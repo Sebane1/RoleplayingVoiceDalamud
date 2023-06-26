@@ -64,7 +64,11 @@ namespace RoleplayingVoice {
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
             if (!_networkedClient.Connected) {
-                _networkedClient.Start();
+                try {
+                    _networkedClient.Start();
+                } catch {
+
+                }
             }
             if (_roleplayingVoiceManager != null) {
                 if (!string.IsNullOrEmpty(config.CharacterName)) {
