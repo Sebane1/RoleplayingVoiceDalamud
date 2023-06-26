@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DalamudPluginProjectTemplate.Attributes
+namespace RoleplayingVoice.Attributes
 {
     [AttributeUsage(AttributeTargets.Method)]
     public class AliasesAttribute : Attribute

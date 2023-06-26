@@ -1,12 +1,12 @@
 ﻿using Dalamud.Game.Command;
-using DalamudPluginProjectTemplate.Attributes;
+using RoleplayingVoice.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using static Dalamud.Game.Command.CommandInfo;
 
-namespace DalamudPluginProjectTemplate
+namespace RoleplayingVoice
 {
     public class PluginCommandManager<THost> : IDisposable
     {
