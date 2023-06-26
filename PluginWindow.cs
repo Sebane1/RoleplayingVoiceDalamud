@@ -1,4 +1,5 @@
 ﻿using Dalamud.Interface.Windowing;
+using Dalamud.Plugin;
 using ImGuiNET;
 using System.Numerics;
 
@@ -9,6 +10,7 @@ namespace RoleplayingVoice {
         private string apiKey = "";
         private string characterName = "";
         private string characterVoice = "";
+        private string serverIP;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -21,6 +23,7 @@ namespace RoleplayingVoice {
             set {
                 configuration = value;
                 if (configuration != null) {
+                    serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null ? configuration.ApiKey : "";
                     characterName = configuration.CharacterName != null ? configuration.CharacterName : "";
                     characterVoice = configuration.CharacterVoice != null ? configuration.CharacterVoice : "";
@@ -28,7 +31,12 @@ namespace RoleplayingVoice {
             }
         }
 
+        public DalamudPluginInterface PluginInteface { get; internal set; }
+
         public override async void Draw() {
+            ImGui.Text("Server IP");
+            ImGui.InputText("##serverIP", ref serverIP, 2000);
+
             ImGui.Text("Elevenlabs API Key");
             ImGui.InputText("##apiKey", ref apiKey, 2000);
 
@@ -40,10 +48,11 @@ namespace RoleplayingVoice {
 
             if (ImGui.Button("Save")) {
                 if (configuration != null) {
+                    configuration.ConnectionIP = serverIP;
                     configuration.ApiKey = apiKey;
                     configuration.CharacterName = characterName;
                     configuration.CharacterVoice = characterVoice;
-                    configuration.Save();
+                    PluginInteface.SavePluginConfig(configuration);
                 }
             }
         }

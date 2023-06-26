@@ -5,12 +5,14 @@ using System;
 namespace RoleplayingVoice {
     public class Configuration : IPluginConfiguration {
         public event EventHandler OnConfigurationChanged;
+        private string connectionIP = "50.70.229.19";
         int IPluginConfiguration.Version { get; set; }
 
         #region Saved configuration values
+        public string ConnectionIP { get => connectionIP; set => connectionIP = value; }
         public string CharacterName { get; set; }
         public string ApiKey { get; set; }
-        public string CharacterVoice { get; internal set; }
+        public string CharacterVoice { get; set; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

@@ -40,6 +40,7 @@ namespace RoleplayingVoice {
 
             var window = this.pluginInterface.Create<PluginWindow>();
             window.Configuration = this.config;
+            window.PluginInteface = this.pluginInterface;
 
             if (window is not null) {
                 this.windowSystem.AddWindow(window);
@@ -52,8 +53,7 @@ namespace RoleplayingVoice {
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             chat.ChatMessage += Chat_ChatMessage;
             if (_networkedClient == null) {
-                _networkedClient = new NetworkedClient("50.70.229.19");
-                _networkedClient.Start();
+                _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
             if (!string.IsNullOrEmpty(config.ApiKey)) {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient);
@@ -63,6 +63,9 @@ namespace RoleplayingVoice {
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
+            if (!_networkedClient.Connected) {
+                _networkedClient.Start();
+            }
             if (_roleplayingVoiceManager != null) {
                 if (!string.IsNullOrEmpty(config.CharacterName)) {
                     if (sender.TextValue.Contains(config.CharacterName)) {
@@ -77,7 +80,6 @@ namespace RoleplayingVoice {
                 }
             }
         }
-
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient);
@@ -88,13 +90,18 @@ namespace RoleplayingVoice {
             this.windowSystem.Draw();
         }
 
-        //[Command("/rpvoice")]
-        //[HelpMessage("OpenConfig")]
-        //public void OpenConfig(string command, string args) {
-        //    // You may want to assign these references to private variables for convenience.
-        //    // Keep in mind that the local player does not exist until after logging in.
+        [Command("/rpvoice")]
+        [HelpMessage("OpenConfig")]
+        public void OpenConfig(string command, string args) {
+            var window = this.pluginInterface.Create<PluginWindow>();
+            window.Configuration = this.config;
+            window.PluginInteface = this.pluginInterface;
 
-        //}
+            if (window is not null) {
+                this.windowSystem.AddWindow(window);
+            }
+
+        }
 
         #region IDisposable Support
         protected virtual void Dispose(bool disposing) {
