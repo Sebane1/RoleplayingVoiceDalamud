@@ -1,6 +1,8 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
+using System.Linq;
+using System.Net;
 using System.Numerics;
 
 namespace RoleplayingVoice {
@@ -11,6 +13,10 @@ namespace RoleplayingVoice {
         private string characterName = "";
         private string characterVoice = "";
         private string serverIP;
+        private string serverIPErrorMessage = "";
+        private string characterNameErrorMessage = "";
+        private bool isServerIPValid = true;
+        private bool isCharacterNameValid = true;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -46,16 +52,81 @@ namespace RoleplayingVoice {
             ImGui.Text("Voice");
             ImGui.InputText("##characterVoice", ref characterVoice, 2000);
 
-            if (ImGui.Button("Save")) {
-                if (configuration != null) {
-                    configuration.ConnectionIP = serverIP;
-                    configuration.ApiKey = apiKey;
-                    configuration.CharacterName = characterName;
-                    configuration.CharacterVoice = characterVoice;
-                    configuration.Save();
-                    PluginInteface.SavePluginConfig(configuration);
+            if (ImGui.Button("Save"))
+            {
+                if (InputValidation())
+                {
+                    if (configuration != null)
+                    {
+                        configuration.ConnectionIP = serverIP;
+                        configuration.ApiKey = apiKey;
+                        configuration.CharacterName = characterName;
+                        configuration.CharacterVoice = characterVoice;
+                        configuration.Save();
+                        PluginInteface.SavePluginConfig(configuration);
+                    }
                 }
             }
+            if (!isServerIPValid)
+            {
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+            }
+            if (!isCharacterNameValid)
+            {
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+            }
+            // Place button in bottom right + some padding / extra space
+            var originPos = ImGui.GetCursorPos();
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
+            if (ImGui.Button("Close"))
+            {
+                // Because we don't trust the user
+                if (configuration != null)
+                {
+                    if (InputValidation())
+                    {
+                        configuration.ConnectionIP = serverIP;
+                        configuration.ApiKey = apiKey;
+                        configuration.CharacterName = characterName;
+                        configuration.CharacterVoice = characterVoice;
+                        configuration.Save();
+                        PluginInteface.SavePluginConfig(configuration);
+                        IsOpen = false;
+                    }
+                }
+            }
+            ImGui.SetCursorPos(originPos);
+        }
+
+        private bool InputValidation()
+        {
+            if (!IPAddress.TryParse(serverIP, out _))
+            {
+                serverIPErrorMessage = "Invalid Server IP! Please check the input.";
+                isServerIPValid = false;
+            }
+            else
+            {
+                serverIPErrorMessage = string.Empty;
+                isServerIPValid = true;
+            }
+
+            // AsciiLetter is A-Z and a-z, hence the extra check for space
+            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' '))
+            {
+                characterNameErrorMessage = "Invalid Character Name! Please check the input.";
+                isCharacterNameValid = false;
+            }
+            else
+            {
+                characterNameErrorMessage = string.Empty;
+                isCharacterNameValid = true;
+            }
+            if (!isServerIPValid || !isCharacterNameValid)
+                return false;
+            //TODO: Add logic for API key
+            return true;
         }
     }
 }
