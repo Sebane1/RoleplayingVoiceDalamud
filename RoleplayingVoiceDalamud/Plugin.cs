@@ -7,6 +7,7 @@ using FFXIVLooseTextureCompiler.Networking;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
@@ -63,8 +64,7 @@ namespace RoleplayingVoice {
             window.Toggle();
         }
 
-        private void UiBuilder_OpenConfigUi()
-        {
+        private void UiBuilder_OpenConfigUi() {
             window.IsOpen = true;
         }
 
@@ -74,6 +74,10 @@ namespace RoleplayingVoice {
         }
         public static string SplitCamelCase(string input) {
             return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1", System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
+        }
+        public static string RemoveSpecialSymbols(string value) {
+            Regex rgx = new Regex("[^a-zA-Z0-9 -]");
+            return rgx.Replace(value, "");
         }
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
@@ -86,7 +90,7 @@ namespace RoleplayingVoice {
                 }
             }
             if (_roleplayingVoiceManager != null) {
-                if (!string.IsNullOrEmpty(config.CharacterName)) {
+                if (!string.IsNullOrEmpty(config.CharacterName) && config.IsActive) {
                     switch (type) {
                         case Dalamud.Game.Text.XivChatType.Say:
                         case Dalamud.Game.Text.XivChatType.Shout:
@@ -95,14 +99,16 @@ namespace RoleplayingVoice {
                         case Dalamud.Game.Text.XivChatType.FreeCompany:
                         case Dalamud.Game.Text.XivChatType.Party:
                         case Dalamud.Game.Text.XivChatType.CrossParty:
+                        case Dalamud.Game.Text.XivChatType.TellIncoming:
+                        case Dalamud.Game.Text.XivChatType.TellOutgoing:
                             if (sender.TextValue.Contains(config.CharacterName)) {
-                                string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
                                 string playerSender = senderStrings[0] + " " + senderStrings[2];
                                 string playerMessage = message.TextValue;
                                 Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                     config.CharacterVoice, type == Dalamud.Game.Text.XivChatType.CustomEmote));
                             } else {
-                                string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
                                 if (senderStrings.Length > 2) {
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
@@ -128,7 +134,22 @@ namespace RoleplayingVoice {
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
         public void OpenConfig(string command, string args) {
-            window.Toggle();
+            switch (args.ToLower()) {
+                case "on":
+                    config.IsActive = true;
+                    this.pluginInterface.SavePluginConfig(config);
+                    window.Configuration = config;
+                    break;
+                case "off":
+                    config.IsActive = false;
+                    this.pluginInterface.SavePluginConfig(config);
+                    window.Configuration = config;
+                    break;
+                default:
+                    window.Toggle();
+                    break;
+            }
+
         }
 
         #region IDisposable Support

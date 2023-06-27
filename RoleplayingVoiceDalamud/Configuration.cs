@@ -14,6 +14,7 @@ namespace RoleplayingVoice {
         public string CharacterName { get; set; }
         public string ApiKey { get; set; }
         public string CharacterVoice { get; set; }
+        public bool IsActive { get; set; }
 
         public CharacterVoices CharacterVoices { get; set; }
         #endregion
