@@ -89,9 +89,11 @@ namespace RoleplayingVoice {
                         Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage, config.CharacterVoice));
                     } else {
                         string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
-                        string playerSender = senderStrings[0] + " " + senderStrings[2];
-                        string playerMessage = message.TextValue;
-                        Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
+                        if (senderStrings.Length > 2) {
+                            string playerSender = senderStrings[0] + " " + senderStrings[2];
+                            string playerMessage = message.TextValue;
+                            Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
+                        }
                     }
                 }
             }
