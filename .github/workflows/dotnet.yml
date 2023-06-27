@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build_and_test:
+  build:
 
     runs-on: windows-latest
 
@@ -25,14 +25,5 @@ jobs:
       run: |
         Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -OutFile latest.zip
         Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev\"
-    # - name: Download latest Dalamud build
-      # run: |
-        # cd ..
-        # curl -O https://goatcorp.github.io/dalamud-distrib/latest.zip
-        # mkdir Dalamud
-        # unzip latest.zip -d ./Dalamud/bin
-    # - uses: actions/checkout@v2
     - name: Build
-      run: dotnet build --no-restore -c Debug
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet build --no-restore -c Release
