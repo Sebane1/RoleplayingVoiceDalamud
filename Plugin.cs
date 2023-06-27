@@ -60,6 +60,7 @@ namespace RoleplayingVoice {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             }
+            window.Toggle();
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
