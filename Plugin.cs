@@ -66,7 +66,9 @@ namespace RoleplayingVoice {
             config.CharacterVoices = _roleplayingVoiceManager.CharacterVoices;
             pluginInterface.SavePluginConfig(config);
         }
-
+        public static string SplitCamelCase(string input) {
+            return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1", System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
+        }
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
@@ -80,11 +82,13 @@ namespace RoleplayingVoice {
             if (_roleplayingVoiceManager != null) {
                 if (!string.IsNullOrEmpty(config.CharacterName)) {
                     if (sender.TextValue.Contains(config.CharacterName)) {
-                        string playerSender = sender.TextValue.Split("@")[0];
+                        string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                        string playerSender = senderStrings[0] + " " + senderStrings[2];
                         string playerMessage = message.TextValue;
                         Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage, config.CharacterVoice));
                     } else {
-                        string playerSender = sender.TextValue.Split("@")[0];
+                        string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                        string playerSender = senderStrings[0] + " " + senderStrings[2];
                         string playerMessage = message.TextValue;
                         Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
                     }
