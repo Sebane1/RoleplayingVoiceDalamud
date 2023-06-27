@@ -2,7 +2,6 @@
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
 using RoleplayingVoice.Attributes;
@@ -20,7 +19,7 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private readonly Configuration config;
         private readonly WindowSystem windowSystem;
-        private readonly PluginWindow window;
+        private PluginWindow window { get; init; }
         private RoleplayingVoiceManager _roleplayingVoiceManager;
         public string Name => "Roleplaying Voice";
 
@@ -48,6 +47,7 @@ namespace RoleplayingVoice {
             }
 
             this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
+            this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
             // Load all of our commands
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
@@ -61,6 +61,11 @@ namespace RoleplayingVoice {
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             }
             window.Toggle();
+        }
+
+        private void UiBuilder_OpenConfigUi()
+        {
+            window.IsOpen = true;
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
@@ -125,6 +130,7 @@ namespace RoleplayingVoice {
             config.OnConfigurationChanged -= Config_OnConfigurationChanged;
             chat.ChatMessage -= Chat_ChatMessage;
             this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
+            this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
             this.windowSystem.RemoveAllWindows();
             _networkedClient.Dispose();
         }
