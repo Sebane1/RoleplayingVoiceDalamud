@@ -20,6 +20,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\RoleplayingVoiceCore\RoleplayingVoiceCore.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!--You may need to adjust these paths yourself. These point to a Dalamud assembly in AppData.-->
 		<Reference Include="Dalamud">
 			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
