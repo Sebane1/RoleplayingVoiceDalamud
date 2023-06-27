@@ -26,7 +26,7 @@ jobs:
     - name: Build
       run: |
         $ver = '${{ github.ref_name }}'
-        dotnet build --no-restore -c Release --nologo -p:Version=$ver -p:FileVersion=$ver -p:AssemblyVersion=$ver'
+        invoke-expression 'dotnet build --no-restore --configuration Release --nologo -p:Version=$ver -p:FileVersion=$ver -p:AssemblyVersion=$ver'
     - name: Write version into manifest
       run: |
         $ver = '${{ github.ref_name }}'
