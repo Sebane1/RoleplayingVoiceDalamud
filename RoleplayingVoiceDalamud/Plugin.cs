@@ -82,18 +82,29 @@ namespace RoleplayingVoice {
             }
             if (_roleplayingVoiceManager != null) {
                 if (!string.IsNullOrEmpty(config.CharacterName)) {
-                    if (sender.TextValue.Contains(config.CharacterName)) {
-                        string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
-                        string playerSender = senderStrings[0] + " " + senderStrings[2];
-                        string playerMessage = message.TextValue;
-                        Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage, config.CharacterVoice));
-                    } else {
-                        string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
-                        if (senderStrings.Length > 2) {
-                            string playerSender = senderStrings[0] + " " + senderStrings[2];
-                            string playerMessage = message.TextValue;
-                            Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
-                        }
+                    switch (type) {
+                        case Dalamud.Game.Text.XivChatType.Say:
+                        case Dalamud.Game.Text.XivChatType.Shout:
+                        case Dalamud.Game.Text.XivChatType.Yell:
+                        case Dalamud.Game.Text.XivChatType.CustomEmote:
+                        case Dalamud.Game.Text.XivChatType.FreeCompany:
+                        case Dalamud.Game.Text.XivChatType.Party:
+                        case Dalamud.Game.Text.XivChatType.CrossParty:
+                            if (sender.TextValue.Contains(config.CharacterName)) {
+                                string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                                string playerSender = senderStrings[0] + " " + senderStrings[2];
+                                string playerMessage = message.TextValue;
+                                Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
+                                    config.CharacterVoice, type == Dalamud.Game.Text.XivChatType.CustomEmote));
+                            } else {
+                                string[] senderStrings = SplitCamelCase(sender.TextValue).Split(" ");
+                                if (senderStrings.Length > 2) {
+                                    string playerSender = senderStrings[0] + " " + senderStrings[2];
+                                    string playerMessage = message.TextValue;
+                                    Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
+                                }
+                            }
+                            break;
                     }
                 }
             }
