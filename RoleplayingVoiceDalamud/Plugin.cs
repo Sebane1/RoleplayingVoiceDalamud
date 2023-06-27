@@ -1,9 +1,7 @@
 ﻿using Dalamud.Game.ClientState;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
-using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
 using RoleplayingVoice.Attributes;
