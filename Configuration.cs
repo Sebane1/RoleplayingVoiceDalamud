@@ -1,5 +1,6 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
+using RoleplayingVoiceCore.AudioRecycler;
 using System;
 
 namespace RoleplayingVoice {
@@ -13,6 +14,8 @@ namespace RoleplayingVoice {
         public string CharacterName { get; set; }
         public string ApiKey { get; set; }
         public string CharacterVoice { get; set; }
+
+        public CharacterVoices CharacterVoices { get; set; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

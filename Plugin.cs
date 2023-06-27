@@ -20,6 +20,7 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private readonly Configuration config;
         private readonly WindowSystem windowSystem;
+        private readonly PluginWindow window;
         private RoleplayingVoiceManager _roleplayingVoiceManager;
         public string Name => "Roleplaying Voice";
 
@@ -38,7 +39,7 @@ namespace RoleplayingVoice {
             // Initialize the UI
             this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
 
-            var window = this.pluginInterface.Create<PluginWindow>();
+            window = this.pluginInterface.Create<PluginWindow>();
             window.Configuration = this.config;
             window.PluginInteface = this.pluginInterface;
 
@@ -56,8 +57,14 @@ namespace RoleplayingVoice {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
             if (!string.IsNullOrEmpty(config.ApiKey)) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient);
+                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             }
+        }
+
+        private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
+            config.CharacterVoices = _roleplayingVoiceManager.CharacterVoices;
+            pluginInterface.SavePluginConfig(config);
         }
 
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
@@ -73,11 +80,11 @@ namespace RoleplayingVoice {
             if (_roleplayingVoiceManager != null) {
                 if (!string.IsNullOrEmpty(config.CharacterName)) {
                     if (sender.TextValue.Contains(config.CharacterName)) {
-                        string playerSender = sender.TextValue;
+                        string playerSender = sender.TextValue.Split("@")[0];
                         string playerMessage = message.TextValue;
                         Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage, config.CharacterVoice));
                     } else {
-                        string playerSender = sender.TextValue;
+                        string playerSender = sender.TextValue.Split("@")[0];
                         string playerMessage = message.TextValue;
                         Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
                     }
@@ -86,7 +93,8 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient);
+                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             }
         }
 
@@ -97,14 +105,7 @@ namespace RoleplayingVoice {
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
         public void OpenConfig(string command, string args) {
-            var window = this.pluginInterface.Create<PluginWindow>();
-            window.Configuration = this.config;
-            window.PluginInteface = this.pluginInterface;
-
-            if (window is not null) {
-                this.windowSystem.AddWindow(window);
-            }
-
+            window.Toggle();
         }
 
         #region IDisposable Support

@@ -52,6 +52,7 @@ namespace RoleplayingVoice {
                     configuration.ApiKey = apiKey;
                     configuration.CharacterName = characterName;
                     configuration.CharacterVoice = characterVoice;
+                    configuration.Save();
                     PluginInteface.SavePluginConfig(configuration);
                 }
             }
