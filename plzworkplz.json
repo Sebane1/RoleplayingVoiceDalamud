@@ -1,0 +1,24 @@
+[
+  {
+    "Author": "Sebastina",
+    "Name": "Roleplaying Voice (Plz work edition)",
+    "Description": "WORK!!! WORK!!! WORK!!! WORK!!! WORK!!! WORK!!! WORK!!!",
+    "InternalName": "RoleplayingVoiceDalamudPlzWork",
+    "AssemblyVersion": "0.0.1.1",
+    "TestingAssemblyVersion": "0.0.1.1",
+    "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 8,
+    "IsHide": "False",
+    "IsTestingExclusive": "False",
+    "DownloadCount": 0,
+    "LastUpdate": 0,
+    "LoadPriority": 69420,
+    "LoadRequiredState": 2,
+    "LoadSync": true,
+    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/plzwork/plz.zip",
+    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/plzwork/plz.zip",
+    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/plzwork/plz.zip",
+    "IconUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud/blob/1bb1b9519f4be2b5fb0fb787ea5275b89f803046/icon.png?raw=true"
+  }
+]
