@@ -1,28 +1,41 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
+using RoleplayingVoiceCore;
+using System;
 using System.Linq;
 using System.Net;
 using System.Numerics;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
-        private string testText = "";
         private Configuration configuration;
         private string apiKey = "";
         private string characterName = "";
         private string characterVoice = "";
-        private string serverIP;
+        private string serverIP = "";
         private string serverIPErrorMessage = "";
         private string characterNameErrorMessage = "";
         private bool isServerIPValid = true;
         private bool isCharacterNameValid = true;
         private bool characterVoiceActive = false;
+        RoleplayingVoiceManager _manager = null;
+        private string[] _voiceList = new string[1] { "" };
+        BetterComboBox voiceComboBox;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
             Size = new Vector2(810, 810);
             SizeCondition = ImGuiCond.FirstUseEver;
+            voiceComboBox = new BetterComboBox("Voice List", _voiceList, 810);
+            voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
+            voiceComboBox.SelectedIndex = 0;
+        }
+
+        private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
+            if (voiceComboBox != null && _voiceList != null) {
+                characterVoice = _voiceList[voiceComboBox.SelectedIndex];
+            }
         }
 
         public Configuration Configuration {
@@ -34,11 +47,13 @@ namespace RoleplayingVoice {
                     apiKey = configuration.ApiKey != null ? configuration.ApiKey : "";
                     characterName = configuration.CharacterName != null ? configuration.CharacterName : "";
                     characterVoice = configuration.CharacterVoice != null ? configuration.CharacterVoice : "";
+                    characterVoiceActive = configuration.IsActive;
                 }
             }
         }
 
         public DalamudPluginInterface PluginInteface { get; internal set; }
+        public RoleplayingVoiceManager Manager { get => _manager; set => _manager = value; }
 
         public override async void Draw() {
             ImGui.Text("Server IP");
@@ -53,9 +68,12 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##characterName", ref characterName, 2000);
 
-            ImGui.Text("Voice");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##characterVoice", ref characterVoice, 2000);
+            if (voiceComboBox != null && _voiceList != null) {
+                if (_voiceList.Length > 0) {
+                    ImGui.Text("Voice");
+                    voiceComboBox.Draw();
+                }
+            }
 
             ImGui.Text("Is Active");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
@@ -92,6 +110,7 @@ namespace RoleplayingVoice {
                         configuration.ApiKey = apiKey;
                         configuration.CharacterName = characterName;
                         configuration.CharacterVoice = characterVoice;
+                        configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
                         IsOpen = false;
@@ -121,6 +140,66 @@ namespace RoleplayingVoice {
                 return false;
             //TODO: Add logic for API key
             return true;
+        }
+
+        public async void RefreshVoices() {
+            if (_manager != null) {
+                _voiceList = await _manager.GetVoiceList();
+            }
+            if (voiceComboBox != null) {
+                if (_voiceList != null) {
+                    voiceComboBox.Contents = _voiceList;
+                    for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                        if (voiceComboBox.Contents[i].Contains(characterVoice)) {
+                            voiceComboBox.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        internal class BetterComboBox {
+            string _label = "";
+            int _width = 0;
+            int index = -1;
+            int _lastIndex = 0;
+            bool _enabled = true;
+            string[] _contents = new string[1] { "" };
+            public event EventHandler OnSelectedIndexChanged;
+            public string Text { get { return index > -1 ? _contents[index] : ""; } }
+            public BetterComboBox(string _label, string[] contents, int index, int width = 100) {
+                if (Label != null) {
+                    this._label = _label;
+                }
+                this._width = width;
+                this.index = index;
+                if (contents != null) {
+                    this._contents = contents;
+                }
+            }
+
+            public string[] Contents { get => _contents; set => _contents = value; }
+            public int SelectedIndex { get => index; set => index = value; }
+            public int Width { get => (_enabled ? _width : 0); set => _width = value; }
+            public string Label { get => _label; set => _label = value; }
+            public bool Enabled { get => _enabled; set => _enabled = value; }
+
+            public void Draw() {
+                if (_enabled) {
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                    if (_label != null && _contents != null) {
+                        if (_contents.Length > 0) {
+                            ImGui.Combo("##" + _label, ref index, _contents, _contents.Length);
+                        }
+                    }
+                }
+                if (index != _lastIndex) {
+                    if (OnSelectedIndexChanged != null) {
+                        OnSelectedIndexChanged.Invoke(this, EventArgs.Empty);
+                    }
+                }
+                _lastIndex = index;
+            }
         }
     }
 }

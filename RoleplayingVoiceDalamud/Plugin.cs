@@ -42,6 +42,11 @@ namespace RoleplayingVoice {
             window = this.pluginInterface.Create<PluginWindow>();
             window.Configuration = this.config;
             window.PluginInteface = this.pluginInterface;
+            if (!string.IsNullOrEmpty(config.ApiKey)) {
+                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+                window.Manager = _roleplayingVoiceManager;
+            }
 
             if (window is not null) {
                 this.windowSystem.AddWindow(window);
@@ -57,10 +62,6 @@ namespace RoleplayingVoice {
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
-            if (!string.IsNullOrEmpty(config.ApiKey)) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
-                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            }
             window.Toggle();
         }
 
@@ -73,7 +74,8 @@ namespace RoleplayingVoice {
             pluginInterface.SavePluginConfig(config);
         }
         public static string SplitCamelCase(string input) {
-            return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1", System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
+            return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1",
+                System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
             Regex rgx = new Regex("[^a-zA-Z0-9 -]");
@@ -122,8 +124,11 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
-                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+                if (_roleplayingVoiceManager.ApiKey != config.ApiKey) {
+                    _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+                    _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+                    window.Manager = _roleplayingVoiceManager;
+                }
             }
         }
 
@@ -146,6 +151,7 @@ namespace RoleplayingVoice {
                     window.Configuration = config;
                     break;
                 default:
+                    window.RefreshVoices();
                     window.Toggle();
                     break;
             }
