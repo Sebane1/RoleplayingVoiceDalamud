@@ -30,7 +30,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(295,379);
+            Size = new Vector2(295, 379);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -60,7 +60,11 @@ namespace RoleplayingVoice {
         }
 
         public DalamudPluginInterface PluginInteface { get; internal set; }
-        public RoleplayingVoiceManager Manager { get => _manager; set => _manager = value; }
+        public RoleplayingVoiceManager Manager {
+            get => _manager; set {
+                _manager = value;
+            }
+        }
 
         public override async void Draw() {
             ImGui.Text("Server IP");
@@ -106,7 +110,7 @@ namespace RoleplayingVoice {
                 }
             }
             ImGui.SetCursorPos(originPos);
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y-40f), false);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 // Calculate the number of lines taken by the wrapped text
                 var requiredY = ImGui.CalcTextSize(serverIPErrorMessage).Y + 1f;
@@ -120,15 +124,13 @@ namespace RoleplayingVoice {
                 int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
                 // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged) 
-                {
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                     SizeYChanged = true;
                     changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                     Size = changedSize;
                 }
             }
-            if (!isapiKeyValid)
-            {
+            if (!isapiKeyValid) {
                 // Calculate the number of lines taken by the wrapped text
                 var requiredY = ImGui.CalcTextSize(apiKeyErrorMessage).Y + 1f;
                 var availableY = ImGui.GetContentRegionAvail().Y;
@@ -141,8 +143,7 @@ namespace RoleplayingVoice {
                 int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
                 // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
-                {
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                     SizeYChanged = true;
                     changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                     Size = changedSize;
@@ -161,8 +162,7 @@ namespace RoleplayingVoice {
                 int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
                 // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
-                {
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                     SizeYChanged = true;
                     changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                     Size = changedSize;
@@ -175,8 +175,7 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Close")) {
                 // Because we don't trust the user
                 if (configuration != null) {
-                    if (InputValidation())
-                    {
+                    if (InputValidation()) {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
                         configuration.CharacterName = characterName;
@@ -217,11 +216,9 @@ namespace RoleplayingVoice {
             return true;
         }
 
-        private Vector2? GetSizeChange(float requiredY, float availableY,int Lines, Vector2? initial)
-        {
+        private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
             // Height
-            if (availableY - requiredY * Lines < 1 )
-            {
+            if (availableY - requiredY * Lines < 1) {
                 Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + requiredY * Lines);
                 return newHeight;
             }
