@@ -4,3 +4,6 @@ Add this repo link to your Dalamud installation and configure your Eleven Labs A
 ```
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
 ```
+
+Support discord: 
+https://discord.gg/rtGXwMn7pX
