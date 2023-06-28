@@ -1,5 +1,8 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using ElevenLabs;
+using ElevenLabs.User;
+using FFXIVLooseTextureCompiler.Networking;
 using ImGuiNET;
 using RoleplayingVoiceCore;
 using System;
@@ -10,23 +13,33 @@ using System.Numerics;
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
+        private RoleplayingVoiceManager _roleplayingVoiceManager;
+        private NetworkedClient _networkedClient;
+        private ElevenLabsClient _api;
         private string apiKey = "";
         private string characterName = "";
         private string characterVoice = "";
         private string serverIP = "";
         private string serverIPErrorMessage = "";
         private string characterNameErrorMessage = "";
+        private string apiKeyErrorMessage = "";
         private bool isServerIPValid = true;
         private bool isCharacterNameValid = true;
+        private bool isapiKeyValid = true;
         private bool characterVoiceActive = false;
         RoleplayingVoiceManager _manager = null;
         private string[] _voiceList = new string[1] { "" };
         BetterComboBox voiceComboBox;
+        private bool SizeXChanged = false;
+        private bool SizeYChanged = false;
+        private Vector2? initialSize;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(810, 810);
-            SizeCondition = ImGuiCond.FirstUseEver;
+            Size = new Vector2(295,379);
+            initialSize = Size;
+            SizeCondition = ImGuiCond.Always;
+            Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
             voiceComboBox = new BetterComboBox("Voice List", _voiceList, 810);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voiceComboBox.SelectedIndex = 0;
@@ -79,6 +92,9 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
 
+            var originPos = ImGui.GetCursorPos();
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
                 if (InputValidation()) {
                     if (configuration != null) {
@@ -90,19 +106,72 @@ namespace RoleplayingVoice {
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
                         RefreshVoices();
+                        SizeXChanged = false;
+                        SizeYChanged = false;
+                        Size = initialSize;
                     }
                 }
             }
+            ImGui.SetCursorPos(originPos);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y-40f), false);
             if (!isServerIPValid) {
+                Vector2? requiredSize = new Vector2(ImGui.CalcTextSize(serverIPErrorMessage).X, ImGui.CalcTextSize(serverIPErrorMessage).Y + 5f);
+                Vector2? availableSize = new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y);
+                // Check Width
+                /*if (requiredSize.Value.X > availableSize.Value.X && !SizeXChanged)
+                {
+                    SizeXChanged = true;
+                    Size = GetSizeChange(requiredSize,availableSize, initialSize);
+                    availableSize = Size;
+                }*/
+                // Check Height
+                if (availableSize.Value.Y - requiredSize.Value.Y * 3 < 1 && !SizeYChanged)
+                {
+                    SizeYChanged = true;
+                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
+                    availableSize = Size;
+                }
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
                 ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+                //ImGui.PopTextWrapPos();
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+                //ImGui.PopTextWrapPos();
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+                //ImGui.PopTextWrapPos();
             }
             if (!isCharacterNameValid) {
+                Vector2? requiredSize = new Vector2(ImGui.CalcTextSize(characterNameErrorMessage).X, ImGui.CalcTextSize(characterNameErrorMessage).Y + 5f);
+                Vector2? availableSize = new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y);
+                // Check Width
+                /*if (requiredSize.Value.X > availableSize.Value.X && !SizeXChanged)
+                {
+                    SizeXChanged = true;
+                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
+                    availableSize = Size;
+                }*/
+                // Check Height
+                if (availableSize.Value.Y - requiredSize.Value.Y * 3 < 1 && !SizeYChanged)
+                {
+                    SizeYChanged = true;
+                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
+                    availableSize = Size;
+                }
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
                 ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+                //ImGui.PopTextWrapPos();
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+                //ImGui.PopTextWrapPos();
+                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+                //ImGui.PopTextWrapPos();
             }
+            ImGui.EndChild();
             // Place button in bottom right + some padding / extra space
-            ImGui.SameLine();
-            ImGui.Dummy(new Vector2(ImGui.GetContentRegionMax().X - 100));
-            ImGui.SameLine();
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Close")) {
                 // Because we don't trust the user
                 if (configuration != null) {
@@ -114,10 +183,14 @@ namespace RoleplayingVoice {
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
+                        SizeXChanged = false;
+                        SizeYChanged = false;
+                        Size = initialSize;
                         IsOpen = false;
                     }
                 }
             }
+            ImGui.SetCursorPos(originPos);
         }
 
         private bool InputValidation() {
@@ -137,10 +210,45 @@ namespace RoleplayingVoice {
                 characterNameErrorMessage = string.Empty;
                 isCharacterNameValid = true;
             }
-            if (!isServerIPValid || !isCharacterNameValid)
-                return false;
             //TODO: Add logic for API key
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                _api = new ElevenLabsClient(apiKey);
+                var userInfo = _api.UserEndpoint.GetUserInfoAsync();
+                apiKeyErrorMessage = "Invalid API Key! Please check the input.";
+                isapiKeyValid = false;
+            }
+            else
+            {
+                apiKeyErrorMessage = string.Empty;
+                isapiKeyValid = true;
+            }
+            if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
+                return false;
             return true;
+        }
+
+        private Vector2? GetSizeChange(Vector2? required, Vector2? available, Vector2? initial)
+        {
+            // Only width
+            if (required.Value.X > available.Value.X && available.Value.Y - required.Value.Y * 3 > 1)
+            {
+                Vector2? newWidth = new Vector2(required.Value.X, initial.Value.Y);
+                return newWidth;
+            }
+            // Only height
+            if (available.Value.Y - required.Value.Y * 3 < 1 && required.Value.X < available.Value.X)
+            {
+                Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + required.Value.Y * 3);
+                return newHeight;
+            }
+            // Both
+            if(available.Value.Y - required.Value.Y * 3 < 1 && required.Value.X > available.Value.X)
+            {
+                Vector2? newSize = new Vector2(required.Value.X, initial.Value.Y + required.Value.Y * 3);
+                return newSize;
+            }
+            return initial;
         }
 
         public async void RefreshVoices() {
