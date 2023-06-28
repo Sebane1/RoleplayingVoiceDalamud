@@ -42,6 +42,9 @@ namespace RoleplayingVoice {
             window = this.pluginInterface.Create<PluginWindow>();
             window.Configuration = this.config;
             window.PluginInteface = this.pluginInterface;
+            if (_networkedClient == null) {
+                _networkedClient = new NetworkedClient(config.ConnectionIP);
+            }
             if (!string.IsNullOrEmpty(config.ApiKey)) {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
@@ -59,9 +62,6 @@ namespace RoleplayingVoice {
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             chat.ChatMessage += Chat_ChatMessage;
-            if (_networkedClient == null) {
-                _networkedClient = new NetworkedClient(config.ConnectionIP);
-            }
             window.Toggle();
         }
 
