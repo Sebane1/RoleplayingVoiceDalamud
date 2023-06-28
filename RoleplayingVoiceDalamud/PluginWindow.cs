@@ -1,7 +1,5 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using ElevenLabs;
-using FFXIVLooseTextureCompiler.Networking;
 using ImGuiNET;
 using RoleplayingVoiceCore;
 using System;
@@ -12,9 +10,6 @@ using System.Numerics;
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
-        private RoleplayingVoiceManager _roleplayingVoiceManager;
-        private NetworkedClient _networkedClient;
-        private ElevenLabsClient _api;
         private string apiKey = "";
         private string characterName = "";
         private string characterVoice = "";
