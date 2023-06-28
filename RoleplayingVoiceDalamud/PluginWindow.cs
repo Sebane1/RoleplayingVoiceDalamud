@@ -89,6 +89,7 @@ namespace RoleplayingVoice {
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
+                        RefreshVoices();
                     }
                 }
             }
