@@ -7,23 +7,25 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
+        RoleplayingVoiceManager _manager = null;
+        BetterComboBox voiceComboBox;
         private string apiKey = "";
         private string characterVoice = "";
         private string serverIP = "";
         private string serverIPErrorMessage = "";
         private string characterNameErrorMessage = "";
         private string apiKeyErrorMessage = "";
-        private bool isServerIPValid = true;
-        private bool isCharacterNameValid = true;
-        private bool isapiKeyValid = true;
-        private bool characterVoiceActive = false;
-        RoleplayingVoiceManager _manager = null;
         private string[] _voiceList = new string[1] { "" };
-        BetterComboBox voiceComboBox;
+        private bool isServerIPValid = false;
+        private bool isCharacterNameValid = false;
+        private bool isapiKeyValid = false;
+        private bool characterVoiceActive = false;
+        private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
         private Vector2? initialSize;
         private Vector2? changedSize;
@@ -59,10 +61,16 @@ namespace RoleplayingVoice {
             }
         }
 
-        public DalamudPluginInterface PluginInterface { get; internal set; }
-        public RoleplayingVoiceManager Manager {
-            get => _manager; set {
+        public DalamudPluginInterface PluginInteface { get; internal set; }
+        public RoleplayingVoiceManager Manager
+        {
+            get => _manager; set
+            {
                 _manager = value;
+                if (_manager != null)
+                {
+                    _manager.OnApiValidationComplete += _manager_OnApiValidationComplete;
+                }
             }
         }
 
@@ -116,6 +124,7 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
             }
             var originPos = ImGui.GetCursorPos();
+            // Place button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
@@ -133,6 +142,7 @@ namespace RoleplayingVoice {
                         PluginInterface.SavePluginConfig(configuration);
                         configuration.Save();
                         RefreshVoices();
+                        apiKeyValidated = true;
                         SizeYChanged = false;
                         changedSize = null;
                         Size = initialSize;
@@ -140,6 +150,36 @@ namespace RoleplayingVoice {
                 }
             }
             ImGui.SetCursorPos(originPos);
+            // Place button in bottom right + some padding / extra space
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
+            if (ImGui.Button("Close"))
+            {
+                // Because we don't trust the user
+                if (configuration != null)
+                {
+                    if (InputValidation())
+                    {
+                        configuration.ConnectionIP = serverIP;
+                        configuration.ApiKey = apiKey;
+                        configuration.CharacterName = characterName;
+                        configuration.CharacterVoice = characterVoice;
+                        configuration.IsActive = characterVoiceActive;
+                        configuration.Save();
+                        PluginInteface.SavePluginConfig(configuration);
+                        SizeYChanged = false;
+                        apiKeyValidated = false;
+                        changedSize = null;
+                        Size = initialSize;
+                        IsOpen = false;
+                    }
+                }
+            }
+            ImGui.SetCursorPos(originPos);
+            if (!apiKeyValidated)
+            {
+                Task.Run(() => _manager.ApiValidation(apiKey));
+            }
             ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 // Calculate the number of lines taken by the wrapped text
@@ -236,10 +276,32 @@ namespace RoleplayingVoice {
                 isServerIPValid = true;
             }
 
-            //TODO: Api validation
-            if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
+            // AsciiLetter is A-Z and a-z, hence the extra check for space
+            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' ' || c == '\'')) {
+                characterNameErrorMessage = "Invalid Character Name! Please check the input.";
+                isCharacterNameValid = false;
+            } else {
+                characterNameErrorMessage = string.Empty;
+                isCharacterNameValid = true;
+            }
+            if (!isServerIPValid || !isCharacterNameValid || (!isapiKeyValid && apiKeyValidated))
                 return false;
             return true;
+        }
+
+        private void _manager_OnApiValidationComplete(object sender, ValidationResult e)
+        {
+            if (e.ValidationSuceeded && !apiKeyValidated)
+            {
+                apiKeyErrorMessage = string.Empty;
+                isapiKeyValid = true;
+            }
+            else if (!e.ValidationSuceeded && !apiKeyValidated)
+            {
+                apiKeyErrorMessage = "Invalid API Key! Please check the input.";
+                isapiKeyValid = false;
+            }
+            apiKeyValidated = true;
         }
 
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {

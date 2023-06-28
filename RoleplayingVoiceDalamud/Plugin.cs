@@ -4,12 +4,9 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
-using ImGuiNET;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
-using System.Linq;
-using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -137,7 +134,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private void Config_OnConfigurationChanged(object sender, EventArgs e) {
+        private async void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey) {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
