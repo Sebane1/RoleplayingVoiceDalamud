@@ -1,7 +1,6 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ElevenLabs;
-using ElevenLabs.User;
 using FFXIVLooseTextureCompiler.Networking;
 using ImGuiNET;
 using RoleplayingVoiceCore;
@@ -30,9 +29,9 @@ namespace RoleplayingVoice {
         RoleplayingVoiceManager _manager = null;
         private string[] _voiceList = new string[1] { "" };
         BetterComboBox voiceComboBox;
-        private bool SizeXChanged = false;
         private bool SizeYChanged = false;
         private Vector2? initialSize;
+        private Vector2? changedSize;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -87,7 +86,6 @@ namespace RoleplayingVoice {
                     voiceComboBox.Draw();
                 }
             }
-
             ImGui.Text("Is Active");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
@@ -106,8 +104,8 @@ namespace RoleplayingVoice {
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
                         RefreshVoices();
-                        SizeXChanged = false;
                         SizeYChanged = false;
+                        changedSize = null;
                         Size = initialSize;
                     }
                 }
@@ -115,58 +113,65 @@ namespace RoleplayingVoice {
             ImGui.SetCursorPos(originPos);
             ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y-40f), false);
             if (!isServerIPValid) {
-                Vector2? requiredSize = new Vector2(ImGui.CalcTextSize(serverIPErrorMessage).X, ImGui.CalcTextSize(serverIPErrorMessage).Y + 5f);
-                Vector2? availableSize = new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y);
-                // Check Width
-                /*if (requiredSize.Value.X > availableSize.Value.X && !SizeXChanged)
-                {
-                    SizeXChanged = true;
-                    Size = GetSizeChange(requiredSize,availableSize, initialSize);
-                    availableSize = Size;
-                }*/
-                // Check Height
-                if (availableSize.Value.Y - requiredSize.Value.Y * 3 < 1 && !SizeYChanged)
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(serverIPErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged) 
                 {
                     SizeYChanged = true;
-                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
-                    availableSize = Size;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
                 }
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
-                //ImGui.PopTextWrapPos();
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
-                //ImGui.PopTextWrapPos();
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
-                //ImGui.PopTextWrapPos();
+            }
+            if (!isapiKeyValid)
+            {
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(apiKeyErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), apiKeyErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
+                {
+                    SizeYChanged = true;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
+                }
             }
             if (!isCharacterNameValid) {
-                Vector2? requiredSize = new Vector2(ImGui.CalcTextSize(characterNameErrorMessage).X, ImGui.CalcTextSize(characterNameErrorMessage).Y + 5f);
-                Vector2? availableSize = new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y);
-                // Check Width
-                /*if (requiredSize.Value.X > availableSize.Value.X && !SizeXChanged)
-                {
-                    SizeXChanged = true;
-                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
-                    availableSize = Size;
-                }*/
-                // Check Height
-                if (availableSize.Value.Y - requiredSize.Value.Y * 3 < 1 && !SizeYChanged)
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(characterNameErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
                 {
                     SizeYChanged = true;
-                    Size = GetSizeChange(requiredSize, availableSize, initialSize);
-                    availableSize = Size;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
                 }
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
-                //ImGui.PopTextWrapPos();
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
-                //ImGui.PopTextWrapPos();
-                //ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
-                //ImGui.PopTextWrapPos();
             }
             ImGui.EndChild();
             // Place button in bottom right + some padding / extra space
@@ -175,7 +180,8 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Close")) {
                 // Because we don't trust the user
                 if (configuration != null) {
-                    if (InputValidation()) {
+                    if (InputValidation())
+                    {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
                         configuration.CharacterName = characterName;
@@ -183,8 +189,8 @@ namespace RoleplayingVoice {
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
-                        SizeXChanged = false;
                         SizeYChanged = false;
+                        changedSize = null;
                         Size = initialSize;
                         IsOpen = false;
                     }
@@ -210,43 +216,19 @@ namespace RoleplayingVoice {
                 characterNameErrorMessage = string.Empty;
                 isCharacterNameValid = true;
             }
-            //TODO: Add logic for API key
-            if (!string.IsNullOrEmpty(apiKey))
-            {
-                _api = new ElevenLabsClient(apiKey);
-                var userInfo = _api.UserEndpoint.GetUserInfoAsync();
-                apiKeyErrorMessage = "Invalid API Key! Please check the input.";
-                isapiKeyValid = false;
-            }
-            else
-            {
-                apiKeyErrorMessage = string.Empty;
-                isapiKeyValid = true;
-            }
+            //TODO: Api validation
             if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
                 return false;
             return true;
         }
 
-        private Vector2? GetSizeChange(Vector2? required, Vector2? available, Vector2? initial)
+        private Vector2? GetSizeChange(float requiredY, float availableY,int Lines, Vector2? initial)
         {
-            // Only width
-            if (required.Value.X > available.Value.X && available.Value.Y - required.Value.Y * 3 > 1)
+            // Height
+            if (availableY - requiredY * Lines < 1 )
             {
-                Vector2? newWidth = new Vector2(required.Value.X, initial.Value.Y);
-                return newWidth;
-            }
-            // Only height
-            if (available.Value.Y - required.Value.Y * 3 < 1 && required.Value.X < available.Value.X)
-            {
-                Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + required.Value.Y * 3);
+                Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + requiredY * Lines);
                 return newHeight;
-            }
-            // Both
-            if(available.Value.Y - required.Value.Y * 3 < 1 && required.Value.X > available.Value.X)
-            {
-                Vector2? newSize = new Vector2(required.Value.X, initial.Value.Y + required.Value.Y * 3);
-                return newSize;
             }
             return initial;
         }
