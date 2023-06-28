@@ -62,7 +62,7 @@ namespace RoleplayingVoice {
 
             ImGui.Text("Elevenlabs API Key");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##apiKey", ref apiKey, 2000);
+            ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
             ImGui.Text("Character Name");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
