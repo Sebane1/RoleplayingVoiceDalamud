@@ -55,7 +55,7 @@ jobs:
           name: RoleplayingVoiceDalamud ${{ github.ref_name }}
           artifacts: "./RoleplayingVoiceDalamud/bin/Release/*.zip"
           tag: ${{ github.ref_name }}
-          body: "Are you lost? This is no place to be in."
+          body: "A build of the Roleplaying Voice plugin. Do not install this manually. Install via the dalamud repo link!"
           omitBodyDuringUpdate: true
           allowUpdates: true
           replacesArtifacts: true
