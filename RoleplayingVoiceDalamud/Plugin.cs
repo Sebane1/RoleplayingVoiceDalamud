@@ -4,9 +4,11 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
+using ImGuiNET;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -66,7 +68,7 @@ namespace RoleplayingVoice {
         }
 
         private void UiBuilder_OpenConfigUi() {
-            window.IsOpen = true;
+            window.Toggle();
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {

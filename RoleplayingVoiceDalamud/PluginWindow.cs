@@ -16,17 +16,24 @@ namespace RoleplayingVoice {
         private string serverIP = "";
         private string serverIPErrorMessage = "";
         private string characterNameErrorMessage = "";
+        private string apiKeyErrorMessage = "";
         private bool isServerIPValid = true;
         private bool isCharacterNameValid = true;
+        private bool isapiKeyValid = true;
         private bool characterVoiceActive = false;
         RoleplayingVoiceManager _manager = null;
         private string[] _voiceList = new string[1] { "" };
         BetterComboBox voiceComboBox;
+        private bool SizeYChanged = false;
+        private Vector2? initialSize;
+        private Vector2? changedSize;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(810, 810);
-            SizeCondition = ImGuiCond.FirstUseEver;
+            Size = new Vector2(295,379);
+            initialSize = Size;
+            SizeCondition = ImGuiCond.Always;
+            Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
             voiceComboBox = new BetterComboBox("Voice List", _voiceList, 810);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voiceComboBox.SelectedIndex = 0;
@@ -74,11 +81,13 @@ namespace RoleplayingVoice {
                     voiceComboBox.Draw();
                 }
             }
-
             ImGui.Text("Is Active");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
 
+            var originPos = ImGui.GetCursorPos();
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
                 if (InputValidation()) {
                     if (configuration != null) {
@@ -90,23 +99,84 @@ namespace RoleplayingVoice {
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
                         RefreshVoices();
+                        SizeYChanged = false;
+                        changedSize = null;
+                        Size = initialSize;
                     }
                 }
             }
+            ImGui.SetCursorPos(originPos);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y-40f), false);
             if (!isServerIPValid) {
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(serverIPErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
                 ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged) 
+                {
+                    SizeYChanged = true;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
+                }
+            }
+            if (!isapiKeyValid)
+            {
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(apiKeyErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), apiKeyErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
+                {
+                    SizeYChanged = true;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
+                }
             }
             if (!isCharacterNameValid) {
+                // Calculate the number of lines taken by the wrapped text
+                var requiredY = ImGui.CalcTextSize(characterNameErrorMessage).Y + 1f;
+                var availableY = ImGui.GetContentRegionAvail().Y;
+                var initialH = ImGui.GetCursorPos().Y;
+                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
                 ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
+                ImGui.PopTextWrapPos();
+                var changedH = ImGui.GetCursorPos().Y;
+                float textHeight = changedH - initialH;
+                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+                // Check height and increase if necessarry
+                if (availableY - requiredY * textLines < 1 && !SizeYChanged)
+                {
+                    SizeYChanged = true;
+                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                    Size = changedSize;
+                }
             }
+            ImGui.EndChild();
             // Place button in bottom right + some padding / extra space
-            ImGui.SameLine();
-            ImGui.Dummy(new Vector2(ImGui.GetContentRegionMax().X - 100));
-            ImGui.SameLine();
+            ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
+            ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Close")) {
                 // Because we don't trust the user
                 if (configuration != null) {
-                    if (InputValidation()) {
+                    if (InputValidation())
+                    {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
                         configuration.CharacterName = characterName;
@@ -114,10 +184,14 @@ namespace RoleplayingVoice {
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
+                        SizeYChanged = false;
+                        changedSize = null;
+                        Size = initialSize;
                         IsOpen = false;
                     }
                 }
             }
+            ImGui.SetCursorPos(originPos);
         }
 
         private bool InputValidation() {
@@ -137,10 +211,21 @@ namespace RoleplayingVoice {
                 characterNameErrorMessage = string.Empty;
                 isCharacterNameValid = true;
             }
-            if (!isServerIPValid || !isCharacterNameValid)
+            //TODO: Api validation
+            if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
                 return false;
-            //TODO: Add logic for API key
             return true;
+        }
+
+        private Vector2? GetSizeChange(float requiredY, float availableY,int Lines, Vector2? initial)
+        {
+            // Height
+            if (availableY - requiredY * Lines < 1 )
+            {
+                Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + requiredY * Lines);
+                return newHeight;
+            }
+            return initial;
         }
 
         public async void RefreshVoices() {
