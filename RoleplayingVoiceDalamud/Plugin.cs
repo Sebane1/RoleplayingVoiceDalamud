@@ -128,7 +128,7 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager.ApiKey != config.ApiKey) {
+                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey) {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                     _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                     window.Manager = _roleplayingVoiceManager;
