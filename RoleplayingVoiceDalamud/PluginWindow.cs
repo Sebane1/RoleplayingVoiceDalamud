@@ -142,7 +142,6 @@ namespace RoleplayingVoice {
                         PluginInterface.SavePluginConfig(configuration);
                         configuration.Save();
                         RefreshVoices();
-                        //apiKeyValidated = true;
                         SizeYChanged = false;
                         changedSize = null;
                         Size = initialSize;
@@ -268,6 +267,7 @@ namespace RoleplayingVoice {
         }
 
         private bool InputValidation() {
+            apiKeyValidated = false;
             if (!IPAddress.TryParse(serverIP, out _)) {
                 serverIPErrorMessage = "Invalid Server IP! Please check the input.";
                 isServerIPValid = false;
