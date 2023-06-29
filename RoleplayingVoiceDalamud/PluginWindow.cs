@@ -131,8 +131,10 @@ namespace RoleplayingVoice {
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
-                if (InputValidation()) {
-                    if (configuration != null) {
+                if (InputValidation())
+                {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
+                    {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
                         if (clientState.LocalPlayer != null) {
@@ -140,6 +142,15 @@ namespace RoleplayingVoice {
                                 configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                             }
                             configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                        apiKeyValidated = false;
+                        save = true;
+                        if (_manager != null)
+                        {
+                            Task.Run(() => _manager.ApiValidation(apiKey));
+                        }
+                        else
+                        {
+                            managerNull = true;
                         }
                         configuration.IsActive = characterVoiceActive;
                         PluginInterface.SavePluginConfig(configuration);
@@ -164,11 +175,11 @@ namespace RoleplayingVoice {
                     {
                         apiKeyValidated = false;
                         save = true;
-                        try
+                        if (_manager != null)
                         {
                             Task.Run(() => _manager.ApiValidation(apiKey));
                         }
-                        catch (Exception ex)
+                        else
                         {
                             managerNull = true;
                         }
