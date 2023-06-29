@@ -118,7 +118,15 @@ namespace RoleplayingVoice {
                                 if (senderStrings.Length > 2) {
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
-                                    Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage));
+                                    bool audioFocus = false;
+                                    if (clientState.LocalPlayer.TargetObject != null) {
+                                        if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
+                                            audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
+                                        }
+                                    } else {
+                                        audioFocus = true;
+                                    }
+                                    Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage, audioFocus ? 1f : 0.5f));
                                 }
                             }
                             break;
