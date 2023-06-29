@@ -86,14 +86,16 @@ namespace RoleplayingVoice {
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
-            if (!_networkedClient.Connected) {
-                try {
-                    _networkedClient.Start();
-                } catch {
-
-                }
-            }
             if (_roleplayingVoiceManager != null) {
+                if (_networkedClient != null) {
+                    if (!_networkedClient.Connected) {
+                        try {
+                            _networkedClient.Start();
+                        } catch {
+
+                        }
+                    }
+                }
                 if (!string.IsNullOrEmpty(config.CharacterName) && config.IsActive) {
                     switch (type) {
                         case Dalamud.Game.Text.XivChatType.Say:
