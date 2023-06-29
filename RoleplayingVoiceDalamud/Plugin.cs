@@ -63,8 +63,8 @@ namespace RoleplayingVoice {
             // Load all of our commands
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
-            chat.ChatMessage += Chat_ChatMessage;
             window.Toggle();
+            chat.ChatMessage += Chat_ChatMessage;
         }
 
         private void UiBuilder_OpenConfigUi() {
