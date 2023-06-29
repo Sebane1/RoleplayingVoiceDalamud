@@ -87,7 +87,7 @@ namespace RoleplayingVoice {
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
-            if (_roleplayingVoiceManager != null) {
+            if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
                 if (_networkedClient != null) {
                     if (!_networkedClient.Connected) {
                         try {
@@ -137,7 +137,7 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
+                if (_roleplayingVoiceManager == null && !string.IsNullOrEmpty(config.ApiKey) || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey)) {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                     _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                     window.Manager = _roleplayingVoiceManager;
