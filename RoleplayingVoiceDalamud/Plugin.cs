@@ -68,6 +68,7 @@ namespace RoleplayingVoice {
         }
 
         private void UiBuilder_OpenConfigUi() {
+            window.RefreshVoices();
             window.Toggle();
         }
 
