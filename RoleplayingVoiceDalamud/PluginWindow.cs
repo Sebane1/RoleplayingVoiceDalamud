@@ -75,11 +75,10 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            if (!string.IsNullOrEmpty(configuration.ApiKey)){
-                ImGui.Text("Character Name");
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.InputText("##characterName", ref characterName, 2000);
-
+            ImGui.Text("Character Name");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.InputText("##characterName", ref characterName, 2000);
+            if (!string.IsNullOrEmpty(configuration.ApiKey)) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
