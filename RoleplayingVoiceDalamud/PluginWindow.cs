@@ -97,8 +97,8 @@ namespace RoleplayingVoice {
                     if (configuration != null) {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
-                        configuration.CharacterName = characterName;
-                        configuration.CharacterVoice = characterVoice;
+                        configuration.CharacterName = characterName != null ? characterName : "";
+                        configuration.CharacterVoice = characterVoice != null ? characterName : "";
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
@@ -178,8 +178,8 @@ namespace RoleplayingVoice {
                     if (InputValidation()) {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
-                        configuration.CharacterName = characterName;
-                        configuration.CharacterVoice = characterVoice;
+                        configuration.CharacterName = characterName != null ? characterName : "";
+                        configuration.CharacterVoice = characterVoice != null ? characterName : "";
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInteface.SavePluginConfig(configuration);
