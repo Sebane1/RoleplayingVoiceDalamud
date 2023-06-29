@@ -59,7 +59,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        public DalamudPluginInterface PluginInteface { get; internal set; }
+        public DalamudPluginInterface PluginInterface { get; internal set; }
         public RoleplayingVoiceManager Manager {
             get => _manager; set {
                 _manager = value;
@@ -75,20 +75,21 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            ImGui.Text("Character Name");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##characterName", ref characterName, 2000);
+            if (!string.IsNullOrEmpty(configuration.ApiKey)){
+                ImGui.Text("Character Name");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.InputText("##characterName", ref characterName, 2000);
 
-            if (voiceComboBox != null && _voiceList != null) {
-                if (_voiceList.Length > 0) {
-                    ImGui.Text("Voice");
-                    voiceComboBox.Draw();
+                if (voiceComboBox != null && _voiceList != null) {
+                    if (_voiceList.Length > 0) {
+                        ImGui.Text("Voice");
+                        voiceComboBox.Draw();
+                    }
                 }
+                ImGui.Text("Is Active");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
             }
-            ImGui.Text("Is Active");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-
             var originPos = ImGui.GetCursorPos();
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
@@ -100,8 +101,8 @@ namespace RoleplayingVoice {
                         configuration.CharacterName = characterName != null ? characterName : "";
                         configuration.CharacterVoice = characterVoice != null ? characterName : "";
                         configuration.IsActive = characterVoiceActive;
+                        PluginInterface.SavePluginConfig(configuration);
                         configuration.Save();
-                        PluginInteface.SavePluginConfig(configuration);
                         RefreshVoices();
                         SizeYChanged = false;
                         changedSize = null;
@@ -182,7 +183,7 @@ namespace RoleplayingVoice {
                         configuration.CharacterVoice = characterVoice != null ? characterName : "";
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
-                        PluginInteface.SavePluginConfig(configuration);
+                        PluginInterface.SavePluginConfig(configuration);
                         SizeYChanged = false;
                         changedSize = null;
                         Size = initialSize;

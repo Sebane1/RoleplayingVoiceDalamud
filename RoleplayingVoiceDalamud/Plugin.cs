@@ -43,7 +43,7 @@ namespace RoleplayingVoice {
 
             window = this.pluginInterface.Create<PluginWindow>();
             window.Configuration = this.config;
-            window.PluginInteface = this.pluginInterface;
+            window.PluginInterface = this.pluginInterface;
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
