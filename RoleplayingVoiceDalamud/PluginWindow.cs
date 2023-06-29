@@ -203,7 +203,7 @@ namespace RoleplayingVoice {
             }
 
             // AsciiLetter is A-Z and a-z, hence the extra check for space
-            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' ')) {
+            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' ' || c == '\'')) {
                 characterNameErrorMessage = "Invalid Character Name! Please check the input.";
                 isCharacterNameValid = false;
             } else {
