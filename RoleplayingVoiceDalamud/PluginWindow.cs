@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -111,7 +112,7 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            if (!string.IsNullOrEmpty(configuration.ApiKey) && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && clientState.LocalPlayer != null) {
+            if (!string.IsNullOrEmpty(configuration.ApiKey) && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
@@ -175,10 +176,10 @@ namespace RoleplayingVoice {
                 IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
-            /*if (!apiKeyValidated)
+            if (!apiKeyValidated)
             {
                 Task.Run(() => _manager.ApiValidation(apiKey));
-            }*/
+            }
             ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 // Calculate the number of lines taken by the wrapped text
@@ -300,6 +301,7 @@ namespace RoleplayingVoice {
                 apiKeyErrorMessage = "Invalid API Key! Please check the input.";
                 isapiKeyValid = false;
             }
+            apiKeyValidated = true;
         }
 
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
