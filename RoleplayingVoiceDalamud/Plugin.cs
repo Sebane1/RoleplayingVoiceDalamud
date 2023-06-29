@@ -7,6 +7,7 @@ using FFXIVLooseTextureCompiler.Networking;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -46,7 +47,7 @@ namespace RoleplayingVoice {
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
-            if (!string.IsNullOrEmpty(config.ApiKey)) {
+            if (!string.IsNullOrEmpty(config.ApiKey) && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 window.Manager = _roleplayingVoiceManager;
@@ -136,7 +137,7 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey) {
+                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                     _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                     window.Manager = _roleplayingVoiceManager;
