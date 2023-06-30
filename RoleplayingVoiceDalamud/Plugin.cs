@@ -47,11 +47,9 @@ namespace RoleplayingVoice {
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
-            if (!string.IsNullOrEmpty(config.ApiKey) && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
-                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-                window.Manager = _roleplayingVoiceManager;
-            }
+            _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+            _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+            window.Manager = _roleplayingVoiceManager;
 
             if (window is not null) {
                 this.windowSystem.AddWindow(window);
@@ -137,7 +135,8 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null && !string.IsNullOrEmpty(config.ApiKey) || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey)) {
+                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey))
+                {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                     _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                     window.Manager = _roleplayingVoiceManager;

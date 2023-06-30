@@ -17,9 +17,9 @@ namespace RoleplayingVoice {
         private string apiKey = "";
         private string characterVoice = "";
         private string serverIP = "";
-        private string serverIPErrorMessage = "";
-        private string characterNameErrorMessage = "";
-        private string apiKeyErrorMessage = "";
+        private string serverIPErrorMessage = string.Empty;
+        private string characterNameErrorMessage = string.Empty;
+        private string apiKeyErrorMessage = string.Empty;
         private string[] _voiceList = new string[1] { "" };
         private bool isServerIPValid = false;
         private bool isCharacterNameValid = false;
@@ -116,16 +116,18 @@ namespace RoleplayingVoice {
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
             if (!string.IsNullOrEmpty(configuration.ApiKey) && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
+                RefreshVoices();
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
-                        voiceComboBox.Draw();                    }
+                        voiceComboBox.Draw();
+                    }
                 }
                 ImGui.Text("Is Active");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
             }
-            var testComboBoxPreButtons = ImGui.GetCursorPos();
+
             var originPos = ImGui.GetCursorPos();
             // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
@@ -142,6 +144,11 @@ namespace RoleplayingVoice {
                                 configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                             }
                             configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                        }
+                        configuration.IsActive = characterVoiceActive;
+                        PluginInterface.SavePluginConfig(configuration);
+                        configuration.Save();
+                        RefreshVoices();
                         apiKeyValidated = false;
                         save = true;
                         if (_manager != null)
@@ -152,14 +159,15 @@ namespace RoleplayingVoice {
                         {
                             managerNull = true;
                         }
-                        configuration.IsActive = characterVoiceActive;
-                        PluginInterface.SavePluginConfig(configuration);
-                        configuration.Save();
-                        RefreshVoices();
-                        SizeYChanged = false;
-                        changedSize = null;
-                        Size = initialSize;
                     }
+                    else if (string.IsNullOrEmpty(apiKey))
+                    {
+                        isapiKeyValid = false;
+                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                    }
+                    SizeYChanged = false;
+                    changedSize = null;
+                    Size = initialSize;
                 }
             }
             ImGui.SetCursorPos(originPos);
@@ -194,16 +202,19 @@ namespace RoleplayingVoice {
             if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
             {
                 Task.Run(() => _manager.ApiValidation(apiKey));
+                InputValidation();
                 runOnLaunch = false;
             }
             else if (string.IsNullOrEmpty(apiKey))
             {
+                if (runOnLaunch)
+                {
+                    InputValidation();
+                }
                 apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 runOnLaunch = false;
             }
-            var testPostButtons = ImGui.GetCursorPos();
             ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
-            var testStartChild = ImGui.GetCursorPos();
             if (!isServerIPValid) {
                 // Calculate the number of lines taken by the wrapped text
                 var requiredY = ImGui.CalcTextSize(serverIPErrorMessage).Y + 1f;
@@ -223,10 +234,9 @@ namespace RoleplayingVoice {
                     Size = changedSize;
                 }
             }
-            if (!isapiKeyValid && string.IsNullOrEmpty(apiKey))
+            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
             {
                 // Calculate the number of lines taken by the wrapped text
-                var testChildAPI = ImGui.GetCursorPos();
                 var requiredY = ImGui.CalcTextSize(apiKeyErrorMessage).Y + 1f;
                 var availableY = ImGui.GetContentRegionAvail().Y;
                 var initialH = ImGui.GetCursorPos().Y;
@@ -306,8 +316,7 @@ namespace RoleplayingVoice {
                 characterNameErrorMessage = string.Empty;
                 isCharacterNameValid = true;
             }
-
-            if (isServerIPValid && isCharacterNameValid)// && isapiKeyValid && apiKeyValidated)
+            if (isServerIPValid && isCharacterNameValid)
             {
                 return true;
             }
