@@ -89,6 +89,8 @@ namespace RoleplayingVoice {
             }
         }
 
+        public Plugin PluginReference { get; internal set; }
+
         private void ClientState_Logout(object sender, EventArgs e) {
             characterVoice = "None";
             _loggedIn = false;
@@ -174,6 +176,9 @@ namespace RoleplayingVoice {
                     {
                         apiKeyValidated = false;
                         save = true;
+                        if(_manager == null) {
+                            PluginReference.InitialzeManager();
+                        }
                         if (_manager != null)
                         {
                             managerNullMessage = string.Empty;
