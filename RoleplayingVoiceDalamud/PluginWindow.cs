@@ -114,6 +114,11 @@ namespace RoleplayingVoice {
                 ImGui.Text("Is Active");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
+
+                if (_manager != null && _manager.Info != null) {
+                    ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                    ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
+                }
             }
             var originPos = ImGui.GetCursorPos();
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
@@ -254,6 +259,7 @@ namespace RoleplayingVoice {
         public async void RefreshVoices() {
             if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
+                _manager.RefreshElevenlabsSubscriptionInfo();
             }
             if (clientState.LocalPlayer != null) {
                 if (configuration.Characters == null) {
