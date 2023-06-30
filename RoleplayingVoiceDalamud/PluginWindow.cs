@@ -181,6 +181,20 @@ namespace RoleplayingVoice {
                 {
                     if (configuration != null && !string.IsNullOrEmpty(apiKey))
                     {
+                        configuration.ConnectionIP = serverIP;
+                        configuration.ApiKey = apiKey;
+                        if (clientState.LocalPlayer != null)
+                        {
+                            if (configuration.Characters == null)
+                            {
+                                configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                            }
+                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                        }
+                        configuration.IsActive = characterVoiceActive;
+                        PluginInterface.SavePluginConfig(configuration);
+                        configuration.Save();
+                        RefreshVoices();
                         apiKeyValidated = false;
                         save = true;
                         if (_manager != null)
@@ -278,24 +292,6 @@ namespace RoleplayingVoice {
             // Place button in bottom right + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
-            if (ImGui.Button("Close")) {
-                // Because we don't trust the user
-                if (configuration != null) {
-                    if (InputValidation()) {
-                        configuration.ConnectionIP = serverIP;
-                        configuration.ApiKey = apiKey;
-                        configuration.CharacterName = characterName != null ? characterName : "";
-                        configuration.CharacterVoice = characterVoice != null ? characterVoice : "";
-                        configuration.IsActive = characterVoiceActive;
-                        configuration.Save();
-                        PluginInterface.SavePluginConfig(configuration);
-                        SizeYChanged = false;
-                        changedSize = null;
-                        Size = initialSize;
-                        IsOpen = false;
-                    }
-                }
-            }
             ImGui.EndChild();
         }
 
@@ -307,16 +303,7 @@ namespace RoleplayingVoice {
                 serverIPErrorMessage = string.Empty;
                 isServerIPValid = true;
             }
-
-            // AsciiLetter is A-Z and a-z, hence the extra check for space
-            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' ' || c == '\'')) {
-                characterNameErrorMessage = "Invalid Character Name! Please check the input.";
-                isCharacterNameValid = false;
-            } else {
-                characterNameErrorMessage = string.Empty;
-                isCharacterNameValid = true;
-            }
-            if (isServerIPValid && isCharacterNameValid)
+            if (isServerIPValid)
             {
                 return true;
             }
@@ -340,8 +327,14 @@ namespace RoleplayingVoice {
             {
                 configuration.ConnectionIP = serverIP;
                 configuration.ApiKey = apiKey;
-                configuration.CharacterName = characterName != null ? characterName : "";
-                configuration.CharacterVoice = characterVoice != null ? characterVoice : "";
+                if (clientState.LocalPlayer != null)
+                {
+                    if (configuration.Characters == null)
+                    {
+                        configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                    }
+                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                }
                 configuration.IsActive = characterVoiceActive;
                 PluginInterface.SavePluginConfig(configuration);
                 configuration.Save();
