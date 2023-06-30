@@ -72,6 +72,15 @@ namespace RoleplayingVoice {
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
             chat.ChatMessage += Chat_ChatMessage;
+            if (_networkedClient != null) {
+                if (!_networkedClient.Connected) {
+                    try {
+                        Task.Run(() => _networkedClient.Start());
+                    } catch {
+
+                    }
+                }
+            }
         }
 
         private void UiBuilder_OpenConfigUi() {
@@ -101,17 +110,8 @@ namespace RoleplayingVoice {
                 }
 
                 // Let the user be fully logged in before we start working.
-                if (stopwatch.ElapsedMilliseconds > 30000) {
-                    if (_networkedClient != null) {
-                        if (!_networkedClient.Connected) {
-                            try {
-                                _networkedClient.Start();
-                                stopwatch.Stop();
-                            } catch {
-
-                            }
-                        }
-                    }
+                if (stopwatch.ElapsedMilliseconds > 5000) {
+                    stopwatch.Stop();
                     if (config.IsActive) {
                         switch (type) {
                             case Dalamud.Game.Text.XivChatType.Say:
@@ -156,6 +156,9 @@ namespace RoleplayingVoice {
             if (config != null) {
                 if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey)) {
                     InitialzeManager();
+                }
+                if (_networkedClient != null) {
+                    _networkedClient.UpdateIPAddress(config.ConnectionIP);
                 }
             }
         }
