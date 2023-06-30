@@ -4,12 +4,10 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
-using ImGuiNET;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
 using System.Linq;
-using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -49,7 +47,8 @@ namespace RoleplayingVoice {
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
-            if (!string.IsNullOrEmpty(config.ApiKey)) {
+            if (config.ApiKey != null)
+            {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 window.Manager = _roleplayingVoiceManager;
@@ -89,7 +88,7 @@ namespace RoleplayingVoice {
         private void Chat_ChatMessage(Dalamud.Game.Text.XivChatType type, uint senderId,
             ref Dalamud.Game.Text.SeStringHandling.SeString sender,
             ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled) {
-            if (_roleplayingVoiceManager != null) {
+            if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
                 if (_networkedClient != null) {
                     if (!_networkedClient.Connected) {
                         try {
@@ -117,17 +116,24 @@ namespace RoleplayingVoice {
                                 
                                 Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                     config.Characters[clientState.LocalPlayer.Name.TextValue], type == Dalamud.Game.Text.XivChatType.CustomEmote));
-                            } else {
+                            }
+                            else
+                            {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
-                                if (senderStrings.Length > 2) {
+                                if (senderStrings.Length > 2)
+                                {
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
                                     bool audioFocus = false;
-                                    if (clientState.LocalPlayer.TargetObject != null) {
-                                        if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
+                                    if (clientState.LocalPlayer.TargetObject != null)
+                                    {
+                                        if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player)
+                                        {
                                             audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
                                         }
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         audioFocus = true;
                                     }
                                     Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage, audioFocus ? 1f : 0.5f));
@@ -140,7 +146,8 @@ namespace RoleplayingVoice {
         }
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey) {
+                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey))
+                {
                     _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                     _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                     window.Manager = _roleplayingVoiceManager;

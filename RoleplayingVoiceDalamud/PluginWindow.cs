@@ -2,29 +2,35 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoiceCore;
 using System;
 using System.Linq;
 using System.Net;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
+        RoleplayingVoiceManager _manager = null;
+        BetterComboBox voiceComboBox;
         private string apiKey = "";
         private string characterVoice = "";
         private string serverIP = "";
-        private string serverIPErrorMessage = "";
-        private string characterNameErrorMessage = "";
-        private string apiKeyErrorMessage = "";
-        private bool isServerIPValid = true;
-        private bool isCharacterNameValid = true;
-        private bool isapiKeyValid = true;
-        private bool characterVoiceActive = false;
-        RoleplayingVoiceManager _manager = null;
+        private string serverIPErrorMessage = string.Empty;
+        private string apiKeyErrorMessage = string.Empty;
+        private string managerNullMessage = string.Empty;
         private string[] _voiceList = new string[1] { "" };
-        BetterComboBox voiceComboBox;
+        private bool isServerIPValid = false;
+        private bool isapiKeyValid = false;
+        private bool characterVoiceActive = false;
+        private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
+        private bool runOnLaunch = true;
+        private bool save = false;
+        private bool managerNull;
+        private bool voiceComboBoxVisible;
         private Vector2? initialSize;
         private Vector2? changedSize;
         private ClientState clientState;
@@ -53,16 +59,24 @@ namespace RoleplayingVoice {
                 configuration = value;
                 if (configuration != null) {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
-                    apiKey = configuration.ApiKey != null ? configuration.ApiKey : "";
+                    apiKey = configuration.ApiKey != null && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
                     characterVoiceActive = configuration.IsActive;
                 }
             }
         }
 
         public DalamudPluginInterface PluginInterface { get; internal set; }
-        public RoleplayingVoiceManager Manager {
-            get => _manager; set {
+        public RoleplayingVoiceManager Manager
+        {
+            get => _manager; set
+            {
                 _manager = value;
+                if (_manager != null)
+                {
+                    managerNullMessage = string.Empty;
+                    managerNull = false;
+                    _manager.OnApiValidationComplete += _manager_OnApiValidationComplete;
+                }
             }
         }
 
@@ -81,21 +95,26 @@ namespace RoleplayingVoice {
         }
 
         private void ClientState_Login(object sender, EventArgs e) {
-            if (configuration.Characters != null) {
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+            if (configuration.Characters != null)
+            {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
+                {
                     characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
                         != null ? configuration.Characters[clientState.LocalPlayer.Name.TextValue] : "";
-                } else {
+                }
+                else
+                {
                     characterVoice = "None";
                 }
-            } else {
+            }
+            else
+            {
                 characterVoice = "None";
             }
             _loggedIn = true;
             RefreshVoices();
         }
-
-        public override async void Draw() {
+        public override void Draw() {
             ImGui.Text("Server IP");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##serverIP", ref serverIP, 2000);
@@ -104,132 +123,135 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            if (!string.IsNullOrEmpty(configuration.ApiKey) && clientState.LocalPlayer != null) {
+            if (!string.IsNullOrEmpty(configuration.ApiKey) && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
                         voiceComboBox.Draw();
+                        voiceComboBoxVisible = true;
                     }
+                    else
+                    {
+                        voiceComboBoxVisible = false;
+                    }
+                }
+                else
+                {
+                    voiceComboBoxVisible = false;
                 }
                 ImGui.Text("Is Active");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-
-                if (_manager != null && _manager.Info != null) {
+                if (_manager != null && _manager.Info != null)
+                {
                     ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                     ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
                 }
             }
+            else
+            {
+                voiceComboBoxVisible = false;
+            }
+            if(voiceComboBox.Contents.Length == 1 && voiceComboBoxVisible)
+            {
+                foreach (string voice in voiceComboBox.Contents)
+                {
+                    if (voice.Equals("") || voice.Equals("None"))
+                    {
+                        RefreshVoices();
+                        voiceComboBoxVisible = false;
+                    }
+                }
+            }
             var originPos = ImGui.GetCursorPos();
+            // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
-                if (InputValidation()) {
-                    if (configuration != null) {
-                        configuration.ConnectionIP = serverIP;
-                        configuration.ApiKey = apiKey;
-                        if (clientState.LocalPlayer != null) {
-                            if (configuration.Characters == null) {
-                                configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
-                            }
-                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                if (InputValidation())
+                {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
+                    {
+                        apiKeyValidated = false;
+                        save = true;
+                        if (_manager != null)
+                        {
+                            managerNullMessage = string.Empty;
+                            Task.Run(() => _manager.ApiValidation(apiKey));
                         }
-                        configuration.IsActive = characterVoiceActive;
-                        PluginInterface.SavePluginConfig(configuration);
-                        configuration.Save();
-                        RefreshVoices();
-                        SizeYChanged = false;
-                        changedSize = null;
-                        Size = initialSize;
+                        else
+                        {
+                            managerNullMessage = "Somehow, the manager went missing. Contact developer!";
+                            managerNull = true;
+                        }
                     }
+                    else if (string.IsNullOrEmpty(apiKey))
+                    {
+                        isapiKeyValid = false;
+                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                    }
+                    SizeYChanged = false;
+                    changedSize = null;
+                    Size = initialSize;
                 }
             }
             ImGui.SetCursorPos(originPos);
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
-            if (!isServerIPValid) {
-                // Calculate the number of lines taken by the wrapped text
-                var requiredY = ImGui.CalcTextSize(serverIPErrorMessage).Y + 1f;
-                var availableY = ImGui.GetContentRegionAvail().Y;
-                var initialH = ImGui.GetCursorPos().Y;
-                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), serverIPErrorMessage);
-                ImGui.PopTextWrapPos();
-                var changedH = ImGui.GetCursorPos().Y;
-                float textHeight = changedH - initialH;
-                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
-
-                // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
-                    SizeYChanged = true;
-                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
-                    Size = changedSize;
-                }
-            }
-            if (!isapiKeyValid) {
-                // Calculate the number of lines taken by the wrapped text
-                var requiredY = ImGui.CalcTextSize(apiKeyErrorMessage).Y + 1f;
-                var availableY = ImGui.GetContentRegionAvail().Y;
-                var initialH = ImGui.GetCursorPos().Y;
-                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), apiKeyErrorMessage);
-                ImGui.PopTextWrapPos();
-                var changedH = ImGui.GetCursorPos().Y;
-                float textHeight = changedH - initialH;
-                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
-
-                // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
-                    SizeYChanged = true;
-                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
-                    Size = changedSize;
-                }
-            }
-            if (!isCharacterNameValid) {
-                // Calculate the number of lines taken by the wrapped text
-                var requiredY = ImGui.CalcTextSize(characterNameErrorMessage).Y + 1f;
-                var availableY = ImGui.GetContentRegionAvail().Y;
-                var initialH = ImGui.GetCursorPos().Y;
-                ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
-                ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), characterNameErrorMessage);
-                ImGui.PopTextWrapPos();
-                var changedH = ImGui.GetCursorPos().Y;
-                float textHeight = changedH - initialH;
-                int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
-
-                // Check height and increase if necessarry
-                if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
-                    SizeYChanged = true;
-                    changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
-                    Size = changedSize;
-                }
-            }
-            ImGui.EndChild();
-            // Place button in bottom right + some padding / extra space
+            // Place close button in bottom right + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
-            if (ImGui.Button("Close")) {
+            if (ImGui.Button("Close"))
+            {
                 // Because we don't trust the user
-                if (configuration != null) {
-                    if (InputValidation()) {
-                        configuration.ConnectionIP = serverIP;
-                        configuration.ApiKey = apiKey;
-                        if (clientState.LocalPlayer != null) {
-                            if (configuration.Characters == null) {
-                                configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
-                            }
-                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                if (InputValidation())
+                {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
+                    {
+                        apiKeyValidated = false;
+                        save = true;
+                        if (_manager != null)
+                        {
+                            Task.Run(() => _manager.ApiValidation(apiKey));
                         }
-                        configuration.IsActive = characterVoiceActive;
-                        configuration.Save();
-                        PluginInterface.SavePluginConfig(configuration);
-                        SizeYChanged = false;
-                        changedSize = null;
-                        Size = initialSize;
-                        IsOpen = false;
+                        else
+                        {
+                            managerNull = true;
+                        }
                     }
                 }
+                SizeYChanged = false;
+                changedSize = null;
+                Size = initialSize;
+                IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
+            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
+            {
+                Task.Run(() => _manager.ApiValidation(apiKey));
+                InputValidation();
+                runOnLaunch = false;
+            }
+            else if (string.IsNullOrEmpty(apiKey))
+            {
+                if (runOnLaunch)
+                {
+                    InputValidation();
+                }
+                apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                runOnLaunch = false;
+            }
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
+            if (!isServerIPValid) {
+                ErrorMessage(serverIPErrorMessage);
+            }
+            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
+            {
+                ErrorMessage(apiKeyErrorMessage);
+            }
+            if (managerNull)
+            {
+                ErrorMessage(managerNullMessage);
+            }
+            ImGui.EndChild();
         }
 
         private bool InputValidation() {
@@ -240,11 +262,44 @@ namespace RoleplayingVoice {
                 serverIPErrorMessage = string.Empty;
                 isServerIPValid = true;
             }
+            if (isServerIPValid)
+            {
+                return true;
+            }
+            return false;
+        }
 
-            //TODO: Api validation
-            if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
-                return false;
-            return true;
+       private void _manager_OnApiValidationComplete(object sender, ValidationResult e)
+        {
+            if (e.ValidationSuceeded && !apiKeyValidated)
+            {
+                apiKeyErrorMessage = string.Empty;
+                isapiKeyValid = true;
+            }
+            else if (!e.ValidationSuceeded && !apiKeyValidated)
+            {
+                apiKeyErrorMessage = "Invalid API Key! Please check the input.";
+                isapiKeyValid = false;
+            }
+            apiKeyValidated = true;
+            if (isapiKeyValid && save && apiKeyValidated)
+            {
+                configuration.ConnectionIP = serverIP;
+                configuration.ApiKey = apiKey;
+                if (clientState.LocalPlayer != null)
+                {
+                    if (configuration.Characters == null)
+                    {
+                        configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                    }
+                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                }
+                configuration.IsActive = characterVoiceActive;
+                PluginInterface.SavePluginConfig(configuration);
+                configuration.Save();
+                RefreshVoices();
+                save = false;
+            }
         }
 
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
@@ -256,21 +311,51 @@ namespace RoleplayingVoice {
             return initial;
         }
 
-        public async void RefreshVoices() {
-            if (_manager != null) {
+        private void ErrorMessage (string message)
+        {
+            var requiredY = ImGui.CalcTextSize(message).Y + 1f;
+            var availableY = ImGui.GetContentRegionAvail().Y;
+            var initialH = ImGui.GetCursorPos().Y;
+            ImGui.PushTextWrapPos(ImGui.GetContentRegionAvail().X);
+            ImGui.TextColored(new Vector4(1f, 0f, 0f, 1f), message);
+            ImGui.PopTextWrapPos();
+            var changedH = ImGui.GetCursorPos().Y;
+            float textHeight = changedH - initialH;
+            int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
+
+            // Check height and increase if necessarry
+            if (availableY - requiredY * textLines < 1 && !SizeYChanged)
+            {
+                SizeYChanged = true;
+                changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
+                Size = changedSize;
+            }
+        }
+
+        public async void RefreshVoices()
+        {
+            if (_manager != null)
+            {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
             }
-            if (clientState.LocalPlayer != null) {
-                if (configuration.Characters == null) {
+            if (clientState.LocalPlayer != null)
+            {
+                if (configuration.Characters == null)
+                {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                 }
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                    if (voiceComboBox != null) {
-                        if (_voiceList != null) {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
+                {
+                    if (voiceComboBox != null)
+                    {
+                        if (_voiceList != null)
+                        {
                             voiceComboBox.Contents = _voiceList;
-                            for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                            for (int i = 0; i < voiceComboBox.Contents.Length; i++)
+                            {
+                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue]))
+                                {
                                     voiceComboBox.SelectedIndex = i;
                                     break;
                                 }
@@ -280,7 +365,8 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        internal class BetterComboBox {
+        internal class BetterComboBox
+        {
             string _label = "";
             int _width = 0;
             int index = -1;
@@ -289,13 +375,16 @@ namespace RoleplayingVoice {
             string[] _contents = new string[1] { "" };
             public event EventHandler OnSelectedIndexChanged;
             public string Text { get { return index > -1 ? _contents[index] : ""; } }
-            public BetterComboBox(string _label, string[] contents, int index, int width = 100) {
-                if (Label != null) {
+            public BetterComboBox(string _label, string[] contents, int index, int width = 100)
+            {
+                if (Label != null)
+                {
                     this._label = _label;
                 }
                 this._width = width;
                 this.index = index;
-                if (contents != null) {
+                if (contents != null)
+                {
                     this._contents = contents;
                 }
             }
@@ -306,17 +395,23 @@ namespace RoleplayingVoice {
             public string Label { get => _label; set => _label = value; }
             public bool Enabled { get => _enabled; set => _enabled = value; }
 
-            public void Draw() {
-                if (_enabled) {
+            public void Draw()
+            {
+                if (_enabled)
+                {
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                    if (_label != null && _contents != null) {
-                        if (_contents.Length > 0) {
+                    if (_label != null && _contents != null)
+                    {
+                        if (_contents.Length > 0)
+                        {
                             ImGui.Combo("##" + _label, ref index, _contents, _contents.Length);
                         }
                     }
                 }
-                if (index != _lastIndex) {
-                    if (OnSelectedIndexChanged != null) {
+                if (index != _lastIndex)
+                {
+                    if (OnSelectedIndexChanged != null)
+                    {
                         OnSelectedIndexChanged.Invoke(this, EventArgs.Empty);
                     }
                 }
