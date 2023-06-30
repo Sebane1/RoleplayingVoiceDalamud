@@ -47,9 +47,12 @@ namespace RoleplayingVoice {
             if (_networkedClient == null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
             }
-            _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
-            _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            window.Manager = _roleplayingVoiceManager;
+            if (config.ApiKey != null)
+            {
+                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+                window.Manager = _roleplayingVoiceManager;
+            }
 
             if (window is not null) {
                 this.windowSystem.AddWindow(window);
@@ -95,7 +98,8 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-                if (!string.IsNullOrEmpty(config.CharacterName) && config.IsActive) {
+                if (config.IsActive)
+                {
                     switch (type) {
                         case Dalamud.Game.Text.XivChatType.Say:
                         case Dalamud.Game.Text.XivChatType.Shout:
@@ -106,23 +110,31 @@ namespace RoleplayingVoice {
                         case Dalamud.Game.Text.XivChatType.CrossParty:
                         case Dalamud.Game.Text.XivChatType.TellIncoming:
                         case Dalamud.Game.Text.XivChatType.TellOutgoing:
-                            if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue)) {
-                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
+                            if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue))
+                            {
+                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(clientState.LocalPlayer.Name.TextValue)).Split(" ");
                                 string playerSender = senderStrings[0] + " " + senderStrings[2];
                                 string playerMessage = message.TextValue;
                                 Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                     config.Characters[clientState.LocalPlayer.Name.TextValue], type == Dalamud.Game.Text.XivChatType.CustomEmote));
-                            } else {
+                            }
+                            else
+                            {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
-                                if (senderStrings.Length > 2) {
+                                if (senderStrings.Length > 2)
+                                {
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
                                     bool audioFocus = false;
-                                    if (clientState.LocalPlayer.TargetObject != null) {
-                                        if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
+                                    if (clientState.LocalPlayer.TargetObject != null)
+                                    {
+                                        if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player)
+                                        {
                                             audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
                                         }
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         audioFocus = true;
                                     }
                                     Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage, audioFocus ? 1f : 0.5f));
