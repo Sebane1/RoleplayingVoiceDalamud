@@ -8,6 +8,7 @@ using ImGuiNET;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
+using System.Linq;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -42,6 +43,7 @@ namespace RoleplayingVoice {
             this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
 
             window = this.pluginInterface.Create<PluginWindow>();
+            window.ClientState = this.clientState;
             window.Configuration = this.config;
             window.PluginInterface = this.pluginInterface;
             if (_networkedClient == null) {
@@ -108,12 +110,12 @@ namespace RoleplayingVoice {
                         case Dalamud.Game.Text.XivChatType.CrossParty:
                         case Dalamud.Game.Text.XivChatType.TellIncoming:
                         case Dalamud.Game.Text.XivChatType.TellOutgoing:
-                            if (sender.TextValue.Contains(config.CharacterName)) {
+                            if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue)) {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
                                 string playerSender = senderStrings[0] + " " + senderStrings[2];
                                 string playerMessage = message.TextValue;
                                 Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
-                                    config.CharacterVoice, type == Dalamud.Game.Text.XivChatType.CustomEmote));
+                                    config.Characters[clientState.LocalPlayer.Name.TextValue], type == Dalamud.Game.Text.XivChatType.CustomEmote));
                             } else {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
                                 if (senderStrings.Length > 2) {

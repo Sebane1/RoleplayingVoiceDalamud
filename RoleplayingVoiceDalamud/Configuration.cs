@@ -2,6 +2,7 @@
 using Dalamud.Plugin;
 using RoleplayingVoiceCore.AudioRecycler;
 using System;
+using System.Collections.Generic;
 
 namespace RoleplayingVoice {
     public class Configuration : IPluginConfiguration {
@@ -17,6 +18,8 @@ namespace RoleplayingVoice {
         public bool IsActive { get; set; }
 
         public CharacterVoices CharacterVoices { get; set; }
+
+        public Dictionary<string, string> Characters { get; set; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

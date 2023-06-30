@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Game.ClientState;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
 using RoleplayingVoiceCore;
@@ -11,7 +12,6 @@ namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         private string apiKey = "";
-        private string characterName = "";
         private string characterVoice = "";
         private string serverIP = "";
         private string serverIPErrorMessage = "";
@@ -27,6 +27,8 @@ namespace RoleplayingVoice {
         private bool SizeYChanged = false;
         private Vector2? initialSize;
         private Vector2? changedSize;
+        private ClientState clientState;
+        private bool _loggedIn;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -52,8 +54,6 @@ namespace RoleplayingVoice {
                 if (configuration != null) {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null ? configuration.ApiKey : "";
-                    characterName = configuration.CharacterName != null ? configuration.CharacterName : "";
-                    characterVoice = configuration.CharacterVoice != null ? configuration.CharacterVoice : "";
                     characterVoiceActive = configuration.IsActive;
                 }
             }
@@ -66,6 +66,35 @@ namespace RoleplayingVoice {
             }
         }
 
+        internal ClientState ClientState {
+            get => clientState;
+            set {
+                clientState = value;
+                clientState.Login += ClientState_Login;
+                clientState.Logout += ClientState_Logout;
+            }
+        }
+
+        private void ClientState_Logout(object sender, EventArgs e) {
+            characterVoice = "None";
+            _loggedIn = false;
+        }
+
+        private void ClientState_Login(object sender, EventArgs e) {
+            if (configuration.Characters != null) {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
+                        != null ? configuration.Characters[clientState.LocalPlayer.Name.TextValue] : "";
+                } else {
+                    characterVoice = "None";
+                }
+            } else {
+                characterVoice = "None";
+            }
+            _loggedIn = true;
+            RefreshVoices();
+        }
+
         public override async void Draw() {
             ImGui.Text("Server IP");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
@@ -75,10 +104,7 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            ImGui.Text("Character Name");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##characterName", ref characterName, 2000);
-            if (!string.IsNullOrEmpty(configuration.ApiKey)) {
+            if (!string.IsNullOrEmpty(configuration.ApiKey) && clientState.LocalPlayer != null) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
@@ -97,8 +123,12 @@ namespace RoleplayingVoice {
                     if (configuration != null) {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
-                        configuration.CharacterName = characterName != null ? characterName : "";
-                        configuration.CharacterVoice = characterVoice != null ? characterVoice : "";
+                        if (clientState.LocalPlayer != null) {
+                            if (configuration.Characters == null) {
+                                configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                            }
+                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                        }
                         configuration.IsActive = characterVoiceActive;
                         PluginInterface.SavePluginConfig(configuration);
                         configuration.Save();
@@ -178,8 +208,12 @@ namespace RoleplayingVoice {
                     if (InputValidation()) {
                         configuration.ConnectionIP = serverIP;
                         configuration.ApiKey = apiKey;
-                        configuration.CharacterName = characterName != null ? characterName : "";
-                        configuration.CharacterVoice = characterVoice != null ? characterVoice : "";
+                        if (clientState.LocalPlayer != null) {
+                            if (configuration.Characters == null) {
+                                configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                            }
+                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                        }
                         configuration.IsActive = characterVoiceActive;
                         configuration.Save();
                         PluginInterface.SavePluginConfig(configuration);
@@ -202,14 +236,6 @@ namespace RoleplayingVoice {
                 isServerIPValid = true;
             }
 
-            // AsciiLetter is A-Z and a-z, hence the extra check for space
-            if (string.IsNullOrEmpty(characterName) || !characterName.All(c => char.IsAsciiLetter(c) || c == ' ' || c == '\'')) {
-                characterNameErrorMessage = "Invalid Character Name! Please check the input.";
-                isCharacterNameValid = false;
-            } else {
-                characterNameErrorMessage = string.Empty;
-                isCharacterNameValid = true;
-            }
             //TODO: Api validation
             if (!isServerIPValid || !isCharacterNameValid)// || !isapiKeyValid)
                 return false;
@@ -229,13 +255,20 @@ namespace RoleplayingVoice {
             if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
             }
-            if (voiceComboBox != null) {
-                if (_voiceList != null) {
-                    voiceComboBox.Contents = _voiceList;
-                    for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                        if (voiceComboBox.Contents[i].Contains(characterVoice)) {
-                            voiceComboBox.SelectedIndex = i;
-                            break;
+            if (clientState.LocalPlayer != null) {
+                if (configuration.Characters == null) {
+                    configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                }
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    if (voiceComboBox != null) {
+                        if (_voiceList != null) {
+                            voiceComboBox.Contents = _voiceList;
+                            for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                    voiceComboBox.SelectedIndex = i;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
