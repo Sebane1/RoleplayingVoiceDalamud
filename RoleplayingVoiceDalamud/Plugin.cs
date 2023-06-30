@@ -99,7 +99,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-                if (!string.IsNullOrEmpty(config.CharacterName) && config.IsActive) {
+                if (config.IsActive) {
                     switch (type) {
                         case Dalamud.Game.Text.XivChatType.Say:
                         case Dalamud.Game.Text.XivChatType.Shout:
@@ -111,9 +111,10 @@ namespace RoleplayingVoice {
                         case Dalamud.Game.Text.XivChatType.TellIncoming:
                         case Dalamud.Game.Text.XivChatType.TellOutgoing:
                             if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue)) {
-                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
+                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(clientState.LocalPlayer.Name.TextValue)).Split(" ");
                                 string playerSender = senderStrings[0] + " " + senderStrings[2];
                                 string playerMessage = message.TextValue;
+                                
                                 Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                     config.Characters[clientState.LocalPlayer.Name.TextValue], type == Dalamud.Game.Text.XivChatType.CustomEmote));
                             } else {
