@@ -61,7 +61,7 @@ namespace RoleplayingVoice {
             if (window is not null) {
                 this.windowSystem.AddWindow(window);
             }
-
+            window.RequestingReconnect += Window_RequestingReconnect;
             this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
@@ -70,6 +70,10 @@ namespace RoleplayingVoice {
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
             chat.ChatMessage += Chat_ChatMessage;
+        }
+
+        private void Window_RequestingReconnect(object sender, EventArgs e) {
+            AttemptConnection();
         }
 
         private void AttemptConnection() {

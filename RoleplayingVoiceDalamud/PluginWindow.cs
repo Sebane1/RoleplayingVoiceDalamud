@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
+using System;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -35,6 +36,8 @@ namespace RoleplayingVoice {
         private Vector2? changedSize;
         private ClientState clientState;
         private bool _loggedIn;
+
+        public event EventHandler RequestingReconnect; 
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -165,7 +168,10 @@ namespace RoleplayingVoice {
                     }
                 }
             }
-            var originPos = ImGui.GetCursorPos();
+            if (ImGui.Button("Reconnect")) {
+                RequestingReconnect?.Invoke(this, EventArgs.Empty);
+            }
+                var originPos = ImGui.GetCursorPos();
             // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
