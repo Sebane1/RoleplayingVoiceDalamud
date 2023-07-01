@@ -51,9 +51,7 @@ namespace RoleplayingVoice {
             window.Configuration = this.config;
             window.PluginInterface = this.pluginInterface;
             window.PluginReference = this;
-            if (_networkedClient == null) {
-                _networkedClient = new NetworkedClient(config.ConnectionIP);
-            }
+            AttemptConnection();
             if (config.ApiKey != null) {
                 _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
                 _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
@@ -72,6 +70,16 @@ namespace RoleplayingVoice {
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
             chat.ChatMessage += Chat_ChatMessage;
+        }
+
+        private void AttemptConnection() {
+            if (_networkedClient != null) {
+                _networkedClient.Dispose();
+            }
+            _networkedClient = new NetworkedClient(config.ConnectionIP);
+            if (_roleplayingVoiceManager != null) {
+                _roleplayingVoiceManager.NetworkedClient = _networkedClient;
+            }
             if (_networkedClient != null) {
                 if (!_networkedClient.Connected) {
                     try {
@@ -184,6 +192,9 @@ namespace RoleplayingVoice {
                     config.IsActive = false;
                     this.pluginInterface.SavePluginConfig(config);
                     window.Configuration = config;
+                    break;
+                case "reload":
+                    AttemptConnection();
                     break;
                 default:
                     window.RefreshVoices();
