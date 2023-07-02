@@ -36,12 +36,16 @@ namespace RoleplayingVoice {
         private Vector2? changedSize;
         private ClientState clientState;
         private bool _loggedIn;
+        private float _playerCharacterVolume;
+        private float _otherCharacterVolume;
+        private float _unfocusedCharacterVolume;
+        private bool _aggressiveCaching;
 
-        public event EventHandler RequestingReconnect; 
+        public event EventHandler RequestingReconnect;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(295, 379);
+            Size = new Vector2(295, 550);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -62,20 +66,22 @@ namespace RoleplayingVoice {
                 configuration = value;
                 if (configuration != null) {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
-                    apiKey = configuration.ApiKey != null && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
+                    apiKey = configuration.ApiKey != null &&
+                    configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
                     characterVoiceActive = configuration.IsActive;
+                    _playerCharacterVolume = configuration.PlayerCharacterVolume;
+                    _otherCharacterVolume = configuration.OtherCharacterVolume;
+                    _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
+                    _aggressiveCaching = configuration.UseAggressiveSplicing;
                 }
             }
         }
 
         public DalamudPluginInterface PluginInterface { get; internal set; }
-        public RoleplayingVoiceManager Manager
-        {
-            get => _manager; set
-            {
+        public RoleplayingVoiceManager Manager {
+            get => _manager; set {
                 _manager = value;
-                if (_manager != null)
-                {
+                if (_manager != null) {
                     managerNullMessage = string.Empty;
                     managerNull = false;
                     _manager.OnApiValidationComplete += _manager_OnApiValidationComplete;
@@ -100,20 +106,14 @@ namespace RoleplayingVoice {
         }
 
         private void ClientState_Login(object sender, EventArgs e) {
-            if (configuration.Characters != null)
-            {
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
-                {
+            if (configuration.Characters != null) {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
                         != null ? configuration.Characters[clientState.LocalPlayer.Name.TextValue] : "";
-                }
-                else
-                {
+                } else {
                     characterVoice = "None";
                 }
-            }
-            else
-            {
+            } else {
                 characterVoice = "None";
             }
             _loggedIn = true;
@@ -128,41 +128,47 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
-            if (!string.IsNullOrEmpty(configuration.ApiKey) && configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
+            if (!string.IsNullOrEmpty(configuration.ApiKey) &&
+                configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
                         voiceComboBox.Draw();
                         voiceComboBoxVisible = true;
-                    }
-                    else
-                    {
+                    } else {
                         voiceComboBoxVisible = false;
                     }
-                }
-                else
-                {
+                } else {
                     voiceComboBoxVisible = false;
                 }
-                ImGui.Text("Is Active");
+                ImGui.Text("Current Player Voice Volume");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.SliderFloat("##playerSlider", ref _playerCharacterVolume, 0, 1);
+                ImGui.Text("Other Player Voice Volume");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.SliderFloat("##otherSlider", ref _otherCharacterVolume, 0, 1);
+                ImGui.Text("Unfocused Player Voice Volume");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 1);
+
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-                if (_manager != null && _manager.Info != null)
-                {
+                ImGui.SameLine();
+                ImGui.Text("Voice Enabled");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
+                ImGui.SameLine();
+                ImGui.Text("Use Aggressive Caching");
+                if (_manager != null && _manager.Info != null) {
                     ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                     ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
                 }
-            }
-            else
-            {
+            } else {
                 voiceComboBoxVisible = false;
             }
-            if(voiceComboBox.Contents.Length == 1 && voiceComboBoxVisible)
-            {
-                foreach (string voice in voiceComboBox.Contents)
-                {
-                    if (voice.Equals("") || voice.Equals("None"))
-                    {
+            if (voiceComboBox.Contents.Length == 1 && voiceComboBoxVisible) {
+                foreach (string voice in voiceComboBox.Contents) {
+                    if (voice.Equals("") || voice.Equals("None")) {
                         RefreshVoices();
                         voiceComboBoxVisible = false;
                     }
@@ -171,33 +177,26 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Reconnect")) {
                 RequestingReconnect?.Invoke(this, EventArgs.Empty);
             }
-                var originPos = ImGui.GetCursorPos();
+            var originPos = ImGui.GetCursorPos();
             // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
-                if (InputValidation())
-                {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
-                    {
+                if (InputValidation()) {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
                         apiKeyValidated = false;
                         save = true;
-                        if(_manager == null) {
+                        if (_manager == null) {
                             PluginReference.InitialzeManager();
                         }
-                        if (_manager != null)
-                        {
+                        if (_manager != null) {
                             managerNullMessage = string.Empty;
                             Task.Run(() => _manager.ApiValidation(apiKey));
-                        }
-                        else
-                        {
+                        } else {
                             managerNullMessage = "Somehow, the manager went missing. Contact developer!";
                             managerNull = true;
                         }
-                    }
-                    else if (string.IsNullOrEmpty(apiKey))
-                    {
+                    } else if (string.IsNullOrEmpty(apiKey)) {
                         isapiKeyValid = false;
                         apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
@@ -210,21 +209,15 @@ namespace RoleplayingVoice {
             // Place close button in bottom right + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
-            if (ImGui.Button("Close"))
-            {
+            if (ImGui.Button("Close")) {
                 // Because we don't trust the user
-                if (InputValidation())
-                {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
-                    {
+                if (InputValidation()) {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
                         apiKeyValidated = false;
                         save = true;
-                        if (_manager != null)
-                        {
+                        if (_manager != null) {
                             Task.Run(() => _manager.ApiValidation(apiKey));
-                        }
-                        else
-                        {
+                        } else {
                             managerNull = true;
                         }
                     }
@@ -235,16 +228,12 @@ namespace RoleplayingVoice {
                 IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
-            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
-            {
+            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch) {
                 Task.Run(() => _manager.ApiValidation(apiKey));
                 InputValidation();
                 runOnLaunch = false;
-            }
-            else if (string.IsNullOrEmpty(apiKey))
-            {
-                if (runOnLaunch)
-                {
+            } else if (string.IsNullOrEmpty(apiKey)) {
+                if (runOnLaunch) {
                     InputValidation();
                 }
                 apiKeyErrorMessage = "API Key is empty! Please check the input.";
@@ -254,12 +243,10 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
-            {
+            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey)) {
                 ErrorMessage(apiKeyErrorMessage);
             }
-            if (managerNull)
-            {
+            if (managerNull) {
                 ErrorMessage(managerNullMessage);
             }
             ImGui.EndChild();
@@ -273,39 +260,35 @@ namespace RoleplayingVoice {
                 serverIPErrorMessage = string.Empty;
                 isServerIPValid = true;
             }
-            if (isServerIPValid)
-            {
+            if (isServerIPValid) {
                 return true;
             }
             return false;
         }
 
-       private void _manager_OnApiValidationComplete(object sender, ValidationResult e)
-        {
-            if (e.ValidationSuceeded && !apiKeyValidated)
-            {
+        private void _manager_OnApiValidationComplete(object sender, ValidationResult e) {
+            if (e.ValidationSuceeded && !apiKeyValidated) {
                 apiKeyErrorMessage = string.Empty;
                 isapiKeyValid = true;
-            }
-            else if (!e.ValidationSuceeded && !apiKeyValidated)
-            {
+            } else if (!e.ValidationSuceeded && !apiKeyValidated) {
                 apiKeyErrorMessage = "Invalid API Key! Please check the input.";
                 isapiKeyValid = false;
             }
             apiKeyValidated = true;
-            if (isapiKeyValid && save && apiKeyValidated)
-            {
+            if (isapiKeyValid && save && apiKeyValidated) {
                 configuration.ConnectionIP = serverIP;
                 configuration.ApiKey = apiKey;
-                if (clientState.LocalPlayer != null)
-                {
-                    if (configuration.Characters == null)
-                    {
+                if (clientState.LocalPlayer != null) {
+                    if (configuration.Characters == null) {
                         configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                     }
                     configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
                 }
+                configuration.PlayerCharacterVolume = _playerCharacterVolume;
+                configuration.OtherCharacterVolume = _otherCharacterVolume;
+                configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.IsActive = characterVoiceActive;
+                _aggressiveCaching = configuration.UseAggressiveSplicing;
                 PluginInterface.SavePluginConfig(configuration);
                 configuration.Save();
                 RefreshVoices();
@@ -322,8 +305,7 @@ namespace RoleplayingVoice {
             return initial;
         }
 
-        private void ErrorMessage (string message)
-        {
+        private void ErrorMessage(string message) {
             var requiredY = ImGui.CalcTextSize(message).Y + 1f;
             var availableY = ImGui.GetContentRegionAvail().Y;
             var initialH = ImGui.GetCursorPos().Y;
@@ -335,38 +317,28 @@ namespace RoleplayingVoice {
             int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
             // Check height and increase if necessarry
-            if (availableY - requiredY * textLines < 1 && !SizeYChanged)
-            {
+            if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                 SizeYChanged = true;
                 changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                 Size = changedSize;
             }
         }
 
-        public async void RefreshVoices()
-        {
-            if (_manager != null)
-            {
+        public async void RefreshVoices() {
+            if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
             }
-            if (clientState.LocalPlayer != null)
-            {
-                if (configuration.Characters == null)
-                {
+            if (clientState.LocalPlayer != null) {
+                if (configuration.Characters == null) {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                 }
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
-                {
-                    if (voiceComboBox != null)
-                    {
-                        if (_voiceList != null)
-                        {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    if (voiceComboBox != null) {
+                        if (_voiceList != null) {
                             voiceComboBox.Contents = _voiceList;
-                            for (int i = 0; i < voiceComboBox.Contents.Length; i++)
-                            {
-                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue]))
-                                {
+                            for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
                                     voiceComboBox.SelectedIndex = i;
                                     break;
                                 }
@@ -376,8 +348,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        internal class BetterComboBox
-        {
+        internal class BetterComboBox {
             string _label = "";
             int _width = 0;
             int index = -1;
@@ -386,16 +357,13 @@ namespace RoleplayingVoice {
             string[] _contents = new string[1] { "" };
             public event EventHandler OnSelectedIndexChanged;
             public string Text { get { return index > -1 ? _contents[index] : ""; } }
-            public BetterComboBox(string _label, string[] contents, int index, int width = 100)
-            {
-                if (Label != null)
-                {
+            public BetterComboBox(string _label, string[] contents, int index, int width = 100) {
+                if (Label != null) {
                     this._label = _label;
                 }
                 this._width = width;
                 this.index = index;
-                if (contents != null)
-                {
+                if (contents != null) {
                     this._contents = contents;
                 }
             }
@@ -406,23 +374,17 @@ namespace RoleplayingVoice {
             public string Label { get => _label; set => _label = value; }
             public bool Enabled { get => _enabled; set => _enabled = value; }
 
-            public void Draw()
-            {
-                if (_enabled)
-                {
+            public void Draw() {
+                if (_enabled) {
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                    if (_label != null && _contents != null)
-                    {
-                        if (_contents.Length > 0)
-                        {
+                    if (_label != null && _contents != null) {
+                        if (_contents.Length > 0) {
                             ImGui.Combo("##" + _label, ref index, _contents, _contents.Length);
                         }
                     }
                 }
-                if (index != _lastIndex)
-                {
-                    if (OnSelectedIndexChanged != null)
-                    {
+                if (index != _lastIndex) {
+                    if (OnSelectedIndexChanged != null) {
                         OnSelectedIndexChanged.Invoke(this, EventArgs.Empty);
                     }
                 }

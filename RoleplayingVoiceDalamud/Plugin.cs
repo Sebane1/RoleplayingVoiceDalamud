@@ -124,49 +124,58 @@ namespace RoleplayingVoice {
                 // Let the user be fully logged in before we start working.
                 if (stopwatch.ElapsedMilliseconds > 5000) {
                     stopwatch.Stop();
-                    if (config.IsActive) {
-                        switch (type) {
-                            case Dalamud.Game.Text.XivChatType.Say:
-                            case Dalamud.Game.Text.XivChatType.Shout:
-                            case Dalamud.Game.Text.XivChatType.Yell:
-                            case Dalamud.Game.Text.XivChatType.CustomEmote:
-                            case Dalamud.Game.Text.XivChatType.FreeCompany:
-                            case Dalamud.Game.Text.XivChatType.Party:
-                            case Dalamud.Game.Text.XivChatType.CrossParty:
-                            case Dalamud.Game.Text.XivChatType.TellIncoming:
-                            case Dalamud.Game.Text.XivChatType.TellOutgoing:
-                                if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue)) {
-                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(clientState.LocalPlayer.Name.TextValue)).Split(" ");
+                    switch (type) {
+                        case Dalamud.Game.Text.XivChatType.Say:
+                        case Dalamud.Game.Text.XivChatType.Shout:
+                        case Dalamud.Game.Text.XivChatType.Yell:
+                        case Dalamud.Game.Text.XivChatType.CustomEmote:
+                        case Dalamud.Game.Text.XivChatType.FreeCompany:
+                        case Dalamud.Game.Text.XivChatType.Party:
+                        case Dalamud.Game.Text.XivChatType.CrossParty:
+                        case Dalamud.Game.Text.XivChatType.TellIncoming:
+                        case Dalamud.Game.Text.XivChatType.TellOutgoing:
+                            if (sender.TextValue.Contains(clientState.LocalPlayer.Name.TextValue)) {
+                                if (config.IsActive) {
+                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
+                                    clientState.LocalPlayer.Name.TextValue)).Split(" ");
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
-
                                     Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
-                                        config.Characters[clientState.LocalPlayer.Name.TextValue], type == Dalamud.Game.Text.XivChatType.CustomEmote));
-                                } else {
-                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
-                                    if (senderStrings.Length > 2) {
-                                        string playerSender = senderStrings[0] + " " + senderStrings[2];
-                                        string playerMessage = message.TextValue;
-                                        bool audioFocus = false;
-                                        if (clientState.LocalPlayer.TargetObject != null) {
-                                            if (clientState.LocalPlayer.TargetObject.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
-                                                audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
-                                            }
-                                        } else {
-                                            audioFocus = true;
-                                        }
-                                        Task.Run(() => _roleplayingVoiceManager.GetVoice(playerSender, playerMessage, audioFocus ? 1f : 0.5f));
-                                    }
+                                        config.Characters[clientState.LocalPlayer.Name.TextValue],
+                                        type == Dalamud.Game.Text.XivChatType.CustomEmote, 
+                                        config.PlayerCharacterVolume, config.UseAggressiveSplicing));
                                 }
-                                break;
-                        }
+                            } else {
+                                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
+                                if (senderStrings.Length > 2) {
+                                    string playerSender = senderStrings[0] + " " + senderStrings[2];
+                                    string playerMessage = message.TextValue;
+                                    bool audioFocus = false;
+                                    if (clientState.LocalPlayer.TargetObject != null) {
+                                        if (clientState.LocalPlayer.TargetObject.ObjectKind ==
+                                            Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
+                                            audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
+                                        }
+                                    } else {
+                                        audioFocus = true;
+                                    }
+                                    Task.Run(() => _roleplayingVoiceManager.
+                                    GetVoice(playerSender, playerMessage, audioFocus ? 
+                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume));
+                                }
+                            }
+                            break;
                     }
                 }
             }
         }
+
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null || _roleplayingVoiceManager.ApiKey != config.ApiKey && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && !string.IsNullOrEmpty(config.ApiKey)) {
+                if (_roleplayingVoiceManager == null ||
+                    _roleplayingVoiceManager.ApiKey != config.ApiKey
+                    && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
+                    && !string.IsNullOrEmpty(config.ApiKey)) {
                     InitialzeManager();
                 }
                 if (_networkedClient != null) {
