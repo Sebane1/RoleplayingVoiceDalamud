@@ -84,15 +84,6 @@ namespace RoleplayingVoice {
             if (_roleplayingVoiceManager != null) {
                 _roleplayingVoiceManager.NetworkedClient = _networkedClient;
             }
-            if (_networkedClient != null) {
-                if (!_networkedClient.Connected) {
-                    try {
-                        Task.Run(() => _networkedClient.Start());
-                    } catch {
-
-                    }
-                }
-            }
         }
 
         private void UiBuilder_OpenConfigUi() {
