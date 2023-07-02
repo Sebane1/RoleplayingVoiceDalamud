@@ -131,8 +131,8 @@ namespace RoleplayingVoice {
                                     string playerMessage = message.TextValue;
                                     Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                         config.Characters[clientState.LocalPlayer.Name.TextValue],
-                                        type == Dalamud.Game.Text.XivChatType.CustomEmote, 
-                                        config.PlayerCharacterVolume, config.UseAggressiveSplicing));
+                                        type == Dalamud.Game.Text.XivChatType.CustomEmote,
+                                        config.PlayerCharacterVolume, clientState.LocalPlayer.Position, config.UseAggressiveSplicing));
                                 }
                             } else {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
@@ -149,8 +149,8 @@ namespace RoleplayingVoice {
                                         audioFocus = true;
                                     }
                                     Task.Run(() => _roleplayingVoiceManager.
-                                    GetVoice(playerSender, playerMessage, audioFocus ? 
-                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume));
+                                    GetVoice(playerSender, playerMessage, audioFocus ?
+                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume, clientState.LocalPlayer.Position));
                                 }
                             }
                             break;
