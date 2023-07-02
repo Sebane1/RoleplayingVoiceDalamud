@@ -4,8 +4,8 @@
     "Name": "Roleplaying Voice",
     "Description": "Custom player voices that play alongside your characters speech, synced with others!",
     "InternalName": "RoleplayingVoiceDalamud",
-    "AssemblyVersion": "0.0.3.6",
-    "TestingAssemblyVersion": "0.0.3.6",
+    "AssemblyVersion": "0.0.3.7",
+    "TestingAssemblyVersion": "0.0.3.7",
     "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 8,
@@ -16,9 +16,9 @@
     "LoadPriority": 69420,
     "LoadRequiredState": 2,
     "LoadSync": true,
-    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.6/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.6/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.6/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.7/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.7/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.0.3.7/RoleplayingVoiceDalamud.zip",
     "IconUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud/blob/1bb1b9519f4be2b5fb0fb787ea5275b89f803046/icon.png?raw=true"
   }
 ]
