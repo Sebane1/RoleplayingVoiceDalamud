@@ -2,14 +2,12 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoiceCore;
 using System;
 using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
-using System;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -187,14 +185,14 @@ namespace RoleplayingVoice {
                         apiKeyValidated = false;
                         save = true;
                         if (_manager == null) {
+                            managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
+                            managerNull = true;
                             PluginReference.InitialzeManager();
                         }
                         if (_manager != null) {
                             managerNullMessage = string.Empty;
+                            managerNull = false;
                             Task.Run(() => _manager.ApiValidation(apiKey));
-                        } else {
-                            managerNullMessage = "Somehow, the manager went missing. Contact developer!";
-                            managerNull = true;
                         }
                     } else if (string.IsNullOrEmpty(apiKey)) {
                         isapiKeyValid = false;
@@ -215,11 +213,21 @@ namespace RoleplayingVoice {
                     if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
                         apiKeyValidated = false;
                         save = true;
-                        if (_manager != null) {
-                            Task.Run(() => _manager.ApiValidation(apiKey));
-                        } else {
+                        if (_manager == null) {
+                            managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
                             managerNull = true;
+                            PluginReference.InitialzeManager();
                         }
+                        if (_manager != null) {
+                            managerNullMessage = string.Empty;
+                            managerNull = false;
+                            Task.Run(() => _manager.ApiValidation(apiKey));
+                        }
+                    }
+                    else if (string.IsNullOrEmpty(apiKey))
+                    {
+                        isapiKeyValid = false;
+                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
                 }
                 SizeYChanged = false;
@@ -275,6 +283,8 @@ namespace RoleplayingVoice {
                 isapiKeyValid = false;
             }
             apiKeyValidated = true;
+
+            // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
             if (isapiKeyValid && save && apiKeyValidated) {
                 configuration.ConnectionIP = serverIP;
                 configuration.ApiKey = apiKey;

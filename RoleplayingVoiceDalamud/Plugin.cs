@@ -53,9 +53,7 @@ namespace RoleplayingVoice {
             window.PluginReference = this;
             AttemptConnection();
             if (config.ApiKey != null) {
-                _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
-                _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-                window.Manager = _roleplayingVoiceManager;
+                InitialzeManager();
             }
 
             if (window is not null) {
