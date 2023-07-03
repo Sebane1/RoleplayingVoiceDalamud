@@ -299,6 +299,7 @@ namespace RoleplayingVoice {
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.IsActive = characterVoiceActive;
+                configuration.UseAggressiveSplicing = _aggressiveCaching;
                 _aggressiveCaching = configuration.UseAggressiveSplicing;
                 PluginInterface.SavePluginConfig(configuration);
                 configuration.Save();

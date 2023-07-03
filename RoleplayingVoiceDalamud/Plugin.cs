@@ -4,6 +4,7 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
+using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
