@@ -157,6 +157,7 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
                 ImGui.SameLine();
                 ImGui.Text("Use Aggressive Caching");
+
                 if (_manager != null && _manager.Info != null) {
                     ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                     ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
