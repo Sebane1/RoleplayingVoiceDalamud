@@ -119,7 +119,6 @@ namespace RoleplayingVoice {
                         case Dalamud.Game.Text.XivChatType.Shout:
                         case Dalamud.Game.Text.XivChatType.Yell:
                         case Dalamud.Game.Text.XivChatType.CustomEmote:
-                        case Dalamud.Game.Text.XivChatType.FreeCompany:
                         case Dalamud.Game.Text.XivChatType.Party:
                         case Dalamud.Game.Text.XivChatType.CrossParty:
                         case Dalamud.Game.Text.XivChatType.TellIncoming:
@@ -133,10 +132,12 @@ namespace RoleplayingVoice {
                                     Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                         config.Characters[clientState.LocalPlayer.Name.TextValue],
                                         type == Dalamud.Game.Text.XivChatType.CustomEmote,
-                                        config.PlayerCharacterVolume, clientState.LocalPlayer.Position, config.UseAggressiveSplicing));
+                                        config.PlayerCharacterVolume,
+                                        clientState.LocalPlayer.Position, config.UseAggressiveSplicing));
                                 }
                             } else {
                                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender.TextValue)).Split(" ");
+                                bool isShoutYell = false;
                                 if (senderStrings.Length > 2) {
                                     string playerSender = senderStrings[0] + " " + senderStrings[2];
                                     string playerMessage = message.TextValue;
@@ -144,14 +145,19 @@ namespace RoleplayingVoice {
                                     if (clientState.LocalPlayer.TargetObject != null) {
                                         if (clientState.LocalPlayer.TargetObject.ObjectKind ==
                                             Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
-                                            audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue;
+                                            audioFocus = clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue
+                                                || type == Dalamud.Game.Text.XivChatType.Party
+                                                || type == Dalamud.Game.Text.XivChatType.CrossParty || isShoutYell;
+                                            isShoutYell = type == Dalamud.Game.Text.XivChatType.Shout
+                                                || type == Dalamud.Game.Text.XivChatType.Yell;
                                         }
                                     } else {
                                         audioFocus = true;
                                     }
                                     Task.Run(() => _roleplayingVoiceManager.
                                     GetVoice(playerSender, playerMessage, audioFocus ?
-                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume, clientState.LocalPlayer.Position));
+                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                                    clientState.LocalPlayer.Position, isShoutYell));
                                 }
                             }
                             break;
