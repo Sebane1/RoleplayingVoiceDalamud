@@ -1,13 +1,18 @@
 ﻿using Dalamud.Game.ClientState;
+using Dalamud.Interface.Components;
+using Dalamud.Interface;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
 using RoleplayingVoiceCore;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
+
 namespace RoleplayingVoice
 {
     public class PluginWindow : Window
@@ -15,12 +20,14 @@ namespace RoleplayingVoice
         private Configuration configuration;
         RoleplayingVoiceManager _manager = null;
         BetterComboBox voiceComboBox;
+        private FileDialogManager fileDialogManager;
         private string apiKey = "";
         private string characterVoice = "";
         private string serverIP = "";
         private string serverIPErrorMessage = string.Empty;
         private string apiKeyErrorMessage = string.Empty;
         private string managerNullMessage = string.Empty;
+        private string fileMoveMessage = string.Empty;
         private string[] _voiceList = new string[1] { "" };
         private bool isServerIPValid = false;
         private bool isapiKeyValid = false;
@@ -29,8 +36,8 @@ namespace RoleplayingVoice
         private bool SizeYChanged = false;
         private bool runOnLaunch = true;
         private bool save = false;
+        private bool fileMoveSuccess;
         private bool managerNull;
-        private bool voiceComboBoxVisible;
         private Vector2? initialSize;
         private Vector2? changedSize;
         private ClientState clientState;
@@ -39,19 +46,25 @@ namespace RoleplayingVoice
         private float _otherCharacterVolume;
         private float _unfocusedCharacterVolume;
         private bool _aggressiveCaching;
+        private string cacheFolder;
+        private string attemptedMoveLocation = null;
 
+
+        private static readonly object fileLock = new object();
+        private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
 
         public PluginWindow() : base("Roleplaying Voice Config")
         {
             IsOpen = true;
-            Size = new Vector2(295, 550);
+            Size = new Vector2(400, 430);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
             voiceComboBox = new BetterComboBox("Voice List", _voiceList, 810);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voiceComboBox.SelectedIndex = 0;
+            fileDialogManager = new FileDialogManager();
         }
 
         private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e)
@@ -78,6 +91,7 @@ namespace RoleplayingVoice
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
+                    cacheFolder = configuration.CacheFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                 }
             }
         }
@@ -140,7 +154,7 @@ namespace RoleplayingVoice
         public override void Draw()
         {
             //// UI REWORK
-
+            fileDialogManager.Draw();
             if (ImGui.BeginTabBar("ConfigTabs"))
             {
                 if (ImGui.BeginTabItem("General"))
@@ -162,6 +176,28 @@ namespace RoleplayingVoice
                 }
                 ImGui.EndTabBar();
             }
+
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), true);
+            if (!isServerIPValid)
+            {
+                ErrorMessage(serverIPErrorMessage);
+            }
+            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
+            {
+                ErrorMessage(apiKeyErrorMessage);
+            }
+            if (managerNull)
+            {
+                ErrorMessage(managerNullMessage);
+            }
+            if (!fileMoveSuccess && !string.IsNullOrEmpty(fileMoveMessage))
+            {
+                if (!string.IsNullOrEmpty(attemptedMoveLocation))
+                    Task.Run(() => Directory.Delete(attemptedMoveLocation, true));
+                ErrorMessage(fileMoveMessage);
+            }
+            ImGui.EndChild();
 
             ////
             /*ImGui.Text("Server IP");
@@ -223,6 +259,23 @@ namespace RoleplayingVoice
                 RequestingReconnect?.Invoke(this, EventArgs.Empty);
             }
             */
+
+            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
+            {
+                Task.Run(() => _manager.ApiValidation(apiKey));
+                InputValidation();
+                runOnLaunch = false;
+            }
+            else if (string.IsNullOrEmpty(apiKey))
+            {
+                if (runOnLaunch)
+                {
+                    InputValidation();
+                }
+                apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                runOnLaunch = false;
+            }
+
             var originPos = ImGui.GetCursorPos();
             // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
@@ -296,35 +349,6 @@ namespace RoleplayingVoice
                 IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
-            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
-            {
-                Task.Run(() => _manager.ApiValidation(apiKey));
-                InputValidation();
-                runOnLaunch = false;
-            }
-            else if (string.IsNullOrEmpty(apiKey))
-            {
-                if (runOnLaunch)
-                {
-                    InputValidation();
-                }
-                apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                runOnLaunch = false;
-            }
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
-            if (!isServerIPValid)
-            {
-                ErrorMessage(serverIPErrorMessage);
-            }
-            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
-            {
-                ErrorMessage(apiKeyErrorMessage);
-            }
-            if (managerNull)
-            {
-                ErrorMessage(managerNullMessage);
-            }
-            ImGui.EndChild();
         }
 
         private bool InputValidation()
@@ -378,6 +402,7 @@ namespace RoleplayingVoice
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.IsActive = characterVoiceActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
+                configuration.CacheFolder = cacheFolder;
                 PluginInterface.SavePluginConfig(configuration);
                 configuration.Save();
                 RefreshVoices();
@@ -504,16 +529,32 @@ namespace RoleplayingVoice
             }
         }
 
-        private void DrawTest()
-        {
-            ImGui.Text("This is a test.");
-
-        }
-
         private void DrawGeneral()
         {
-            // Needs changes for new behaviour: show combo at all times
-            // if api isn't valid / validated the only options should be something like "API not initialized"
+            ImGui.Text("Cache Location:");
+            ImGui.TextWrapped(cacheFolder);
+            ImGui.SameLine();
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderClosed))
+            {
+                fileDialogManager.Reset();
+                ImGui.OpenPopup("OutputPathDialog");
+            }
+            if (ImGui.BeginPopup("OutputPathDialog"))
+            {
+                fileDialogManager.SaveFolderDialog("Select cache location", "RPVoiceCache", (isOk, folder) =>
+                {
+                    if (isOk)
+                    {
+                        if (folder != null && !string.Equals(folder, cacheFolder))
+                        {
+                            attemptedMoveLocation = folder;
+                            Task.Run(() => FileMove(ref cacheFolder, folder));
+                        }
+                    }
+                }, null, true);
+                ImGui.EndPopup();
+            }
+
             if (isapiKeyValid && clientState.LocalPlayer != null)
             {
                 if (voiceComboBox != null && _voiceList != null)
@@ -540,7 +581,7 @@ namespace RoleplayingVoice
                     voiceComboBox.Draw();
                 }
             }
-            else if (clientState.LocalPlayer == null && isapiKeyValid)
+            else if (!clientState.IsLoggedIn && isapiKeyValid)
             {
                 voiceComboBox.Contents[0] = "Not logged in";
                 if (_voiceList.Length > 0)
@@ -555,7 +596,7 @@ namespace RoleplayingVoice
             ImGui.SameLine();
             ImGui.Text("Voice Enabled");
 
-            if (_manager != null && _manager.Info != null && isapiKeyValid)
+            if (_manager != null && _manager.Info != null && isapiKeyValid)// && clientState.IsLoggedIn)
             {
                 ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                 ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
@@ -596,5 +637,115 @@ namespace RoleplayingVoice
                 RequestingReconnect?.Invoke(this, EventArgs.Empty);
             }
         }
+
+        private void FileMove(ref string oldFolder, string newFolder)
+        {
+            // Check if the destination folder exists, create it if necessary
+            if (!Directory.Exists(newFolder))
+            {
+                Directory.CreateDirectory(newFolder);
+            }
+            // Calculate the space needed for the move
+            long fileSize = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
+
+            // Check the amount of available space
+            DriveInfo destinationDrive = new DriveInfo(Path.GetPathRoot(newFolder));
+            long availableSpace = destinationDrive.AvailableFreeSpace;
+
+            if (fileSize >= availableSpace)
+            {
+                fileMoveSuccess = false;
+                fileMoveMessage = "Not enough space available.";
+                Directory.Delete(newFolder, true);
+            }
+            else
+            {
+                var fileCount = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Count();
+
+                // Check if oldFolder is empty, if so abort
+                if (fileCount == 0)
+                    return;
+
+                int currentFile = 0;
+                int moveFailed = 0;
+
+                foreach (string filePath in Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories))
+                {
+                    // Get the relative path of the file within the oldFolder folder
+                    string relativePath = Path.GetRelativePath(oldFolder, filePath);
+
+                    // Create the newFolder directory path
+                    string destinationDirectoryPath = Path.Combine(newFolder, Path.GetDirectoryName(relativePath));
+
+                    // Create the newFolder directory if necessary
+                    Directory.CreateDirectory(destinationDirectoryPath);
+
+                    // Create the new file to the newFolder directory while preserving the structure
+                    string destinationFilePath = Path.Combine(destinationDirectoryPath, Path.GetFileName(filePath));
+
+                    Task.Run(async () =>
+                    {
+                        bool fileMoved = await MoveFileAsync(filePath, destinationFilePath);
+                        lock (currentFileLock)
+                        {
+                            currentFile++;
+                            if (!fileMoved)
+                                moveFailed++;
+                        };
+
+                    });
+                }
+
+                // Wait for all threads
+                while (currentFile < fileCount && moveFailed == 0)
+                {
+                    if (moveFailed > 0)
+                        break;
+                }
+                if (moveFailed == 0 && currentFile == fileCount)
+                {
+                    fileMoveSuccess = true;
+                    //Directory.Delete(oldFolder, true);
+                    oldFolder = newFolder;
+                    Configuration.CacheFolder = oldFolder;
+                }
+                else
+                {
+                    fileMoveSuccess = false;
+                    if (string.IsNullOrEmpty(fileMoveMessage))
+                    {
+                        fileMoveMessage = "Move failed!";
+                    }
+                    //Move failed, figure it out nerd
+                }
+            }
+        }
+
+        private async Task<bool> MoveFileAsync(string sourceFilePath, string destinationFilePath)
+        {
+            bool status = true;
+            lock (fileLock)
+            {
+                try
+                {
+                    using (FileStream sourceStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize: 4096, useAsync: true))
+                    using (FileStream destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+                    {
+                        sourceStream.CopyTo(destinationStream);
+                    }
+                }
+                catch (Exception e)
+                {
+                    fileMoveSuccess = false;
+                    if (e.Message.Contains("it is being used by another process"))
+                    {
+                        fileMoveMessage = $"The file {Path.GetFileName(sourceFilePath)} is in use.";
+                    }
+                    status = false;
+                }
+            }
+            return status;
+        }
+
     }
 }
