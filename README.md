@@ -3,7 +3,9 @@ This plugin lets you have a fairly decent and player synced character voice that
 Players nearby with the same plugin will be able to hear your characters AI voice (if the server does not implode)
 
 This is the repo link for installation in dalamud:
+```
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
+```
 
 You will need to have an Eleven labs account to have a custom voice, and get your API key
 https://beta.elevenlabs.io/ 
