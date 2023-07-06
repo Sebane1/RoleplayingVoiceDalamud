@@ -178,75 +178,31 @@ namespace RoleplayingVoice
                 }
                 ImGui.EndTabBar();
             }
+            DrawrErrors();
+            SaveAndClose();
+        }
 
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), true);
-            if (!isServerIPValid)
-            {
-                ErrorMessage(serverIPErrorMessage);
-            }
-            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey))
-            {
-                ErrorMessage(apiKeyErrorMessage);
-            }
-            if (managerNull)
-            {
-                ErrorMessage(managerNullMessage);
-            }
-            if (!fileMoveSuccess && !string.IsNullOrEmpty(fileMoveMessage))
-            {
-                if (!string.IsNullOrEmpty(attemptedMoveLocation))
-                {
-                    Task.Run(() => Directory.Delete(attemptedMoveLocation, true));
-                    attemptedMoveLocation = null;
-                }
-                ErrorMessage(fileMoveMessage);
-            }
-            ImGui.EndChild();
-
-            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
-            {
-                Task.Run(() => _manager.ApiValidation(apiKey));
-                InputValidation();
-                runOnLaunch = false;
-            }
-            else if (string.IsNullOrEmpty(apiKey))
-            {
-                if (runOnLaunch)
-                {
-                    InputValidation();
-                }
-                apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                runOnLaunch = false;
-            }
-
+        private void SaveAndClose() {
             var originPos = ImGui.GetCursorPos();
             // Place save button in bottom left + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
-            if (ImGui.Button("Save"))
-            {
-                if (InputValidation())
-                {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
-                    {
+            if (ImGui.Button("Save")) {
+                if (InputValidation()) {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
                         apiKeyValidated = false;
                         save = true;
-                        if (_manager == null)
-                        {
+                        if (_manager == null) {
                             managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
                             managerNull = true;
                             PluginReference.InitialzeManager();
                         }
-                        if (_manager != null)
-                        {
+                        if (_manager != null) {
                             managerNullMessage = string.Empty;
                             managerNull = false;
                             Task.Run(() => _manager.ApiValidation(apiKey));
                         }
-                    }
-                    else if (string.IsNullOrEmpty(apiKey))
-                    {
+                    } else if (string.IsNullOrEmpty(apiKey)) {
                         isapiKeyValid = false;
                         apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
@@ -259,30 +215,23 @@ namespace RoleplayingVoice
             // Place close button in bottom right + some padding / extra space
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
-            if (ImGui.Button("Close"))
-            {
+            if (ImGui.Button("Close")) {
                 // Because we don't trust the user
-                if (InputValidation())
-                {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey))
-                    {
+                if (InputValidation()) {
+                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
                         apiKeyValidated = false;
                         save = true;
-                        if (_manager == null)
-                        {
+                        if (_manager == null) {
                             managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
                             managerNull = true;
                             PluginReference.InitialzeManager();
                         }
-                        if (_manager != null)
-                        {
+                        if (_manager != null) {
                             managerNullMessage = string.Empty;
                             managerNull = false;
                             Task.Run(() => _manager.ApiValidation(apiKey));
                         }
-                    }
-                    else if (string.IsNullOrEmpty(apiKey))
-                    {
+                    } else if (string.IsNullOrEmpty(apiKey)) {
                         isapiKeyValid = false;
                         apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
@@ -293,6 +242,40 @@ namespace RoleplayingVoice
                 IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
+        }
+
+        private void DrawrErrors() {
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), true);
+            if (!isServerIPValid) {
+                ErrorMessage(serverIPErrorMessage);
+            }
+            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey)) {
+                ErrorMessage(apiKeyErrorMessage);
+            }
+            if (managerNull) {
+                ErrorMessage(managerNullMessage);
+            }
+            if (!fileMoveSuccess && !string.IsNullOrEmpty(fileMoveMessage)) {
+                if (!string.IsNullOrEmpty(attemptedMoveLocation)) {
+                    Task.Run(() => Directory.Delete(attemptedMoveLocation, true));
+                    attemptedMoveLocation = null;
+                }
+                ErrorMessage(fileMoveMessage);
+            }
+            ImGui.EndChild();
+
+            if (!string.IsNullOrEmpty(apiKey) && runOnLaunch) {
+                Task.Run(() => _manager.ApiValidation(apiKey));
+                InputValidation();
+                runOnLaunch = false;
+            } else if (string.IsNullOrEmpty(apiKey)) {
+                if (runOnLaunch) {
+                    InputValidation();
+                }
+                apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                runOnLaunch = false;
+            }
         }
 
         private bool InputValidation()
@@ -516,7 +499,8 @@ namespace RoleplayingVoice
                     RefreshVoices();
                 }
             }
-            else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null && !isapiKeyValid || clientState.LocalPlayer == null && !isapiKeyValid)
+            else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null 
+            && !isapiKeyValid || clientState.LocalPlayer == null && !isapiKeyValid)
             {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0)
@@ -695,8 +679,10 @@ namespace RoleplayingVoice
             {
                 try
                 {
-                    using (FileStream sourceStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize: 4096, useAsync: true))
-                    using (FileStream destinationStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+                    using (FileStream sourceStream = new FileStream(sourceFilePath, FileMode.Open,
+                        FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+                    using (FileStream destinationStream = new FileStream(destinationFilePath, FileMode.Create, 
+                        FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
                     {
                         sourceStream.CopyTo(destinationStream);
                     }
