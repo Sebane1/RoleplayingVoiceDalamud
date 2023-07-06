@@ -194,13 +194,13 @@ namespace RoleplayingVoice {
             switch (args.ToLower()) {
                 case "on":
                     config.IsActive = true;
-                    this.pluginInterface.SavePluginConfig(config);
                     window.Configuration = config;
+                    this.pluginInterface.SavePluginConfig(config);
                     break;
                 case "off":
                     config.IsActive = false;
-                    this.pluginInterface.SavePluginConfig(config);
                     window.Configuration = config;
+                    this.pluginInterface.SavePluginConfig(config);
                     break;
                 case "reload":
                     AttemptConnection();
