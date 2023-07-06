@@ -658,6 +658,7 @@ namespace RoleplayingVoice
                     configuration.CacheFolder = oldFolder;
                     // Right now this solves the issue of the manager having an incorrect cache location until a manual save happens
                     // but subinfo needs a full window redraw to work
+                    Configuration = configuration;
                     PluginReference.InitialzeManager();
                 }
                 else
