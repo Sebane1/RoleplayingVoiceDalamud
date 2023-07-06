@@ -246,7 +246,7 @@ namespace RoleplayingVoice
 
         private void DrawrErrors() {
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), true);
+            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
