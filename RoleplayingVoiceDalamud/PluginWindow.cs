@@ -178,7 +178,7 @@ namespace RoleplayingVoice
                 }
                 ImGui.EndTabBar();
             }
-            DrawrErrors();
+            DrawErrors();
             SaveAndClose();
         }
 
@@ -244,7 +244,7 @@ namespace RoleplayingVoice
             ImGui.SetCursorPos(originPos);
         }
 
-        private void DrawrErrors() {
+        private void DrawErrors() {
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
             ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
