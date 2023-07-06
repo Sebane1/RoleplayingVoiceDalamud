@@ -3,6 +3,7 @@ using Dalamud.Plugin;
 using RoleplayingVoiceCore.AudioRecycler;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace RoleplayingVoice {
     public class Configuration : IPluginConfiguration {
@@ -12,6 +13,7 @@ namespace RoleplayingVoice {
         private float _otherCharacterVolume = 1;
         private float _unfocusedCharacterVolume = 0.5f;
         bool useAggressiveCaching = true;
+        private string cacheFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
         int IPluginConfiguration.Version { get; set; }
 
         #region Saved configuration values
@@ -26,6 +28,7 @@ namespace RoleplayingVoice {
         public float OtherCharacterVolume { get => _otherCharacterVolume; set => _otherCharacterVolume = value; }
         public float UnfocusedCharacterVolume { get => _unfocusedCharacterVolume; set => _unfocusedCharacterVolume = value; }
         public bool UseAggressiveSplicing { get => useAggressiveCaching; set => useAggressiveCaching = value; }
+        public string CacheFolder { get => cacheFolder; set => cacheFolder = value; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

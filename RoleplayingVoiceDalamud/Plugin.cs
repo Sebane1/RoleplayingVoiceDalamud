@@ -4,7 +4,6 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
-using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using System;
@@ -169,8 +168,7 @@ namespace RoleplayingVoice {
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 if (_roleplayingVoiceManager == null ||
-                    _roleplayingVoiceManager.ApiKey != config.ApiKey
-                    && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
+                    config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
                     && !string.IsNullOrEmpty(config.ApiKey)) {
                     InitialzeManager();
                 }
@@ -180,7 +178,7 @@ namespace RoleplayingVoice {
             }
         }
         public void InitialzeManager() {
-            _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, _networkedClient, config.CharacterVoices);
+            _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
             _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             window.Manager = _roleplayingVoiceManager;
         }
