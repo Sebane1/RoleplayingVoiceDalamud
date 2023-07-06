@@ -21,6 +21,8 @@ namespace RoleplayingVoice
         RoleplayingVoiceManager _manager = null;
         BetterComboBox voiceComboBox;
         private FileDialogManager fileDialogManager;
+        private ClientState clientState;
+
         private string apiKey = "";
         private string characterVoice = "";
         private string serverIP = "";
@@ -29,6 +31,9 @@ namespace RoleplayingVoice
         private string managerNullMessage = string.Empty;
         private string fileMoveMessage = string.Empty;
         private string[] _voiceList = new string[1] { "" };
+        private string cacheFolder;
+        private string attemptedMoveLocation = null;
+
         private bool isServerIPValid = false;
         private bool isapiKeyValid = false;
         private bool characterVoiceActive = false;
@@ -38,16 +43,15 @@ namespace RoleplayingVoice
         private bool save = false;
         private bool fileMoveSuccess;
         private bool managerNull;
+        private bool _aggressiveCaching;
+
         private Vector2? initialSize;
         private Vector2? changedSize;
-        private ClientState clientState;
-        private bool _loggedIn;
+
         private float _playerCharacterVolume;
         private float _otherCharacterVolume;
         private float _unfocusedCharacterVolume;
-        private bool _aggressiveCaching;
-        private string cacheFolder;
-        private string attemptedMoveLocation = null;
+        
 
 
         private static readonly object fileLock = new object();
@@ -127,7 +131,6 @@ namespace RoleplayingVoice
         private void ClientState_Logout(object sender, EventArgs e)
         {
             characterVoice = "None";
-            _loggedIn = false;
         }
 
         private void ClientState_Login(object sender, EventArgs e)
@@ -148,7 +151,6 @@ namespace RoleplayingVoice
             {
                 characterVoice = "None";
             }
-            _loggedIn = true;
             RefreshVoices();
         }
         public override void Draw()
@@ -194,71 +196,13 @@ namespace RoleplayingVoice
             if (!fileMoveSuccess && !string.IsNullOrEmpty(fileMoveMessage))
             {
                 if (!string.IsNullOrEmpty(attemptedMoveLocation))
+                {
                     Task.Run(() => Directory.Delete(attemptedMoveLocation, true));
+                    attemptedMoveLocation = null;
+                }
                 ErrorMessage(fileMoveMessage);
             }
             ImGui.EndChild();
-
-            ////
-            /*ImGui.Text("Server IP");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##serverIP", ref serverIP, 2000);
-
-            ImGui.Text("Elevenlabs API Key");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
-
-            if (!string.IsNullOrEmpty(configuration.ApiKey) &&
-                configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) && isapiKeyValid && clientState.LocalPlayer != null) {
-                if (voiceComboBox != null && _voiceList != null) {
-                    if (_voiceList.Length > 0) {
-                        ImGui.Text("Voice");
-                        voiceComboBox.Draw();
-                        voiceComboBoxVisible = true;
-                    } else {
-                        voiceComboBoxVisible = false;
-                    }
-                } else {
-                    voiceComboBoxVisible = false;
-                }
-                ImGui.Text("Current Player Voice Volume");
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.SliderFloat("##playerSlider", ref _playerCharacterVolume, 0, 1);
-                ImGui.Text("Other Player Voice Volume");
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.SliderFloat("##otherSlider", ref _otherCharacterVolume, 0, 1);
-                ImGui.Text("Unfocused Player Voice Volume");
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 1);
-
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-                ImGui.SameLine();
-                ImGui.Text("Voice Enabled");
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
-                ImGui.SameLine();
-                ImGui.Text("Use Aggressive Caching");
-
-                if (_manager != null && _manager.Info != null) {
-                    ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
-                    ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
-                }
-            } else {
-                voiceComboBoxVisible = false;
-            }
-            if (voiceComboBox.Contents.Length == 1 && voiceComboBoxVisible) {
-                foreach (string voice in voiceComboBox.Contents) {
-                    if (voice.Equals("") || voice.Equals("None")) {
-                        RefreshVoices();
-                        voiceComboBoxVisible = false;
-                    }
-                }
-            }
-            if (ImGui.Button("Reconnect")) {
-                RequestingReconnect?.Invoke(this, EventArgs.Empty);
-            }
-            */
 
             if (!string.IsNullOrEmpty(apiKey) && runOnLaunch)
             {
@@ -705,9 +649,32 @@ namespace RoleplayingVoice
                 if (moveFailed == 0 && currentFile == fileCount)
                 {
                     fileMoveSuccess = true;
-                    //Directory.Delete(oldFolder, true);
+                    fileMoveMessage = string.Empty;
+                    //var Catalogue = configuration.CharacterVoices.VoiceCatalogue;
+                    foreach (var voice in configuration.CharacterVoices.VoiceCatalogue)
+                    {
+                        string voiceName = voice.Key;
+                        var innerDictionary = voice.Value;
+                        foreach (var message in innerDictionary)
+                        {
+                            string text = message.Key;
+                            string path = message.Value;
+                            if (path.StartsWith(oldFolder))
+                            {
+                                string relativePath = path.Substring(oldFolder.Length);
+                                string newPath = newFolder + relativePath;
+                                innerDictionary[text] = newPath;
+                            }
+
+                        }
+                    }
+                    //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
+                    Directory.Delete(oldFolder, true);
                     oldFolder = newFolder;
-                    Configuration.CacheFolder = oldFolder;
+                    configuration.CacheFolder = oldFolder;
+                    // Right now this solves the issue of the manager having an incorrect cache location until a manual save happens
+                    // but subinfo needs a full window redraw to work
+                    PluginReference.InitialzeManager();
                 }
                 else
                 {

@@ -168,8 +168,7 @@ namespace RoleplayingVoice {
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 if (_roleplayingVoiceManager == null ||
-                    _roleplayingVoiceManager.ApiKey != config.ApiKey
-                    && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
+                    config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
                     && !string.IsNullOrEmpty(config.ApiKey)) {
                     InitialzeManager();
                 }
