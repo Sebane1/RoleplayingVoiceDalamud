@@ -330,8 +330,8 @@ namespace RoleplayingVoice
                 configuration.IsActive = characterVoiceActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
-                PluginInterface.SavePluginConfig(configuration);
                 configuration.Save();
+                PluginInterface.SavePluginConfig(configuration);
                 RefreshVoices();
                 save = false;
             }
@@ -492,9 +492,9 @@ namespace RoleplayingVoice
                         voiceComboBox.Draw();
                     }
                 }
-                else if (voiceComboBox.Contents.Length == 1 &&
-                    voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
-                    voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))
+                else if (voiceComboBox.Contents.Length == 1 && 
+                    (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
+                    voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase)))
                 {
                     RefreshVoices();
                 }
