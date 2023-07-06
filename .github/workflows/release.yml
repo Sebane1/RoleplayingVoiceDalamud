@@ -37,14 +37,14 @@ jobs:
       - name: Write version into manifest
         run: |
           $ver = '${{ github.ref }}' -replace 'refs/tags/',''
-          $path = './RoleplayingVoiceDalamud/bin/Release/net7.0/RoleplayingVoiceDalamud.json'
+          $path = './RoleplayingVoiceDalamud/bin/Release/net7.0-windows/RoleplayingVoiceDalamud.json'
           $content = get-content -path $path
           $content = $content -replace '0.0.0.0',$ver
           set-content -Path $path -Value $content
 
       - name: Packing Release
         run: |
-          pushd RoleplayingVoiceDalamud/bin/Release/net7.0
+          pushd RoleplayingVoiceDalamud/bin/Release/net7.0-windows
           7z a ../RoleplayingVoiceDalamud.zip *
           popd
         shell: bash
