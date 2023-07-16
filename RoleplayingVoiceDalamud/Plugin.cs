@@ -126,7 +126,9 @@ namespace RoleplayingVoice {
                                 if (config.IsActive) {
                                     string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
                                     clientState.LocalPlayer.Name.TextValue)).Split(" ");
-                                    string playerSender = senderStrings[0] + " " + senderStrings[2];
+                                    string playerSender = senderStrings.Length == 2 ? 
+                                        (senderStrings[0] + " " + senderStrings[1]) : 
+                                        (senderStrings[0] + " " + senderStrings[2]);
                                     string playerMessage = message.TextValue;
                                     Task.Run(() => _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
                                         config.Characters[clientState.LocalPlayer.Name.TextValue],
