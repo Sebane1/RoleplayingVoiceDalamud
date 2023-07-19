@@ -11,6 +11,7 @@
 		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
 		<PlatformTarget>x64</PlatformTarget>
 		<AnalysisLevel>5.0</AnalysisLevel>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>
