@@ -18,9 +18,13 @@ namespace RoleplayingVoiceDalamud {
         string IPlayerObject.FocusedPlayerObject {
             get {
                 if (_playerCharacter != null) {
-                    return _playerCharacter.TargetObject != null ?
-                        (_playerCharacter.TargetObject.ObjectKind == ObjectKind.Player ? _playerCharacter.TargetObject.Name.TextValue : "")
-                        : "";
+                    try {
+                        return _playerCharacter.TargetObject != null ?
+                            (_playerCharacter.TargetObject.ObjectKind == ObjectKind.Player ? _playerCharacter.TargetObject.Name.TextValue : "")
+                            : "";
+                    } catch {
+                        return "";
+                    }
                 } else {
                     return "";
                 }

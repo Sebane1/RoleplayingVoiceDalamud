@@ -55,6 +55,7 @@ namespace RoleplayingVoice {
         private bool isDownloadingZip;
         private RaceVoice _raceVoice;
         private string lastPrintedWarning;
+        private bool disposed;
 
         public string Name => "Roleplaying Voice";
 
@@ -160,10 +161,12 @@ namespace RoleplayingVoice {
             window.Toggle();
         }
         public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
-            if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
-                SendingEmote(instigator, emoteId);
-            } else {
-                Task.Run(() => ReceivingEmote(instigator, emoteId));
+            if (!disposed) {
+                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
+                    SendingEmote(instigator, emoteId);
+                } else {
+                    Task.Run(() => ReceivingEmote(instigator, emoteId));
+                }
             }
         }
 
@@ -284,39 +287,41 @@ namespace RoleplayingVoice {
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
             ref SeString sender, ref SeString message, ref bool isHandled) {
-            CheckDependancies();
-            if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
-                if (stopwatch == null) {
-                    stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                }
-                // Let the user be fully logged in before we start working.
-                if (stopwatch.ElapsedMilliseconds > 5000) {
-                    stopwatch.Stop();
-                    switch (type) {
-                        case XivChatType.Say:
-                        case XivChatType.Shout:
-                        case XivChatType.Yell:
-                        case XivChatType.CustomEmote:
-                        case XivChatType.Party:
-                        case XivChatType.CrossParty:
-                        case XivChatType.TellIncoming:
-                        case XivChatType.TellOutgoing:
-                            ChatText(sender, message, type, senderId);
-                            break;
-                        case (XivChatType)2729:
-                        case (XivChatType)2091:
-                        case (XivChatType)2234:
-                        case (XivChatType)2730:
-                        case (XivChatType)2219:
-                        case (XivChatType)2859:
-                        case (XivChatType)2731:
-                        case (XivChatType)2106:
-                        case (XivChatType)10409:
-                        case (XivChatType)8235:
-                        case (XivChatType)9001:
-                            BattleText(message, type);
-                            break;
+            if (!disposed) {
+                CheckDependancies();
+                if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
+                    if (stopwatch == null) {
+                        stopwatch = new Stopwatch();
+                        stopwatch.Start();
+                    }
+                    // Let the user be fully logged in before we start working.
+                    if (stopwatch.ElapsedMilliseconds > 5000) {
+                        stopwatch.Stop();
+                        switch (type) {
+                            case XivChatType.Say:
+                            case XivChatType.Shout:
+                            case XivChatType.Yell:
+                            case XivChatType.CustomEmote:
+                            case XivChatType.Party:
+                            case XivChatType.CrossParty:
+                            case XivChatType.TellIncoming:
+                            case XivChatType.TellOutgoing:
+                                ChatText(sender, message, type, senderId);
+                                break;
+                            case (XivChatType)2729:
+                            case (XivChatType)2091:
+                            case (XivChatType)2234:
+                            case (XivChatType)2730:
+                            case (XivChatType)2219:
+                            case (XivChatType)2859:
+                            case (XivChatType)2731:
+                            case (XivChatType)2106:
+                            case (XivChatType)10409:
+                            case (XivChatType)8235:
+                            case (XivChatType)9001:
+                                BattleText(message, type);
+                                break;
+                        }
                     }
                 }
             }
@@ -571,7 +576,7 @@ namespace RoleplayingVoice {
         #region IDisposable Support
         protected virtual void Dispose(bool disposing) {
             if (!disposing) return;
-
+            disposed = true;
             this.commandManager.Dispose();
 
             this.pluginInterface.SavePluginConfig(this.config);
