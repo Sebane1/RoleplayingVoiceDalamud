@@ -324,8 +324,15 @@ namespace RoleplayingVoice {
                 }
                 if (_audioManager == null || forceNewAssignments) {
                     _audioManager = new AudioManager(_playerObject);
+                    _audioManager.OnNewAudioTriggered += _audioManager_OnNewAudioTriggered;
                 }
             }
+        }
+
+        private void _audioManager_OnNewAudioTriggered(object sender, EventArgs e) {
+            _audioManager.MainPlayerVolume = config.PlayerCharacterVolume;
+            _audioManager.OtherPlayerVolume = config.OtherCharacterVolume;
+            _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume;
         }
 
         private void BattleText(SeString message, XivChatType type) {
@@ -502,6 +509,7 @@ namespace RoleplayingVoice {
                         GetSound(playerSender, playerMessage, audioFocus ?
                         config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                         _clientState.LocalPlayer.Position, isShoutYell);
+
                         _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
                     });
                 }
@@ -574,6 +582,7 @@ namespace RoleplayingVoice {
             _clientState.Logout -= _clientState_Logout;
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
             _clientState.LeavePvP -= _clientState_LeavePvP;
+            _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
         }
 
         public void Dispose() {
