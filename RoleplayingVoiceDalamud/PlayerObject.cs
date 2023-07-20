@@ -6,10 +6,12 @@ using System.Numerics;
 namespace RoleplayingVoiceDalamud {
     internal class PlayerObject : IPlayerObject {
         private PlayerCharacter _playerCharacter;
+        private string _name = "";
+        private Vector3 _position;
 
-        string IPlayerObject.Name => _playerCharacter != null ? _playerCharacter.Name.TextValue : "null";
+        string IPlayerObject.Name => _playerCharacter != null ? _playerCharacter.Name.TextValue : _name;
 
-        Vector3 IPlayerObject.Position => _playerCharacter != null ? _playerCharacter.Position : Vector3.Zero;
+        Vector3 IPlayerObject.Position => _playerCharacter != null ? _playerCharacter.Position : _position;
 
         float IPlayerObject.Rotation => _playerCharacter != null ? _playerCharacter.Rotation : 0;
 
@@ -26,6 +28,15 @@ namespace RoleplayingVoiceDalamud {
         }
         public PlayerObject(PlayerCharacter playerCharacter) {
             _playerCharacter = playerCharacter;
+        }
+        public PlayerObject(string name, Vector3 position) {
+            _name = name;
+            _position = position;
+        }
+        public PlayerObject(PlayerCharacter playerCharacter, string name, Vector3 position) {
+            _playerCharacter = playerCharacter;
+            _name = name;
+            _position = position;
         }
     }
 }

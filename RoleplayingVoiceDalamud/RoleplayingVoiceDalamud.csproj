@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0-windows</TargetFramework>
 		<LangVersion>9.0</LangVersion>
-		<Version>0.0.4.2</Version>
+		<Version>0.0.5.1</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -13,6 +13,16 @@
 		<AnalysisLevel>5.0</AnalysisLevel>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="racialEmoteTime.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="racialEmoteTime.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </EmbeddedResource>
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="2.1.6" />

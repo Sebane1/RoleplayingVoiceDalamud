@@ -28,8 +28,10 @@ namespace RoleplayingVoiceDalamud {
         "stretch", "upset", "yes", "happy"
         };
         private Random _random;
+        private int emoteIndex;
 
         public string VoiceName { get => _voiceName; set => _voiceName = value; }
+        public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
         public CharacterVoicePack(string voiceName, string directory) {
             _voiceName = voiceName;
@@ -153,6 +155,7 @@ namespace RoleplayingVoiceDalamud {
 
         // Emotes ----------------------------------------------------------------------
         public string GetSurprised() {
+            emoteIndex = 0;
             if (_emotes[0].Count > 0) {
                 return _emotes[0][_random.Next(0, _emotes[0].Count)];
             } else {
@@ -160,6 +163,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetAngry() {
+            emoteIndex = 1;
             if (_emotes[1].Count > 0) {
                 return _emotes[1][_random.Next(0, _emotes[1].Count)];
             } else {
@@ -167,6 +171,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetFurious() {
+            emoteIndex = 2;
             if (_emotes[2].Count > 0) {
                 return _emotes[2][_random.Next(0, _emotes[2].Count)];
             } else {
@@ -174,6 +179,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetCheer() {
+            emoteIndex = 3;
             if (_emotes[3].Count > 0) {
                 return _emotes[3][_random.Next(0, _emotes[3].Count)];
             } else {
@@ -181,6 +187,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetDoze() {
+            emoteIndex = 4;
             if (_emotes[4].Count > 0) {
                 return _emotes[4][_random.Next(0, _emotes[4].Count)];
             } else {
@@ -188,6 +195,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetFume() {
+            emoteIndex = 5;
             if (_emotes[5].Count > 0) {
                 return _emotes[5][_random.Next(0, _emotes[5].Count)];
             } else {
@@ -195,6 +203,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetHuh() {
+            emoteIndex = 6;
             if (_emotes[6].Count > 0) {
                 return _emotes[6][_random.Next(0, _emotes[6].Count)];
             } else {
@@ -202,6 +211,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetChuckle() {
+            emoteIndex = 7;
             if (_emotes[7].Count > 0) {
                 return _emotes[7][_random.Next(0, _emotes[7].Count)];
             } else {
@@ -209,6 +219,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetLaugh() {
+            emoteIndex = 8;
             if (_emotes[8].Count > 0) {
                 return _emotes[8][_random.Next(0, _emotes[8].Count)];
             } else {
@@ -216,6 +227,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetNo() {
+            emoteIndex = 9;
             if (_emotes[9].Count > 0) {
                 return _emotes[9][_random.Next(0, _emotes[9].Count)];
             } else {
@@ -223,6 +235,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetStretch() {
+            emoteIndex = 10;
             if (_emotes[10].Count > 0) {
                 return _emotes[10][_random.Next(0, _emotes[10].Count)];
             } else {
@@ -230,6 +243,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetUpset() {
+            emoteIndex = 11;
             if (_emotes[11].Count > 0) {
                 return _emotes[11][_random.Next(0, _emotes[11].Count)];
             } else {
@@ -237,6 +251,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetYes() {
+            emoteIndex = 12;
             if (_emotes[12].Count > 0) {
                 return _emotes[12][_random.Next(0, _emotes[12].Count)];
             } else {
@@ -244,6 +259,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetHappy() {
+            emoteIndex = 13;
             if (_emotes[13].Count > 0) {
                 return _emotes[13][_random.Next(0, _emotes[13].Count)];
             } else {
