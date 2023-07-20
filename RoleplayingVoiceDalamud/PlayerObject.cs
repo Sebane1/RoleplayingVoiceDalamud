@@ -20,7 +20,7 @@ namespace RoleplayingVoiceDalamud {
                 if (_playerCharacter != null) {
                     return _playerCharacter.TargetObject != null ?
                         (_playerCharacter.TargetObject.ObjectKind == ObjectKind.Player ? _playerCharacter.TargetObject.Name.TextValue : "")
-                        : null;
+                        : "";
                 } else {
                     return "";
                 }

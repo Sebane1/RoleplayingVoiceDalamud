@@ -54,6 +54,7 @@ namespace RoleplayingVoice {
         private ObjectTable _objectTable;
         private bool isDownloadingZip;
         private RaceVoice _raceVoice;
+        private string lastPrintedWarning;
 
         public string Name => "Roleplaying Voice";
 
@@ -214,7 +215,11 @@ namespace RoleplayingVoice {
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote, (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
                     MuteChecK();
                 } else {
-                    chat.Print("[Roleplaying Voice] No sound found for emote Id " + emoteId);
+                    string message = "[Roleplaying Voice] No sound found for emote Id " + emoteId;
+                    if (message != lastPrintedWarning) {
+                        chat.Print(message);
+                        lastPrintedWarning = message;
+                    }
                 }
             }
         }
