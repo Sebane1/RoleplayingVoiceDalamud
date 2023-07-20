@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
@@ -24,7 +25,7 @@ namespace RoleplayingVoiceDalamud {
         private List<string> _casting = new List<string>();
         private Dictionary<string, List<string>> _misc = new Dictionary<string, List<string>>();
         private List<string> emotesNames = new List<string>() {
-        "suprised", "angry", "furious", "cheer", "doze", "fume", "huh", "chuckle", "laugh", "no",
+        "surprised", "angry", "furious", "cheer", "doze", "fume", "huh", "chuckle", "laugh", "no",
         "stretch", "upset", "yes", "happy"
         };
         private Random _random;
@@ -38,35 +39,40 @@ namespace RoleplayingVoiceDalamud {
             if (!string.IsNullOrEmpty(directory)) {
                 foreach (string file in Directory.EnumerateFiles(directory)) {
                     if (file.ToLower().EndsWith(".mp3")) {
+                        bool emoteAdded = false;
                         for (int i = 0; i < emotesNames.Count; i++) {
-                            if (file.ToLower().Contains(emotesNames[i])) {
+                            if (file.ToLower().Contains(emotesNames[i]) &&
+                                file.Length == emotesNames[i].Length) {
                                 _emotes[i].Add(file);
+                                emoteAdded = true;
                                 break;
                             }
                         }
-                        if (file.ToLower().Contains("attack")
-                                || file.ToLower().Contains("extra")) {
-                            _attack.Add(file);
-                        } else if (file.ToLower().Contains("hurt")) {
-                            _hurt.Add(file);
-                        } else if (file.ToLower().Contains("death")) {
-                            _death.Add(file);
-                        } else if (file.ToLower().Contains("limit")) {
-                            _readying.Add(file);
-                        } else if (file.ToLower().Contains("casting")) {
-                            _casting.Add(file);
-                        } else if (file.ToLower().Contains("missed")) {
-                            _missed.Add(file);
-                        } else if (file.ToLower().Contains("revive")) {
-                            _revive.Add(file);
-                        } else {
-                            string name = Path.GetFileNameWithoutExtension(file);
-                            string strippedName = StripNonCharacters(name).ToLower();
-                            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                            if (!_misc.ContainsKey(final)) {
-                                _misc[final] = new List<string>();
+                        if (!emoteAdded) {
+                            if (file.ToLower().Contains("attack")
+                                    || file.ToLower().Contains("extra")) {
+                                _attack.Add(file);
+                            } else if (file.ToLower().Contains("hurt")) {
+                                _hurt.Add(file);
+                            } else if (file.ToLower().Contains("death")) {
+                                _death.Add(file);
+                            } else if (file.ToLower().Contains("limit")) {
+                                _readying.Add(file);
+                            } else if (file.ToLower().Contains("casting")) {
+                                _casting.Add(file);
+                            } else if (file.ToLower().Contains("missed")) {
+                                _missed.Add(file);
+                            } else if (file.ToLower().Contains("revive")) {
+                                _revive.Add(file);
+                            } else {
+                                string name = Path.GetFileNameWithoutExtension(file);
+                                string strippedName = StripNonCharacters(name).ToLower();
+                                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
+                                if (!_misc.ContainsKey(final)) {
+                                    _misc[final] = new List<string>();
+                                }
+                                _misc[final].Add(file);
                             }
-                            _misc[final].Add(file);
                         }
                     }
                 }
@@ -81,8 +87,10 @@ namespace RoleplayingVoiceDalamud {
 
         // Combat --------------------------------------------------------------------------
         public string GetAction(string value) {
+            string strippedName = StripNonCharacters(value).ToLower();
+            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (value.ToLower().Contains(name)) {
+                if (final.ToLower().Contains(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }
@@ -93,8 +101,10 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public string GetMisc(string value) {
+            string strippedName = StripNonCharacters(value).ToLower();
+            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (value.ToLower().Contains(name)) {
+                if (final.ToLower().Contains(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }

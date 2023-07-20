@@ -6,6 +6,7 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui;
+using Dalamud.Game.Gui.Toast;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Windowing;
@@ -56,6 +57,7 @@ namespace RoleplayingVoice {
         private RaceVoice _raceVoice;
         private string lastPrintedWarning;
         private bool disposed;
+        private ToastGui _toast;
 
         public string Name => "Roleplaying Voice";
 
@@ -68,7 +70,8 @@ namespace RoleplayingVoice {
             ChatGui chat,
             ClientState clientState,
             SigScanner scanner,
-            ObjectTable objectTable) {
+            ObjectTable objectTable,
+            ToastGui toast) {
             this.pluginInterface = pi;
             this.chat = chat;
             this._clientState = clientState;
@@ -111,9 +114,23 @@ namespace RoleplayingVoice {
             _clientState.Logout += _clientState_Logout;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _clientState.LeavePvP += _clientState_LeavePvP;
+            _toast = toast;
+            _toast.ErrorToast += _toast_ErrorToast;
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
 
+        }
+
+        private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
+            string voice = config.Characters[_clientState.LocalPlayer.Name.TextValue];
+            string path = config.CacheFolder + @"\VoicePack\" + voice;
+            if (Directory.Exists(path)) {
+                CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
+                string value = characterVoicePack.GetMisc(message.TextValue);
+                if (!string.IsNullOrEmpty(value)) {
+                    _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                }
+            }
         }
 
         private void _clientState_LeavePvP() {
@@ -195,7 +212,8 @@ namespace RoleplayingVoice {
                         string value = GetEmotePath(characterVoicePack, emoteId);
                         string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                         TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                        _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer, (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                        _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
+                        (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
                         MuteChecK();
                     }
                 } catch {
@@ -355,21 +373,23 @@ namespace RoleplayingVoice {
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
                 if (Directory.Exists(path)) {
                     CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
-                    if (type == (XivChatType)2729 ||
+                    if (!message.TextValue.Contains("cancel")) {
+                        if (type == (XivChatType)2729 ||
                         type == (XivChatType)2091) {
-                        value = characterVoicePack.GetAction(message.TextValue);
-                    } else if (type == (XivChatType)2234) {
-                        value = characterVoicePack.GetDeath();
-                    } else if (type == (XivChatType)2730) {
-                        value = characterVoicePack.GetMissed();
-                    } else if (type == (XivChatType)2219) {
-                        value = characterVoicePack.GetReadying(message.TextValue);
-                    } else if (type == (XivChatType)2731) {
-                        value = characterVoicePack.GetCasting();
-                    } else if (type == (XivChatType)2106) {
-                        value = characterVoicePack.GetRevive();
-                    } else if (type == (XivChatType)10409) {
-                        value = characterVoicePack.GetHurt();
+                            value = characterVoicePack.GetAction(message.TextValue);
+                        } else if (type == (XivChatType)2234) {
+                            value = characterVoicePack.GetDeath();
+                        } else if (type == (XivChatType)2730) {
+                            value = characterVoicePack.GetMissed();
+                        } else if (type == (XivChatType)2219) {
+                            value = characterVoicePack.GetReadying(message.TextValue);
+                        } else if (type == (XivChatType)2731) {
+                            value = characterVoicePack.GetCasting();
+                        } else if (type == (XivChatType)2106) {
+                            value = characterVoicePack.GetRevive();
+                        } else if (type == (XivChatType)10409) {
+                            value = characterVoicePack.GetHurt();
+                        }
                     }
                 }
                 if (!string.IsNullOrEmpty(value)) {
@@ -592,6 +612,7 @@ namespace RoleplayingVoice {
             _clientState.Logout -= _clientState_Logout;
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
             _clientState.LeavePvP -= _clientState_LeavePvP;
+            _toast.ErrorToast -= _toast_ErrorToast;
             _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
         }
 
