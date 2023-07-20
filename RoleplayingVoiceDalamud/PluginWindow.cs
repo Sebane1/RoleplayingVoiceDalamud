@@ -12,11 +12,11 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.IO.Compression;
 
-namespace RoleplayingVoice
-{
-    public class PluginWindow : Window
-    {
+namespace RoleplayingVoice {
+    public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingVoiceManager _manager = null;
         BetterComboBox voiceComboBox;
@@ -35,7 +35,7 @@ namespace RoleplayingVoice
         private string attemptedMoveLocation = null;
 
         private bool isServerIPValid = false;
-        private bool isapiKeyValid = false;
+        private bool isApiKeyValid = false;
         private bool characterVoiceActive = false;
         private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
@@ -51,15 +51,14 @@ namespace RoleplayingVoice
         private float _playerCharacterVolume;
         private float _otherCharacterVolume;
         private float _unfocusedCharacterVolume;
-        
+
 
 
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
 
-        public PluginWindow() : base("Roleplaying Voice Config")
-        {
+        public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
             Size = new Vector2(400, 430);
             initialSize = Size;
@@ -71,22 +70,17 @@ namespace RoleplayingVoice
             fileDialogManager = new FileDialogManager();
         }
 
-        private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (voiceComboBox != null && _voiceList != null)
-            {
+        private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
+            if (voiceComboBox != null && _voiceList != null) {
                 characterVoice = _voiceList[voiceComboBox.SelectedIndex];
             }
         }
 
-        public Configuration Configuration
-        {
+        public Configuration Configuration {
             get => configuration;
-            set
-            {
+            set {
                 configuration = value;
-                if (configuration != null)
-                {
+                if (configuration != null) {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null &&
                     configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
@@ -101,13 +95,10 @@ namespace RoleplayingVoice
         }
 
         public DalamudPluginInterface PluginInterface { get; internal set; }
-        public RoleplayingVoiceManager Manager
-        {
-            get => _manager; set
-            {
+        public RoleplayingVoiceManager Manager {
+            get => _manager; set {
                 _manager = value;
-                if (_manager != null)
-                {
+                if (_manager != null) {
                     managerNullMessage = string.Empty;
                     managerNull = false;
                     _manager.OnApiValidationComplete += _manager_OnApiValidationComplete;
@@ -115,11 +106,9 @@ namespace RoleplayingVoice
             }
         }
 
-        internal ClientState ClientState
-        {
+        internal ClientState ClientState {
             get => clientState;
-            set
-            {
+            set {
                 clientState = value;
                 clientState.Login += ClientState_Login;
                 clientState.Logout += ClientState_Logout;
@@ -128,51 +117,38 @@ namespace RoleplayingVoice
 
         public Plugin PluginReference { get; internal set; }
 
-        private void ClientState_Logout(object sender, EventArgs e)
-        {
+        private void ClientState_Logout(object sender, EventArgs e) {
             characterVoice = "None";
         }
 
-        private void ClientState_Login(object sender, EventArgs e)
-        {
-            if (configuration.Characters != null)
-            {
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
-                {
+        private void ClientState_Login(object sender, EventArgs e) {
+            if (configuration.Characters != null) {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
                         != null ? configuration.Characters[clientState.LocalPlayer.Name.TextValue] : "";
-                }
-                else
-                {
+                } else {
                     characterVoice = "None";
                 }
-            }
-            else
-            {
+            } else {
                 characterVoice = "None";
             }
             RefreshVoices();
         }
-        public override void Draw()
-        {
+        public override void Draw() {
             //// UI REWORK
             fileDialogManager.Draw();
-            if (ImGui.BeginTabBar("ConfigTabs"))
-            {
-                if (ImGui.BeginTabItem("General"))
-                {
+            if (ImGui.BeginTabBar("ConfigTabs")) {
+                if (ImGui.BeginTabItem("General")) {
                     DrawGeneral();
                     ImGui.EndTabItem();
                 }
 
-                if (ImGui.BeginTabItem("Volume"))
-                {
+                if (ImGui.BeginTabItem("Volume")) {
                     DrawVolume();
                     ImGui.EndTabItem();
                 }
 
-                if (ImGui.BeginTabItem("Server"))
-                {
+                if (ImGui.BeginTabItem("Server")) {
                     DrawServer();
                     ImGui.EndTabItem();
                 }
@@ -203,7 +179,7 @@ namespace RoleplayingVoice
                             Task.Run(() => _manager.ApiValidation(apiKey));
                         }
                     } else if (string.IsNullOrEmpty(apiKey)) {
-                        isapiKeyValid = false;
+                        isApiKeyValid = false;
                         apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
                     SizeYChanged = false;
@@ -232,7 +208,7 @@ namespace RoleplayingVoice
                             Task.Run(() => _manager.ApiValidation(apiKey));
                         }
                     } else if (string.IsNullOrEmpty(apiKey)) {
-                        isapiKeyValid = false;
+                        isApiKeyValid = false;
                         apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
                 }
@@ -250,7 +226,7 @@ namespace RoleplayingVoice
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if (!isapiKeyValid || string.IsNullOrEmpty(apiKey)) {
+            if (!isApiKeyValid || string.IsNullOrEmpty(apiKey)) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -278,48 +254,36 @@ namespace RoleplayingVoice
             }
         }
 
-        private bool InputValidation()
-        {
-            if (!IPAddress.TryParse(serverIP, out _))
-            {
+        private bool InputValidation() {
+            if (!IPAddress.TryParse(serverIP, out _)) {
                 serverIPErrorMessage = "Invalid Server IP! Please check the input.";
                 isServerIPValid = false;
-            }
-            else
-            {
+            } else {
                 serverIPErrorMessage = string.Empty;
                 isServerIPValid = true;
             }
-            if (isServerIPValid)
-            {
+            if (isServerIPValid) {
                 return true;
             }
             return false;
         }
 
-        private void _manager_OnApiValidationComplete(object sender, ValidationResult e)
-        {
-            if (e.ValidationSuceeded && !apiKeyValidated)
-            {
+        private void _manager_OnApiValidationComplete(object sender, ValidationResult e) {
+            if (e.ValidationSuceeded && !apiKeyValidated) {
                 apiKeyErrorMessage = string.Empty;
-                isapiKeyValid = true;
-            }
-            else if (!e.ValidationSuceeded && !apiKeyValidated)
-            {
+                isApiKeyValid = true;
+            } else if (!e.ValidationSuceeded && !apiKeyValidated) {
                 apiKeyErrorMessage = "Invalid API Key! Please check the input.";
-                isapiKeyValid = false;
+                isApiKeyValid = false;
             }
             apiKeyValidated = true;
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
-            if (isapiKeyValid && save && apiKeyValidated)
-            {
+            if (isApiKeyValid && save && apiKeyValidated) {
                 configuration.ConnectionIP = serverIP;
                 configuration.ApiKey = apiKey;
-                if (clientState.LocalPlayer != null)
-                {
-                    if (configuration.Characters == null)
-                    {
+                if (clientState.LocalPlayer != null) {
+                    if (configuration.Characters == null) {
                         configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                     }
                     configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
@@ -337,19 +301,16 @@ namespace RoleplayingVoice
             }
         }
 
-        private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial)
-        {
+        private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
             // Height
-            if (availableY - requiredY * Lines < 1)
-            {
+            if (availableY - requiredY * Lines < 1) {
                 Vector2? newHeight = new Vector2(initial.Value.X, initial.Value.Y + requiredY * Lines);
                 return newHeight;
             }
             return initial;
         }
 
-        private void ErrorMessage(string message)
-        {
+        private void ErrorMessage(string message) {
             var requiredY = ImGui.CalcTextSize(message).Y + 1f;
             var availableY = ImGui.GetContentRegionAvail().Y;
             var initialH = ImGui.GetCursorPos().Y;
@@ -361,38 +322,28 @@ namespace RoleplayingVoice
             int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
             // Check height and increase if necessarry
-            if (availableY - requiredY * textLines < 1 && !SizeYChanged)
-            {
+            if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                 SizeYChanged = true;
                 changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                 Size = changedSize;
             }
         }
 
-        public async void RefreshVoices()
-        {
-            if (_manager != null)
-            {
+        public async void RefreshVoices() {
+            if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
             }
-            if (clientState.LocalPlayer != null)
-            {
-                if (configuration.Characters == null)
-                {
+            if (clientState.LocalPlayer != null) {
+                if (configuration.Characters == null) {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                 }
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue))
-                {
-                    if (voiceComboBox != null)
-                    {
-                        if (_voiceList != null)
-                        {
+                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    if (voiceComboBox != null) {
+                        if (_voiceList != null) {
                             voiceComboBox.Contents = _voiceList;
-                            for (int i = 0; i < voiceComboBox.Contents.Length; i++)
-                            {
-                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue]))
-                                {
+                            for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
                                     voiceComboBox.SelectedIndex = i;
                                     break;
                                 }
@@ -402,8 +353,7 @@ namespace RoleplayingVoice
                 }
             }
         }
-        internal class BetterComboBox
-        {
+        internal class BetterComboBox {
             string _label = "";
             int _width = 0;
             int index = -1;
@@ -412,16 +362,13 @@ namespace RoleplayingVoice
             string[] _contents = new string[1] { "" };
             public event EventHandler OnSelectedIndexChanged;
             public string Text { get { return index > -1 ? _contents[index] : ""; } }
-            public BetterComboBox(string _label, string[] contents, int index, int width = 100)
-            {
-                if (Label != null)
-                {
+            public BetterComboBox(string _label, string[] contents, int index, int width = 100) {
+                if (Label != null) {
                     this._label = _label;
                 }
                 this._width = width;
                 this.index = index;
-                if (contents != null)
-                {
+                if (contents != null) {
                     this._contents = contents;
                 }
             }
@@ -432,23 +379,17 @@ namespace RoleplayingVoice
             public string Label { get => _label; set => _label = value; }
             public bool Enabled { get => _enabled; set => _enabled = value; }
 
-            public void Draw()
-            {
-                if (_enabled)
-                {
+            public void Draw() {
+                if (_enabled) {
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                    if (_label != null && _contents != null)
-                    {
-                        if (_contents.Length > 0)
-                        {
+                    if (_label != null && _contents != null) {
+                        if (_contents.Length > 0) {
                             ImGui.Combo("##" + _label, ref index, _contents, _contents.Length);
                         }
                     }
                 }
-                if (index != _lastIndex)
-                {
-                    if (OnSelectedIndexChanged != null)
-                    {
+                if (index != _lastIndex) {
+                    if (OnSelectedIndexChanged != null) {
                         OnSelectedIndexChanged.Invoke(this, EventArgs.Empty);
                     }
                 }
@@ -456,24 +397,18 @@ namespace RoleplayingVoice
             }
         }
 
-        private void DrawGeneral()
-        {
+        private void DrawGeneral() {
             ImGui.Text("Cache Location:");
             ImGui.TextWrapped(cacheFolder);
             ImGui.SameLine();
-            if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderClosed))
-            {
+            if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderClosed)) {
                 fileDialogManager.Reset();
                 ImGui.OpenPopup("OutputPathDialog");
             }
-            if (ImGui.BeginPopup("OutputPathDialog"))
-            {
-                fileDialogManager.SaveFolderDialog("Select cache location", "RPVoiceCache", (isOk, folder) =>
-                {
-                    if (isOk)
-                    {
-                        if (folder != null && !string.Equals(folder, cacheFolder))
-                        {
+            if (ImGui.BeginPopup("OutputPathDialog")) {
+                fileDialogManager.SaveFolderDialog("Select cache location", "RPVoiceCache", (isOk, folder) => {
+                    if (isOk) {
+                        if (folder != null && !string.Equals(folder, cacheFolder)) {
                             attemptedMoveLocation = folder;
                             Task.Run(() => FileMove(ref cacheFolder, folder));
                         }
@@ -482,38 +417,64 @@ namespace RoleplayingVoice
                 ImGui.EndPopup();
             }
 
-            if (isapiKeyValid && clientState.LocalPlayer != null)
-            {
-                if (voiceComboBox != null && _voiceList != null)
-                {
-                    if (_voiceList.Length > 0)
-                    {
+            if (isApiKeyValid && clientState.LocalPlayer != null) {
+                if (voiceComboBox != null && _voiceList != null) {
+                    if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
                         voiceComboBox.Draw();
+
+                        ImGui.LabelText("##Label", "Emote and Battle Sounds ");
+                        if (ImGui.Button("Import Sound Pack")) {
+                            ImGui.OpenPopup("ImportDialog");
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Export Sound Pack")) {
+                            ImGui.OpenPopup("ExportDialog");
+                        }
+                        if (ImGui.BeginPopup("ImportDialog")) {
+                            fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
+                                string directory = configuration.CacheFolder + @"\VoicePacks\" + characterVoice;
+                                if (isOk) {
+                                    ZipFile.ExtractToDirectory(file, directory);
+                                }
+                            });
+                            ImGui.EndPopup();
+                        }
+                        if (ImGui.BeginPopup("ExportDialog")) {
+                            fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
+                                string directory = configuration.CacheFolder + @"\VoicePacks\" + characterVoice;
+                                if (isOk) {
+                                    ZipFile.CreateFromDirectory(directory, file);
+                                }
+                            });
+                            ImGui.EndPopup();
+                        }
+                        if (ImGui.Button("Open Sound Directory")) {
+                            ProcessStartInfo ProcessInfo;
+                            Process Process;
+                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
+                            Directory.CreateDirectory(directory);
+                            ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                            ProcessInfo.UseShellExecute = true;
+                            Process = Process.Start(ProcessInfo);
+                        }
+                        ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                     }
-                }
-                else if (voiceComboBox.Contents.Length == 1 && 
-                    (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
-                    voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase)))
-                {
+                } else if (voiceComboBox.Contents.Length == 1 &&
+                      (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
+                      voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
                     RefreshVoices();
                 }
-            }
-            else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null 
-            && !isapiKeyValid || clientState.LocalPlayer == null && !isapiKeyValid)
-            {
+            } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
+              && !isApiKeyValid || clientState.LocalPlayer == null && !isApiKeyValid) {
                 voiceComboBox.Contents[0] = "API not initialized";
-                if (_voiceList.Length > 0)
-                {
+                if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
-            }
-            else if (!clientState.IsLoggedIn && isapiKeyValid)
-            {
+            } else if (!clientState.IsLoggedIn && isApiKeyValid) {
                 voiceComboBox.Contents[0] = "Not logged in";
-                if (_voiceList.Length > 0)
-                {
+                if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
@@ -522,17 +483,16 @@ namespace RoleplayingVoice
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
             ImGui.SameLine();
-            ImGui.Text("Voice Enabled");
+            ImGui.Text("AI Voice Enabled");
 
-            if (_manager != null && _manager.Info != null && isapiKeyValid)// && clientState.IsLoggedIn)
+            if (_manager != null && _manager.Info != null && isApiKeyValid)// && clientState.IsLoggedIn)
             {
                 ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                 ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
             }
         }
 
-        private void DrawVolume()
-        {
+        private void DrawVolume() {
             ////TODO?
             ImGui.Text("Current Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
@@ -545,8 +505,7 @@ namespace RoleplayingVoice
             ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 1);
         }
 
-        private void DrawServer()
-        {
+        private void DrawServer() {
             ImGui.Text("Server IP");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##serverIP", ref serverIP, 2000);
@@ -560,17 +519,14 @@ namespace RoleplayingVoice
             ImGui.SameLine();
             ImGui.Text("Use Aggressive Caching");
 
-            if (ImGui.Button("Reconnect"))
-            {
+            if (ImGui.Button("Reconnect")) {
                 RequestingReconnect?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        private void FileMove(ref string oldFolder, string newFolder)
-        {
+        private void FileMove(ref string oldFolder, string newFolder) {
             // Check if the destination folder exists, create it if necessary
-            if (!Directory.Exists(newFolder))
-            {
+            if (!Directory.Exists(newFolder)) {
                 Directory.CreateDirectory(newFolder);
             }
             // Calculate the space needed for the move
@@ -580,14 +536,11 @@ namespace RoleplayingVoice
             DriveInfo destinationDrive = new DriveInfo(Path.GetPathRoot(newFolder));
             long availableSpace = destinationDrive.AvailableFreeSpace;
 
-            if (fileSize >= availableSpace)
-            {
+            if (fileSize >= availableSpace) {
                 fileMoveSuccess = false;
                 fileMoveMessage = "Not enough space available.";
                 Directory.Delete(newFolder, true);
-            }
-            else
-            {
+            } else {
                 var fileCount = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Count();
 
                 // Check if oldFolder is empty, if so abort
@@ -597,8 +550,7 @@ namespace RoleplayingVoice
                 int currentFile = 0;
                 int moveFailed = 0;
 
-                foreach (string filePath in Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories))
-                {
+                foreach (string filePath in Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories)) {
                     // Get the relative path of the file within the oldFolder folder
                     string relativePath = Path.GetRelativePath(oldFolder, filePath);
 
@@ -611,11 +563,9 @@ namespace RoleplayingVoice
                     // Create the new file to the newFolder directory while preserving the structure
                     string destinationFilePath = Path.Combine(destinationDirectoryPath, Path.GetFileName(filePath));
 
-                    Task.Run(async () =>
-                    {
+                    Task.Run(async () => {
                         bool fileMoved = await MoveFileAsync(filePath, destinationFilePath);
-                        lock (currentFileLock)
-                        {
+                        lock (currentFileLock) {
                             currentFile++;
                             if (!fileMoved)
                                 moveFailed++;
@@ -625,26 +575,21 @@ namespace RoleplayingVoice
                 }
 
                 // Wait for all threads
-                while (currentFile < fileCount && moveFailed == 0)
-                {
+                while (currentFile < fileCount && moveFailed == 0) {
                     if (moveFailed > 0)
                         break;
                 }
-                if (moveFailed == 0 && currentFile == fileCount)
-                {
+                if (moveFailed == 0 && currentFile == fileCount) {
                     fileMoveSuccess = true;
                     fileMoveMessage = string.Empty;
                     //var Catalogue = configuration.CharacterVoices.VoiceCatalogue;
-                    foreach (var voice in configuration.CharacterVoices.VoiceCatalogue)
-                    {
+                    foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
                         string voiceName = voice.Key;
                         var innerDictionary = voice.Value;
-                        foreach (var message in innerDictionary)
-                        {
+                        foreach (var message in innerDictionary) {
                             string text = message.Key;
                             string path = message.Value;
-                            if (path.StartsWith(oldFolder))
-                            {
+                            if (path.StartsWith(oldFolder)) {
                                 string relativePath = path.Substring(oldFolder.Length);
                                 string newPath = newFolder + relativePath;
                                 innerDictionary[text] = newPath;
@@ -660,12 +605,9 @@ namespace RoleplayingVoice
                     // but subinfo needs a full window redraw to work
                     Configuration = configuration;
                     PluginReference.InitialzeManager();
-                }
-                else
-                {
+                } else {
                     fileMoveSuccess = false;
-                    if (string.IsNullOrEmpty(fileMoveMessage))
-                    {
+                    if (string.IsNullOrEmpty(fileMoveMessage)) {
                         fileMoveMessage = "Move failed!";
                     }
                     //Move failed, figure it out nerd
@@ -673,26 +615,19 @@ namespace RoleplayingVoice
             }
         }
 
-        private async Task<bool> MoveFileAsync(string sourceFilePath, string destinationFilePath)
-        {
+        private async Task<bool> MoveFileAsync(string sourceFilePath, string destinationFilePath) {
             bool status = true;
-            lock (fileLock)
-            {
-                try
-                {
+            lock (fileLock) {
+                try {
                     using (FileStream sourceStream = new FileStream(sourceFilePath, FileMode.Open,
                         FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
-                    using (FileStream destinationStream = new FileStream(destinationFilePath, FileMode.Create, 
-                        FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
-                    {
+                    using (FileStream destinationStream = new FileStream(destinationFilePath, FileMode.Create,
+                        FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true)) {
                         sourceStream.CopyTo(destinationStream);
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     fileMoveSuccess = false;
-                    if (e.Message.Contains("it is being used by another process"))
-                    {
+                    if (e.Message.Contains("it is being used by another process")) {
                         fileMoveMessage = $"The file {Path.GetFileName(sourceFilePath)} is in use.";
                     }
                     status = false;

@@ -47,6 +47,7 @@ namespace RoleplayingVoice {
         private PlayerObject _playerObject;
         private AudioManager _audioManager;
         private ObjectTable _objectTable;
+        private bool isDownloadingZip;
 
         public string Name => "Roleplaying Voice";
 
@@ -91,7 +92,7 @@ namespace RoleplayingVoice {
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
-            chat.ChatMessage += Chat_ChatMessage;
+            this.chat.ChatMessage += Chat_ChatMessage;
             cooldown = new Stopwatch();
             muteTimer = new Stopwatch();
             _realChat = new Chat(scanner);
@@ -99,14 +100,39 @@ namespace RoleplayingVoice {
             _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             _objectTable = objectTable;
             _clientState.Login += _clientState_Login;
-            CheckDepandancies();
+            _clientState.Logout += _clientState_Logout;
+            _clientState.TerritoryChanged += _clientState_TerritoryChanged;
+            _clientState.LeavePvP += _clientState_LeavePvP;
+            CheckDependancies();
 
+        }
+
+        private void _clientState_LeavePvP() {
+            CleanSounds();
+        }
+
+        private void _clientState_TerritoryChanged(object sender, ushort e) {
+            CleanSounds();
+        }
+
+        private void _clientState_Logout(object sender, EventArgs e) {
+            CleanSounds();
         }
 
         private void _clientState_Login(object sender, EventArgs e) {
-            CheckDepandancies(true);
+            CheckDependancies(true);
+            CleanSounds();
         }
+        public void CleanSounds() {
+            string path = config.CacheFolder + @"\VoicePack\Others";
+            if (Directory.Exists(path)) {
+                try {
+                    Directory.Delete(path, true);
+                } catch {
 
+                }
+            }
+        }
         private void Window_RequestingReconnect(object sender, EventArgs e) {
             AttemptConnection();
         }
@@ -134,13 +160,34 @@ namespace RoleplayingVoice {
         }
 
         private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
-            string path = @"\VoicePack\Other";
-            try {
-                string value = await _roleplayingVoiceManager.GetSound(_clientState.LocalPlayer.Name.TextValue, emoteId + "",
-                                config.PlayerCharacterVolume * 0.6f, _clientState.LocalPlayer.Position, false, path, true);
-                _audioManager.PlayAudio(_playerObject, value, SoundType.OtherPlayer);
-            } catch {
+            string[] senderStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(instigator.Name.TextValue))).Split(' ');
+            bool isShoutYell = false;
+            if (senderStrings.Length > 2) {
+                int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
+                string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
+                string path = config.CacheFolder + @"\VoicePack\Others";
+                Directory.CreateDirectory(path);
+                string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+                string clipPath = path + @"\" + hash;
+                try {
+                    if (!isDownloadingZip) {
+                        if (!Path.Exists(clipPath)) {
+                            isDownloadingZip = true;
+                            Task.Run(async () => {
+                                string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                isDownloadingZip = false;
+                            });
+                        }
+                    }
+                    if (Directory.Exists(path)) {
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
+                        string value = GetEmotePath(characterVoicePack, emoteId);
+                        _audioManager.PlayAudio(_playerObject, value, SoundType.OtherPlayer);
+                        MuteChecK();
+                    }
+                } catch {
 
+                }
             }
         }
         private void SendingEmote(PlayerCharacter instigator, ushort emoteId) {
@@ -148,73 +195,63 @@ namespace RoleplayingVoice {
             string path = config.CacheFolder + @"\VoicePack\" + voice;
             if (Directory.Exists(path)) {
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
-                string value = "";
-                switch (emoteId) {
-                    case 1:
-                        value = characterVoicePack.GetSurprised();
-                        break;
-                    case 2:
-                        value = characterVoicePack.GetAngry();
-                        break;
-                    case 3:
-                        value = characterVoicePack.GetFurious();
-                        break;
-                    case 6:
-                        value = characterVoicePack.GetCheer();
-                        break;
-                    case 13:
-                        value = characterVoicePack.GetDoze();
-                        break;
-                    case 14:
-                        value = characterVoicePack.GetFume();
-                        break;
-                    case 17:
-                        value = characterVoicePack.GetHuh();
-                        break;
-                    case 20:
-                        value = characterVoicePack.GetChuckle();
-                        break;
-                    case 21:
-                        value = characterVoicePack.GetLaugh();
-                        break;
-                    case 24:
-                        value = characterVoicePack.GetNo();
-                        break;
-                    case 37:
-                        value = characterVoicePack.GetStretch();
-                        break;
-                    case 40:
-                        value = characterVoicePack.GetUpset();
-                        break;
-                    case 42:
-                        value = characterVoicePack.GetYes();
-                        break;
-                    case 48:
-                        value = characterVoicePack.GetHappy();
-                        break;
-                }
-                if (string.IsNullOrEmpty(value)) {
-                    value = characterVoicePack.GetMisc(emoteId + "");
-                }
+                string value = GetEmotePath(characterVoicePack, emoteId);
                 if (!string.IsNullOrEmpty(value)) {
-                    Task.Run(() => _roleplayingVoiceManager.SendSound(_clientState.LocalPlayer.Name.TextValue, emoteId + "",
-                    value, config.PlayerCharacterVolume * 0.6f, _clientState.LocalPlayer.Position));
+                    Task.Run(async () => {
+                        bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
+                    });
                     _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
-                    if (!muteTimer.IsRunning) {
-                        _realChat.SendMessage("/voice");
-                        Task.Run(() => {
-                            while (muteTimer.ElapsedMilliseconds < 4000) {
-                                Thread.Sleep(4000);
-                            }
-                            _realChat.SendMessage("/voice");
-                            muteTimer.Reset();
-                        });
-                    }
-                    muteTimer.Restart();
+                    MuteChecK();
                 } else {
                     chat.Print("[Roleplaying Voice] No sound found for emote Id " + emoteId);
                 }
             }
+        }
+        public void MuteChecK() {
+            if (!muteTimer.IsRunning) {
+                _realChat.SendMessage("/voice");
+                Task.Run(() => {
+                    while (muteTimer.ElapsedMilliseconds < 4000) {
+                        Thread.Sleep(4000);
+                    }
+                    _realChat.SendMessage("/voice");
+                    muteTimer.Reset();
+                });
+            }
+            muteTimer.Restart();
+        }
+        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId) {
+            switch (emoteId) {
+                case 1:
+                    return characterVoicePack.GetSurprised();
+                case 2:
+                    return characterVoicePack.GetAngry();
+                case 3:
+                    return characterVoicePack.GetFurious();
+                case 6:
+                    return characterVoicePack.GetCheer();
+                case 13:
+                    return characterVoicePack.GetDoze();
+                case 14:
+                    return characterVoicePack.GetFume();
+                case 17:
+                    return characterVoicePack.GetHuh();
+                case 20:
+                    return characterVoicePack.GetChuckle();
+                case 21:
+                    return characterVoicePack.GetLaugh();
+                case 24:
+                    return characterVoicePack.GetNo();
+                case 37:
+                    return characterVoicePack.GetStretch();
+                case 40:
+                    return characterVoicePack.GetUpset();
+                case 42:
+                    return characterVoicePack.GetYes();
+                case 48:
+                    return characterVoicePack.GetHappy();
+            }
+            return characterVoicePack.GetMisc(emoteId + "");
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
@@ -231,7 +268,7 @@ namespace RoleplayingVoice {
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
             ref SeString sender, ref SeString message, ref bool isHandled) {
-            CheckDepandancies();
+            CheckDependancies();
             if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
                 if (stopwatch == null) {
                     stopwatch = new Stopwatch();
@@ -269,7 +306,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void CheckDepandancies(bool forceNewAssignments = false) {
+        private void CheckDependancies(bool forceNewAssignments = false) {
             if (_clientState.LocalPlayer != null) {
                 if (_playerObject == null || forceNewAssignments) {
                     _playerObject = new PlayerObject(_clientState.LocalPlayer);
@@ -281,7 +318,7 @@ namespace RoleplayingVoice {
         }
 
         private void BattleText(SeString message, XivChatType type) {
-            CheckDepandancies();
+            CheckDependancies();
             if (message.TextValue.ToLower().Contains("you")) {
                 string value = "";
                 string playerMessage = message.TextValue;
@@ -311,13 +348,13 @@ namespace RoleplayingVoice {
                     string[] stringValues = MakeThirdPerson(RemoveActionPhrases(RemoveSpecialSymbols(playerMessage))).Split(' ');
                     string thirdPerson = stringValues[1] + " " + stringValues[stringValues.Length - 2] + stringValues[stringValues.Length - 1];
                     string debug = _clientState.LocalPlayer.Name.TextValue + " " + thirdPerson;
-                    chat.Print(debug);
-                    Task.Run(() => _roleplayingVoiceManager.SendSound(_clientState.LocalPlayer.Name.TextValue, thirdPerson,
-                    value, config.PlayerCharacterVolume * 0.6f, _clientState.LocalPlayer.Position));
                     _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
                     if (!muteTimer.IsRunning) {
                         _realChat.SendMessage("/voice");
                         Task.Run(() => {
+                            Task.Run(async () => {
+                                bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
+                            });
                             while (muteTimer.ElapsedMilliseconds < 4000) {
                                 Thread.Sleep(4000);
                             }
@@ -334,16 +371,52 @@ namespace RoleplayingVoice {
                 if (senderStrings.Length > 2) {
                     int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
                     string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
-                    string playerMessage = message.TextValue;
-                    string debug = playerSender + " " + senderStrings[3 + offset] + " " + 
-                    messageStrings[messageStrings.Length - 2] + messageStrings[messageStrings.Length - 1];
-                    chat.Print(debug);
-                    Task.Run(async () => {
-                        string value = await _roleplayingVoiceManager.GetSound(playerSender, senderStrings[3 + offset] + " " +
-                            messageStrings[messageStrings.Length - 2] + messageStrings[messageStrings.Length - 1], config.OtherCharacterVolume,
-                        _clientState.LocalPlayer.Position, isShoutYell, @"\VoicePack\Others", true);
+                    string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+                    string path = config.CacheFolder + @"\VoicePack\Others";
+                    string clipPath = path + @"\" + hash;
+                    Directory.CreateDirectory(path);
+                    if (!isDownloadingZip) {
+                        if (!Path.Exists(clipPath)) {
+                            isDownloadingZip = true;
+                            Task.Run(async () => {
+                                string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                isDownloadingZip = false;
+                            });
+                        }
+                    }
+                    if (Path.Exists(clipPath)) {
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
+                        string value = "";
+                        if (message.TextValue.Contains("hit") ||
+                            message.TextValue.Contains("uses") ||
+                            message.TextValue.Contains("casts")) {
+                            value = characterVoicePack.GetAction(message.TextValue);
+                        } else if (message.TextValue.Contains("defeated")) {
+                            value = characterVoicePack.GetDeath();
+                        } else if (message.TextValue.Contains("miss")) {
+                            value = characterVoicePack.GetMissed();
+                        } else if (message.TextValue.Contains("readies")) {
+                            value = characterVoicePack.GetReadying(message.TextValue);
+                        } else if (message.TextValue.Contains("casting")) {
+                            value = characterVoicePack.GetCasting();
+                        } else if (message.TextValue.Contains("revive")) {
+                            value = characterVoicePack.GetRevive();
+                        } else if (message.TextValue.Contains("damage")) {
+                            value = characterVoicePack.GetHurt();
+                        }
                         _audioManager.PlayAudio(_playerObject, value, SoundType.OtherPlayer);
-                    });
+                        if (!muteTimer.IsRunning) {
+                            _realChat.SendMessage("/voice");
+                            Task.Run(() => {
+                                while (muteTimer.ElapsedMilliseconds < 4000) {
+                                    Thread.Sleep(4000);
+                                }
+                                _realChat.SendMessage("/voice");
+                                muteTimer.Reset();
+                            });
+                        }
+                        muteTimer.Restart();
+                    }
                 }
             }
         }
@@ -477,6 +550,9 @@ namespace RoleplayingVoice {
             _networkedClient.Dispose();
             _audioManager.Dispose();
             _clientState.Login -= _clientState_Login;
+            _clientState.Logout -= _clientState_Logout;
+            _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+            _clientState.LeavePvP -= _clientState_LeavePvP;
         }
 
         public void Dispose() {
