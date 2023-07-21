@@ -239,12 +239,6 @@ namespace RoleplayingVoice {
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote, (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
                     MuteChecK();
-                } else {
-                    string message = "[Roleplaying Voice] No sound found for emote Id " + emoteId;
-                    if (lastPrintedWarning != message) {
-                        chat.Print(message);
-                        lastPrintedWarning = message;
-                    }
                 }
             }
         }
@@ -262,39 +256,29 @@ namespace RoleplayingVoice {
             muteTimer.Restart();
         }
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId) {
-            switch (emoteId) {
-                case 1:
-                    return characterVoicePack.GetSurprised();
-                case 2:
-                    return characterVoicePack.GetAngry();
-                case 3:
-                    return characterVoicePack.GetFurious();
-                case 6:
-                    return characterVoicePack.GetCheer();
-                case 13:
-                    return characterVoicePack.GetDoze();
-                case 14:
-                    return characterVoicePack.GetFume();
-                case 17:
-                    return characterVoicePack.GetHuh();
-                case 20:
-                    return characterVoicePack.GetChuckle();
-                case 21:
-                    return characterVoicePack.GetLaugh();
-                case 24:
-                    return characterVoicePack.GetNo();
-                case 37:
-                    return characterVoicePack.GetStretch();
-                case 40:
-                    return characterVoicePack.GetUpset();
-                case 42:
-                    return characterVoicePack.GetYes();
-                case 48:
-                    return characterVoicePack.GetHappy();
+            Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
+            Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
+            Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
+            Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
+
+            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString());
+            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name);
+            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
+            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
+            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
+
+            if (!string.IsNullOrEmpty(emotePathId)) {
+                return emotePathId;
+            } else if (!string.IsNullOrEmpty(emotePathEnglish)) {
+                return emotePathEnglish;
+            } else if (!string.IsNullOrEmpty(emotePathFrench)) {
+                return emotePathFrench;
+            } else if (!string.IsNullOrEmpty(emotePathGerman)) {
+                return emotePathGerman;
+            } else if (!string.IsNullOrEmpty(emotePathJapanese)) {
+                return emotePathJapanese;
             }
-            var emoteData = _dataManager.GetExcelSheet<Emote>();
-            Emote emote = emoteData.GetRow(emoteId);
-            return characterVoicePack.GetMisc(emote.Name);
+            return string.Empty;
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {

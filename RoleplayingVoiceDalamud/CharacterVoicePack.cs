@@ -9,13 +9,6 @@ using System.Xml.Linq;
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
         private string _voiceName;
-        private List<string>[] _emotes = new List<string>[] {
-        new List<string>(), new List<string>(),new List<string>(),
-        new List<string>(), new List<string>(),new List<string>(),
-        new List<string>(), new List<string>(),new List<string>(),
-        new List<string>(), new List<string>(),new List<string>(),
-        new List<string>(), new List<string>()
-        };
         private List<string> _attack = new List<string>();
         private List<string> _hurt = new List<string>();
         private List<string> _death = new List<string>();
@@ -25,10 +18,6 @@ namespace RoleplayingVoiceDalamud {
         private List<string> _castingAttack = new List<string>();
         private List<string> _castingHeal = new List<string>();
         private Dictionary<string, List<string>> _misc = new Dictionary<string, List<string>>();
-        private List<string> emotesNames = new List<string>() {
-        "surprised", "angry", "furious", "cheer", "doze", "fume", "huh", "chuckle", "laugh", "no",
-        "stretch", "upset", "yes", "happy"
-        };
         private Random _random;
         private int emoteIndex;
 
@@ -41,14 +30,6 @@ namespace RoleplayingVoiceDalamud {
                 foreach (string file in Directory.EnumerateFiles(directory)) {
                     if (file.ToLower().EndsWith(".mp3")) {
                         bool emoteAdded = false;
-                        for (int i = 0; i < emotesNames.Count; i++) {
-                            if (file.ToLower().Contains(emotesNames[i]) &&
-                                file.Length == emotesNames[i].Length) {
-                                _emotes[i].Add(file);
-                                emoteAdded = true;
-                                break;
-                            }
-                        }
                         if (!emoteAdded) {
                             if (file.ToLower().Contains("attack")
                                     || file.ToLower().Contains("extra")) {
@@ -74,12 +55,10 @@ namespace RoleplayingVoiceDalamud {
                                 string name = Path.GetFileNameWithoutExtension(file);
                                 string strippedName = StripNonCharacters(name).ToLower();
                                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                                if (final != "no") {
-                                    if (!_misc.ContainsKey(final)) {
-                                        _misc[final] = new List<string>();
-                                    }
-                                    _misc[final].Add(file);
+                                if (!_misc.ContainsKey(final)) {
+                                    _misc[final] = new List<string>();
                                 }
+                                _misc[final].Add(file);
                             }
                         }
                     }
@@ -93,12 +72,11 @@ namespace RoleplayingVoiceDalamud {
             return str;
         }
 
-        // Combat --------------------------------------------------------------------------
         public string GetAction(string value) {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (final.ToLower().Contains(name)) {
+                if (final.ToLower().Contains(name) && name.Length > 2 || final.StartsWith(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }
@@ -112,7 +90,7 @@ namespace RoleplayingVoiceDalamud {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (final.ToLower().Contains(name)) {
+                if (final.ToLower().Contains(name) && name.Length > 2 || final.StartsWith(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }
@@ -173,121 +151,6 @@ namespace RoleplayingVoiceDalamud {
         public string GetMissed() {
             if (_missed.Count > 0) {
                 return _missed[_random.Next(0, _missed.Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-
-
-        // Emotes ----------------------------------------------------------------------
-        public string GetSurprised() {
-            emoteIndex = 0;
-            if (_emotes[0].Count > 0) {
-                return _emotes[0][_random.Next(0, _emotes[0].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetAngry() {
-            emoteIndex = 1;
-            if (_emotes[1].Count > 0) {
-                return _emotes[1][_random.Next(0, _emotes[1].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetFurious() {
-            emoteIndex = 2;
-            if (_emotes[2].Count > 0) {
-                return _emotes[2][_random.Next(0, _emotes[2].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetCheer() {
-            emoteIndex = 3;
-            if (_emotes[3].Count > 0) {
-                return _emotes[3][_random.Next(0, _emotes[3].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetDoze() {
-            emoteIndex = 4;
-            if (_emotes[4].Count > 0) {
-                return _emotes[4][_random.Next(0, _emotes[4].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetFume() {
-            emoteIndex = 5;
-            if (_emotes[5].Count > 0) {
-                return _emotes[5][_random.Next(0, _emotes[5].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetHuh() {
-            emoteIndex = 6;
-            if (_emotes[6].Count > 0) {
-                return _emotes[6][_random.Next(0, _emotes[6].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetChuckle() {
-            emoteIndex = 7;
-            if (_emotes[7].Count > 0) {
-                return _emotes[7][_random.Next(0, _emotes[7].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetLaugh() {
-            emoteIndex = 8;
-            if (_emotes[8].Count > 0) {
-                return _emotes[8][_random.Next(0, _emotes[8].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetNo() {
-            emoteIndex = 9;
-            if (_emotes[9].Count > 0) {
-                return _emotes[9][_random.Next(0, _emotes[9].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetStretch() {
-            emoteIndex = 10;
-            if (_emotes[10].Count > 0) {
-                return _emotes[10][_random.Next(0, _emotes[10].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetUpset() {
-            emoteIndex = 11;
-            if (_emotes[11].Count > 0) {
-                return _emotes[11][_random.Next(0, _emotes[11].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetYes() {
-            emoteIndex = 12;
-            if (_emotes[12].Count > 0) {
-                return _emotes[12][_random.Next(0, _emotes[12].Count)];
-            } else {
-                return string.Empty;
-            }
-        }
-        public string GetHappy() {
-            emoteIndex = 13;
-            if (_emotes[13].Count > 0) {
-                return _emotes[13][_random.Next(0, _emotes[13].Count)];
             } else {
                 return string.Empty;
             }
