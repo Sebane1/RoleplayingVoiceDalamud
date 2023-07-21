@@ -237,7 +237,7 @@ namespace RoleplayingVoice {
                     MuteChecK();
                 } else {
                     string message = "[Roleplaying Voice] No sound found for emote Id " + emoteId;
-                    if (!lastPrintedWarning.Contains(message)) {
+                    if (lastPrintedWarning != message) {
                         chat.Print(message);
                         lastPrintedWarning = message;
                     }
