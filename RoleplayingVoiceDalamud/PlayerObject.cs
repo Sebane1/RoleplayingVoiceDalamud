@@ -7,11 +7,19 @@ namespace RoleplayingVoiceDalamud {
     internal class PlayerObject : IPlayerObject {
         private PlayerCharacter _playerCharacter;
         private string _name = "";
-        private Vector3 _position;
+        private Vector3 _position = new Vector3();
 
         string IPlayerObject.Name => _playerCharacter != null ? _playerCharacter.Name.TextValue : _name;
 
-        Vector3 IPlayerObject.Position => _playerCharacter != null ? _playerCharacter.Position : _position;
+        Vector3 IPlayerObject.Position {
+            get {
+                try {
+                    return (_playerCharacter != null ? _playerCharacter.Position : _position);
+                } catch {
+                    return _position;
+                }
+            }
+        }
 
         float IPlayerObject.Rotation => _playerCharacter != null ? _playerCharacter.Rotation : 0;
 

@@ -237,7 +237,7 @@ namespace RoleplayingVoice {
                     MuteChecK();
                 } else {
                     string message = "[Roleplaying Voice] No sound found for emote Id " + emoteId;
-                    if (message != lastPrintedWarning) {
+                    if (!lastPrintedWarning.Contains(message)) {
                         chat.Print(message);
                         lastPrintedWarning = message;
                     }
@@ -382,7 +382,11 @@ namespace RoleplayingVoice {
                         } else if (type == (XivChatType)2730) {
                             value = characterVoicePack.GetMissed();
                         } else if (type == (XivChatType)2219) {
-                            value = characterVoicePack.GetReadying(message.TextValue);
+                            if (message.TextValue.Contains("read")) {
+                                value = characterVoicePack.GetReadying(message.TextValue);
+                            } else {
+                                value = characterVoicePack.GetCasting();
+                            }
                         } else if (type == (XivChatType)2731) {
                             value = characterVoicePack.GetCasting();
                         } else if (type == (XivChatType)2106) {
