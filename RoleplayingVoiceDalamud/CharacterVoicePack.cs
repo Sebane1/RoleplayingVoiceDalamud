@@ -74,10 +74,12 @@ namespace RoleplayingVoiceDalamud {
                                 string name = Path.GetFileNameWithoutExtension(file);
                                 string strippedName = StripNonCharacters(name).ToLower();
                                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                                if (!_misc.ContainsKey(final)) {
-                                    _misc[final] = new List<string>();
+                                if (final != "no") {
+                                    if (!_misc.ContainsKey(final)) {
+                                        _misc[final] = new List<string>();
+                                    }
+                                    _misc[final].Add(file);
                                 }
-                                _misc[final].Add(file);
                             }
                         }
                     }
