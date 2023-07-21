@@ -22,7 +22,8 @@ namespace RoleplayingVoiceDalamud {
         private List<string> _readying = new List<string>();
         private List<string> _revive = new List<string>();
         private List<string> _missed = new List<string>();
-        private List<string> _casting = new List<string>();
+        private List<string> _castingAttack = new List<string>();
+        private List<string> _castingHeal = new List<string>();
         private Dictionary<string, List<string>> _misc = new Dictionary<string, List<string>>();
         private List<string> emotesNames = new List<string>() {
         "surprised", "angry", "furious", "cheer", "doze", "fume", "huh", "chuckle", "laugh", "no",
@@ -58,8 +59,13 @@ namespace RoleplayingVoiceDalamud {
                                 _death.Add(file);
                             } else if (file.ToLower().Contains("limit")) {
                                 _readying.Add(file);
+                            } else if (file.ToLower().Contains("casting attack")) {
+                                _castingAttack.Add(file);
+                            } else if (file.ToLower().Contains("casting heal")) {
+                                _castingHeal.Add(file);
                             } else if (file.ToLower().Contains("casting")) {
-                                _casting.Add(file);
+                                _castingAttack.Add(file);
+                                _castingHeal.Add(file);
                             } else if (file.ToLower().Contains("missed")) {
                                 _missed.Add(file);
                             } else if (file.ToLower().Contains("revive")) {
@@ -138,9 +144,17 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        public string GetCasting() {
-            if (_casting.Count > 0) {
-                return _casting[_random.Next(0, _casting.Count)];
+        public string GetCastingAttack() {
+            if (_castingAttack.Count > 0) {
+                return _castingAttack[_random.Next(0, _castingAttack.Count)];
+            } else {
+                return string.Empty;
+            }
+        }
+
+        public string GetCastingHeal() {
+            if (_castingHeal.Count > 0) {
+                return _castingHeal[_random.Next(0, _castingHeal.Count)];
             } else {
                 return string.Empty;
             }

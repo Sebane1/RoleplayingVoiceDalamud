@@ -40,12 +40,15 @@ namespace PatMe {
         void OnEmoteDetour(ulong unk, ulong instigatorAddr, ushort emoteId, ulong targetId, ulong unk2) {
             // unk - some field of event framework singleton? doesn't matter here anyway
             // PluginLog.Log($"Emote >> unk:{unk:X}, instigatorAddr:{instigatorAddr:X}, emoteId:{emoteId}, targetId:{targetId:X}, unk2:{unk2:X}");
-
-            if (_clientState.LocalPlayer != null) {
-                var instigatorOb = _objectTable.FirstOrDefault(x => (ulong)x.Address == instigatorAddr);
-                if (instigatorOb != null) {
-                    OnEmote?.Invoke(instigatorOb, emoteId);
+            try {
+                if (_clientState.LocalPlayer != null) {
+                    var instigatorOb = _objectTable.FirstOrDefault(x => (ulong)x.Address == instigatorAddr);
+                    if (instigatorOb != null) {
+                        OnEmote?.Invoke(instigatorOb, emoteId);
+                    }
                 }
+            } catch {
+
             }
 
             hookEmote.Original(unk, instigatorAddr, emoteId, targetId, unk2);

@@ -385,10 +385,10 @@ namespace RoleplayingVoice {
                             if (message.TextValue.Contains("read")) {
                                 value = characterVoicePack.GetReadying(message.TextValue);
                             } else {
-                                value = characterVoicePack.GetCasting();
+                                value = characterVoicePack.GetCastingHeal();
                             }
                         } else if (type == (XivChatType)2731) {
-                            value = characterVoicePack.GetCasting();
+                            value = characterVoicePack.GetCastingAttack();
                         } else if (type == (XivChatType)2106) {
                             value = characterVoicePack.GetRevive();
                         } else if (type == (XivChatType)10409) {
@@ -450,7 +450,7 @@ namespace RoleplayingVoice {
                         } else if (message.TextValue.Contains("readies")) {
                             value = characterVoicePack.GetReadying(message.TextValue);
                         } else if (message.TextValue.Contains("casting")) {
-                            value = characterVoicePack.GetCasting();
+                            value = characterVoicePack.GetCastingAttack();
                         } else if (message.TextValue.Contains("revive")) {
                             value = characterVoicePack.GetRevive();
                         } else if (message.TextValue.Contains("damage")) {
