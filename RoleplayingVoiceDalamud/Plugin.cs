@@ -1,4 +1,5 @@
-﻿using Dalamud.Game;
+﻿using Dalamud.Data;
+using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Enums;
@@ -57,6 +58,7 @@ namespace RoleplayingVoice {
         private RaceVoice _raceVoice;
         private string lastPrintedWarning;
         private bool disposed;
+        private DataManager _dataManager;
         private ToastGui _toast;
 
         public string Name => "Roleplaying Voice";
@@ -71,7 +73,8 @@ namespace RoleplayingVoice {
             ClientState clientState,
             SigScanner scanner,
             ObjectTable objectTable,
-            ToastGui toast) {
+            ToastGui toast,
+            DataManager dataManager) {
             this.pluginInterface = pi;
             this.chat = chat;
             this._clientState = clientState;
@@ -114,6 +117,7 @@ namespace RoleplayingVoice {
             _clientState.Logout += _clientState_Logout;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _clientState.LeavePvP += _clientState_LeavePvP;
+            _dataManager = dataManager;
             _toast = toast;
             _toast.ErrorToast += _toast_ErrorToast;
             RaceVoice.LoadRacialVoiceInfo();
@@ -288,7 +292,9 @@ namespace RoleplayingVoice {
                 case 48:
                     return characterVoicePack.GetHappy();
             }
-            return characterVoicePack.GetMisc(emoteId + "");
+            var emoteData = _dataManager.GetExcelSheet<Emote>();
+            Emote emote = emoteData.GetRow(emoteId);
+            return characterVoicePack.GetMisc(emote.Name);
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
