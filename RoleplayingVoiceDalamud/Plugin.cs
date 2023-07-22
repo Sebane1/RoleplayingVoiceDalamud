@@ -372,7 +372,8 @@ namespace RoleplayingVoice {
                         } else if (type == (XivChatType)2730) {
                             value = characterVoicePack.GetMissed();
                         } else if (type == (XivChatType)2219) {
-                            if (message.TextValue.Contains("read")) {
+                            if (message.TextValue.Contains("ready") ||
+                                message.TextValue.Contains("readies")) {
                                 value = characterVoicePack.GetReadying(message.TextValue);
                             } else {
                                 value = characterVoicePack.GetCastingHeal();
