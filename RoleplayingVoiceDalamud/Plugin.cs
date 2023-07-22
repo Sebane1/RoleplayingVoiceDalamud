@@ -202,13 +202,15 @@ namespace RoleplayingVoice {
                 string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
                 string clipPath = path + @"\" + hash;
                 try {
-                    if (!isDownloadingZip) {
-                        if (!Path.Exists(clipPath)) {
-                            isDownloadingZip = true;
-                            Task.Run(async () => {
-                                string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
-                                isDownloadingZip = false;
-                            });
+                    if (config.UsePlayerSync) {
+                        if (!isDownloadingZip) {
+                            if (!Path.Exists(clipPath)) {
+                                isDownloadingZip = true;
+                                Task.Run(async () => {
+                                    string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                    isDownloadingZip = false;
+                                });
+                            }
                         }
                     }
                     if (Directory.Exists(path)) {
@@ -232,9 +234,11 @@ namespace RoleplayingVoice {
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
                 string value = GetEmotePath(characterVoicePack, emoteId);
                 if (!string.IsNullOrEmpty(value)) {
-                    Task.Run(async () => {
-                        bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
-                    });
+                    if (config.UsePlayerSync) {
+                        Task.Run(async () => {
+                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
+                        });
+                    }
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote, (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
@@ -395,9 +399,11 @@ namespace RoleplayingVoice {
                     if (!muteTimer.IsRunning) {
                         _realChat.SendMessage("/voice");
                         Task.Run(() => {
-                            Task.Run(async () => {
-                                bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
-                            });
+                            if (config.UsePlayerSync) {
+                                Task.Run(async () => {
+                                    bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
+                                });
+                            }
                             while (muteTimer.ElapsedMilliseconds < 4000) {
                                 Thread.Sleep(4000);
                             }
@@ -505,7 +511,7 @@ namespace RoleplayingVoice {
                         config.Characters[_clientState.LocalPlayer.Name.TextValue],
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
-                        _clientState.LocalPlayer.Position, config.UseAggressiveSplicing);
+                        _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
                         _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
                     });
                 }
@@ -518,7 +524,7 @@ namespace RoleplayingVoice {
                     bool audioFocus = false;
                     if (_clientState.LocalPlayer.TargetObject != null) {
                         if (_clientState.LocalPlayer.TargetObject.ObjectKind ==
-                            Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Player) {
+                            ObjectKind.Player) {
                             audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender.TextValue
                                 || type == XivChatType.Party
                                 || type == XivChatType.CrossParty || isShoutYell;
@@ -528,15 +534,17 @@ namespace RoleplayingVoice {
                     } else {
                         audioFocus = true;
                     }
-                    Task.Run(async () => {
-                        PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == sender.TextValue);
-                        string value = await _roleplayingVoiceManager.
-                        GetSound(playerSender, playerMessage, audioFocus ?
-                        config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                        _clientState.LocalPlayer.Position, isShoutYell);
+                    if (config.UsePlayerSync) {
+                        Task.Run(async () => {
+                            PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == sender.TextValue);
+                            string value = await _roleplayingVoiceManager.
+                            GetSound(playerSender, playerMessage, audioFocus ?
+                            config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                            _clientState.LocalPlayer.Position, isShoutYell);
 
-                        _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
-                    });
+                            _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
+                        });
+                    }
                 }
             }
         }
