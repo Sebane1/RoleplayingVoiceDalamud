@@ -31,7 +31,9 @@ namespace RoleplayingVoiceDalamud {
                     if (file.ToLower().EndsWith(".mp3")) {
                         bool emoteAdded = false;
                         if (!emoteAdded) {
-                            if (file.ToLower().Contains("attack")
+                            if (file.ToLower().Contains("casting attack")) {
+                                _castingAttack.Add(file);
+                            } else if (file.ToLower().Contains("attack")
                                     || file.ToLower().Contains("extra")) {
                                 _attack.Add(file);
                             } else if (file.ToLower().Contains("hurt")) {
@@ -40,8 +42,6 @@ namespace RoleplayingVoiceDalamud {
                                 _death.Add(file);
                             } else if (file.ToLower().Contains("limit")) {
                                 _readying.Add(file);
-                            } else if (file.ToLower().Contains("casting attack")) {
-                                _castingAttack.Add(file);
                             } else if (file.ToLower().Contains("casting heal")) {
                                 _castingHeal.Add(file);
                             } else if (file.ToLower().Contains("casting")) {
