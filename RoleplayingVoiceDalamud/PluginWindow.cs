@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Threading;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -51,9 +52,7 @@ namespace RoleplayingVoice {
         private float _playerCharacterVolume;
         private float _otherCharacterVolume;
         private float _unfocusedCharacterVolume;
-
-
-
+        private bool _useServer;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -89,6 +88,7 @@ namespace RoleplayingVoice {
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
+                    _useServer = configuration.UsePlayerSync;
                     cacheFolder = configuration.CacheFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                 }
             }
@@ -294,6 +294,7 @@ namespace RoleplayingVoice {
                 configuration.IsActive = characterVoiceActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
+                configuration.UsePlayerSync = _useServer;
                 configuration.Save();
                 PluginInterface.SavePluginConfig(configuration);
                 RefreshVoices();
@@ -519,9 +520,10 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Use Aggressive Caching");
 
-            if (ImGui.Button("Reconnect")) {
-                RequestingReconnect?.Invoke(this, EventArgs.Empty);
-            }
+            ImGui.Checkbox("##useServer", ref _useServer);
+            ImGui.SameLine();
+            ImGui.Text("Allow Sending/Receiving Server Data");
+            ImGui.TextWrapped("(Any players with the plugin installed and connected to the same server will hear your custom voice and vice versa)");
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {
@@ -576,8 +578,10 @@ namespace RoleplayingVoice {
 
                 // Wait for all threads
                 while (currentFile < fileCount && moveFailed == 0) {
-                    if (moveFailed > 0)
+                    if (moveFailed > 0) {
                         break;
+                    }
+                    Thread.Sleep(100);
                 }
                 if (moveFailed == 0 && currentFile == fileCount) {
                     fileMoveSuccess = true;
