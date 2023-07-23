@@ -174,16 +174,27 @@ namespace RoleplayingVoice {
             }
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
-            if (ImGui.Button("Add Targeted Player")) {
-                if (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null) {
-                    if (clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
-                        string senderName = Plugin.CleanSenderName(clientState.LocalPlayer.TargetObject.Name.TextValue);
-                        if (!configuration.Whitelist.Contains(senderName)) {
-                            configuration.Whitelist.Add(senderName);
-                        }
-                        Save();
+            bool playerTargetted = (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null);
+            bool playerCloseEnough = playerTargetted && Vector3.Distance(clientState.LocalPlayer.Position, clientState.LocalPlayer.TargetObject.Position) < 1;
+            string targetedPlayerText = "Add Targetted Player";
+            if (!playerTargetted) {
+                targetedPlayerText += " (No Target)";
+                ImGui.BeginDisabled();
+            } else if (playerTargetted && !playerCloseEnough) {
+                targetedPlayerText += " (Too Far)";
+                ImGui.BeginDisabled();
+            }
+            if (ImGui.Button(targetedPlayerText)) {
+                if (clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
+                    string senderName = Plugin.CleanSenderName(clientState.LocalPlayer.TargetObject.Name.TextValue);
+                    if (!configuration.Whitelist.Contains(senderName)) {
+                        configuration.Whitelist.Add(senderName);
                     }
+                    Save();
                 }
+            }
+            if (!playerTargetted || !playerCloseEnough) {
+                ImGui.EndDisabled();
             }
             ImGui.SameLine();
             if (ImGui.Button("Remove Selected Player")) {
