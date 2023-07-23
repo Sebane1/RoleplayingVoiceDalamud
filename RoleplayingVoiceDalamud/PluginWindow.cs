@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Threading;
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Memory.Exceptions;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -53,6 +55,8 @@ namespace RoleplayingVoice {
         private float _otherCharacterVolume;
         private float _unfocusedCharacterVolume;
         private bool _useServer;
+        private bool _ignoreWhitelist;
+        private int _currentWhitelistItem = 0;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -89,6 +93,7 @@ namespace RoleplayingVoice {
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
+                    _ignoreWhitelist = configuration.IgnoreWhitelist;
                     cacheFolder = configuration.CacheFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                 }
             }
@@ -152,10 +157,40 @@ namespace RoleplayingVoice {
                     DrawServer();
                     ImGui.EndTabItem();
                 }
+                if (ImGui.BeginTabItem("Whitelist")) {
+                    DrawWhitelist();
+                    ImGui.EndTabItem();
+                }
                 ImGui.EndTabBar();
             }
             DrawErrors();
             SaveAndClose();
+        }
+
+        private void DrawWhitelist() {
+            string[] whitelist = configuration.Whitelist.ToArray();
+            if (whitelist.Length == 0) {
+                whitelist = new string[] { "None" };
+            }
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
+            if (ImGui.Button("Add Targeted Player")) {
+                if (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null) {
+                    if (clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
+                        string senderName = Plugin.CleanSenderName(clientState.LocalPlayer.TargetObject.Name.TextValue);
+                        if (!configuration.Whitelist.Contains(senderName)) {
+                            configuration.Whitelist.Add(senderName);
+                        }
+                        Save();
+                    }
+                }
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Remove Selected Player")) {
+                configuration.Whitelist.Remove(configuration.Whitelist[_currentWhitelistItem]);
+                Save();
+            }
+            ImGui.TextWrapped("Add users to your whitelist in order to be able to hear them (assuming they have Roleplaying Voice)");
         }
 
         private void SaveAndClose() {
@@ -164,28 +199,7 @@ namespace RoleplayingVoice {
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.GetWindowContentRegionMax().X + 10f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Save")) {
-                if (InputValidation()) {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
-                        apiKeyValidated = false;
-                        save = true;
-                        if (_manager == null) {
-                            managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
-                            managerNull = true;
-                            PluginReference.InitialzeManager();
-                        }
-                        if (_manager != null) {
-                            managerNullMessage = string.Empty;
-                            managerNull = false;
-                            Task.Run(() => _manager.ApiValidation(apiKey));
-                        }
-                    } else if (string.IsNullOrEmpty(apiKey)) {
-                        isApiKeyValid = false;
-                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                    }
-                    SizeYChanged = false;
-                    changedSize = null;
-                    Size = initialSize;
-                }
+                Save();
             }
             ImGui.SetCursorPos(originPos);
             // Place close button in bottom right + some padding / extra space
@@ -218,6 +232,31 @@ namespace RoleplayingVoice {
                 IsOpen = false;
             }
             ImGui.SetCursorPos(originPos);
+        }
+
+        private void Save() {
+            if (InputValidation()) {
+                if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
+                    apiKeyValidated = false;
+                    save = true;
+                    if (_manager == null) {
+                        managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
+                        managerNull = true;
+                        PluginReference.InitialzeManager();
+                    }
+                    if (_manager != null) {
+                        managerNullMessage = string.Empty;
+                        managerNull = false;
+                        Task.Run(() => _manager.ApiValidation(apiKey));
+                    }
+                } else if (string.IsNullOrEmpty(apiKey)) {
+                    isApiKeyValid = false;
+                    apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                }
+                SizeYChanged = false;
+                changedSize = null;
+                Size = initialSize;
+            }
         }
 
         private void DrawErrors() {
@@ -288,6 +327,7 @@ namespace RoleplayingVoice {
                     }
                     configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
                 }
+
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
@@ -295,6 +335,7 @@ namespace RoleplayingVoice {
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
                 configuration.UsePlayerSync = _useServer;
+                configuration.IgnoreWhitelist = _ignoreWhitelist;
                 configuration.Save();
                 PluginInterface.SavePluginConfig(configuration);
                 RefreshVoices();
@@ -426,30 +467,36 @@ namespace RoleplayingVoice {
 
                         ImGui.LabelText("##Label", "Emote and Battle Sounds ");
                         if (ImGui.Button("Import Sound Pack")) {
+                            fileDialogManager.Reset();
                             ImGui.OpenPopup("ImportDialog");
                         }
+
                         ImGui.SameLine();
                         if (ImGui.Button("Export Sound Pack")) {
+                            fileDialogManager.Reset();
                             ImGui.OpenPopup("ExportDialog");
                         }
+
                         if (ImGui.BeginPopup("ImportDialog")) {
                             fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePacks\" + characterVoice;
+                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
                                 if (isOk) {
                                     ZipFile.ExtractToDirectory(file, directory);
                                 }
                             });
                             ImGui.EndPopup();
                         }
+
                         if (ImGui.BeginPopup("ExportDialog")) {
                             fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePacks\" + characterVoice;
+                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
                                 if (isOk) {
                                     ZipFile.CreateFromDirectory(directory, file);
                                 }
                             });
                             ImGui.EndPopup();
                         }
+
                         if (ImGui.Button("Open Sound Directory")) {
                             ProcessStartInfo ProcessInfo;
                             Process Process;
@@ -523,7 +570,7 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##useServer", ref _useServer);
             ImGui.SameLine();
             ImGui.Text("Allow Sending/Receiving Server Data");
-            ImGui.TextWrapped("(Any players with the plugin installed and connected to the same server will hear your custom voice and vice versa)");
+            ImGui.TextWrapped("(Any players with Roleplaying Voice installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {

@@ -15,6 +15,8 @@ namespace RoleplayingVoice {
         bool useAggressiveCaching = true;
         private string cacheFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
         private bool usePlayerSync;
+        private bool ignoreWhitelist;
+        private List<string> whitelist = new List<string>();
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -31,7 +33,9 @@ namespace RoleplayingVoice {
         public float UnfocusedCharacterVolume { get => _unfocusedCharacterVolume; set => _unfocusedCharacterVolume = value; }
         public bool UseAggressiveSplicing { get => useAggressiveCaching; set => useAggressiveCaching = value; }
         public bool UsePlayerSync { get => usePlayerSync; set => usePlayerSync = value; }
+        public bool IgnoreWhitelist { get => ignoreWhitelist; set => ignoreWhitelist = value; }
         public string CacheFolder { get => cacheFolder; set => cacheFolder = value; }
+        public List<string> Whitelist { get => whitelist; set => whitelist = value; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

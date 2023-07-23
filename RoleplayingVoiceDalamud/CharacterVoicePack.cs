@@ -20,6 +20,8 @@ namespace RoleplayingVoiceDalamud {
         private Dictionary<string, List<string>> _misc = new Dictionary<string, List<string>>();
         private Random _random;
         private int emoteIndex;
+        private string lastMissed;
+        private string lastAction;
 
         public string VoiceName { get => _voiceName; set => _voiceName = value; }
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
@@ -76,12 +78,16 @@ namespace RoleplayingVoiceDalamud {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 2 || final.StartsWith(name)) {
+                if (final.Contains(name) && name.Length > 2 || final.EndsWith(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }
-            if (_attack.Count > 0 && !value.Contains("sprint")) {
-                return _attack[_random.Next(0, _attack.Count)];
+            if (_attack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+                string action = _attack[_random.Next(0, _attack.Count)];
+                if (lastAction != action) {
+                    return lastAction = action;
+                }
+                return "";
             } else {
                 return string.Empty;
             }
@@ -90,7 +96,7 @@ namespace RoleplayingVoiceDalamud {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 4 || final.StartsWith(name)) {
+                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
                     return _misc[name][_random.Next(0, _misc[name].Count)];
                 }
             }
@@ -150,7 +156,11 @@ namespace RoleplayingVoiceDalamud {
 
         public string GetMissed() {
             if (_missed.Count > 0) {
-                return _missed[_random.Next(0, _missed.Count)];
+                string missed = _missed[_random.Next(0, _missed.Count)];
+                if (lastMissed != missed) {
+                    return lastMissed = missed;
+                }
+                return "";
             } else {
                 return string.Empty;
             }

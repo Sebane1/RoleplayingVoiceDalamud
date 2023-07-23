@@ -60,6 +60,7 @@ namespace RoleplayingVoice {
         private bool disposed;
         private DataManager _dataManager;
         private ToastGui _toast;
+        private bool ignoreAttack;
 
         public string Name => "Roleplaying Voice";
 
@@ -203,24 +204,26 @@ namespace RoleplayingVoice {
                 string clipPath = path + @"\" + hash;
                 try {
                     if (config.UsePlayerSync) {
-                        if (!isDownloadingZip) {
-                            if (!Path.Exists(clipPath)) {
-                                isDownloadingZip = true;
-                                Task.Run(async () => {
-                                    string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
-                                    isDownloadingZip = false;
-                                });
+                        if (config.Whitelist.Contains(playerSender)) {
+                            if (!isDownloadingZip) {
+                                if (!Path.Exists(clipPath)) {
+                                    isDownloadingZip = true;
+                                    Task.Run(async () => {
+                                        string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                        isDownloadingZip = false;
+                                    });
+                                }
+                            }
+                            if (Directory.Exists(path)) {
+                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
+                                string value = GetEmotePath(characterVoicePack, emoteId);
+                                string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
+                                TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                                _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
+                                (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                                MuteChecK();
                             }
                         }
-                    }
-                    if (Directory.Exists(path)) {
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
-                        string value = GetEmotePath(characterVoicePack, emoteId);
-                        string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                        TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                        _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
-                        (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
-                        MuteChecK();
                     }
                 } catch {
 
@@ -370,7 +373,10 @@ namespace RoleplayingVoice {
                     if (!message.TextValue.Contains("cancel")) {
                         if (type == (XivChatType)2729 ||
                         type == (XivChatType)2091) {
-                            value = characterVoicePack.GetAction(message.TextValue);
+                            if (!ignoreAttack) {
+                                value = characterVoicePack.GetAction(message.TextValue);
+                            }
+                            ignoreAttack = !ignoreAttack;
                         } else if (type == (XivChatType)2234) {
                             value = characterVoicePack.GetDeath();
                         } else if (type == (XivChatType)2730) {
@@ -424,57 +430,62 @@ namespace RoleplayingVoice {
                     string path = config.CacheFolder + @"\VoicePack\Others";
                     string clipPath = path + @"\" + hash;
                     Directory.CreateDirectory(path);
-                    if (!isDownloadingZip) {
-                        if (!Path.Exists(clipPath)) {
-                            isDownloadingZip = true;
-                            Task.Run(async () => {
-                                string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
-                                isDownloadingZip = false;
-                            });
-                        }
-                    }
-                    if (Path.Exists(clipPath)) {
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
-                        string value = "";
-                        if (message.TextValue.Contains("hit") ||
-                            message.TextValue.Contains("uses") ||
-                            message.TextValue.Contains("casts")) {
-                            value = characterVoicePack.GetAction(message.TextValue);
-                        } else if (message.TextValue.Contains("defeated")) {
-                            value = characterVoicePack.GetDeath();
-                        } else if (message.TextValue.Contains("miss")) {
-                            value = characterVoicePack.GetMissed();
-                        } else if (message.TextValue.Contains("readies")) {
-                            value = characterVoicePack.GetReadying(message.TextValue);
-                        } else if (message.TextValue.Contains("casting")) {
-                            value = characterVoicePack.GetCastingAttack();
-                        } else if (message.TextValue.Contains("revive")) {
-                            value = characterVoicePack.GetRevive();
-                        } else if (message.TextValue.Contains("damage")) {
-                            value = characterVoicePack.GetHurt();
-                        }
-                        Task.Run(async () => {
-                            GameObject character = null;
-                            foreach (var item in _objectTable) {
-                                string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
-                                string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
-                                if (playerNameStrings.Contains(playerSender)) {
-                                    character = item;
+                    if (config.UsePlayerSync) {
+                        if (config.Whitelist.Contains(playerSender)) {
+                            if (!isDownloadingZip) {
+                                if (!Path.Exists(clipPath)) {
+                                    isDownloadingZip = true;
+                                    Task.Run(async () => {
+                                        string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                        isDownloadingZip = false;
+                                    });
                                 }
                             }
-                            _audioManager.PlayAudio(new PlayerObject((PlayerCharacter)character, playerSender, character.Position), value, SoundType.OtherPlayer);
-                        });
-                        if (!muteTimer.IsRunning) {
-                            _realChat.SendMessage("/voice");
-                            Task.Run(() => {
-                                while (muteTimer.ElapsedMilliseconds < 4000) {
-                                    Thread.Sleep(4000);
+                            if (Path.Exists(clipPath)) {
+                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(hash, clipPath);
+                                string value = "";
+                                if (message.TextValue.Contains("hit") ||
+                                    message.TextValue.Contains("uses") ||
+                                    message.TextValue.Contains("casts")) {
+                                    value = characterVoicePack.GetAction(message.TextValue);
+                                } else if (message.TextValue.Contains("defeated")) {
+                                    value = characterVoicePack.GetDeath();
+                                } else if (message.TextValue.Contains("miss")) {
+                                    value = characterVoicePack.GetMissed();
+                                } else if (message.TextValue.Contains("readies")) {
+                                    value = characterVoicePack.GetReadying(message.TextValue);
+                                } else if (message.TextValue.Contains("casting")) {
+                                    value = characterVoicePack.GetCastingAttack();
+                                } else if (message.TextValue.Contains("revive")) {
+                                    value = characterVoicePack.GetRevive();
+                                } else if (message.TextValue.Contains("damage")) {
+                                    value = characterVoicePack.GetHurt();
                                 }
-                                _realChat.SendMessage("/voice");
-                                muteTimer.Reset();
-                            });
+                                Task.Run(async () => {
+                                    GameObject character = null;
+                                    foreach (var item in _objectTable) {
+                                        string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
+                                        string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
+                                        if (playerNameStrings.Contains(playerSender)) {
+                                            character = item;
+                                        }
+                                    }
+                                    _audioManager.PlayAudio(new PlayerObject((PlayerCharacter)character,
+                                    playerSender, character.Position), value, SoundType.OtherPlayer);
+                                });
+                                if (!muteTimer.IsRunning) {
+                                    _realChat.SendMessage("/voice");
+                                    Task.Run(() => {
+                                        while (muteTimer.ElapsedMilliseconds < 4000) {
+                                            Thread.Sleep(4000);
+                                        }
+                                        _realChat.SendMessage("/voice");
+                                        muteTimer.Reset();
+                                    });
+                                }
+                                muteTimer.Restart();
+                            }
                         }
-                        muteTimer.Restart();
                     }
                 }
             }
@@ -535,18 +546,27 @@ namespace RoleplayingVoice {
                         audioFocus = true;
                     }
                     if (config.UsePlayerSync) {
-                        Task.Run(async () => {
-                            PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == sender.TextValue);
-                            string value = await _roleplayingVoiceManager.
-                            GetSound(playerSender, playerMessage, audioFocus ?
-                            config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                            _clientState.LocalPlayer.Position, isShoutYell);
-
-                            _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
-                        });
+                        if (config.Whitelist.Contains(playerSender)) {
+                            Task.Run(async () => {
+                                PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == sender.TextValue);
+                                string value = await _roleplayingVoiceManager.
+                                GetSound(playerSender, playerMessage, audioFocus ?
+                                config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                                _clientState.LocalPlayer.Position, isShoutYell);
+                                _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
+                            });
+                        }
                     }
                 }
             }
+        }
+
+        public static string CleanSenderName(string senderName) {
+            string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(senderName)).Split(" ");
+            string playerSender = senderStrings.Length == 2 ?
+                (senderStrings[0] + " " + senderStrings[1]) :
+                (senderStrings[0] + " " + senderStrings[2]);
+            return playerSender;
         }
 
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
