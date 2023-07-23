@@ -535,7 +535,7 @@ namespace RoleplayingVoice {
 
             if (_manager != null && _manager.Info != null && isApiKeyValid)// && clientState.IsLoggedIn)
             {
-                ImGui.LabelText("##usage", $"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                 ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
             }
         }
@@ -619,7 +619,6 @@ namespace RoleplayingVoice {
                             if (!fileMoved)
                                 moveFailed++;
                         };
-
                     });
                 }
 
@@ -633,7 +632,6 @@ namespace RoleplayingVoice {
                 if (moveFailed == 0 && currentFile == fileCount) {
                     fileMoveSuccess = true;
                     fileMoveMessage = string.Empty;
-                    //var Catalogue = configuration.CharacterVoices.VoiceCatalogue;
                     foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
                         string voiceName = voice.Key;
                         var innerDictionary = voice.Value;
