@@ -118,12 +118,17 @@ namespace RoleplayingVoice {
             _clientState.Logout += _clientState_Logout;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _clientState.LeavePvP += _clientState_LeavePvP;
+            window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
             _dataManager = dataManager;
             _toast = toast;
             _toast.ErrorToast += _toast_ErrorToast;
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
 
+        }
+
+        private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
+            chat.PrintError(e.Message);
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
@@ -151,11 +156,15 @@ namespace RoleplayingVoice {
         }
 
         private void _clientState_Login(object sender, EventArgs e) {
-            CheckDependancies(true);
             CleanSounds();
+            CheckDependancies(true);
         }
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
+            if (_audioManager != null) {
+                _audioManager.Dispose();
+                _audioManager = null;
+            }
             if (Directory.Exists(path)) {
                 try {
                     Directory.Delete(path, true);

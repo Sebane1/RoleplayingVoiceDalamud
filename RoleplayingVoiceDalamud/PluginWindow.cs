@@ -60,6 +60,7 @@ namespace RoleplayingVoice {
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
+        public event EventHandler<MessageEventArgs> OnWindowOperationFailed;
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
@@ -453,6 +454,7 @@ namespace RoleplayingVoice {
         private void DrawGeneral() {
             ImGui.Text("Cache Location:");
             ImGui.TextWrapped(cacheFolder);
+            ImGui.Text("Pick A New Cache (Optional):");
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderClosed)) {
                 fileDialogManager.Reset();
@@ -462,8 +464,13 @@ namespace RoleplayingVoice {
                 fileDialogManager.SaveFolderDialog("Select cache location", "RPVoiceCache", (isOk, folder) => {
                     if (isOk) {
                         if (folder != null && !string.Equals(folder, cacheFolder)) {
-                            attemptedMoveLocation = folder;
-                            Task.Run(() => FileMove(ref cacheFolder, folder));
+                            if (!folder.Contains(cacheFolder)) {
+                                attemptedMoveLocation = folder;
+                                Task.Run(() => FileMove(ref cacheFolder, folder));
+                            } else {
+                                OnWindowOperationFailed?.Invoke(this, new MessageEventArgs() 
+                                { Message = "You cannot put a cache folder inside the old cache folder." });
+                            }
                         }
                     }
                 }, null, true);
@@ -696,5 +703,10 @@ namespace RoleplayingVoice {
             return status;
         }
 
+        public class MessageEventArgs : EventArgs {
+            string message;
+
+            public string Message { get => message; set => message = value; }
+        }
     }
 }

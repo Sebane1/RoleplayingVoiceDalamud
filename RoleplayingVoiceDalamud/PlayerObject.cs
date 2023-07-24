@@ -9,7 +9,7 @@ namespace RoleplayingVoiceDalamud {
         private string _name = "";
         private Vector3 _position = new Vector3();
 
-        string IPlayerObject.Name => _playerCharacter != null ? _playerCharacter.Name.TextValue : _name;
+        string IPlayerObject.Name => _playerCharacter != null ? (_playerCharacter.Name != null ? _playerCharacter.Name.TextValue : _name) : _name;
 
         Vector3 IPlayerObject.Position {
             get {
