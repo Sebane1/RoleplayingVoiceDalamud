@@ -21,6 +21,7 @@ Hit save, pick a voice and you are done!
 You can use the Elevenlabs website to make more voices.
 
 In order to sync your character voice with other players you will need to enable connection to a sync server and whitelist players you want to hear.
+
 ![bb6a59667029657fe68b24a7988d7a0c](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/371e2e9a-081c-4129-8096-aa5ff7f90858)
 ![401b7253fd3b57eb4b1cd2021531c93f](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/496fd720-51c4-49da-a5a7-e0796cc15d2b)
 
