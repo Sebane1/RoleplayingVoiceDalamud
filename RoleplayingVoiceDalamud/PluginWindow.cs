@@ -76,8 +76,6 @@ namespace RoleplayingVoice {
             voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 0, 235);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voicePackComboBox.OnSelectedIndexChanged += VoicePackComboBox_OnSelectedIndexChanged;
-            voiceComboBox.SelectedIndex = 0;
-            voicePackComboBox.SelectedIndex = 0;
             fileDialogManager = new FileDialogManager();
         }
 
@@ -110,6 +108,13 @@ namespace RoleplayingVoice {
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
+                    if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                        characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
+                    }
+                    if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                        characterVoicePack = configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue];
+                    }
+                    RefreshVoices();
                 }
             }
         }
@@ -162,8 +167,7 @@ namespace RoleplayingVoice {
             } else {
                 characterVoicePack = "None";
             }
-            if (characterVoiceActive)
-            {
+            if (characterVoiceActive) {
                 RefreshVoices();
             }
         }
@@ -268,11 +272,12 @@ namespace RoleplayingVoice {
                         managerNull = false;
                         Task.Run(() => _manager.ApiValidation(apiKey));
                     }
-                } 
+                }
                 if (string.IsNullOrWhiteSpace(apiKey) && characterVoiceActive) {
                     isApiKeyValid = false;
                     apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 }
+
                 SizeYChanged = false;
                 changedSize = null;
                 Size = initialSize;
@@ -340,27 +345,29 @@ namespace RoleplayingVoice {
             apiKeyValidated = true;
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
-            if (save) 
-            {
-                if (isApiKeyValid && characterVoiceActive && apiKeyValidated)
-                {
+            if (save) {
+                if (isApiKeyValid && characterVoiceActive && apiKeyValidated) {
                     configuration.ConnectionIP = serverIP;
                     configuration.ApiKey = apiKey;
-                    if (clientState.LocalPlayer != null)
-                    {
-                        if (configuration.Characters == null)
-                        {
+                    if (clientState.LocalPlayer != null) {
+                        if (configuration.Characters == null) {
                             configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                         }
                         if (configuration.CharacterVoicePacks == null) {
-                        configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
-                    }
-                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                            configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
+                        }
+                        configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
                         configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
-                }
+                    }
                     RefreshVoices();
                 }
 
+                if (voicePackComboBox != null && _voicePackList != null) {
+                    characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                }
+                if (voiceComboBox != null && _voiceList != null) {
+                    characterVoice = _voiceList[voiceComboBox.SelectedIndex];
+                }
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
@@ -529,21 +536,15 @@ namespace RoleplayingVoice {
                         voiceComboBox.Draw();
 
                         ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                        ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-                        ImGui.SameLine();
-                        ImGui.Text("AI Voice Enabled");
-
-                        if (_manager != null && _manager.Info != null && isApiKeyValid)// && clientState.IsLoggedIn)
-                        {
-                            ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
-                            ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
-                        }
-                        ImGui.Dummy(new Vector2(0, 10));
                     }
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
                     RefreshVoices();
+                }
+                if (_manager != null && _manager.Info != null && isApiKeyValid) {
+                    ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                    ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
               && !isApiKeyValid && characterVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && characterVoiceActive) {
@@ -559,12 +560,19 @@ namespace RoleplayingVoice {
                     voiceComboBox.Draw();
                 }
             }
+            ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
+            ImGui.SameLine();
+            ImGui.Text("AI Voice Enabled");
+            ImGui.Dummy(new Vector2(0, 10));
             ImGui.LabelText("##Label", "Emote and Battle Sounds ");
             if (_voicePackList.Length > 0) {
                 voicePackComboBox.Draw();
             }
             ImGui.SameLine();
             if (ImGui.Button("Open Sound Directory")) {
+                if (voicePackComboBox != null && _voicePackList != null) {
+                    characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                }
                 ProcessStartInfo ProcessInfo;
                 Process Process;
                 string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;

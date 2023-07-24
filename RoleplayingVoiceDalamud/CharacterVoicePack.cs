@@ -77,10 +77,14 @@ namespace RoleplayingVoiceDalamud {
         public string GetAction(string value) {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
-            foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 2 || final.EndsWith(name)) {
-                    return _misc[name][_random.Next(0, _misc[name].Count)];
+            try {
+                foreach (string name in _misc.Keys) {
+                    if (final.Contains(name) && name.Length > 2 || final.EndsWith(name)) {
+                        return _misc[name][_random.Next(0, _misc[name].Count)];
+                    }
                 }
+            } catch {
+
             }
             if (_attack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
                 string action = _attack[_random.Next(0, _attack.Count)];
