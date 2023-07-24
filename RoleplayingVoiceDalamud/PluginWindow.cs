@@ -138,10 +138,12 @@ namespace RoleplayingVoice {
             } else {
                 characterVoice = "None";
             }
-            RefreshVoices();
+            if (characterVoiceActive)
+            {
+                RefreshVoices();
+            }
         }
         public override void Draw() {
-            //// UI REWORK
             fileDialogManager.Draw();
             if (ImGui.BeginTabBar("ConfigTabs")) {
                 if (ImGui.BeginTabItem("General")) {
@@ -218,26 +220,6 @@ namespace RoleplayingVoice {
             ImGui.SetCursorPosX(ImGui.GetWindowContentRegionMax().X - ImGui.CalcTextSize("Close").X - 20f);
             ImGui.SetCursorPosY(ImGui.GetWindowContentRegionMax().Y - ImGui.GetFrameHeight() - 10f);
             if (ImGui.Button("Close")) {
-                // Because we don't trust the user
-                if (InputValidation()) {
-                    if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
-                        apiKeyValidated = false;
-                        save = true;
-                        if (_manager == null) {
-                            managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
-                            managerNull = true;
-                            PluginReference.InitialzeManager();
-                        }
-                        if (_manager != null) {
-                            managerNullMessage = string.Empty;
-                            managerNull = false;
-                            Task.Run(() => _manager.ApiValidation(apiKey));
-                        }
-                    } else if (string.IsNullOrEmpty(apiKey)) {
-                        isApiKeyValid = false;
-                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                    }
-                }
                 SizeYChanged = false;
                 changedSize = null;
                 Size = initialSize;
@@ -248,7 +230,7 @@ namespace RoleplayingVoice {
 
         private void Save() {
             if (InputValidation()) {
-                if (configuration != null && !string.IsNullOrEmpty(apiKey)) {
+                if (configuration != null) {
                     apiKeyValidated = false;
                     save = true;
                     if (_manager == null) {
@@ -261,7 +243,8 @@ namespace RoleplayingVoice {
                         managerNull = false;
                         Task.Run(() => _manager.ApiValidation(apiKey));
                     }
-                } else if (string.IsNullOrEmpty(apiKey)) {
+                } 
+                if (string.IsNullOrWhiteSpace(apiKey) && characterVoiceActive) {
                     isApiKeyValid = false;
                     apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 }
@@ -277,7 +260,7 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if (!isApiKeyValid || string.IsNullOrEmpty(apiKey)) {
+            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && characterVoiceActive) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -330,14 +313,21 @@ namespace RoleplayingVoice {
             apiKeyValidated = true;
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
-            if (isApiKeyValid && save && apiKeyValidated) {
-                configuration.ConnectionIP = serverIP;
-                configuration.ApiKey = apiKey;
-                if (clientState.LocalPlayer != null) {
-                    if (configuration.Characters == null) {
-                        configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+            if (save) 
+            {
+                if (isApiKeyValid && characterVoiceActive && apiKeyValidated)
+                {
+                    configuration.ConnectionIP = serverIP;
+                    configuration.ApiKey = apiKey;
+                    if (clientState.LocalPlayer != null)
+                    {
+                        if (configuration.Characters == null)
+                        {
+                            configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                        }
+                        configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
                     }
-                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                    RefreshVoices();
                 }
 
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
@@ -350,7 +340,6 @@ namespace RoleplayingVoice {
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
                 configuration.Save();
                 PluginInterface.SavePluginConfig(configuration);
-                RefreshVoices();
                 save = false;
             }
         }
@@ -477,54 +466,11 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
 
-            if (isApiKeyValid && clientState.LocalPlayer != null) {
+            if (isApiKeyValid && clientState.LocalPlayer != null && characterVoiceActive) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
                         voiceComboBox.Draw();
-
-                        ImGui.LabelText("##Label", "Emote and Battle Sounds ");
-                        if (ImGui.Button("Import Sound Pack")) {
-                            fileDialogManager.Reset();
-                            ImGui.OpenPopup("ImportDialog");
-                        }
-
-                        ImGui.SameLine();
-                        if (ImGui.Button("Export Sound Pack")) {
-                            fileDialogManager.Reset();
-                            ImGui.OpenPopup("ExportDialog");
-                        }
-
-                        if (ImGui.BeginPopup("ImportDialog")) {
-                            fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                                if (isOk) {
-                                    ZipFile.ExtractToDirectory(file, directory);
-                                }
-                            });
-                            ImGui.EndPopup();
-                        }
-
-                        if (ImGui.BeginPopup("ExportDialog")) {
-                            fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                                if (isOk) {
-                                    ZipFile.CreateFromDirectory(directory, file);
-                                }
-                            });
-                            ImGui.EndPopup();
-                        }
-
-                        if (ImGui.Button("Open Sound Directory")) {
-                            ProcessStartInfo ProcessInfo;
-                            Process Process;
-                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                            Directory.CreateDirectory(directory);
-                            ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                            ProcessInfo.UseShellExecute = true;
-                            Process = Process.Start(ProcessInfo);
-                        }
-                        ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                     }
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
@@ -532,13 +478,13 @@ namespace RoleplayingVoice {
                     RefreshVoices();
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
-              && !isApiKeyValid || clientState.LocalPlayer == null && !isApiKeyValid) {
+              && !isApiKeyValid && characterVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && characterVoiceActive) {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
-            } else if (!clientState.IsLoggedIn && isApiKeyValid) {
+            } else if (!clientState.IsLoggedIn && isApiKeyValid && characterVoiceActive) {
                 voiceComboBox.Contents[0] = "Not logged in";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
@@ -546,12 +492,62 @@ namespace RoleplayingVoice {
                 }
             }
 
+            ImGui.LabelText("##Label", "Emote and Battle Sounds ");
+            if (ImGui.Button("Import Sound Pack"))
+            {
+                fileDialogManager.Reset();
+                ImGui.OpenPopup("ImportDialog");
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Export Sound Pack"))
+            {
+                fileDialogManager.Reset();
+                ImGui.OpenPopup("ExportDialog");
+            }
+
+            if (ImGui.BeginPopup("ImportDialog"))
+            {
+                fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
+                    if (isOk)
+                    {
+                        ZipFile.ExtractToDirectory(file, directory);
+                    }
+                });
+                ImGui.EndPopup();
+            }
+
+            if (ImGui.BeginPopup("ExportDialog"))
+            {
+                fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
+                    if (isOk)
+                    {
+                        ZipFile.CreateFromDirectory(directory, file);
+                    }
+                });
+                ImGui.EndPopup();
+            }
+
+            if (ImGui.Button("Open Sound Directory"))
+            {
+                ProcessStartInfo ProcessInfo;
+                Process Process;
+                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
+                Directory.CreateDirectory(directory);
+                ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                ProcessInfo.UseShellExecute = true;
+                Process = Process.Start(ProcessInfo);
+            }
+            ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
+
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
             ImGui.SameLine();
             ImGui.Text("AI Voice Enabled");
 
-            if (_manager != null && _manager.Info != null && isApiKeyValid)// && clientState.IsLoggedIn)
+            if (_manager != null && _manager.Info != null && isApiKeyValid && characterVoiceActive)// && clientState.IsLoggedIn)
             {
                 ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
                 ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
@@ -559,7 +555,6 @@ namespace RoleplayingVoice {
         }
 
         private void DrawVolume() {
-            ////TODO?
             ImGui.Text("Current Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##playerSlider", ref _playerCharacterVolume, 0, 1);

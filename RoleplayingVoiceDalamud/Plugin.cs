@@ -188,7 +188,10 @@ namespace RoleplayingVoice {
         }
 
         private void UiBuilder_OpenConfigUi() {
-            window.RefreshVoices();
+            if (config.IsActive)
+            {
+                window.RefreshVoices();
+            }
             window.Toggle();
         }
         public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
@@ -617,7 +620,10 @@ namespace RoleplayingVoice {
                     AttemptConnection();
                     break;
                 default:
-                    window.RefreshVoices();
+                    if (config.IsActive)
+                    {
+                        window.RefreshVoices();
+                    }
                     window.Toggle();
                     break;
             }
