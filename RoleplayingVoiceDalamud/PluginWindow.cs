@@ -416,13 +416,15 @@ namespace RoleplayingVoice {
                 _manager.RefreshElevenlabsSubscriptionInfo();
             }
             List<string> voicePacks = new List<string>();
-            foreach (string voice in Directory.EnumerateDirectories(cacheFolder + @"\VoicePack\")) {
-                if (!voice.EndsWith("Others")) {
-                    voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+            string path = cacheFolder + @"\VoicePack\";
+            if (Directory.Exists(path)) {
+                foreach (string voice in Directory.EnumerateDirectories(path)) {
+                    if (!voice.EndsWith("Others")) {
+                        voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+                    }
                 }
+                _voicePackList = voicePacks.ToArray();
             }
-            _voicePackList = voicePacks.ToArray();
-
             if (clientState.LocalPlayer != null) {
                 if (configuration.Characters == null) {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
