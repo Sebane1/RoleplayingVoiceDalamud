@@ -16,13 +16,14 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Threading;
 using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Memory.Exceptions;
+using System.Collections.Generic;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingVoiceManager _manager = null;
         BetterComboBox voiceComboBox;
+        BetterComboBox voicePackComboBox;
         private FileDialogManager fileDialogManager;
         private ClientState clientState;
 
@@ -57,6 +58,8 @@ namespace RoleplayingVoice {
         private bool _useServer;
         private bool _ignoreWhitelist;
         private int _currentWhitelistItem = 0;
+        private string characterVoicePack;
+        private string[] _voicePackList = new string[1] { "" };
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -64,14 +67,23 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(400, 430);
+            Size = new Vector2(400, 500);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
-            voiceComboBox = new BetterComboBox("Voice List", _voiceList, 810);
+            voiceComboBox = new BetterComboBox("AI Voice List", _voiceList, 810);
+            voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 810);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
+            voicePackComboBox.OnSelectedIndexChanged += VoicePackComboBox_OnSelectedIndexChanged;
             voiceComboBox.SelectedIndex = 0;
+            voicePackComboBox.SelectedIndex = 0;
             fileDialogManager = new FileDialogManager();
+        }
+
+        private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
+            if (voicePackComboBox != null && _voicePackList != null) {
+                characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+            }
         }
 
         private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
@@ -137,6 +149,16 @@ namespace RoleplayingVoice {
                 }
             } else {
                 characterVoice = "None";
+            }
+            if (configuration.CharacterVoicePacks != null) {
+                if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    characterVoicePack = configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue]
+                        != null ? configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] : "";
+                } else {
+                    characterVoicePack = "None";
+                }
+            } else {
+                characterVoicePack = "None";
             }
             RefreshVoices();
         }
@@ -337,7 +359,11 @@ namespace RoleplayingVoice {
                     if (configuration.Characters == null) {
                         configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                     }
+                    if (configuration.CharacterVoicePacks == null) {
+                        configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
+                    }
                     configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                    configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
                 }
 
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
@@ -388,9 +414,18 @@ namespace RoleplayingVoice {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
             }
+            List<string> voicePacks = new List<string>();
+            foreach (string voice in Directory.EnumerateDirectories(cacheFolder + @"\VoicePack\")) {
+                voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+            }
+            _voicePackList = voicePacks.ToArray();
+
             if (clientState.LocalPlayer != null) {
                 if (configuration.Characters == null) {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                }
+                if (configuration.CharacterVoicePacks == null) {
+                    configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
                 }
                 if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     if (voiceComboBox != null) {
@@ -399,6 +434,19 @@ namespace RoleplayingVoice {
                             for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
                                 if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
                                     voiceComboBox.SelectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                    if (voicePackComboBox != null) {
+                        if (_voiceList != null) {
+                            voicePackComboBox.Contents = _voicePackList;
+                            for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
+                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                    voicePackComboBox.SelectedIndex = i;
                                     break;
                                 }
                             }
@@ -468,8 +516,9 @@ namespace RoleplayingVoice {
                                 attemptedMoveLocation = folder;
                                 Task.Run(() => FileMove(ref cacheFolder, folder));
                             } else {
-                                OnWindowOperationFailed?.Invoke(this, new MessageEventArgs() 
-                                { Message = "You cannot put a cache folder inside the old cache folder." });
+                                OnWindowOperationFailed?.Invoke(this, new MessageEventArgs() {
+                                    Message = "You cannot put a cache folder inside the old cache folder."
+                                });
                             }
                         }
                     }
@@ -482,50 +531,52 @@ namespace RoleplayingVoice {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Voice");
                         voiceComboBox.Draw();
-
-                        ImGui.LabelText("##Label", "Emote and Battle Sounds ");
-                        if (ImGui.Button("Import Sound Pack")) {
-                            fileDialogManager.Reset();
-                            ImGui.OpenPopup("ImportDialog");
-                        }
-
-                        ImGui.SameLine();
-                        if (ImGui.Button("Export Sound Pack")) {
-                            fileDialogManager.Reset();
-                            ImGui.OpenPopup("ExportDialog");
-                        }
-
-                        if (ImGui.BeginPopup("ImportDialog")) {
-                            fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                                if (isOk) {
-                                    ZipFile.ExtractToDirectory(file, directory);
-                                }
-                            });
-                            ImGui.EndPopup();
-                        }
-
-                        if (ImGui.BeginPopup("ExportDialog")) {
-                            fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                                if (isOk) {
-                                    ZipFile.CreateFromDirectory(directory, file);
-                                }
-                            });
-                            ImGui.EndPopup();
-                        }
-
-                        if (ImGui.Button("Open Sound Directory")) {
-                            ProcessStartInfo ProcessInfo;
-                            Process Process;
-                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                            Directory.CreateDirectory(directory);
-                            ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                            ProcessInfo.UseShellExecute = true;
-                            Process = Process.Start(ProcessInfo);
-                        }
-                        ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                     }
+                    ImGui.LabelText("##Label", "Emote and Battle Sounds ");
+                    if (_voicePackList.Length > 0) {
+                        voicePackComboBox.Draw();
+                    }
+                    if (ImGui.Button("Import Sound Pack")) {
+                        fileDialogManager.Reset();
+                        ImGui.OpenPopup("ImportDialog");
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("Export Sound Pack")) {
+                        fileDialogManager.Reset();
+                        ImGui.OpenPopup("ExportDialog");
+                    }
+
+                    if (ImGui.BeginPopup("ImportDialog")) {
+                        fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
+                            string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
+                            if (isOk) {
+                                ZipFile.ExtractToDirectory(file, directory);
+                            }
+                        });
+                        ImGui.EndPopup();
+                    }
+
+                    if (ImGui.BeginPopup("ExportDialog")) {
+                        fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
+                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                            if (isOk) {
+                                ZipFile.CreateFromDirectory(directory, file);
+                            }
+                        });
+                        ImGui.EndPopup();
+                    }
+
+                    if (ImGui.Button("Open Sound Directory")) {
+                        ProcessStartInfo ProcessInfo;
+                        Process Process;
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
+                        Directory.CreateDirectory(directory);
+                        ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                        ProcessInfo.UseShellExecute = true;
+                        Process = Process.Start(ProcessInfo);
+                    }
+                    ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {

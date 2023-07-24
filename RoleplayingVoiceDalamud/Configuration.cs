@@ -28,6 +28,7 @@ namespace RoleplayingVoice {
         public CharacterVoices CharacterVoices { get; set; }
 
         public Dictionary<string, string> Characters { get; set; }
+        public Dictionary<string, string> CharacterVoicePacks { get; set; }
         public float PlayerCharacterVolume { get => _playerCharacterVolume; set => _playerCharacterVolume = value; }
         public float OtherCharacterVolume { get => _otherCharacterVolume; set => _otherCharacterVolume = value; }
         public float UnfocusedCharacterVolume { get => _unfocusedCharacterVolume; set => _unfocusedCharacterVolume = value; }

@@ -9,7 +9,15 @@ namespace RoleplayingVoiceDalamud {
         private string _name = "";
         private Vector3 _position = new Vector3();
 
-        string IPlayerObject.Name => _playerCharacter != null ? (_playerCharacter.Name != null ? _playerCharacter.Name.TextValue : _name) : _name;
+        string IPlayerObject.Name {
+            get {
+                try {
+                    return _playerCharacter != null ? (_playerCharacter.Name != null ? _playerCharacter.Name.TextValue : _name) : _name;
+                } catch {
+                    return _name;
+                }
+            }
+        }
 
         Vector3 IPlayerObject.Position {
             get {
@@ -21,7 +29,15 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        float IPlayerObject.Rotation => _playerCharacter != null ? _playerCharacter.Rotation : 0;
+        float IPlayerObject.Rotation {
+            get {
+                try {
+                    return _playerCharacter != null ? _playerCharacter.Rotation : 0;
+                } catch {
+                    return 0;
+                }
+            }
+        }
 
         string IPlayerObject.FocusedPlayerObject {
             get {
