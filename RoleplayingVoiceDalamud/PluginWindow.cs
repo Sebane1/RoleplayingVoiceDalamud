@@ -540,60 +540,6 @@ namespace RoleplayingVoice {
                         }
                         ImGui.Dummy(new Vector2(0, 10));
                     }
-                    ImGui.LabelText("##Label", "Emote and Battle Sounds ");
-                    if (_voicePackList.Length > 0) {
-                        voicePackComboBox.Draw();
-                    }
-                    ImGui.SameLine();
-                    if (ImGui.Button("Open Sound Directory")) {
-                        ProcessStartInfo ProcessInfo;
-                        Process Process;
-                        string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                        Directory.CreateDirectory(directory);
-                        ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                        ProcessInfo.UseShellExecute = true;
-                        Process = Process.Start(ProcessInfo);
-                    }
-                    ImGui.SetNextItemWidth(270);
-                    ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
-                    ImGui.SameLine();
-                    if (ImGui.Button("New Sound Pack")) {
-                        string directory = configuration.CacheFolder + @"\VoicePack\" + _newVoicePackName;
-                        Directory.CreateDirectory(directory);
-                        RefreshVoices();
-                        _newVoicePackName = "";
-                    }
-                    if (ImGui.Button("Import Sound Pack")) {
-                        fileDialogManager.Reset();
-                        ImGui.OpenPopup("ImportDialog");
-                    }
-
-                    ImGui.SameLine();
-                    if (ImGui.Button("Export Sound Pack")) {
-                        fileDialogManager.Reset();
-                        ImGui.OpenPopup("ExportDialog");
-                    }
-
-                    if (ImGui.BeginPopup("ImportDialog")) {
-                        fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                            string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
-                            if (isOk) {
-                                ZipFile.ExtractToDirectory(file, directory);
-                            }
-                        });
-                        ImGui.EndPopup();
-                    }
-
-                    if (ImGui.BeginPopup("ExportDialog")) {
-                        fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                            if (isOk) {
-                                ZipFile.CreateFromDirectory(directory, file);
-                            }
-                        });
-                        ImGui.EndPopup();
-                    }
-                    ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
@@ -613,70 +559,60 @@ namespace RoleplayingVoice {
                     voiceComboBox.Draw();
                 }
             }
-
             ImGui.LabelText("##Label", "Emote and Battle Sounds ");
             if (_voicePackList.Length > 0) {
-                        voicePackComboBox.Draw();
-                    }
-            if (ImGui.Button("Import Sound Pack"))
-            {
+                voicePackComboBox.Draw();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Open Sound Directory")) {
+                ProcessStartInfo ProcessInfo;
+                Process Process;
+                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                Directory.CreateDirectory(directory);
+                ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                ProcessInfo.UseShellExecute = true;
+                Process = Process.Start(ProcessInfo);
+            }
+            ImGui.SetNextItemWidth(270);
+            ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
+            ImGui.SameLine();
+            if (ImGui.Button("New Sound Pack")) {
+                string directory = configuration.CacheFolder + @"\VoicePack\" + _newVoicePackName;
+                Directory.CreateDirectory(directory);
+                RefreshVoices();
+                _newVoicePackName = "";
+            }
+            if (ImGui.Button("Import Sound Pack")) {
                 fileDialogManager.Reset();
                 ImGui.OpenPopup("ImportDialog");
             }
 
             ImGui.SameLine();
-            if (ImGui.Button("Export Sound Pack"))
-            {
+            if (ImGui.Button("Export Sound Pack")) {
                 fileDialogManager.Reset();
                 ImGui.OpenPopup("ExportDialog");
             }
 
-            if (ImGui.BeginPopup("ImportDialog"))
-            {
+            if (ImGui.BeginPopup("ImportDialog")) {
                 fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                    if (isOk)
-                    {
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
+                    if (isOk) {
                         ZipFile.ExtractToDirectory(file, directory);
                     }
                 });
                 ImGui.EndPopup();
             }
 
-            if (ImGui.BeginPopup("ExportDialog"))
-            {
+            if (ImGui.BeginPopup("ExportDialog")) {
                 fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                    if (isOk)
-                    {
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                    if (isOk) {
                         ZipFile.CreateFromDirectory(directory, file);
                     }
                 });
                 ImGui.EndPopup();
             }
-
-            if (ImGui.Button("Open Sound Directory"))
-            {
-                ProcessStartInfo ProcessInfo;
-                Process Process;
-                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoice;
-                Directory.CreateDirectory(directory);
-                ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                ProcessInfo.UseShellExecute = true;
-                Process = Process.Start(ProcessInfo);
-            }
             ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
-
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
-            ImGui.SameLine();
-            ImGui.Text("AI Voice Enabled");
-
-            if (_manager != null && _manager.Info != null && isApiKeyValid && characterVoiceActive)// && clientState.IsLoggedIn)
-            {
-                ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
-                ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
-            }
         }
 
         private void DrawVolume() {
