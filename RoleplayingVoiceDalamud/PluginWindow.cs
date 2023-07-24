@@ -60,6 +60,7 @@ namespace RoleplayingVoice {
         private int _currentWhitelistItem = 0;
         private string characterVoicePack;
         private string[] _voicePackList = new string[1] { "" };
+        private string _newVoicePackName = "";
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -71,8 +72,8 @@ namespace RoleplayingVoice {
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
-            voiceComboBox = new BetterComboBox("AI Voice List", _voiceList, 810);
-            voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 810);
+            voiceComboBox = new BetterComboBox("AI Voice List", _voiceList, 0, 390);
+            voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 0, 235);
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voicePackComboBox.OnSelectedIndexChanged += VoicePackComboBox_OnSelectedIndexChanged;
             voiceComboBox.SelectedIndex = 0;
@@ -107,7 +108,8 @@ namespace RoleplayingVoice {
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
-                    cacheFolder = configuration.CacheFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
+                    cacheFolder = configuration.CacheFolder ??
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                 }
             }
         }
@@ -200,7 +202,8 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
             bool playerTargetted = (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null);
-            bool playerCloseEnough = playerTargetted && Vector3.Distance(clientState.LocalPlayer.Position, clientState.LocalPlayer.TargetObject.Position) < 1;
+            bool playerCloseEnough = playerTargetted && Vector3.Distance(
+            clientState.LocalPlayer.Position, clientState.LocalPlayer.TargetObject.Position) < 1;
             string targetedPlayerText = "Add Targetted Player";
             if (!playerTargetted) {
                 targetedPlayerText += " (No Target)";
@@ -278,7 +281,9 @@ namespace RoleplayingVoice {
 
         private void DrawErrors() {
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
-            ImGui.BeginChild("ErrorRegion", new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y - 40f), false);
+            ImGui.BeginChild("ErrorRegion", new Vector2(
+            ImGui.GetContentRegionAvail().X,
+            ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
@@ -405,7 +410,9 @@ namespace RoleplayingVoice {
             }
             List<string> voicePacks = new List<string>();
             foreach (string voice in Directory.EnumerateDirectories(cacheFolder + @"\VoicePack\")) {
-                voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+                if (!voice.EndsWith("Others")) {
+                    voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+                }
             }
             _voicePackList = voicePacks.ToArray();
 
@@ -472,7 +479,7 @@ namespace RoleplayingVoice {
 
             public void Draw() {
                 if (_enabled) {
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                    ImGui.SetNextItemWidth(_width);
                     if (_label != null && _contents != null) {
                         if (_contents.Length > 0) {
                             ImGui.Combo("##" + _label, ref index, _contents, _contents.Length);
@@ -518,9 +525,75 @@ namespace RoleplayingVoice {
             if (isApiKeyValid && clientState.LocalPlayer != null && characterVoiceActive) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
-                        ImGui.Text("Voice");
+                        ImGui.Text("AI Voice");
                         voiceComboBox.Draw();
+
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                        ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
+                        ImGui.SameLine();
+                        ImGui.Text("AI Voice Enabled");
+
+                        if (_manager != null && _manager.Info != null && isApiKeyValid)// && clientState.IsLoggedIn)
+                        {
+                            ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                            ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
+                        }
+                        ImGui.Dummy(new Vector2(0, 10));
                     }
+                    ImGui.LabelText("##Label", "Emote and Battle Sounds ");
+                    if (_voicePackList.Length > 0) {
+                        voicePackComboBox.Draw();
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Open Sound Directory")) {
+                        ProcessStartInfo ProcessInfo;
+                        Process Process;
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                        Directory.CreateDirectory(directory);
+                        ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                        ProcessInfo.UseShellExecute = true;
+                        Process = Process.Start(ProcessInfo);
+                    }
+                    ImGui.SetNextItemWidth(270);
+                    ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
+                    ImGui.SameLine();
+                    if (ImGui.Button("New Sound Pack")) {
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + _newVoicePackName;
+                        Directory.CreateDirectory(directory);
+                        RefreshVoices();
+                        _newVoicePackName = "";
+                    }
+                    if (ImGui.Button("Import Sound Pack")) {
+                        fileDialogManager.Reset();
+                        ImGui.OpenPopup("ImportDialog");
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("Export Sound Pack")) {
+                        fileDialogManager.Reset();
+                        ImGui.OpenPopup("ExportDialog");
+                    }
+
+                    if (ImGui.BeginPopup("ImportDialog")) {
+                        fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
+                            string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
+                            if (isOk) {
+                                ZipFile.ExtractToDirectory(file, directory);
+                            }
+                        });
+                        ImGui.EndPopup();
+                    }
+
+                    if (ImGui.BeginPopup("ExportDialog")) {
+                        fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
+                            string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                            if (isOk) {
+                                ZipFile.CreateFromDirectory(directory, file);
+                            }
+                        });
+                        ImGui.EndPopup();
+                    }
+                    ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
