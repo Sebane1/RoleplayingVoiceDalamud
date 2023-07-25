@@ -32,7 +32,7 @@ namespace FFXIVVoicePackCreator {
                         string value = streamReader.ReadLine();
                         if (!string.IsNullOrWhiteSpace(value)) {
                             try {
-                                timeCodeDataMasculine.TimeCodes.Add(decimal.Parse(value, CultureInfo.InvariantCulture));
+                                timeCodeDataMasculine.TimeCodes.Add(decimal.Parse(value, new CultureInfo("en-US")));
                             } catch {
                                 timeCodeDataMasculine.TimeCodes.Add(decimal.Parse(value.Replace(".", ",")));
                             }
