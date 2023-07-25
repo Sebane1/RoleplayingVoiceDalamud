@@ -24,6 +24,7 @@ namespace RoleplayingVoice {
         public string ConnectionIP { get => connectionIP; set => connectionIP = value; }
         public string ApiKey { get; set; }
         public bool IsActive { get; set; }
+        public bool VoicePackIsActive { get; set; }
 
         public CharacterVoices CharacterVoices { get; set; }
 

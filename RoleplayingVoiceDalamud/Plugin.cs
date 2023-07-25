@@ -134,14 +134,16 @@ namespace RoleplayingVoice {
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
-            if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                string path = config.CacheFolder + @"\VoicePack\" + voice;
-                if (Directory.Exists(path)) {
-                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
-                    string value = characterVoicePack.GetMisc(message.TextValue);
-                    if (!string.IsNullOrEmpty(value)) {
-                        _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+            if (config.VoicePackIsActive) {
+                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                    string path = config.CacheFolder + @"\VoicePack\" + voice;
+                    if (Directory.Exists(path)) {
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
+                        string value = characterVoicePack.GetMisc(message.TextValue);
+                        if (!string.IsNullOrEmpty(value)) {
+                            _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                        }
                     }
                 }
             }
@@ -198,7 +200,9 @@ namespace RoleplayingVoice {
         public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
             if (!disposed) {
                 if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
-                    SendingEmote(instigator, emoteId);
+                    if (config.VoicePackIsActive) {
+                        SendingEmote(instigator, emoteId);
+                    }
                 } else {
                     Task.Run(() => ReceivingEmote(instigator, emoteId));
                 }
@@ -380,66 +384,69 @@ namespace RoleplayingVoice {
         private void BattleText(string playerName, SeString message, XivChatType type) {
             CheckDependancies();
             if (type != (XivChatType)8235) {
-                string value = "";
-                string playerMessage = message.TextValue;
-                string[] values = message.TextValue.Split(' ');
-                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                    string path = config.CacheFolder + @"\VoicePack\" + voice;
-                    bool attackIntended = false;
-                    if (Directory.Exists(path)) {
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
-                        if (!message.TextValue.Contains("cancel")) {
-                            if (type == (XivChatType)2729 ||
-                            type == (XivChatType)2091) {
-                                if (attackCount == 3) {
-                                    value = characterVoicePack.GetAction(message.TextValue);
-                                    attackCount = 0;
-                                } else {
-                                    attackCount++;
-                                    attackIntended = true;
+                if (config.VoicePackIsActive) {
+                    string value = "";
+                    string playerMessage = message.TextValue;
+                    string[] values = message.TextValue.Split(' ');
+                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        bool attackIntended = false;
+                        if (Directory.Exists(path)) {
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
+                            if (!message.TextValue.Contains("cancel")) {
+                                if (type == (XivChatType)2729 ||
+                                type == (XivChatType)2091) {
+                                    if (attackCount == 3) {
+                                        value = characterVoicePack.GetAction(message.TextValue);
+                                        attackCount = 0;
+                                    } else {
+                                        attackCount++;
+                                        attackIntended = true;
+                                    }
+                                } else if (type == (XivChatType)2234) {
+                                    value = characterVoicePack.GetDeath();
+                                } else if (type == (XivChatType)2730) {
+                                    value = characterVoicePack.GetMissed();
+                                } else if (type == (XivChatType)2219) {
+                                    if (message.TextValue.Contains("ready") ||
+                                        message.TextValue.Contains("readies")) {
+                                        value = characterVoicePack.GetReadying(message.TextValue);
+                                    } else {
+                                        value = characterVoicePack.GetCastingHeal();
+                                    }
+                                } else if (type == (XivChatType)2731) {
+                                    value = characterVoicePack.GetCastingAttack();
+                                } else if (type == (XivChatType)2106) {
+                                    value = characterVoicePack.GetRevive();
+                                } else if (type == (XivChatType)10409) {
+                                    value = characterVoicePack.GetHurt();
                                 }
-                            } else if (type == (XivChatType)2234) {
-                                value = characterVoicePack.GetDeath();
-                            } else if (type == (XivChatType)2730) {
-                                value = characterVoicePack.GetMissed();
-                            } else if (type == (XivChatType)2219) {
-                                if (message.TextValue.Contains("ready") ||
-                                    message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetReadying(message.TextValue);
-                                } else {
-                                    value = characterVoicePack.GetCastingHeal();
-                                }
-                            } else if (type == (XivChatType)2731) {
-                                value = characterVoicePack.GetCastingAttack();
-                            } else if (type == (XivChatType)2106) {
-                                value = characterVoicePack.GetRevive();
-                            } else if (type == (XivChatType)10409) {
-                                value = characterVoicePack.GetHurt();
                             }
                         }
-                    }
-                    if (!string.IsNullOrEmpty(value) || attackIntended) {
-                        if (!attackIntended) {
-                            _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
-                        }
-                        if (!muteTimer.IsRunning) {
-                            _realChat.SendMessage("/voice");
-                            Task.Run(() => {
-                                if (config.UsePlayerSync) {
-                                    Task.Run(async () => {
-                                        bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
-                                    });
-                                }
-                                while (muteTimer.ElapsedMilliseconds < 4000) {
-                                    Thread.Sleep(4000);
-                                }
-                                attackCount = 0;
+
+                        if (!string.IsNullOrEmpty(value) || attackIntended) {
+                            if (!attackIntended) {
+                                _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                            }
+                            if (!muteTimer.IsRunning) {
                                 _realChat.SendMessage("/voice");
-                                muteTimer.Reset();
-                            });
+                                Task.Run(() => {
+                                    if (config.UsePlayerSync) {
+                                        Task.Run(async () => {
+                                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, path);
+                                        });
+                                    }
+                                    while (muteTimer.ElapsedMilliseconds < 4000) {
+                                        Thread.Sleep(4000);
+                                    }
+                                    attackCount = 0;
+                                    _realChat.SendMessage("/voice");
+                                    muteTimer.Reset();
+                                });
+                            }
+                            muteTimer.Restart();
                         }
-                        muteTimer.Restart();
                     }
                 }
             } else {

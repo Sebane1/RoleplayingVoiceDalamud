@@ -40,7 +40,7 @@ namespace RoleplayingVoice {
 
         private bool isServerIPValid = false;
         private bool isApiKeyValid = false;
-        private bool characterVoiceActive = false;
+        private bool _characterVoiceActive = false;
         private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
         private bool runOnLaunch = true;
@@ -61,6 +61,7 @@ namespace RoleplayingVoice {
         private string characterVoicePack;
         private string[] _voicePackList = new string[1] { "" };
         private string _newVoicePackName = "";
+        private bool _characterVoicePackActive;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -99,7 +100,8 @@ namespace RoleplayingVoice {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null &&
                     configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
-                    characterVoiceActive = configuration.IsActive;
+                    _characterVoiceActive = configuration.IsActive;
+                    _characterVoicePackActive = configuration.VoicePackIsActive;
                     _playerCharacterVolume = configuration.PlayerCharacterVolume;
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
@@ -171,7 +173,7 @@ namespace RoleplayingVoice {
             } else {
                 characterVoicePack = "None";
             }
-            if (characterVoiceActive) {
+            if (_characterVoiceActive) {
                 RefreshVoices();
             }
         }
@@ -277,7 +279,7 @@ namespace RoleplayingVoice {
                         Task.Run(() => _manager.ApiValidation(apiKey));
                     }
                 }
-                if (string.IsNullOrWhiteSpace(apiKey) && characterVoiceActive) {
+                if (string.IsNullOrWhiteSpace(apiKey) && _characterVoiceActive) {
                     isApiKeyValid = false;
                     apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 }
@@ -296,7 +298,7 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && characterVoiceActive) {
+            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && _characterVoiceActive) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -350,7 +352,7 @@ namespace RoleplayingVoice {
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
             if (save) {
-                if (isApiKeyValid && characterVoiceActive && apiKeyValidated) {
+                if (isApiKeyValid && _characterVoiceActive && apiKeyValidated) {
                     configuration.ConnectionIP = serverIP;
                     configuration.ApiKey = apiKey;
                     if (clientState.LocalPlayer != null) {
@@ -375,7 +377,8 @@ namespace RoleplayingVoice {
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
-                configuration.IsActive = characterVoiceActive;
+                configuration.IsActive = _characterVoiceActive;
+                configuration.VoicePackIsActive = _characterVoicePackActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
                 configuration.UsePlayerSync = _useServer;
@@ -535,7 +538,7 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
 
-            if (isApiKeyValid && clientState.LocalPlayer != null && characterVoiceActive) {
+            if (isApiKeyValid && clientState.LocalPlayer != null && _characterVoiceActive) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("AI Voice");
@@ -553,20 +556,20 @@ namespace RoleplayingVoice {
                     ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
-              && !isApiKeyValid && characterVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && characterVoiceActive) {
+              && !isApiKeyValid && _characterVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _characterVoiceActive) {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
-            } else if (!clientState.IsLoggedIn && isApiKeyValid && characterVoiceActive) {
+            } else if (!clientState.IsLoggedIn && isApiKeyValid && _characterVoiceActive) {
                 voiceComboBox.Contents[0] = "Not logged in";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
             }
-            ImGui.Checkbox("##characterVoiceActive", ref characterVoiceActive);
+            ImGui.Checkbox("##characterVoiceActive", ref _characterVoiceActive);
             ImGui.SameLine();
             ImGui.Text("AI Voice Enabled");
             ImGui.Dummy(new Vector2(0, 10));
@@ -627,6 +630,9 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
             ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
+            ImGui.Checkbox("##characterVoicePackActive", ref _characterVoicePackActive);
+            ImGui.SameLine();
+            ImGui.Text("Voice Pack Enabled");
         }
 
         private void DrawVolume() {
