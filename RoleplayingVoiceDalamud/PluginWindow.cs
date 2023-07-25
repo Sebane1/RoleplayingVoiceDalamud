@@ -365,15 +365,8 @@ namespace RoleplayingVoice {
                         configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
                         configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
                     }
-                    RefreshVoices();
                 }
 
-                if (voicePackComboBox != null && _voicePackList != null) {
-                    characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
-                }
-                if (voiceComboBox != null && _voiceList != null) {
-                    characterVoice = _voiceList[voiceComboBox.SelectedIndex];
-                }
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
@@ -383,9 +376,20 @@ namespace RoleplayingVoice {
                 configuration.CacheFolder = cacheFolder;
                 configuration.UsePlayerSync = _useServer;
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
+                if (voicePackComboBox != null && _voicePackList != null) {
+                    if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
+                        characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                    }
+                }
+                if (voiceComboBox != null && _voiceList != null) {
+                    if (voiceComboBox.SelectedIndex < _voiceList.Length) {
+                        characterVoice = _voiceList[voiceComboBox.SelectedIndex];
+                    }
+                }
                 configuration.Save();
                 PluginInterface.SavePluginConfig(configuration);
                 save = false;
+                RefreshVoices();
             }
         }
 
@@ -421,6 +425,7 @@ namespace RoleplayingVoice {
             if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
+                voiceComboBox.Contents = _voiceList;
             }
             List<string> voicePacks = new List<string>();
             string path = cacheFolder + @"\VoicePack\";
@@ -431,6 +436,7 @@ namespace RoleplayingVoice {
                     }
                 }
                 _voicePackList = voicePacks.ToArray();
+                voicePackComboBox.Contents = _voicePackList;
             }
             if (clientState.LocalPlayer != null) {
                 if (configuration.Characters == null) {
@@ -574,21 +580,21 @@ namespace RoleplayingVoice {
             ImGui.Text("AI Voice Enabled");
             ImGui.Dummy(new Vector2(0, 10));
             ImGui.LabelText("##Label", "Emote and Battle Sounds ");
-            if (_voicePackList.Length > 0) {
+            if (_voicePackList.Length > 0 && clientState.IsLoggedIn) {
                 voicePackComboBox.Draw();
-            }
-            ImGui.SameLine();
-            if (ImGui.Button("Open Sound Directory")) {
-                if (voicePackComboBox != null && _voicePackList != null) {
-                    characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                ImGui.SameLine();
+                if (ImGui.Button("Open Sound Directory")) {
+                    if (voicePackComboBox != null && _voicePackList != null) {
+                        characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                    }
+                    ProcessStartInfo ProcessInfo;
+                    Process Process;
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                    Directory.CreateDirectory(directory);
+                    ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                    ProcessInfo.UseShellExecute = true;
+                    Process = Process.Start(ProcessInfo);
                 }
-                ProcessStartInfo ProcessInfo;
-                Process Process;
-                string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                Directory.CreateDirectory(directory);
-                ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                ProcessInfo.UseShellExecute = true;
-                Process = Process.Start(ProcessInfo);
             }
             ImGui.SetNextItemWidth(270);
             ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
@@ -615,6 +621,7 @@ namespace RoleplayingVoice {
                     string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
                     if (isOk) {
                         ZipFile.ExtractToDirectory(file, directory);
+                        RefreshVoices();
                     }
                 });
                 ImGui.EndPopup();
