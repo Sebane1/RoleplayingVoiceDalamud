@@ -62,6 +62,7 @@ namespace RoleplayingVoice {
         private DataManager _dataManager;
         private ToastGui _toast;
         private bool ignoreAttack;
+        private int attackCount;
 
         public string Name => "Roleplaying Voice";
 
@@ -385,15 +386,19 @@ namespace RoleplayingVoice {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                     string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                     string path = config.CacheFolder + @"\VoicePack\" + voice;
+                    bool attackIntended = false;
                     if (Directory.Exists(path)) {
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
                         if (!message.TextValue.Contains("cancel")) {
                             if (type == (XivChatType)2729 ||
                             type == (XivChatType)2091) {
-                                if (!ignoreAttack) {
+                                if (attackCount == 3) {
                                     value = characterVoicePack.GetAction(message.TextValue);
+                                    attackCount = 0;
+                                } else {
+                                    attackCount++;
+                                    attackIntended = true;
                                 }
-                                ignoreAttack = !ignoreAttack;
                             } else if (type == (XivChatType)2234) {
                                 value = characterVoicePack.GetDeath();
                             } else if (type == (XivChatType)2730) {
@@ -414,8 +419,10 @@ namespace RoleplayingVoice {
                             }
                         }
                     }
-                    if (!string.IsNullOrEmpty(value)) {
-                        _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                    if (!string.IsNullOrEmpty(value) || attackIntended) {
+                        if (!attackIntended) {
+                            _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                        }
                         if (!muteTimer.IsRunning) {
                             _realChat.SendMessage("/voice");
                             Task.Run(() => {
@@ -427,6 +434,7 @@ namespace RoleplayingVoice {
                                 while (muteTimer.ElapsedMilliseconds < 4000) {
                                     Thread.Sleep(4000);
                                 }
+                                attackCount = 0;
                                 _realChat.SendMessage("/voice");
                                 muteTimer.Reset();
                             });
