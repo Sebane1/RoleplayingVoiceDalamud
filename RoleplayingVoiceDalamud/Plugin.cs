@@ -136,15 +136,18 @@ namespace RoleplayingVoice {
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                    string path = config.CacheFolder + @"\VoicePack\" + voice;
-                    if (Directory.Exists(path)) {
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
-                        string value = characterVoicePack.GetMisc(message.TextValue);
-                        if (!string.IsNullOrEmpty(value)) {
-                            _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                    if (!cooldown.IsRunning || cooldown.ElapsedMilliseconds > 3000) {
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        if (Directory.Exists(path)) {
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(voice, path);
+                            string value = characterVoicePack.GetMisc(message.TextValue);
+                            if (!string.IsNullOrEmpty(value)) {
+                                _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                            }
                         }
                     }
+                    cooldown.Restart();
                 }
             }
         }
