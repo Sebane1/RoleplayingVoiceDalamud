@@ -110,12 +110,12 @@ namespace RoleplayingVoice {
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
-                    if (configuration.Characters != null) {
+                    if (configuration.Characters != null && clientState.LocalPlayer != null) {
                         if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                             characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
                         }
                     }
-                    if (configuration.CharacterVoicePacks != null) {
+                    if (configuration.CharacterVoicePacks != null && clientState.LocalPlayer != null) {
                         if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                             characterVoicePack = configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue];
                         }
