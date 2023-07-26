@@ -416,8 +416,8 @@ namespace RoleplayingVoice {
                                     if (message.TextValue.Contains("ready") ||
                                         message.TextValue.Contains("readies")) {
                                         value = characterVoicePack.GetReadying(message.TextValue);
-                                        attackCount = 0;
-                                        castingCount = 0;
+                                        attackCount = 3;
+                                        castingCount = 3;
                                     } else {
                                         if (castingCount == 3) {
                                             value = characterVoicePack.GetCastingHeal();
@@ -428,12 +428,19 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                 } else if (type == (XivChatType)2731) {
-                                    if (castingCount == 3) {
-                                        value = characterVoicePack.GetCastingAttack();
-                                        castingCount = 0;
+                                    if (message.TextValue.Contains("ready") ||
+                                        message.TextValue.Contains("readies")) {
+                                        value = characterVoicePack.GetReadying(message.TextValue);
+                                        attackCount = 3;
+                                        castingCount = 3;
                                     } else {
-                                        castingCount++;
-                                        attackIntended = true;
+                                        if (castingCount == 3) {
+                                            value = characterVoicePack.GetCastingAttack();
+                                            castingCount = 0;
+                                        } else {
+                                            castingCount++;
+                                            attackIntended = true;
+                                        }
                                     }
                                 } else if (type == (XivChatType)2106) {
                                     value = characterVoicePack.GetRevive();
