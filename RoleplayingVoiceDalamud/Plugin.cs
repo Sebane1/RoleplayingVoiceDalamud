@@ -619,13 +619,17 @@ namespace RoleplayingVoice {
 
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
-                if (_roleplayingVoiceManager == null ||
-                    config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))
-                    && !string.IsNullOrEmpty(config.ApiKey)) {
+                try {
+                    if (_roleplayingVoiceManager == null ||
+                        !string.IsNullOrEmpty(config.ApiKey)
+                        && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
+                        InitialzeManager();
+                    }
+                    if (_networkedClient != null) {
+                        _networkedClient.UpdateIPAddress(config.ConnectionIP);
+                    }
+                } catch {
                     InitialzeManager();
-                }
-                if (_networkedClient != null) {
-                    _networkedClient.UpdateIPAddress(config.ConnectionIP);
                 }
             }
         }
