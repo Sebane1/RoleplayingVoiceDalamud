@@ -63,6 +63,7 @@ namespace RoleplayingVoice {
         private ToastGui _toast;
         private bool ignoreAttack;
         private int attackCount;
+        private int castingCount;
 
         public string Name => "Roleplaying Voice";
 
@@ -415,11 +416,25 @@ namespace RoleplayingVoice {
                                     if (message.TextValue.Contains("ready") ||
                                         message.TextValue.Contains("readies")) {
                                         value = characterVoicePack.GetReadying(message.TextValue);
+                                        attackCount = 0;
+                                        castingCount = 0;
                                     } else {
-                                        value = characterVoicePack.GetCastingHeal();
+                                        if (castingCount == 3) {
+                                            value = characterVoicePack.GetCastingHeal();
+                                            castingCount = 0;
+                                        } else {
+                                            castingCount++;
+                                            attackIntended = true;
+                                        }
                                     }
                                 } else if (type == (XivChatType)2731) {
-                                    value = characterVoicePack.GetCastingAttack();
+                                    if (castingCount == 3) {
+                                        value = characterVoicePack.GetCastingAttack();
+                                        castingCount = 0;
+                                    } else {
+                                        castingCount++;
+                                        attackIntended = true;
+                                    }
                                 } else if (type == (XivChatType)2106) {
                                     value = characterVoicePack.GetRevive();
                                 } else if (type == (XivChatType)10409) {
