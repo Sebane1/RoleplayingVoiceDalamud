@@ -636,7 +636,7 @@ namespace RoleplayingVoice {
                         _networkedClient.UpdateIPAddress(config.ConnectionIP);
                     }
                 } catch {
-                    InitialzeManager();
+                  
                 }
             }
         }

@@ -359,14 +359,13 @@ namespace RoleplayingVoice {
                         if (configuration.Characters == null) {
                             configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                         }
-                        if (configuration.CharacterVoicePacks == null) {
-                            configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
-                        }
                         configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
-                        configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
                     }
                 }
-
+                if (configuration.CharacterVoicePacks == null) {
+                    configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
+                }
+                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
