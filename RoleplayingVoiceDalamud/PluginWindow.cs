@@ -734,22 +734,24 @@ namespace RoleplayingVoice {
                     if (moveFailed == 0 && currentFile == fileCount) {
                         fileMoveSuccess = true;
                         fileMoveMessage = string.Empty;
-                        foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
-                            string voiceName = voice.Key;
-                            var innerDictionary = voice.Value;
-                            foreach (var message in innerDictionary) {
-                                string text = message.Key;
-                                string path = message.Value;
-                                if (path.StartsWith(oldFolder)) {
-                                    string relativePath = path.Substring(oldFolder.Length);
-                                    string newPath = newFolder + relativePath;
-                                    innerDictionary[text] = newPath;
-                                }
+                        if (configuration != null && configuration.CharacterVoices != null) {
+                            foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
+                                string voiceName = voice.Key;
+                                var innerDictionary = voice.Value;
+                                foreach (var message in innerDictionary) {
+                                    string text = message.Key;
+                                    string path = message.Value;
+                                    if (path.StartsWith(oldFolder)) {
+                                        string relativePath = path.Substring(oldFolder.Length);
+                                        string newPath = newFolder + relativePath;
+                                        innerDictionary[text] = newPath;
+                                    }
 
+                                }
                             }
+                            //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
+                            Directory.Delete(oldFolder, true);
                         }
-                        //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
-                        Directory.Delete(oldFolder, true);
                     }
                     oldFolder = newFolder;
                     configuration.CacheFolder = oldFolder;
