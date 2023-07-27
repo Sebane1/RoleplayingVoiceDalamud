@@ -387,7 +387,7 @@ namespace RoleplayingVoice {
 
         private void BattleText(string playerName, SeString message, XivChatType type) {
             CheckDependancies();
-            if (type != (XivChatType)8235) {
+            if (type != (XivChatType)8235 || message.TextValue.Contains("You")) {
                 if (config.VoicePackIsActive) {
                     string value = "";
                     string playerMessage = message.TextValue;
