@@ -329,7 +329,7 @@ namespace RoleplayingVoice {
                 CheckDependancies();
                 PlayerPayload payload = sender.Payloads.SingleOrDefault(x => x is PlayerPayload) as PlayerPayload ?? message.Payloads.FirstOrDefault(x => x is PlayerPayload) as PlayerPayload;
                 string playerName = sender.TextValue;
-                if (_roleplayingVoiceManager != null && !string.IsNullOrEmpty(config.ApiKey)) {
+                if (_roleplayingVoiceManager != null) {
                     if (stopwatch == null) {
                         stopwatch = new Stopwatch();
                         stopwatch.Start();
@@ -565,7 +565,7 @@ namespace RoleplayingVoice {
 
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
-                if (config.IsActive) {
+                if (config.IsActive && !string.IsNullOrEmpty(config.ApiKey)) {
                     string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
                     _clientState.LocalPlayer.Name.TextValue)).Split(" ");
                     string playerSender = senderStrings.Length == 2 ?
@@ -636,7 +636,7 @@ namespace RoleplayingVoice {
                         _networkedClient.UpdateIPAddress(config.ConnectionIP);
                     }
                 } catch {
-                  
+
                 }
             }
         }
