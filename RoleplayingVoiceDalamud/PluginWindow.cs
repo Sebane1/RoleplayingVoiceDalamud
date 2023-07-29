@@ -458,14 +458,16 @@ namespace RoleplayingVoice {
                                 }
                             }
                             if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
-                                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                if (voiceComboBox.Contents.Length > 0) {
+                                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                }
                             }
                         }
                     }
                 }
                 if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     if (voicePackComboBox != null) {
-                        if (_voiceList != null) {
+                        if (_voicePackList != null) {
                             voicePackComboBox.Contents = _voicePackList;
                             for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
                                 if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
@@ -474,7 +476,9 @@ namespace RoleplayingVoice {
                                 }
                             }
                             if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voiceComboBox.SelectedIndex];
+                                if (voicePackComboBox.Contents.Length > 0) {
+                                    configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voiceComboBox.SelectedIndex];
+                                }
                             }
                         }
                     }
