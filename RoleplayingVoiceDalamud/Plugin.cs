@@ -354,6 +354,8 @@ namespace RoleplayingVoice {
                             BattleText(playerName, message, type);
                             break;
                     }
+                } else {
+                    InitialzeManager();
                 }
             }
         }

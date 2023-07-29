@@ -83,12 +83,14 @@ namespace RoleplayingVoice {
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
             if (voicePackComboBox != null && _voicePackList != null) {
                 characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                Save();
             }
         }
 
         private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
             if (voiceComboBox != null && _voiceList != null) {
                 characterVoice = _voiceList[voiceComboBox.SelectedIndex];
+                Save();
             }
         }
 
