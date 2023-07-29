@@ -327,41 +327,32 @@ namespace RoleplayingVoice {
             ref SeString sender, ref SeString message, ref bool isHandled) {
             if (!disposed) {
                 CheckDependancies();
-                PlayerPayload payload = sender.Payloads.SingleOrDefault(x => x is PlayerPayload) as PlayerPayload ?? message.Payloads.FirstOrDefault(x => x is PlayerPayload) as PlayerPayload;
                 string playerName = sender.TextValue;
                 if (_roleplayingVoiceManager != null) {
-                    if (stopwatch == null) {
-                        stopwatch = new Stopwatch();
-                        stopwatch.Start();
-                    }
-                    // Let the user be fully logged in before we start working.
-                    if (stopwatch.ElapsedMilliseconds > 5000) {
-                        stopwatch.Stop();
-                        switch (type) {
-                            case XivChatType.Say:
-                            case XivChatType.Shout:
-                            case XivChatType.Yell:
-                            case XivChatType.CustomEmote:
-                            case XivChatType.Party:
-                            case XivChatType.CrossParty:
-                            case XivChatType.TellIncoming:
-                            case XivChatType.TellOutgoing:
-                                ChatText(playerName, message, type, senderId);
-                                break;
-                            case (XivChatType)2729:
-                            case (XivChatType)2091:
-                            case (XivChatType)2234:
-                            case (XivChatType)2730:
-                            case (XivChatType)2219:
-                            case (XivChatType)2859:
-                            case (XivChatType)2731:
-                            case (XivChatType)2106:
-                            case (XivChatType)10409:
-                            case (XivChatType)8235:
-                            case (XivChatType)9001:
-                                BattleText(playerName, message, type);
-                                break;
-                        }
+                    switch (type) {
+                        case XivChatType.Say:
+                        case XivChatType.Shout:
+                        case XivChatType.Yell:
+                        case XivChatType.CustomEmote:
+                        case XivChatType.Party:
+                        case XivChatType.CrossParty:
+                        case XivChatType.TellIncoming:
+                        case XivChatType.TellOutgoing:
+                            ChatText(playerName, message, type, senderId);
+                            break;
+                        case (XivChatType)2729:
+                        case (XivChatType)2091:
+                        case (XivChatType)2234:
+                        case (XivChatType)2730:
+                        case (XivChatType)2219:
+                        case (XivChatType)2859:
+                        case (XivChatType)2731:
+                        case (XivChatType)2106:
+                        case (XivChatType)10409:
+                        case (XivChatType)8235:
+                        case (XivChatType)9001:
+                            BattleText(playerName, message, type);
+                            break;
                     }
                 }
             }
@@ -636,7 +627,7 @@ namespace RoleplayingVoice {
                         _networkedClient.UpdateIPAddress(config.ConnectionIP);
                     }
                 } catch {
-
+                    InitialzeManager();
                 }
             }
         }
