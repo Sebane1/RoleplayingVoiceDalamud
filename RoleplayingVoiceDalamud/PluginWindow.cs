@@ -17,6 +17,7 @@ using System.IO.Compression;
 using System.Threading;
 using Dalamud.Game.ClientState.Objects.Enums;
 using System.Collections.Generic;
+using Dalamud.Utility;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -456,6 +457,9 @@ namespace RoleplayingVoice {
                                     break;
                                 }
                             }
+                            if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                            }
                         }
                     }
                 }
@@ -468,6 +472,9 @@ namespace RoleplayingVoice {
                                     voicePackComboBox.SelectedIndex = i;
                                     break;
                                 }
+                            }
+                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voiceComboBox.SelectedIndex];
                             }
                         }
                     }
