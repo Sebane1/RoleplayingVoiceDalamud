@@ -459,8 +459,9 @@ namespace RoleplayingVoice {
                                     }
                                 }
                                 if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
-
-                                    configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                    if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
+                                        configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                    }
                                 }
                             }
                         }
@@ -478,7 +479,9 @@ namespace RoleplayingVoice {
                                     }
                                 }
                                 if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                    configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voiceComboBox.SelectedIndex];
+                                    if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
+                                        configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                    }
                                 }
                             }
                         }
