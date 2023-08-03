@@ -596,7 +596,7 @@ namespace RoleplayingVoice {
                     if (config.UsePlayerSync) {
                         if (config.Whitelist.Contains(playerSender)) {
                             Task.Run(async () => {
-                                PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == sender);
+                                PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                 string value = await _roleplayingVoiceManager.
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
