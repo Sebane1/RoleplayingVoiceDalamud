@@ -451,14 +451,15 @@ namespace RoleplayingVoice {
                     if (voiceComboBox != null) {
                         if (_voiceList != null) {
                             voiceComboBox.Contents = _voiceList;
-                            for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
-                                    voiceComboBox.SelectedIndex = i;
-                                    break;
+                            if (voiceComboBox.Contents.Length > 0) {
+                                for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                                    if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                        voiceComboBox.SelectedIndex = i;
+                                        break;
+                                    }
                                 }
-                            }
-                            if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
-                                if (voiceComboBox.Contents.Length > 0) {
+                                if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+
                                     configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
                                 }
                             }
@@ -469,14 +470,14 @@ namespace RoleplayingVoice {
                     if (voicePackComboBox != null) {
                         if (_voicePackList != null) {
                             voicePackComboBox.Contents = _voicePackList;
-                            for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
-                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                    voicePackComboBox.SelectedIndex = i;
-                                    break;
+                            if (voicePackComboBox.Contents.Length > 0) {
+                                for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
+                                    if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                        voicePackComboBox.SelectedIndex = i;
+                                        break;
+                                    }
                                 }
-                            }
-                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                if (voicePackComboBox.Contents.Length > 0) {
+                                if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
                                     configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voiceComboBox.SelectedIndex];
                                 }
                             }
