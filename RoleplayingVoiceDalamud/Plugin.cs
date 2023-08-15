@@ -287,7 +287,7 @@ namespace RoleplayingVoice {
                                 string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                 TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                                 _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
-                                (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                                 characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                                 MuteChecK();
                             }
                         }
@@ -314,8 +314,8 @@ namespace RoleplayingVoice {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote,
-                    (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]));
-                    MuteChecK();
+                  characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                    MuteChecK(10000);
                 }
             }
         }
@@ -351,19 +351,19 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+            list.Sort((x, y) => y.Value.CompareTo(x.Value));
             string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
             if (!string.IsNullOrEmpty(voice)) {
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
                 list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
             }
-            list.Sort((x, y) => y.Value.CompareTo(x.Value));
             return list;
         }
-        public void MuteChecK() {
+        public void MuteChecK(int length = 4000) {
             if (!muteTimer.IsRunning) {
                 _realChat.SendMessage("/voice");
                 Task.Run(() => {
-                    while (muteTimer.ElapsedMilliseconds < 4000) {
+                    while (muteTimer.ElapsedMilliseconds < length) {
                         Thread.Sleep(4000);
                     }
                     _realChat.SendMessage("/voice");
@@ -383,6 +383,51 @@ namespace RoleplayingVoice {
             string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
             string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
             string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
+            characterVoicePack.EmoteIndex = -1;
+            switch (emoteId) {
+                case 1:
+                    characterVoicePack.EmoteIndex = 0;
+                    break;
+                case 2:
+                    characterVoicePack.EmoteIndex = 1;
+                    break;
+                case 3:
+                    characterVoicePack.EmoteIndex = 2;
+                    break;
+                case 6:
+                    characterVoicePack.EmoteIndex = 3;
+                    break;
+                case 13:
+                    characterVoicePack.EmoteIndex = 4;
+                    break;
+                case 14:
+                    characterVoicePack.EmoteIndex = 5;
+                    break;
+                case 17:
+                    characterVoicePack.EmoteIndex = 6;
+                    break;
+                case 20:
+                    characterVoicePack.EmoteIndex = 7;
+                    break;
+                case 21:
+                    characterVoicePack.EmoteIndex = 8;
+                    break;
+                case 24:
+                    characterVoicePack.EmoteIndex = 9;
+                    break;
+                case 37:
+                    characterVoicePack.EmoteIndex = 10;
+                    break;
+                case 40:
+                    characterVoicePack.EmoteIndex = 11;
+                    break;
+                case 42:
+                    characterVoicePack.EmoteIndex = 12;
+                    break;
+                case 48:
+                    characterVoicePack.EmoteIndex = 13;
+                    break;
+            }
 
             if (!string.IsNullOrEmpty(emotePathId)) {
                 return emotePathId;
