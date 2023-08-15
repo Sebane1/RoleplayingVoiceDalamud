@@ -23,52 +23,59 @@ namespace RoleplayingVoiceDalamud {
         private string lastMissed;
         private string lastAction;
 
-        public string VoiceName { get => _voiceName; set => _voiceName = value; }
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
-        public CharacterVoicePack(string voiceName, string directory) {
-            _voiceName = voiceName;
+        public CharacterVoicePack(string directory) {
             if (!string.IsNullOrEmpty(directory)) {
                 foreach (string file in Directory.EnumerateFiles(directory)) {
-                    if (file.ToLower().EndsWith(".mp3")) {
-                        bool emoteAdded = false;
-                        if (!emoteAdded) {
-                            if (file.ToLower().Contains("casting attack")) {
-                                _castingAttack.Add(file);
-                            } else if (file.ToLower().Contains("attack")
-                                    || file.ToLower().Contains("extra")) {
-                                _attack.Add(file);
-                            } else if (file.ToLower().Contains("hurt")) {
-                                _hurt.Add(file);
-                            } else if (file.ToLower().Contains("death")) {
-                                _death.Add(file);
-                            } else if (file.ToLower().Contains("limit")) {
-                                _readying.Add(file);
-                            } else if (file.ToLower().Contains("casting heal")) {
-                                _castingHeal.Add(file);
-                            } else if (file.ToLower().Contains("casting")) {
-                                _castingAttack.Add(file);
-                                _castingHeal.Add(file);
-                            } else if (file.ToLower().Contains("missed")) {
-                                _missed.Add(file);
-                            } else if (file.ToLower().Contains("revive")) {
-                                _revive.Add(file);
-                            } else {
-                                string name = Path.GetFileNameWithoutExtension(file);
-                                string strippedName = StripNonCharacters(name).ToLower();
-                                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                                if (!_misc.ContainsKey(final)) {
-                                    _misc[final] = new List<string>();
-                                }
-                                _misc[final].Add(file);
-                            }
-                        }
-                    }
+                    SortFile(file);
                 }
             }
             _random = new Random();
         }
-        public string StripNonCharacters(string str) {
+        public CharacterVoicePack(List<string> files) {
+            foreach (string file in files) {
+                SortFile(file);
+            }
+            _random = new Random();
+        }
+        public void SortFile(string file) {
+            if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {
+                bool emoteAdded = false;
+                if (!emoteAdded) {
+                    if (file.ToLower().Contains("casting attack")) {
+                        _castingAttack.Add(file);
+                    } else if (file.ToLower().Contains("attack")
+                            || file.ToLower().Contains("extra")) {
+                        _attack.Add(file);
+                    } else if (file.ToLower().Contains("hurt")) {
+                        _hurt.Add(file);
+                    } else if (file.ToLower().Contains("death")) {
+                        _death.Add(file);
+                    } else if (file.ToLower().Contains("limit")) {
+                        _readying.Add(file);
+                    } else if (file.ToLower().Contains("casting heal")) {
+                        _castingHeal.Add(file);
+                    } else if (file.ToLower().Contains("casting")) {
+                        _castingAttack.Add(file);
+                        _castingHeal.Add(file);
+                    } else if (file.ToLower().Contains("missed")) {
+                        _missed.Add(file);
+                    } else if (file.ToLower().Contains("revive")) {
+                        _revive.Add(file);
+                    } else {
+                        string name = Path.GetFileNameWithoutExtension(file);
+                        string strippedName = StripNonCharacters(name).ToLower();
+                        string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
+                        if (!_misc.ContainsKey(final)) {
+                            _misc[final] = new List<string>();
+                        }
+                        _misc[final].Add(file);
+                    }
+                }
+            }
+        }
+        public static string StripNonCharacters(string str) {
             Regex rgx = new Regex("[^a-zA-Z]");
             str = rgx.Replace(str, "");
             return str;
