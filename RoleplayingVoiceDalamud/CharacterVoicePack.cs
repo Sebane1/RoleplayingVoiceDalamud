@@ -34,10 +34,12 @@ namespace RoleplayingVoiceDalamud {
             _random = new Random();
         }
         public CharacterVoicePack(List<string> files) {
-            foreach (string file in files) {
-                SortFile(file);
+            if (files != null) {
+                foreach (string file in files) {
+                    SortFile(file);
+                }
+                _random = new Random();
             }
-            _random = new Random();
         }
         public void SortFile(string file) {
             if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {

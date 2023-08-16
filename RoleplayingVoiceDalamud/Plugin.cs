@@ -352,10 +352,14 @@ namespace RoleplayingVoice {
                 }
             }
             list.Sort((x, y) => y.Value.CompareTo(x.Value));
-            string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-            if (!string.IsNullOrEmpty(voice)) {
-                string path = config.CacheFolder + @"\VoicePack\" + voice;
-                list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+            if (config != null) {
+                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                    if (!string.IsNullOrEmpty(voice)) {
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                    }
+                }
             }
             return list;
         }
