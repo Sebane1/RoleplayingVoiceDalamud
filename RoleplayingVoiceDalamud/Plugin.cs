@@ -284,11 +284,15 @@ namespace RoleplayingVoice {
                             if (Directory.Exists(path)) {
                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
                                 string value = GetEmotePath(characterVoicePack, emoteId);
-                                string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                                TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                                _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
-                                 characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
-                                MuteChecK();
+                                if (!string.IsNullOrEmpty(value)) {
+                                    string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
+                                    TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                                    _audioManager.PlayAudio(new PlayerObject(instigator), value, SoundType.OtherPlayer,
+                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                                    MuteChecK();
+                                } else {
+                                    _audioManager.StopAudio(new PlayerObject(instigator));
+                                }
                             }
                         }
                     }
@@ -314,8 +318,10 @@ namespace RoleplayingVoice {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote,
-                  characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     MuteChecK(10000);
+                } else {
+                    _audioManager.StopAudio(_playerObject);
                 }
             }
         }
@@ -736,7 +742,7 @@ namespace RoleplayingVoice {
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell);
-                                _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayer);
+                                _audioManager.PlayAudio(new PlayerObject(player), value, SoundType.OtherPlayerTts);
                             });
                         }
                     }
