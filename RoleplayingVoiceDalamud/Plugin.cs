@@ -175,7 +175,17 @@ namespace RoleplayingVoice {
             }
             _ = Task.Run(async () => {
                 if (list != null) {
-                    string path = config.CacheFolder + @"\Staging";
+                    string path = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    if (Directory.Exists(config.CacheFolder + @"\Staging")) {
+                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
+                            File.Delete(file);
+                        }
+                    }
+                    if (Directory.Exists(config.CacheFolder)) {
+                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
+                            File.Delete(file);
+                        }
+                    }
                     Directory.CreateDirectory(path);
                     foreach (var sound in list) {
                         File.Copy(sound, Path.Combine(path, Path.GetFileName(sound)), true);
@@ -281,7 +291,7 @@ namespace RoleplayingVoice {
                             if (!isDownloadingZip) {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
-                                    Task.Run(async () => {
+                                    await Task.Run(async () => {
                                         string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
                                         isDownloadingZip = false;
                                     });
@@ -311,7 +321,7 @@ namespace RoleplayingVoice {
             if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                 string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
-                string staging = config.CacheFolder + @"\Staging";
+                string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                 string value = GetEmotePath(characterVoicePack, emoteId);
                 if (!string.IsNullOrEmpty(value)) {
@@ -536,7 +546,7 @@ namespace RoleplayingVoice {
                     if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                         string path = config.CacheFolder + @"\VoicePack\" + voice;
-                        string staging = config.CacheFolder + @"\Staging";
+                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                         bool attackIntended = false;
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         if (!message.TextValue.Contains("cancel")) {
@@ -636,7 +646,7 @@ namespace RoleplayingVoice {
                                     });
                                 }
                             }
-                            if (Path.Exists(clipPath)) {
+                            if (Path.Exists(clipPath) && !isDownloadingZip) {
                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
                                 string value = "";
                                 if (message.TextValue.Contains("hit") ||
@@ -747,7 +757,7 @@ namespace RoleplayingVoice {
                                 string value = await _roleplayingVoiceManager.
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                                _clientState.LocalPlayer.Position, isShoutYell);
+                                _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                 _audioManager.PlayAudio(new AudioGameObject(player), value, SoundType.OtherPlayerTts);
                             });
                         }
