@@ -299,13 +299,16 @@ namespace RoleplayingVoice {
                             }
                             if (Directory.Exists(path)) {
                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
-                                string value = GetEmotePath(characterVoicePack, emoteId);
+                                bool isVoicedEmote = false;
+                                string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
                                 if (!string.IsNullOrEmpty(value)) {
                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                                     _audioManager.PlayAudio(new AudioGameObject(instigator), value, SoundType.OtherPlayer,
                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
-                                    MuteChecK();
+                                    if (isVoicedEmote) {
+                                        MuteChecK();
+                                    }
                                 } else {
                                     _audioManager.StopAudio(new AudioGameObject(instigator));
                                 }
@@ -323,7 +326,8 @@ namespace RoleplayingVoice {
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
                 string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
-                string value = GetEmotePath(characterVoicePack, emoteId);
+                bool isVoicedEmote = false;
+                string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
                 if (!string.IsNullOrEmpty(value)) {
                     if (config.UsePlayerSync) {
                         Task.Run(async () => {
@@ -335,7 +339,9 @@ namespace RoleplayingVoice {
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
-                    MuteChecK(10000);
+                    if (isVoicedEmote) {
+                        MuteChecK(10000);
+                    }
                 } else {
                     _audioManager.StopAudio(_playerObject);
                 }
@@ -398,7 +404,7 @@ namespace RoleplayingVoice {
             }
             muteTimer.Restart();
         }
-        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId) {
+        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
             Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
             Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
             Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
@@ -410,6 +416,7 @@ namespace RoleplayingVoice {
             string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
             string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
             characterVoicePack.EmoteIndex = -1;
+            isVoicedEmote = true;
             switch (emoteId) {
                 case 1:
                     characterVoicePack.EmoteIndex = 0;
@@ -452,6 +459,9 @@ namespace RoleplayingVoice {
                     break;
                 case 48:
                     characterVoicePack.EmoteIndex = 13;
+                    break;
+                default:
+                    isVoicedEmote = false;
                     break;
             }
 
@@ -552,12 +562,15 @@ namespace RoleplayingVoice {
                         if (!message.TextValue.Contains("cancel")) {
                             if (type == (XivChatType)2729 ||
                             type == (XivChatType)2091) {
-                                if (attackCount == 3) {
-                                    value = characterVoicePack.GetAction(message.TextValue);
-                                    attackCount = 0;
-                                } else {
-                                    attackCount++;
-                                    attackIntended = true;
+                                value = characterVoicePack.GetMisc(message.TextValue);
+                                if (string.IsNullOrEmpty(value)) {
+                                    if (attackCount == 3) {
+                                        value = characterVoicePack.GetAction(message.TextValue);
+                                        attackCount = 0;
+                                    } else {
+                                        attackCount++;
+                                        attackIntended = true;
+                                    }
                                 }
                             } else if (type == (XivChatType)2234) {
                                 value = characterVoicePack.GetDeath();
@@ -566,7 +579,10 @@ namespace RoleplayingVoice {
                             } else if (type == (XivChatType)2219) {
                                 if (message.TextValue.Contains("ready") ||
                                     message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetReadying(message.TextValue);
+                                    value = characterVoicePack.GetMisc(message.TextValue);
+                                    if (string.IsNullOrEmpty(value)) {
+                                        value = characterVoicePack.GetReadying(message.TextValue);
+                                    }
                                     attackCount = 3;
                                     castingCount = 3;
                                 } else {
@@ -581,7 +597,10 @@ namespace RoleplayingVoice {
                             } else if (type == (XivChatType)2731) {
                                 if (message.TextValue.Contains("ready") ||
                                     message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetReadying(message.TextValue);
+                                    value = characterVoicePack.GetMisc(message.TextValue);
+                                    if (string.IsNullOrEmpty(value)) {
+                                        value = characterVoicePack.GetReadying(message.TextValue);
+                                    }
                                     attackCount = 3;
                                     castingCount = 3;
                                 } else {
