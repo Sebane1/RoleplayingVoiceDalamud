@@ -443,8 +443,8 @@ namespace RoleplayingVoice {
                 _filter.Muted = voiceMuted = true;
                 RefreshPlayerVoiceMuted();
                 Dalamud.Logging.PluginLog.Log("Mute Triggered");
+                muteTimer.Start();
             }
-            muteTimer.Restart();
         }
 
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
@@ -611,7 +611,7 @@ namespace RoleplayingVoice {
                                         value = characterVoicePack.GetAction(message.TextValue);
                                     } else {
                                         attackCount++;
-                                        if (attackCount >= 3) {
+                                                                                if (attackCount >= 3) {
                                             attackCount = 0;
                                         }
                                         attackIntended = true;
