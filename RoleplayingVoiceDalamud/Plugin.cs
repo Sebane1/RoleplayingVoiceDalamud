@@ -18,6 +18,7 @@ using Dalamud.Plugin.Services;
 using ElevenLabs.Voices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVLooseTextureCompiler.Networking;
 using FFXIVVoicePackCreator;
 using FFXIVVoicePackCreator.VoiceSorting;
@@ -77,7 +78,7 @@ namespace RoleplayingVoice {
         private Framework _framework;
         private bool voiceMuted;
         private int muteLength;
-
+        Dictionary<string, MovingObject> gameObjectPositions = new Dictionary<string, MovingObject>();
         public string Name => "Roleplaying Voice";
 
         public RoleplayingVoiceManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
@@ -145,11 +146,11 @@ namespace RoleplayingVoice {
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += Plugin_Event;
-            RefreshSoundData();
             _filter = new Filter(this);
             _filter.Enable();
             _framework = framework;
             _framework.Update += _framework_Update;
+            RefreshSoundData();
         }
 
         private void _framework_Update(Framework framework) {
@@ -175,7 +176,92 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+            foreach (GameObject gameObject in _objectTable) {
+                string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                if (gameObjectPositions.ContainsKey(cleanedName)) {
+                    var positionData = gameObjectPositions[cleanedName];
+                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f || positionData.LastRotation != gameObject.Rotation) {
+                        if (!positionData.IsMoving) {
+                            ObjectIsMoving(cleanedName, gameObject);
+                            positionData.IsMoving = true;
+                        }
+                    } else {
+                        positionData.IsMoving = false;
+                    }
+                    positionData.LastPosition = gameObject.Position;
+                    positionData.LastRotation = gameObject.Rotation;
+                } else {
+                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
+                }
+            }
         }
+
+        private void ObjectIsMoving(string playerName, GameObject gameObject) {
+            if (playerName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
+                SendingMovement(playerName, gameObject);
+            } else {
+                ReceivingMovement(playerName, gameObject);
+            }
+        }
+
+        private async void ReceivingMovement(string playerSender, GameObject gameObject) {
+            string path = config.CacheFolder + @"\VoicePack\Others";
+            Directory.CreateDirectory(path);
+            string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+            string clipPath = path + @"\" + hash;
+            try {
+                if (config.UsePlayerSync) {
+                    if (config.Whitelist.Contains(playerSender)) {
+                        if (!isDownloadingZip) {
+                            if (!Path.Exists(clipPath)) {
+                                isDownloadingZip = true;
+                                await Task.Run(async () => {
+                                    string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                    isDownloadingZip = false;
+                                });
+                            }
+                        }
+                        if (Directory.Exists(path)) {
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
+                            bool isVoicedEmote = false;
+                            string value = characterVoicePack.GetMisc("moving");
+                            if (!string.IsNullOrEmpty(value)) {
+                                _audioManager.PlayAudio(new AudioGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
+                                if (isVoicedEmote) {
+                                    MuteVoiceChecK(4000);
+                                }
+                            } else {
+                                _audioManager.StopAudio(new AudioGameObject(gameObject));
+                            }
+                        }
+                    }
+                }
+
+            } catch {
+            }
+        }
+
+        private void SendingMovement(string playerName, GameObject gameObject) {
+            if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                string path = config.CacheFolder + @"\VoicePack\" + voice;
+                string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                bool isVoicedEmote = false;
+                string value = characterVoicePack.GetMisc("moving");
+                if (!string.IsNullOrEmpty(value)) {
+                    if (config.UsePlayerSync) {
+                        Task.Run(async () => {
+                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                        });
+                    }
+                    _audioManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
+                } else {
+                    _audioManager.StopAudio(_playerObject);
+                }
+            }
+        }
+
         private void RefreshPlayerVoiceMuted() {
             if (voiceMuted) {
                 _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
@@ -192,9 +278,11 @@ namespace RoleplayingVoice {
                 combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
             });
             if (!config.VoicePackIsActive) {
-                _filter.Muted = false;
-                voiceMuted = false;
-                RefreshPlayerVoiceMuted();
+                if (_filter != null) {
+                    _filter.Muted = false;
+                    voiceMuted = false;
+                    RefreshPlayerVoiceMuted();
+                }
             }
         }
 
@@ -427,11 +515,13 @@ namespace RoleplayingVoice {
             }
             list.Sort((x, y) => y.Value.CompareTo(x.Value));
             if (config != null) {
-                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                    if (!string.IsNullOrEmpty(voice)) {
-                        string path = config.CacheFolder + @"\VoicePack\" + voice;
-                        list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                if (config.CharacterVoicePacks != null) {
+                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        if (!string.IsNullOrEmpty(voice)) {
+                            string path = config.CacheFolder + @"\VoicePack\" + voice;
+                            list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                        }
                     }
                 }
             }
@@ -611,7 +701,7 @@ namespace RoleplayingVoice {
                                         value = characterVoicePack.GetAction(message.TextValue);
                                     } else {
                                         attackCount++;
-                                                                                if (attackCount >= 3) {
+                                        if (attackCount >= 3) {
                                             attackCount = 0;
                                         }
                                         attackIntended = true;
@@ -839,7 +929,7 @@ namespace RoleplayingVoice {
 
         public static string CleanSenderName(string senderName) {
             string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(senderName)).Split(" ");
-            string playerSender = senderStrings.Length == 2 ?
+            string playerSender = senderStrings.Length == 1 ? senderStrings[0] : senderStrings.Length == 2 ?
                 (senderStrings[0] + " " + senderStrings[1]) :
                 (senderStrings[0] + " " + senderStrings[2]);
             return playerSender;
