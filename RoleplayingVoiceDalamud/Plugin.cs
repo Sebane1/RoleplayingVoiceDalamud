@@ -6,6 +6,7 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
+using Dalamud.Game.Config;
 using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.Toast;
 using Dalamud.Game.Text;
@@ -13,6 +14,7 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using ElevenLabs.Voices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -26,19 +28,15 @@ using Penumbra.Api;
 using RoleplayingVoice.Attributes;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
+using SoundFilter;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using XivCommon.Functions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -55,7 +53,6 @@ namespace RoleplayingVoice {
         private Stopwatch stopwatch;
         private Stopwatch cooldown;
         private Stopwatch muteTimer;
-        private Chat _realChat;
         private EmoteReaderHooks _emoteReaderHook;
         private AudioGameObject _playerObject;
         private AudioManager _audioManager;
@@ -73,11 +70,19 @@ namespace RoleplayingVoice {
         private List<string> combinedSoundList;
         private unsafe Camera* _camera;
         private AudioCameraObject _audioCamera;
+        private GameConfig _gameConfig;
+        private SigScanner _sigScanner;
+        private Filter _filter;
+        public EventHandler OnMuteTimerOver;
+        private Framework _framework;
+        private bool voiceMuted;
+        private int muteLength;
 
         public string Name => "Roleplaying Voice";
 
         public RoleplayingVoiceManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
+        public SigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
 
         public unsafe Plugin(
             DalamudPluginInterface pi,
@@ -87,7 +92,9 @@ namespace RoleplayingVoice {
             SigScanner scanner,
             ObjectTable objectTable,
             ToastGui toast,
-            DataManager dataManager) {
+            DataManager dataManager,
+            GameConfig gameConfig,
+            Framework framework) {
             this.pluginInterface = pi;
             this.chat = chat;
             this._clientState = clientState;
@@ -119,12 +126,11 @@ namespace RoleplayingVoice {
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
+            _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
+            _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             this.chat.ChatMessage += Chat_ChatMessage;
             cooldown = new Stopwatch();
             muteTimer = new Stopwatch();
-            _realChat = new Chat(scanner);
-            _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
-            _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             _objectTable = objectTable;
             _clientState.Login += _clientState_Login;
             _clientState.Logout += _clientState_Logout;
@@ -134,14 +140,49 @@ namespace RoleplayingVoice {
             _dataManager = dataManager;
             _toast = toast;
             _toast.ErrorToast += _toast_ErrorToast;
-            _camera = CameraManager.Instance->GetActiveCamera();
-            _audioCamera = new AudioCameraObject(_camera);
+            _gameConfig = gameConfig;
+            _sigScanner = scanner;
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += Plugin_Event;
             RefreshSoundData();
+            _filter = new Filter(this);
+            _filter.Enable();
+            _framework = framework;
+            _framework.Update += _framework_Update;
         }
 
+        private void _framework_Update(Framework framework) {
+            if (config != null && _audioManager != null && !disposed) {
+                uint voiceVolume = 0;
+                uint masterVolume = 0;
+                if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
+                    if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
+                        _audioManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _audioManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        if (muteTimer.ElapsedMilliseconds > muteLength) {
+                            lock (_filter) {
+                                _filter.Muted = voiceMuted = false;
+                                RefreshPlayerVoiceMuted();
+                                muteTimer.Stop();
+                                muteTimer.Reset();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        private void RefreshPlayerVoiceMuted() {
+            if (voiceMuted) {
+                _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
+            } else {
+                _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+            }
+        }
         private void Plugin_Event(Penumbra.Api.Enums.ModSettingChange arg1, string arg2, string arg3, bool arg4) {
             RefreshSoundData();
         }
@@ -150,6 +191,11 @@ namespace RoleplayingVoice {
                 penumbraSoundPacks = await GetPrioritySortedSoundPacks();
                 combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
             });
+            if (!config.VoicePackIsActive) {
+                _filter.Muted = false;
+                voiceMuted = false;
+                RefreshPlayerVoiceMuted();
+            }
         }
 
         public async Task<List<string>> GetCombinedSoundList(List<KeyValuePair<List<string>, int>> sounds) {
@@ -307,7 +353,7 @@ namespace RoleplayingVoice {
                                     _audioManager.PlayAudio(new AudioGameObject(instigator), value, SoundType.OtherPlayer,
                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                                     if (isVoicedEmote) {
-                                        MuteChecK();
+                                        MuteVoiceChecK(4000);
                                     }
                                 } else {
                                     _audioManager.StopAudio(new AudioGameObject(instigator));
@@ -340,7 +386,7 @@ namespace RoleplayingVoice {
                     _audioManager.PlayAudio(_playerObject, value, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     if (isVoicedEmote) {
-                        MuteChecK(10000);
+                        MuteVoiceChecK(10000);
                     }
                 } else {
                     _audioManager.StopAudio(_playerObject);
@@ -391,19 +437,16 @@ namespace RoleplayingVoice {
             }
             return list;
         }
-        public void MuteChecK(int length = 4000) {
+        public void MuteVoiceChecK(int length = 20) {
+            muteLength = length;
             if (!muteTimer.IsRunning) {
-                _realChat.SendMessage("/voice");
-                Task.Run(() => {
-                    while (muteTimer.ElapsedMilliseconds < length) {
-                        Thread.Sleep(4000);
-                    }
-                    _realChat.SendMessage("/voice");
-                    muteTimer.Reset();
-                });
+                _filter.Muted = voiceMuted = true;
+                RefreshPlayerVoiceMuted();
+                Dalamud.Logging.PluginLog.Log("Mute Triggered");
             }
             muteTimer.Restart();
         }
+
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
             Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
             Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
@@ -415,6 +458,7 @@ namespace RoleplayingVoice {
             string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
             string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
             string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
+
             characterVoicePack.EmoteIndex = -1;
             isVoicedEmote = true;
             switch (emoteId) {
@@ -528,12 +572,14 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void CheckDependancies(bool forceNewAssignments = false) {
+        unsafe private void CheckDependancies(bool forceNewAssignments = false) {
             if (_clientState.LocalPlayer != null) {
                 if (_playerObject == null || forceNewAssignments) {
                     _playerObject = new AudioGameObject(_clientState.LocalPlayer);
                 }
                 if (_audioManager == null || forceNewAssignments) {
+                    _camera = CameraManager.Instance->GetActiveCamera();
+                    _audioCamera = new AudioCameraObject(_camera);
                     _audioManager = new AudioManager(_playerObject, _audioCamera);
                     _audioManager.OnNewAudioTriggered += _audioManager_OnNewAudioTriggered;
                 }
@@ -541,9 +587,6 @@ namespace RoleplayingVoice {
         }
 
         private void _audioManager_OnNewAudioTriggered(object sender, EventArgs e) {
-            _audioManager.MainPlayerVolume = config.PlayerCharacterVolume;
-            _audioManager.OtherPlayerVolume = config.OtherCharacterVolume;
-            _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume;
         }
 
         private void BattleText(string playerName, SeString message, XivChatType type) {
@@ -564,11 +607,13 @@ namespace RoleplayingVoice {
                             type == (XivChatType)2091) {
                                 value = characterVoicePack.GetMisc(message.TextValue);
                                 if (string.IsNullOrEmpty(value)) {
-                                    if (attackCount == 3) {
+                                    if (attackCount == 0) {
                                         value = characterVoicePack.GetAction(message.TextValue);
-                                        attackCount = 0;
                                     } else {
                                         attackCount++;
+                                        if (attackCount >= 3) {
+                                            attackCount = 0;
+                                        }
                                         attackIntended = true;
                                     }
                                 }
@@ -583,14 +628,16 @@ namespace RoleplayingVoice {
                                     if (string.IsNullOrEmpty(value)) {
                                         value = characterVoicePack.GetReadying(message.TextValue);
                                     }
-                                    attackCount = 3;
-                                    castingCount = 3;
+                                    attackCount = 0;
+                                    castingCount = 0;
                                 } else {
-                                    if (castingCount == 3) {
+                                    if (castingCount == 0) {
                                         value = characterVoicePack.GetCastingHeal();
-                                        castingCount = 0;
                                     } else {
                                         castingCount++;
+                                        if (attackCount >= 3) {
+                                            attackCount = 0;
+                                        }
                                         attackIntended = true;
                                     }
                                 }
@@ -601,8 +648,8 @@ namespace RoleplayingVoice {
                                     if (string.IsNullOrEmpty(value)) {
                                         value = characterVoicePack.GetReadying(message.TextValue);
                                     }
-                                    attackCount = 3;
-                                    castingCount = 3;
+                                    attackCount = 0;
+                                    castingCount = 0;
                                 } else {
                                     if (castingCount == 3) {
                                         value = characterVoicePack.GetCastingAttack();
@@ -624,19 +671,22 @@ namespace RoleplayingVoice {
                                 _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
                             }
                             if (!muteTimer.IsRunning) {
-                                _realChat.SendMessage("/voice");
+                                _filter.Muted = true;
+                                Dalamud.Logging.PluginLog.Log("Battle Mute Finalized");
                                 Task.Run(() => {
                                     if (config.UsePlayerSync) {
                                         Task.Run(async () => {
                                             bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                         });
                                     }
-                                    while (muteTimer.ElapsedMilliseconds < 4000) {
-                                        Thread.Sleep(4000);
+                                    while (muteTimer.ElapsedMilliseconds < 20) {
+                                        Thread.Sleep(20);
                                     }
                                     attackCount = 0;
-                                    _realChat.SendMessage("/voice");
-                                    muteTimer.Reset();
+                                    lock (_filter) {
+                                        _filter.Muted = false;
+                                        muteTimer.Reset();
+                                    }
                                 });
                             }
                             muteTimer.Restart();
@@ -698,12 +748,14 @@ namespace RoleplayingVoice {
                                     playerSender, character.Position), value, SoundType.OtherPlayer);
                                 });
                                 if (!muteTimer.IsRunning) {
-                                    _realChat.SendMessage("/voice");
+                                    _filter.Muted = true;
                                     Task.Run(() => {
-                                        while (muteTimer.ElapsedMilliseconds < 4000) {
-                                            Thread.Sleep(4000);
+                                        while (muteTimer.ElapsedMilliseconds < 20) {
+                                            Thread.Sleep(20);
                                         }
-                                        _realChat.SendMessage("/voice");
+                                        lock (_filter) {
+                                            _filter.Muted = false;
+                                        }
                                         muteTimer.Reset();
                                     });
                                 }
@@ -862,12 +914,14 @@ namespace RoleplayingVoice {
             this.windowSystem.RemoveAllWindows();
             _networkedClient.Dispose();
             _audioManager.Dispose();
+            _filter.Dispose();
             _clientState.Login -= _clientState_Login;
             _clientState.Logout -= _clientState_Logout;
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
             _clientState.LeavePvP -= _clientState_LeavePvP;
             _toast.ErrorToast -= _toast_ErrorToast;
             _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
+            _framework.Update -= _framework_Update;
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= Plugin_Event;
         }
 

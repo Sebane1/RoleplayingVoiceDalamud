@@ -20,7 +20,6 @@ namespace FFXIVVoicePackCreator {
 
         private static void LoadTimeCodes() {
             timeCodeData.Clear();
-            string racialListPath = Path.Combine(Application.StartupPath, @"res\racialEmoteTime.txt");
             using (StreamReader streamReader = new StreamReader(new MemoryStream(Encoding.ASCII.GetBytes(RacialEmoteTime.Times)))) {
                 int races = int.Parse(streamReader.ReadLine());
                 for (int raceIndex = 0; raceIndex < races; raceIndex++) {

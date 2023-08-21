@@ -15,10 +15,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="emote.scd" />
 	  <None Remove="racialEmoteTime.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <EmbeddedResource Include="emote.scd" />
 	  <EmbeddedResource Include="racialEmoteTime.txt">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </EmbeddedResource>

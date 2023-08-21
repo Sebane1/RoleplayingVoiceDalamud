@@ -8,6 +8,9 @@ using System;
 using System.Linq;
 
 namespace PatMe {
+    /// <summary>
+    /// Implementation Based On Findings From PatMe
+    /// </summary>
     public class EmoteReaderHooks : IDisposable {
         public Action<GameObject, ushort> OnEmote;
 
