@@ -63,7 +63,7 @@ namespace RoleplayingVoice {
         private string[] _voicePackList = new string[1] { "" };
         private string _newVoicePackName = "";
         private bool _characterVoicePackActive;
-        private float _loopingSFXVolume;
+        private float _loopingSFXVolume = 1;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -667,16 +667,16 @@ namespace RoleplayingVoice {
         private void DrawVolume() {
             ImGui.Text("Current Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##playerSlider", ref _playerCharacterVolume, 0, 1);
+            ImGui.SliderFloat("##playerSlider", ref _playerCharacterVolume, 0, 2);
             ImGui.Text("Other Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##otherSlider", ref _otherCharacterVolume, 0, 1);
+            ImGui.SliderFloat("##otherSlider", ref _otherCharacterVolume, 0, 2);
             ImGui.Text("Unfocused Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 1);
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 2);
             ImGui.Text("Looping SFX Volume");
-            ImGui.SliderFloat("##unfocusedVolume", ref _loopingSFXVolume, 0, 1);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##loopingSFX", ref _loopingSFXVolume, 0, 2);
         }
 
         private void DrawServer() {
