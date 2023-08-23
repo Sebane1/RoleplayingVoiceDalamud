@@ -63,6 +63,7 @@ namespace RoleplayingVoice {
         private string[] _voicePackList = new string[1] { "" };
         private string _newVoicePackName = "";
         private bool _characterVoicePackActive;
+        private float _loopingSFXVolume;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -108,6 +109,7 @@ namespace RoleplayingVoice {
                     _playerCharacterVolume = configuration.PlayerCharacterVolume;
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
+                    _loopingSFXVolume = configuration.LoopingSFXVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
@@ -243,6 +245,9 @@ namespace RoleplayingVoice {
                 Save();
             }
             ImGui.TextWrapped("Add users to your whitelist in order to be able to hear them (assuming they have Roleplaying Voice)");
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Checkbox("Sync Via Mare Refresh", ref _ignoreWhitelist);
+            ImGui.TextWrapped("You will hear any user thats refreshed by Mare (effectively relying on your Mare pairs and syncshells)");
         }
 
         private void SaveAndClose() {
@@ -372,6 +377,7 @@ namespace RoleplayingVoice {
                 configuration.PlayerCharacterVolume = _playerCharacterVolume;
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
+                configuration.LoopingSFXVolume = _loopingSFXVolume;
                 configuration.IsActive = _characterVoiceActive;
                 configuration.VoicePackIsActive = _characterVoicePackActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
@@ -668,6 +674,9 @@ namespace RoleplayingVoice {
             ImGui.Text("Unfocused Player Voice Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 1);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.Text("Looping SFX Volume");
+            ImGui.SliderFloat("##unfocusedVolume", ref _loopingSFXVolume, 0, 1);
         }
 
         private void DrawServer() {

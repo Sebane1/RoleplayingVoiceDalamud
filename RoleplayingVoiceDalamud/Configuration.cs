@@ -38,6 +38,7 @@ namespace RoleplayingVoice {
         public bool IgnoreWhitelist { get => ignoreWhitelist; set => ignoreWhitelist = value; }
         public string CacheFolder { get => cacheFolder; set => cacheFolder = value; }
         public List<string> Whitelist { get => whitelist; set => whitelist = value; }
+        public float LoopingSFXVolume { get; internal set; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

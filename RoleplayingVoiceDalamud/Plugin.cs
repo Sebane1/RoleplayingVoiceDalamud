@@ -79,6 +79,12 @@ namespace RoleplayingVoice {
         private bool voiceMuted;
         private int muteLength;
         Dictionary<string, MovingObject> gameObjectPositions = new Dictionary<string, MovingObject>();
+        Queue<string> temporaryWhitelistQueue = new Queue<string>();
+        List<string> temporaryWhitelist = new List<string>();
+        Stopwatch redrawCooldown = new Stopwatch();
+        private int objectsRedrawn;
+        private int redrawObjectCount;
+
         public string Name => "Roleplaying Voice";
 
         public RoleplayingVoiceManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
@@ -145,18 +151,52 @@ namespace RoleplayingVoice {
             _sigScanner = scanner;
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
-            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += Plugin_Event;
             _filter = new Filter(this);
             _filter.Enable();
             _framework = framework;
-            _framework.Update += _framework_Update;
+            _framework.Update += framework_Update;
             RefreshSoundData();
+            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+            Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
         }
 
-        private void _framework_Update(Framework framework) {
+        private void gameObjectRedrawn(nint arg1, int arg2) {
+            if (!redrawCooldown.IsRunning) {
+                redrawCooldown.Start();
+                redrawObjectCount = _objectTable.Count<GameObject>();
+            }
+            if (redrawCooldown.IsRunning) {
+                objectsRedrawn++;
+            }
+            string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+            string path = config.CacheFolder + @"\VoicePack\Others";
+            string hash = RoleplayingVoiceManager.Shai1Hash(senderName);
+            string clipPath = path + @"\" + hash;
+            if (CombinedWhitelist().Contains(senderName) &&
+                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                if (Directory.Exists(clipPath)) {
+                    try {
+                        Directory.Delete(clipPath, true);
+                    } catch {
+
+                    }
+                }
+            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist) {
+                temporaryWhitelistQueue.Enqueue(senderName);
+            }
+        }
+
+        List<string> CombinedWhitelist() {
+            List<string> list = new List<string>();
+            list.AddRange(config.Whitelist);
+            list.AddRange(temporaryWhitelist);
+            return list;
+        }
+        private void framework_Update(Framework framework) {
             if (config != null && _audioManager != null && !disposed) {
                 uint voiceVolume = 0;
                 uint masterVolume = 0;
+                uint soundEffectVolume = 0;
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
                         _audioManager.MainPlayerVolume = config.PlayerCharacterVolume *
@@ -165,6 +205,9 @@ namespace RoleplayingVoice {
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
                         _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        if (_gameConfig.TryGet(SystemConfigOption.SoundEnv, out soundEffectVolume)) {
+                            _audioManager.SFXVolume = (float)soundEffectVolume / 100f;
+                        }
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
                             lock (_filter) {
                                 _filter.Muted = voiceMuted = false;
@@ -175,12 +218,23 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
+                if (redrawCooldown.ElapsedMilliseconds > 100) {
+                    if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
+                        foreach (var item in temporaryWhitelistQueue) {
+                            temporaryWhitelist.Add(item);
+                        }
+                        temporaryWhitelistQueue.Clear();
+                    }
+                    redrawCooldown.Stop();
+                    redrawCooldown.Reset();
+                }
             }
             foreach (GameObject gameObject in _objectTable) {
                 string cleanedName = CleanSenderName(gameObject.Name.TextValue);
                 if (gameObjectPositions.ContainsKey(cleanedName)) {
                     var positionData = gameObjectPositions[cleanedName];
-                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f || positionData.LastRotation != gameObject.Rotation) {
+                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                        positionData.LastRotation != gameObject.Rotation) {
                         if (!positionData.IsMoving) {
                             ObjectIsMoving(cleanedName, gameObject);
                             positionData.IsMoving = true;
@@ -211,7 +265,7 @@ namespace RoleplayingVoice {
             string clipPath = path + @"\" + hash;
             try {
                 if (config.UsePlayerSync) {
-                    if (config.Whitelist.Contains(playerSender)) {
+                    if (CombinedWhitelist().Contains(playerSender)) {
                         if (!isDownloadingZip) {
                             if (!Path.Exists(clipPath)) {
                                 isDownloadingZip = true;
@@ -269,19 +323,27 @@ namespace RoleplayingVoice {
                 _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
             }
         }
-        private void Plugin_Event(Penumbra.Api.Enums.ModSettingChange arg1, string arg2, string arg3, bool arg4) {
+        private void modSettingChanged(Penumbra.Api.Enums.ModSettingChange arg1, string arg2, string arg3, bool arg4) {
             RefreshSoundData();
         }
         public async void RefreshSoundData() {
             _ = Task.Run(async () => {
-                penumbraSoundPacks = await GetPrioritySortedSoundPacks();
-                combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                try {
+                    penumbraSoundPacks = await GetPrioritySortedSoundPacks();
+                    combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.Error(e.Message);
+                }
             });
             if (!config.VoicePackIsActive) {
-                if (_filter != null) {
-                    _filter.Muted = false;
-                    voiceMuted = false;
-                    RefreshPlayerVoiceMuted();
+                try {
+                    if (_filter != null) {
+                        _filter.Muted = false;
+                        voiceMuted = false;
+                        RefreshPlayerVoiceMuted();
+                    }
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.Error(e.Message);
                 }
             }
         }
@@ -371,6 +433,7 @@ namespace RoleplayingVoice {
                 _audioManager.Dispose();
                 _audioManager = null;
             }
+            temporaryWhitelist.Clear();
             if (Directory.Exists(path)) {
                 try {
                     Directory.Delete(path, true);
@@ -421,7 +484,7 @@ namespace RoleplayingVoice {
                 string clipPath = path + @"\" + hash;
                 try {
                     if (config.UsePlayerSync) {
-                        if (config.Whitelist.Contains(playerSender)) {
+                        if (CombinedWhitelist().Contains(playerSender)) {
                             if (!isDownloadingZip) {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
@@ -615,6 +678,7 @@ namespace RoleplayingVoice {
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
             config.CharacterVoices = _roleplayingVoiceManager.CharacterVoices;
+            config.Save();
             pluginInterface.SavePluginConfig(config);
         }
         public static string SplitCamelCase(string input) {
@@ -795,7 +859,7 @@ namespace RoleplayingVoice {
                     string clipPath = path + @"\" + hash;
                     Directory.CreateDirectory(path);
                     if (config.UsePlayerSync) {
-                        if (config.Whitelist.Contains(playerSender)) {
+                        if (CombinedWhitelist().Contains(playerSender)) {
                             if (!isDownloadingZip) {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
@@ -912,7 +976,7 @@ namespace RoleplayingVoice {
                         audioFocus = true;
                     }
                     if (config.UsePlayerSync) {
-                        if (config.Whitelist.Contains(playerSender)) {
+                        if (CombinedWhitelist().Contains(playerSender)) {
                             Task.Run(async () => {
                                 PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                 string value = await _roleplayingVoiceManager.
@@ -993,6 +1057,7 @@ namespace RoleplayingVoice {
         protected virtual void Dispose(bool disposing) {
             if (!disposing) return;
             disposed = true;
+            config.Save();
             this.commandManager.Dispose();
 
             this.pluginInterface.SavePluginConfig(this.config);
@@ -1011,8 +1076,8 @@ namespace RoleplayingVoice {
             _clientState.LeavePvP -= _clientState_LeavePvP;
             _toast.ErrorToast -= _toast_ErrorToast;
             _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
-            _framework.Update -= _framework_Update;
-            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= Plugin_Event;
+            _framework.Update -= framework_Update;
+            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
         }
 
         public void Dispose() {
