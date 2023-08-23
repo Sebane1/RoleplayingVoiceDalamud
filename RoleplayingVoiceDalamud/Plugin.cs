@@ -206,7 +206,8 @@ namespace RoleplayingVoice {
                         _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
                         if (_gameConfig.TryGet(SystemConfigOption.SoundEnv, out soundEffectVolume)) {
-                            _audioManager.SFXVolume = (float)soundEffectVolume / 100f;
+                            _audioManager.SFXVolume = config.LoopingSFXVolume *
+                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
                         }
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
                             if (_filter != null) {
