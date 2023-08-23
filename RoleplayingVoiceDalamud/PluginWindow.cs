@@ -676,7 +676,7 @@ namespace RoleplayingVoice {
             ImGui.SliderFloat("##unfocusedVolume", ref _unfocusedCharacterVolume, 0, 2);
             ImGui.Text("Looping SFX Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##loopingSFX", ref _loopingSFXVolume, 0, 2);
+            ImGui.SliderFloat("##loopingSFX", ref _loopingSFXVolume, 0.000001f, 2);
         }
 
         private void DrawServer() {
