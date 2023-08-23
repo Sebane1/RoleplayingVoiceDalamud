@@ -375,14 +375,18 @@ namespace RoleplayingVoice {
                 if (list != null) {
                     string path = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                     if (Directory.Exists(config.CacheFolder + @"\Staging")) {
-                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
-                            File.Delete(file);
-                        }
+                        try {
+                            foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
+                                File.Delete(file);
+                            }
+                        } catch { }
                     }
                     if (Directory.Exists(config.CacheFolder)) {
-                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
-                            File.Delete(file);
-                        }
+                        try {
+                            foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
+                                File.Delete(file);
+                            }
+                        } catch { }
                     }
                     Directory.CreateDirectory(path);
                     foreach (var sound in list) {
