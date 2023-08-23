@@ -209,11 +209,13 @@ namespace RoleplayingVoice {
                             _audioManager.SFXVolume = (float)soundEffectVolume / 100f;
                         }
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
-                            lock (_filter) {
-                                _filter.Muted = voiceMuted = false;
-                                RefreshPlayerVoiceMuted();
-                                muteTimer.Stop();
-                                muteTimer.Reset();
+                            if (_filter != null) {
+                                lock (_filter) {
+                                    _filter.Muted = voiceMuted = false;
+                                    RefreshPlayerVoiceMuted();
+                                    muteTimer.Stop();
+                                    muteTimer.Reset();
+                                }
                             }
                         }
                     }
@@ -593,7 +595,9 @@ namespace RoleplayingVoice {
         public void MuteVoiceChecK(int length = 20) {
             muteLength = length;
             if (!muteTimer.IsRunning) {
-                _filter.Muted = voiceMuted = true;
+                if (_filter != null) {
+                    _filter.Muted = voiceMuted = true;
+                }
                 RefreshPlayerVoiceMuted();
                 Dalamud.Logging.PluginLog.Log("Mute Triggered");
                 muteTimer.Start();
@@ -825,7 +829,9 @@ namespace RoleplayingVoice {
                                 _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
                             }
                             if (!muteTimer.IsRunning) {
-                                _filter.Muted = true;
+                                if (_filter != null) {
+                                    _filter.Muted = true;
+                                }
                                 Dalamud.Logging.PluginLog.Log("Battle Mute Finalized");
                                 Task.Run(() => {
                                     if (config.UsePlayerSync) {
