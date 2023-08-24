@@ -26,7 +26,7 @@ namespace RoleplayingVoiceDalamud {
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
         public CharacterVoicePack(string directory) {
-            if (!string.IsNullOrEmpty(directory)) {
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
                 foreach (string file in Directory.EnumerateFiles(directory)) {
                     SortFile(file);
                 }

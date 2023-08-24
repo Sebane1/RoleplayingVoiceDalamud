@@ -588,7 +588,7 @@ namespace RoleplayingVoice {
                 if (config.CharacterVoicePacks != null) {
                     if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        if (!string.IsNullOrEmpty(voice)) {
+                        if (!string.IsNullOrEmpty(voice) && Directory.Exists(voice)) {
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
                             list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
                         }
