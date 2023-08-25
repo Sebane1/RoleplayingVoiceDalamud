@@ -494,7 +494,13 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+            if (PluginInterface != null) {
+                try {
+                    PluginReference.RefreshSoundData();
+                } catch (Exception ex) { }
+            }
         }
+
         internal class BetterComboBox {
             string _label = "";
             int _width = 0;

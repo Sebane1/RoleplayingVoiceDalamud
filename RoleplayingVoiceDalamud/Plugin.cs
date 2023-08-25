@@ -84,6 +84,7 @@ namespace RoleplayingVoice {
         Stopwatch redrawCooldown = new Stopwatch();
         private int objectsRedrawn;
         private int redrawObjectCount;
+        private bool staging;
 
         public string Name => "Roleplaying Voice";
 
@@ -133,6 +134,7 @@ namespace RoleplayingVoice {
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
             window.Toggle();
+            window.PluginReference = this;
             _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
             _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             this.chat.ChatMessage += Chat_ChatMessage;
@@ -254,10 +256,12 @@ namespace RoleplayingVoice {
         }
 
         private void ObjectIsMoving(string playerName, GameObject gameObject) {
-            if (playerName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
-                SendingMovement(playerName, gameObject);
-            } else {
-                ReceivingMovement(playerName, gameObject);
+            if (_clientState.LocalPlayer != null) {
+                if (playerName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
+                    SendingMovement(playerName, gameObject);
+                } else {
+                    ReceivingMovement(playerName, gameObject);
+                }
             }
         }
 
@@ -374,25 +378,39 @@ namespace RoleplayingVoice {
             }
             _ = Task.Run(async () => {
                 if (list != null) {
+                    while (staging) {
+                        Thread.Sleep(1000);
+                    }
+                    staging = true;
                     string path = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                     if (Directory.Exists(config.CacheFolder + @"\Staging")) {
-                        try {
-                            foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
+                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
+                            try {
                                 File.Delete(file);
-                            }
-                        } catch { }
+                            } catch { }
+                        }
                     }
                     if (Directory.Exists(config.CacheFolder)) {
-                        try {
-                            foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
+                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
+                            try {
                                 File.Delete(file);
-                            }
-                        } catch { }
+                            } catch { }
+                        }
                     }
                     Directory.CreateDirectory(path);
-                    foreach (var sound in list) {
-                        File.Copy(sound, Path.Combine(path, Path.GetFileName(sound)), true);
+                    if (Directory.Exists(path)) {
+                        foreach (string file in Directory.EnumerateFiles(path)) {
+                            try {
+                                File.Delete(file);
+                            } catch { }
+                        }
                     }
+                    foreach (var sound in list) {
+                        try {
+                            File.Copy(sound, Path.Combine(path, Path.GetFileName(sound)), true);
+                        } catch { }
+                    }
+                    staging = false;
                 }
             });
             return list;
@@ -588,9 +606,11 @@ namespace RoleplayingVoice {
                 if (config.CharacterVoicePacks != null) {
                     if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        if (!string.IsNullOrEmpty(voice) && Directory.Exists(voice)) {
+                        if (!string.IsNullOrEmpty(voice)) {
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
-                            list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                            if (Directory.Exists(path)) {
+                                list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                            }
                         }
                     }
                 }
