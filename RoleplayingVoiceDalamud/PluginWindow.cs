@@ -152,6 +152,7 @@ namespace RoleplayingVoice {
         }
 
         public Plugin PluginReference { get; internal set; }
+        public event EventHandler OnMoveFailed;
 
         private void ClientState_Logout(object sender, EventArgs e) {
             characterVoice = "None";
@@ -618,7 +619,10 @@ namespace RoleplayingVoice {
                     ProcessStartInfo ProcessInfo;
                     Process Process;
                     string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                    Directory.CreateDirectory(directory);
+                    try {
+                        Directory.CreateDirectory(directory);
+                    } catch {
+                    }
                     ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
                     ProcessInfo.UseShellExecute = true;
                     Process = Process.Start(ProcessInfo);
@@ -706,98 +710,107 @@ namespace RoleplayingVoice {
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {
+            bool canContinue = true;
             // Check if the destination folder exists, create it if necessary
             if (!Directory.Exists(newFolder)) {
-                Directory.CreateDirectory(newFolder);
-            }
-            // Calculate the space needed for the move
-            long fileSize = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
-
-            // Check the amount of available space
-            DriveInfo destinationDrive = new DriveInfo(Path.GetPathRoot(newFolder));
-            long availableSpace = destinationDrive.AvailableFreeSpace;
-
-            if (fileSize >= availableSpace) {
-                fileMoveSuccess = false;
-                fileMoveMessage = "Not enough space available.";
-                Directory.Delete(newFolder, true);
-            } else {
-                if (Directory.Exists(oldFolder)) {
-                    var fileCount = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Count();
-
-                    // Check if oldFolder is empty, if so abort
-                    if (fileCount == 0)
-                        return;
-
-                    int currentFile = 0;
-                    int moveFailed = 0;
-
-                    foreach (string filePath in Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories)) {
-                        // Get the relative path of the file within the oldFolder folder
-                        string relativePath = Path.GetRelativePath(oldFolder, filePath);
-
-                        // Create the newFolder directory path
-                        string destinationDirectoryPath = Path.Combine(newFolder, Path.GetDirectoryName(relativePath));
-
-                        // Create the newFolder directory if necessary
-                        Directory.CreateDirectory(destinationDirectoryPath);
-
-                        // Create the new file to the newFolder directory while preserving the structure
-                        string destinationFilePath = Path.Combine(destinationDirectoryPath, Path.GetFileName(filePath));
-
-                        Task.Run(async () => {
-                            bool fileMoved = await MoveFileAsync(filePath, destinationFilePath);
-                            lock (currentFileLock) {
-                                currentFile++;
-                                if (!fileMoved)
-                                    moveFailed++;
-                            };
-                        });
-                    }
-
-                    // Wait for all threads
-                    while (currentFile < fileCount && moveFailed == 0) {
-                        if (moveFailed > 0) {
-                            break;
-                        }
-                        Thread.Sleep(100);
-                    }
-                    if (moveFailed == 0 && currentFile == fileCount) {
-                        fileMoveSuccess = true;
-                        fileMoveMessage = string.Empty;
-                        if (configuration != null && configuration.CharacterVoices != null) {
-                            foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
-                                string voiceName = voice.Key;
-                                var innerDictionary = voice.Value;
-                                foreach (var message in innerDictionary) {
-                                    string text = message.Key;
-                                    string path = message.Value;
-                                    if (path.StartsWith(oldFolder)) {
-                                        string relativePath = path.Substring(oldFolder.Length);
-                                        string newPath = newFolder + relativePath;
-                                        innerDictionary[text] = newPath;
-                                    }
-
-                                }
-                            }
-                            //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
-                            Directory.Delete(oldFolder, true);
-                        }
-                    }
-                    oldFolder = newFolder;
-                    configuration.CacheFolder = oldFolder;
-                    // Right now this solves the issue of the manager having an incorrect cache location until a manual save happens
-                    // but subinfo needs a full window redraw to work
-                    Configuration = configuration;
-                    PluginReference.InitialzeManager();
-                } else {
-                    fileMoveSuccess = false;
-                    if (string.IsNullOrEmpty(fileMoveMessage)) {
-                        fileMoveMessage = "Move failed!";
-                    }
-                    //Move failed, figure it out nerd
+                try {
+                    Directory.CreateDirectory(newFolder);
+                } catch {
+                    fileMoveMessage = "Error, no write access";
+                    canContinue = false;
                 }
             }
+            if (canContinue) {
+                // Calculate the space needed for the move
+                long fileSize = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
+
+                // Check the amount of available space
+                DriveInfo destinationDrive = new DriveInfo(Path.GetPathRoot(newFolder));
+                long availableSpace = destinationDrive.AvailableFreeSpace;
+
+                if (fileSize >= availableSpace) {
+                    fileMoveSuccess = false;
+                    fileMoveMessage = "Not enough space available.";
+                    Directory.Delete(newFolder, true);
+                } else {
+                    if (Directory.Exists(oldFolder)) {
+                        var fileCount = Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories).Count();
+
+                        // Check if oldFolder is empty, if so abort
+                        if (fileCount == 0)
+                            return;
+
+                        int currentFile = 0;
+                        int moveFailed = 0;
+
+                        foreach (string filePath in Directory.EnumerateFiles(oldFolder, "*", SearchOption.AllDirectories)) {
+                            // Get the relative path of the file within the oldFolder folder
+                            string relativePath = Path.GetRelativePath(oldFolder, filePath);
+
+                            // Create the newFolder directory path
+                            string destinationDirectoryPath = Path.Combine(newFolder, Path.GetDirectoryName(relativePath));
+
+                            // Create the newFolder directory if necessary
+                            Directory.CreateDirectory(destinationDirectoryPath);
+
+                            // Create the new file to the newFolder directory while preserving the structure
+                            string destinationFilePath = Path.Combine(destinationDirectoryPath, Path.GetFileName(filePath));
+
+                            Task.Run(async () => {
+                                bool fileMoved = await MoveFileAsync(filePath, destinationFilePath);
+                                lock (currentFileLock) {
+                                    currentFile++;
+                                    if (!fileMoved)
+                                        moveFailed++;
+                                };
+                            });
+                        }
+
+                        // Wait for all threads
+                        while (currentFile < fileCount && moveFailed == 0) {
+                            if (moveFailed > 0) {
+                                break;
+                            }
+                            Thread.Sleep(100);
+                        }
+                        if (moveFailed == 0 && currentFile == fileCount) {
+                            fileMoveSuccess = true;
+                            fileMoveMessage = string.Empty;
+                            if (configuration != null && configuration.CharacterVoices != null) {
+                                foreach (var voice in configuration.CharacterVoices.VoiceCatalogue) {
+                                    string voiceName = voice.Key;
+                                    var innerDictionary = voice.Value;
+                                    foreach (var message in innerDictionary) {
+                                        string text = message.Key;
+                                        string path = message.Value;
+                                        if (path.StartsWith(oldFolder)) {
+                                            string relativePath = path.Substring(oldFolder.Length);
+                                            string newPath = newFolder + relativePath;
+                                            innerDictionary[text] = newPath;
+                                        }
+
+                                    }
+                                }
+                                //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
+                                Directory.Delete(oldFolder, true);
+                            }
+                        }
+                        oldFolder = newFolder;
+                        configuration.CacheFolder = oldFolder;
+                        // Right now this solves the issue of the manager having an incorrect cache location until a manual save happens
+                        // but subinfo needs a full window redraw to work
+                        Configuration = configuration;
+                        PluginReference.InitialzeManager();
+                    } else {
+                        fileMoveSuccess = false;
+                        if (string.IsNullOrEmpty(fileMoveMessage)) {
+                            fileMoveMessage = "Move failed!";
+                        }
+                        //Move failed, figure it out nerd
+                    }
+                }
+            }
+            OnMoveFailed?.Invoke(this, EventArgs.Empty);
         }
 
         private async Task<bool> MoveFileAsync(string sourceFilePath, string destinationFilePath) {

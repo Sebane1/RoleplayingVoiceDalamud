@@ -42,7 +42,7 @@ using System.Threading.Tasks;
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         private readonly DalamudPluginInterface pluginInterface;
-        private readonly ChatGui chat;
+        private readonly ChatGui _chat;
         private readonly ClientState _clientState;
 
         private readonly PluginCommandManager<Plugin> commandManager;
@@ -104,7 +104,7 @@ namespace RoleplayingVoice {
             GameConfig gameConfig,
             Framework framework) {
             this.pluginInterface = pi;
-            this.chat = chat;
+            this._chat = chat;
             this._clientState = clientState;
 
             // Get or create a configuration object
@@ -127,6 +127,7 @@ namespace RoleplayingVoice {
                 this.windowSystem.AddWindow(window);
             }
             window.RequestingReconnect += Window_RequestingReconnect;
+            window.OnMoveFailed += Window_OnMoveFailed;
             this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
@@ -137,7 +138,7 @@ namespace RoleplayingVoice {
             window.PluginReference = this;
             _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
             _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
-            this.chat.ChatMessage += Chat_ChatMessage;
+            this._chat.ChatMessage += Chat_ChatMessage;
             cooldown = new Stopwatch();
             muteTimer = new Stopwatch();
             _objectTable = objectTable;
@@ -160,6 +161,10 @@ namespace RoleplayingVoice {
             RefreshSoundData();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
             Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+        }
+
+        private void Window_OnMoveFailed(object sender, EventArgs e) {
+            _chat.PrintError("Move failed, write access was denied. Try a folder that does not require administrative priviledges.");
         }
 
         private void gameObjectRedrawn(nint arg1, int arg2) {
@@ -267,7 +272,11 @@ namespace RoleplayingVoice {
 
         private async void ReceivingMovement(string playerSender, GameObject gameObject) {
             string path = config.CacheFolder + @"\VoicePack\Others";
-            Directory.CreateDirectory(path);
+            try {
+                Directory.CreateDirectory(path);
+            } catch {
+                _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+            }
             string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
             string clipPath = path + @"\" + hash;
             try {
@@ -397,7 +406,11 @@ namespace RoleplayingVoice {
                             } catch { }
                         }
                     }
-                    Directory.CreateDirectory(path);
+                    try {
+                        Directory.CreateDirectory(path);
+                    } catch {
+                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                    }
                     if (Directory.Exists(path)) {
                         foreach (string file in Directory.EnumerateFiles(path)) {
                             try {
@@ -416,7 +429,7 @@ namespace RoleplayingVoice {
             return list;
         }
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
-            chat.PrintError(e.Message);
+            _chat.PrintError(e.Message);
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
@@ -498,13 +511,18 @@ namespace RoleplayingVoice {
         }
 
         private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
-            string[] senderStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(instigator.Name.TextValue))).Split(' ');
+            string[] senderStrings = SplitCamelCase(
+            RemoveActionPhrases(RemoveSpecialSymbols(instigator.Name.TextValue))).Split(' ');
             bool isShoutYell = false;
             if (senderStrings.Length > 2) {
                 int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
                 string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
                 string path = config.CacheFolder + @"\VoicePack\Others";
-                Directory.CreateDirectory(path);
+                try {
+                    Directory.CreateDirectory(path);
+                } catch {
+                    _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                }
                 string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
                 string clipPath = path + @"\" + hash;
                 try {
@@ -888,7 +906,11 @@ namespace RoleplayingVoice {
                     string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
                     string path = config.CacheFolder + @"\VoicePack\Others";
                     string clipPath = path + @"\" + hash;
-                    Directory.CreateDirectory(path);
+                    try {
+                        Directory.CreateDirectory(path);
+                    } catch {
+                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                    }
                     if (config.UsePlayerSync) {
                         if (CombinedWhitelist().Contains(playerSender)) {
                             if (!isDownloadingZip) {
@@ -1093,12 +1115,12 @@ namespace RoleplayingVoice {
 
             this.pluginInterface.SavePluginConfig(this.config);
             config.OnConfigurationChanged -= Config_OnConfigurationChanged;
-            chat.ChatMessage -= Chat_ChatMessage;
+            _chat.ChatMessage -= Chat_ChatMessage;
             this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
             _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             this.windowSystem.RemoveAllWindows();
-            _networkedClient.Dispose();
+            _networkedClient?.Dispose();
             _audioManager.Dispose();
             _filter.Dispose();
             _clientState.Login -= _clientState_Login;
