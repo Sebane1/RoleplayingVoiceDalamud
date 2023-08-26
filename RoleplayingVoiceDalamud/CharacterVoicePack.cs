@@ -2,13 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
-        private string _voiceName;
         private List<string> _attack = new List<string>();
         private List<string> _hurt = new List<string>();
         private List<string> _death = new List<string>();

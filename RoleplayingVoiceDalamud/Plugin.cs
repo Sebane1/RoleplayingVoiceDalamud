@@ -38,6 +38,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -807,66 +808,10 @@ namespace RoleplayingVoice {
                         bool attackIntended = false;
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         if (!message.TextValue.Contains("cancel")) {
-                            if (type == (XivChatType)2729 ||
-                            type == (XivChatType)2091) {
-                                value = characterVoicePack.GetMisc(message.TextValue);
-                                if (string.IsNullOrEmpty(value)) {
-                                    if (attackCount == 0) {
-                                        value = characterVoicePack.GetAction(message.TextValue);
-                                    } else {
-                                        attackCount++;
-                                        if (attackCount >= 3) {
-                                            attackCount = 0;
-                                        }
-                                        attackIntended = true;
-                                    }
-                                }
-                            } else if (type == (XivChatType)2234) {
-                                value = characterVoicePack.GetDeath();
-                            } else if (type == (XivChatType)2730) {
-                                value = characterVoicePack.GetMissed();
-                            } else if (type == (XivChatType)2219) {
-                                if (message.TextValue.Contains("ready") ||
-                                    message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetMisc(message.TextValue);
-                                    if (string.IsNullOrEmpty(value)) {
-                                        value = characterVoicePack.GetReadying(message.TextValue);
-                                    }
-                                    attackCount = 0;
-                                    castingCount = 0;
-                                } else {
-                                    if (castingCount == 0) {
-                                        value = characterVoicePack.GetCastingHeal();
-                                    } else {
-                                        castingCount++;
-                                        if (attackCount >= 3) {
-                                            attackCount = 0;
-                                        }
-                                        attackIntended = true;
-                                    }
-                                }
-                            } else if (type == (XivChatType)2731) {
-                                if (message.TextValue.Contains("ready") ||
-                                    message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetMisc(message.TextValue);
-                                    if (string.IsNullOrEmpty(value)) {
-                                        value = characterVoicePack.GetReadying(message.TextValue);
-                                    }
-                                    attackCount = 0;
-                                    castingCount = 0;
-                                } else {
-                                    if (castingCount == 3) {
-                                        value = characterVoicePack.GetCastingAttack();
-                                        castingCount = 0;
-                                    } else {
-                                        castingCount++;
-                                        attackIntended = true;
-                                    }
-                                }
-                            } else if (type == (XivChatType)2106) {
-                                value = characterVoicePack.GetRevive();
-                            } else if (type == (XivChatType)10409) {
-                                value = characterVoicePack.GetHurt();
+                            if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                LocalPlayerCombat(playerName, message, type, characterVoicePack, ref value, ref attackIntended);
+                            } else {
+                                PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
                             }
                         }
 
@@ -928,22 +873,10 @@ namespace RoleplayingVoice {
                             if (Path.Exists(clipPath) && !isDownloadingZip) {
                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
                                 string value = "";
-                                if (message.TextValue.Contains("hit") ||
-                                    message.TextValue.Contains("uses") ||
-                                    message.TextValue.Contains("casts")) {
-                                    value = characterVoicePack.GetAction(message.TextValue);
-                                } else if (message.TextValue.Contains("defeated")) {
-                                    value = characterVoicePack.GetDeath();
-                                } else if (message.TextValue.Contains("miss")) {
-                                    value = characterVoicePack.GetMissed();
-                                } else if (message.TextValue.Contains("readies")) {
-                                    value = characterVoicePack.GetReadying(message.TextValue);
-                                } else if (message.TextValue.Contains("casting")) {
-                                    value = characterVoicePack.GetCastingAttack();
-                                } else if (message.TextValue.Contains("revive")) {
-                                    value = characterVoicePack.GetRevive();
-                                } else if (message.TextValue.Contains("damage")) {
-                                    value = characterVoicePack.GetHurt();
+                                if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                    OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
+                                } else {
+                                    PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
                                 }
                                 Task.Run(async () => {
                                     GameObject character = null;
@@ -977,6 +910,97 @@ namespace RoleplayingVoice {
             }
         }
 
+        private void OtherPlayerCombat(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
+            if (message.TextValue.Contains("hit") ||
+              message.TextValue.Contains("uses") ||
+              message.TextValue.Contains("casts")) {
+                value = characterVoicePack.GetAction(message.TextValue);
+            } else if (message.TextValue.Contains("defeated")) {
+                value = characterVoicePack.GetDeath();
+            } else if (message.TextValue.Contains("miss")) {
+                value = characterVoicePack.GetMissed();
+            } else if (message.TextValue.Contains("readies")) {
+                value = characterVoicePack.GetReadying(message.TextValue);
+            } else if (message.TextValue.Contains("casting")) {
+                value = characterVoicePack.GetCastingAttack();
+            } else if (message.TextValue.Contains("revive")) {
+                value = characterVoicePack.GetRevive();
+            } else if (message.TextValue.Contains("damage")) {
+                value = characterVoicePack.GetHurt();
+            }
+        }
+
+        private void PlayerCrafting(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
+            value = characterVoicePack.GetMisc(message.TextValue);
+            if (string.IsNullOrEmpty(value)) {
+                value = characterVoicePack.GetReadying(message.TextValue);
+            }
+        }
+
+        private void LocalPlayerCombat(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
+            if (type == (XivChatType)2729 ||
+            type == (XivChatType)2091) {
+                value = characterVoicePack.GetMisc(message.TextValue);
+                if (string.IsNullOrEmpty(value)) {
+                    if (attackCount == 0) {
+                        value = characterVoicePack.GetAction(message.TextValue);
+                    } else {
+                        attackCount++;
+                        if (attackCount >= 3) {
+                            attackCount = 0;
+                        }
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2234) {
+                value = characterVoicePack.GetDeath();
+            } else if (type == (XivChatType)2730) {
+                value = characterVoicePack.GetMissed();
+            } else if (type == (XivChatType)2219) {
+                if (message.TextValue.Contains("ready") ||
+                    message.TextValue.Contains("readies")) {
+                    value = characterVoicePack.GetMisc(message.TextValue);
+                    if (string.IsNullOrEmpty(value)) {
+                        value = characterVoicePack.GetReadying(message.TextValue);
+                    }
+                    attackCount = 0;
+                    castingCount = 0;
+                } else {
+                    if (castingCount == 0) {
+                        value = characterVoicePack.GetCastingHeal();
+                    } else {
+                        castingCount++;
+                        if (attackCount >= 3) {
+                            attackCount = 0;
+                        }
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2731) {
+                if (message.TextValue.Contains("ready") ||
+                    message.TextValue.Contains("readies")) {
+                    value = characterVoicePack.GetMisc(message.TextValue);
+                    if (string.IsNullOrEmpty(value)) {
+                        value = characterVoicePack.GetReadying(message.TextValue);
+                    }
+                    attackCount = 0;
+                    castingCount = 0;
+                } else {
+                    if (castingCount == 3) {
+                        value = characterVoicePack.GetCastingAttack();
+                        castingCount = 0;
+                    } else {
+                        castingCount++;
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2106) {
+                value = characterVoicePack.GetRevive();
+            } else if (type == (XivChatType)10409) {
+                value = characterVoicePack.GetHurt();
+            }
+        }
+
         public string MakeThirdPerson(string value) {
             return value.Replace("cast ", "casts ")
                         .Replace("use", "uses")
@@ -992,6 +1016,10 @@ namespace RoleplayingVoice {
                     .Replace("Critical ", null)
                     .Replace("Direct ", null)
                     .Replace("direct ", null);
+        }
+        public bool IsDicipleOfTheHand(string value) {
+            List<string> jobs = new List<string>() { "ALC", "ARM", "BSM", "CUL", "CRP", "GSM", "LTW", "WVR" };
+            return jobs.Contains(value.ToUpper());
         }
 
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
