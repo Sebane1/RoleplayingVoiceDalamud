@@ -466,6 +466,7 @@ namespace RoleplayingVoice {
         private void _clientState_Login(object sender, EventArgs e) {
             CleanSounds();
             CheckDependancies(true);
+            RefreshSoundData();
         }
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
