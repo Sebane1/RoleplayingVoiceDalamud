@@ -200,7 +200,7 @@ namespace RoleplayingVoice {
             return list;
         }
         private void framework_Update(Framework framework) {
-            if (config != null && _audioManager != null && !disposed) {
+            if (config != null && _audioManager != null && _objectTable != null && !disposed) {
                 uint voiceVolume = 0;
                 uint masterVolume = 0;
                 uint soundEffectVolume = 0;
@@ -241,21 +241,23 @@ namespace RoleplayingVoice {
             }
             foreach (GameObject gameObject in _objectTable) {
                 string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                if (gameObjectPositions.ContainsKey(cleanedName)) {
-                    var positionData = gameObjectPositions[cleanedName];
-                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                        positionData.LastRotation != gameObject.Rotation) {
-                        if (!positionData.IsMoving) {
-                            ObjectIsMoving(cleanedName, gameObject);
-                            positionData.IsMoving = true;
+                if (!string.IsNullOrEmpty(cleanedName)) {
+                    if (gameObjectPositions.ContainsKey(cleanedName)) {
+                        var positionData = gameObjectPositions[cleanedName];
+                        if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                            positionData.LastRotation != gameObject.Rotation) {
+                            if (!positionData.IsMoving) {
+                                ObjectIsMoving(cleanedName, gameObject);
+                                positionData.IsMoving = true;
+                            }
+                        } else {
+                            positionData.IsMoving = false;
                         }
+                        positionData.LastPosition = gameObject.Position;
+                        positionData.LastRotation = gameObject.Rotation;
                     } else {
-                        positionData.IsMoving = false;
+                        gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                     }
-                    positionData.LastPosition = gameObject.Position;
-                    positionData.LastRotation = gameObject.Rotation;
-                } else {
-                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                 }
             }
         }
@@ -1111,26 +1113,36 @@ namespace RoleplayingVoice {
             if (!disposing) return;
             disposed = true;
             config.Save();
-            this.commandManager.Dispose();
-
             this.pluginInterface.SavePluginConfig(this.config);
             config.OnConfigurationChanged -= Config_OnConfigurationChanged;
             _chat.ChatMessage -= Chat_ChatMessage;
             this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
+            try {
+                _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
+            } catch {
+            }
             _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
-            this.windowSystem.RemoveAllWindows();
-            _networkedClient?.Dispose();
-            _audioManager.Dispose();
-            _filter.Dispose();
-            _clientState.Login -= _clientState_Login;
-            _clientState.Logout -= _clientState_Logout;
-            _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
-            _clientState.LeavePvP -= _clientState_LeavePvP;
+            try {
+                _clientState.Login -= _clientState_Login;
+                _clientState.Logout -= _clientState_Logout;
+                _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+                _clientState.LeavePvP -= _clientState_LeavePvP;
+            } catch {
+
+            }
             _toast.ErrorToast -= _toast_ErrorToast;
-            _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
-            _framework.Update -= framework_Update;
+            try {
+                _framework.Update -= framework_Update;
+            } catch {
+
+            }
+            this.windowSystem.RemoveAllWindows();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+            _networkedClient?.Dispose();
+            _audioManager?.Dispose();
+            _filter?.Dispose();
+            this.commandManager?.Dispose();
         }
 
         public void Dispose() {
