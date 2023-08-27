@@ -476,8 +476,7 @@ namespace RoleplayingVoice {
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
             if (_audioManager != null) {
-                _audioManager.Dispose();
-                _audioManager = null;
+                _audioManager.CleanSounds();
             }
             temporaryWhitelist.Clear();
             if (Directory.Exists(path)) {
