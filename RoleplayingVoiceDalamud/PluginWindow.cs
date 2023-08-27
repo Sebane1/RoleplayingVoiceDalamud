@@ -549,7 +549,7 @@ namespace RoleplayingVoice {
         private void DrawGeneral() {
             ImGui.Text("Cache Location:");
             ImGui.TextWrapped(cacheFolder);
-            ImGui.Text("Pick A New Cache (Optional):");
+            ImGui.Text("Pick A New Cache (Optional, only pick empty folders):");
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.FolderClosed)) {
                 fileDialogManager.Reset();
@@ -715,9 +715,18 @@ namespace RoleplayingVoice {
             if (!Directory.Exists(newFolder)) {
                 try {
                     Directory.CreateDirectory(newFolder);
+
+                    if (Directory.EnumerateFiles(newFolder).Count<string>() > 0) {
+                        fileMoveSuccess = false;
+                        canContinue = false;
+                        fileMoveMessage = "Folder is not empty.";
+                        OnMoveFailed?.Invoke(this, EventArgs.Empty);
+                    }
                 } catch {
-                    fileMoveMessage = "Error, no write access";
+                    fileMoveSuccess = false;
+                    fileMoveMessage = "Error, no write access.";
                     canContinue = false;
+                    OnMoveFailed?.Invoke(this, EventArgs.Empty);
                 }
             }
             if (canContinue) {
@@ -791,7 +800,6 @@ namespace RoleplayingVoice {
 
                                     }
                                 }
-                                //configuration.CharacterVoices.VoiceCatalogue = Catalogue;
                                 Directory.Delete(oldFolder, true);
                             }
                         }
@@ -810,7 +818,6 @@ namespace RoleplayingVoice {
                     }
                 }
             }
-            OnMoveFailed?.Invoke(this, EventArgs.Empty);
         }
 
         private async Task<bool> MoveFileAsync(string sourceFilePath, string destinationFilePath) {

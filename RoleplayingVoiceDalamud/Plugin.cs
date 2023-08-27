@@ -165,7 +165,7 @@ namespace RoleplayingVoice {
         }
 
         private void Window_OnMoveFailed(object sender, EventArgs e) {
-            _chat.PrintError("Move failed, write access was denied. Try a folder that does not require administrative priviledges.");
+            _chat.PrintError("Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
         }
 
         private void gameObjectRedrawn(nint arg1, int arg2) {
@@ -405,7 +405,11 @@ namespace RoleplayingVoice {
                     if (Directory.Exists(config.CacheFolder)) {
                         foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
                             try {
-                                File.Delete(file);
+                                if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                                    File.Delete(file);
+                                } else {
+                                    _chat.PrintError(file + " should not be in the cache folder, please remove it.");
+                                }
                             } catch { }
                         }
                     }
