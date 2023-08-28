@@ -90,6 +90,7 @@ namespace RoleplayingVoice {
         private bool staging;
         private string stagingPath;
         private string lastStreamURL;
+        private string currentStreamer;
         private bool twitchWasPlaying;
 
         public string Name => "Roleplaying Voice";
@@ -509,12 +510,13 @@ namespace RoleplayingVoice {
             string path = config.CacheFolder + @"\VoicePack\Others";
             if (_audioManager != null) {
                 _audioManager.CleanSounds();
-                lastStreamURL = "";
             }
             if (twitchWasPlaying) {
                 twitchWasPlaying = false;
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
             }
+            lastStreamURL = "";
+            currentStreamer = "";
             twitchSetCooldown.Stop();
             twitchSetCooldown.Reset();
             temporaryWhitelist.Clear();
@@ -1133,6 +1135,8 @@ namespace RoleplayingVoice {
                                                     string streamURL = TwitchFeedManager.GetServerResponse(value);
                                                     _audioManager.PlayStream(new AudioGameObject(player), streamURL);
                                                     lastStreamURL = value;
+                                                    currentStreamer = value.Replace(@"https://", null).Replace(@"www.twitch.tv/", null);
+                                                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
                                                 });
                                                 twitchWasPlaying = true;
                                             }
@@ -1203,6 +1207,21 @@ namespace RoleplayingVoice {
                         break;
                     case "reload":
                         AttemptConnection();
+                        break;
+                    case "twitch":
+                        if (!string.IsNullOrEmpty(currentStreamer)) {
+                            try {
+                                Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                                    FileName = @"https://www.twitch.tv/popout/" + currentStreamer + @"/chat?popout=",
+                                    UseShellExecute = true,
+                                    Verb = "OPEN"
+                                });
+                            } catch {
+
+                            }
+                        } else {
+                            _chat.PrintError("There is no active stream");
+                        }
                         break;
                     default:
                         if (config.IsActive) {
