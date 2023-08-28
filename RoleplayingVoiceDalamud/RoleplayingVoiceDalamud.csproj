@@ -34,7 +34,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\RoleplayingVoiceCore\RoleplayingVoiceCore.csproj" />
+	  <ProjectReference Include="..\RoleplayingVoiceCore\RoleplayingVoiceCore.csproj">
+	    <ReferenceOutputAssembly>True</ReferenceOutputAssembly>
+	  </ProjectReference>
 	</ItemGroup>
 
 	<ItemGroup>

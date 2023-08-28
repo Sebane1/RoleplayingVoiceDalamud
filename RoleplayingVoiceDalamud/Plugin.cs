@@ -189,8 +189,11 @@ namespace RoleplayingVoice {
 
                     }
                 }
-            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist) {
+            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
                 temporaryWhitelistQueue.Enqueue(senderName);
+            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                RefreshSoundData();
             }
         }
 
@@ -788,7 +791,7 @@ namespace RoleplayingVoice {
                 if (_audioManager == null || forceNewAssignments) {
                     _camera = CameraManager.Instance->GetActiveCamera();
                     _audioCamera = new AudioCameraObject(_camera);
-                    _audioManager = new AudioManager(_playerObject, _audioCamera);
+                    _audioManager = new AudioManager(_playerObject, _audioCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _audioManager.OnNewAudioTriggered += _audioManager_OnNewAudioTriggered;
                 }
             }
@@ -1115,28 +1118,35 @@ namespace RoleplayingVoice {
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
         public void OpenConfig(string command, string args) {
-            switch (args.ToLower()) {
-                case "on":
-                    config.IsActive = true;
-                    window.Configuration = config;
-                    this.pluginInterface.SavePluginConfig(config);
-                    break;
-                case "off":
-                    config.IsActive = false;
-                    window.Configuration = config;
-                    this.pluginInterface.SavePluginConfig(config);
-                    break;
-                case "reload":
-                    AttemptConnection();
-                    break;
-                default:
-                    if (config.IsActive) {
-                        window.RefreshVoices();
-                    }
-                    window.Toggle();
-                    break;
+            string[] splitArgs = args.Split(' ');
+            if (splitArgs.Length > 0) {
+                switch (splitArgs[0].ToLower()) {
+                    case "on":
+                        config.IsActive = true;
+                        window.Configuration = config;
+                        this.pluginInterface.SavePluginConfig(config);
+                        break;
+                    case "off":
+                        config.IsActive = false;
+                        window.Configuration = config;
+                        this.pluginInterface.SavePluginConfig(config);
+                        break;
+                    case "reload":
+                        AttemptConnection();
+                        break;
+                    case "play":
+                        if (_audioManager != null) {
+                            _audioManager.PlayAudio(_playerObject, args.Split(' ')[1], SoundType.MainPlayerVoice);
+                        }
+                        break;
+                    default:
+                        if (config.IsActive) {
+                            window.RefreshVoices();
+                        }
+                        window.Toggle();
+                        break;
+                }
             }
-
         }
 
 
@@ -1146,34 +1156,36 @@ namespace RoleplayingVoice {
             disposed = true;
             config.Save();
             this.pluginInterface.SavePluginConfig(this.config);
-            config.OnConfigurationChanged -= Config_OnConfigurationChanged;
-            _chat.ChatMessage -= Chat_ChatMessage;
-            this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
-            this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
             try {
-                _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
-            } catch {
-            }
-            _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
-            try {
-                _clientState.Login -= _clientState_Login;
-                _clientState.Logout -= _clientState_Logout;
-                _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
-                _clientState.LeavePvP -= _clientState_LeavePvP;
-            } catch {
+                config.OnConfigurationChanged -= Config_OnConfigurationChanged;
+                _chat.ChatMessage -= Chat_ChatMessage;
+                this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
+                this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
+                try {
+                    _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
+                } catch {
+                }
+                _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                try {
+                    _clientState.Login -= _clientState_Login;
+                    _clientState.Logout -= _clientState_Logout;
+                    _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+                    _clientState.LeavePvP -= _clientState_LeavePvP;
+                } catch {
 
-            }
-            _toast.ErrorToast -= _toast_ErrorToast;
-            try {
-                _framework.Update -= framework_Update;
-            } catch {
+                }
+                _toast.ErrorToast -= _toast_ErrorToast;
+                try {
+                    _framework.Update -= framework_Update;
+                } catch {
 
-            }
-            this.windowSystem.RemoveAllWindows();
-            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
-            _networkedClient?.Dispose();
-            _audioManager?.Dispose();
-            _filter?.Dispose();
+                }
+                this.windowSystem.RemoveAllWindows();
+                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+                _networkedClient?.Dispose();
+                _audioManager?.Dispose();
+                _filter?.Dispose();
+            } catch { }
             this.commandManager?.Dispose();
         }
 
