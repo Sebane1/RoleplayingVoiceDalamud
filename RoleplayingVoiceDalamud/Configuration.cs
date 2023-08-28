@@ -12,12 +12,15 @@ namespace RoleplayingVoice {
         private float _playerCharacterVolume = 1;
         private float _otherCharacterVolume = 1;
         private float _unfocusedCharacterVolume = 0.5f;
+        private float _loopingSFXVolume = 1;
+        private float _livestreamVolume = 1;
         bool useAggressiveCaching = true;
         private string cacheFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
-        private bool usePlayerSync;
-        private bool ignoreWhitelist;
+        private bool usePlayerSync = false;
+        private bool tuneIntoTwitchStreams = true;
+        private bool ignoreWhitelist = true;
         private List<string> whitelist = new List<string>();
-        private float _loopingSFXVolume = 1;
+        private string streamPath = "";
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -48,6 +51,10 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
+        public string StreamPath { get => streamPath; set => streamPath = value; }
+        public float LivestreamVolume { get => _livestreamVolume; set => _livestreamVolume = value; }
+        public bool TuneIntoTwitchStreams { get => tuneIntoTwitchStreams; set => tuneIntoTwitchStreams = value; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

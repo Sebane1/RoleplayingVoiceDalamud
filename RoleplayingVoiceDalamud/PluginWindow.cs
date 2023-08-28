@@ -64,6 +64,9 @@ namespace RoleplayingVoice {
         private string _newVoicePackName = "";
         private bool _characterVoicePackActive;
         private float _loopingSFXVolume = 1;
+        private float _livestreamVolume;
+        private string _streamPath;
+        private bool _tuneIntoTwitchStreams;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -110,9 +113,12 @@ namespace RoleplayingVoice {
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
                     _loopingSFXVolume = configuration.LoopingSFXVolume;
+                    _livestreamVolume = configuration.LivestreamVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
+                    _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
+                    _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -379,12 +385,15 @@ namespace RoleplayingVoice {
                 configuration.OtherCharacterVolume = _otherCharacterVolume;
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.LoopingSFXVolume = _loopingSFXVolume;
+                configuration.LivestreamVolume = _livestreamVolume;
                 configuration.IsActive = _characterVoiceActive;
                 configuration.VoicePackIsActive = _characterVoicePackActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
                 configuration.UsePlayerSync = _useServer;
+                configuration.TuneIntoTwitchStreams = _tuneIntoTwitchStreams;
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
+                configuration.StreamPath = _streamPath;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -687,6 +696,9 @@ namespace RoleplayingVoice {
             ImGui.Text("Looping SFX Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##loopingSFX", ref _loopingSFXVolume, 0.000001f, 2);
+            ImGui.Text("Livestream Volume");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 1);
         }
 
         private void DrawServer() {
@@ -707,6 +719,11 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Allow Sending/Receiving Server Data");
             ImGui.TextWrapped("(Any players with Roleplaying Voice installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
+
+            ImGui.Checkbox("##useTwitchStreams", ref _tuneIntoTwitchStreams);
+            ImGui.SameLine();
+            ImGui.Text("Tune Into Twitch Streams");
+            ImGui.TextWrapped("Intended for venues where DJ's are playing. Audio will play inside the venue as soon as their Twitch URL is advertised in yell chat.");
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {
