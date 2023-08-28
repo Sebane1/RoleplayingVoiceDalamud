@@ -74,7 +74,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Roleplaying Voice Config") {
             IsOpen = true;
-            Size = new Vector2(400, 500);
+            Size = new Vector2(400, 550);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
