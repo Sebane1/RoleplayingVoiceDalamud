@@ -869,7 +869,6 @@ namespace RoleplayingVoice {
                                 if (_filter != null) {
                                     _filter.Muted = true;
                                 }
-                                Dalamud.Logging.PluginLog.Log("Battle Mute Finalized");
                                 Task.Run(() => {
                                     if (config.UsePlayerSync) {
                                         Task.Run(async () => {
@@ -879,7 +878,6 @@ namespace RoleplayingVoice {
                                     while (muteTimer.ElapsedMilliseconds < 20) {
                                         Thread.Sleep(20);
                                     }
-                                    attackCount = 0;
                                     lock (_filter) {
                                         _filter.Muted = false;
                                         muteTimer.Reset();
@@ -903,7 +901,7 @@ namespace RoleplayingVoice {
                     try {
                         Directory.CreateDirectory(path);
                     } catch {
-                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administrative access!");
                     }
                     if (config.UsePlayerSync) {
                         if (CombinedWhitelist().Contains(playerSender)) {
@@ -956,7 +954,8 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void OtherPlayerCombat(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
+        private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
+            CharacterVoicePack characterVoicePack, ref string value) {
             if (message.TextValue.Contains("hit") ||
               message.TextValue.Contains("uses") ||
               message.TextValue.Contains("casts")) {
@@ -976,20 +975,23 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void PlayerCrafting(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
+        private void PlayerCrafting(string playerName, SeString message,
+            XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
             value = characterVoicePack.GetMisc(message.TextValue);
             if (string.IsNullOrEmpty(value)) {
                 value = characterVoicePack.GetReadying(message.TextValue);
             }
         }
 
-        private void LocalPlayerCombat(string playerName, SeString message, XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
+        private void LocalPlayerCombat(string playerName, SeString message,
+            XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
             if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
                 value = characterVoicePack.GetMisc(message.TextValue);
                 if (string.IsNullOrEmpty(value)) {
                     if (attackCount == 0) {
                         value = characterVoicePack.GetAction(message.TextValue);
+                        attackCount++;
                     } else {
                         attackCount++;
                         if (attackCount >= 3) {
@@ -1014,10 +1016,11 @@ namespace RoleplayingVoice {
                 } else {
                     if (castingCount == 0) {
                         value = characterVoicePack.GetCastingHeal();
+                        castingCount++;
                     } else {
                         castingCount++;
                         if (attackCount >= 3) {
-                            attackCount = 0;
+                            castingCount = 0;
                         }
                         attackIntended = true;
                     }
@@ -1032,11 +1035,14 @@ namespace RoleplayingVoice {
                     attackCount = 0;
                     castingCount = 0;
                 } else {
-                    if (castingCount == 3) {
+                    if (castingCount == 0) {
                         value = characterVoicePack.GetCastingAttack();
-                        castingCount = 0;
+                        castingCount++;
                     } else {
                         castingCount++;
+                        if (castingCount >= 3) {
+                            castingCount = 0;
+                        }
                         attackIntended = true;
                     }
                 }
@@ -1125,7 +1131,7 @@ namespace RoleplayingVoice {
                                             if (lastStreamURL != value) {
                                                 Task.Run(async () => {
                                                     string streamURL = TwitchFeedManager.GetServerResponse(value);
-                                                    _audioManager.PlayStream(new AudioGameObject(player), streamURL, SoundType.Livestream);
+                                                    _audioManager.PlayStream(new AudioGameObject(player), streamURL);
                                                     lastStreamURL = value;
                                                 });
                                                 twitchWasPlaying = true;

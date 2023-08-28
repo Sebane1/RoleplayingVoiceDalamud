@@ -247,7 +247,6 @@ namespace SoundFilter {
             var specificPath = $"{path}/{idx}";
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
             if ((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) {
-                Dalamud.Logging.PluginLog.Log("SCD Block Finalized");
                 muted = false;
                 return true;
             }
