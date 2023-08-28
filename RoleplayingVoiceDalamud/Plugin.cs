@@ -90,6 +90,7 @@ namespace RoleplayingVoice {
         private bool staging;
         private string stagingPath;
         private string lastStreamURL;
+        private bool twitchWasPlaying;
 
         public string Name => "Roleplaying Voice";
 
@@ -509,6 +510,10 @@ namespace RoleplayingVoice {
             if (_audioManager != null) {
                 _audioManager.CleanSounds();
                 lastStreamURL = "";
+            }
+            if (twitchWasPlaying) {
+                twitchWasPlaying = false;
+                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
             }
             twitchSetCooldown.Stop();
             twitchSetCooldown.Reset();
@@ -1111,23 +1116,26 @@ namespace RoleplayingVoice {
                                 _audioManager.PlayAudio(new AudioGameObject(player), value, SoundType.OtherPlayerTts);
                             });
                         }
-                        if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 30000) {
-                            if (type == XivChatType.Yell) {
-                                var strings = message.TextValue.Split(' ');
-                                foreach (string value in strings) {
-                                    if (value.Contains("twitch.tv")) {
-                                        if (lastStreamURL != value) {
-                                            Task.Run(async () => {
-                                                string streamURL = TwitchFeedManager.GetServerResponse(value);
-                                                _audioManager.PlayStream(new AudioGameObject(player), streamURL, SoundType.Livestream);
-                                                lastStreamURL = value;
-                                            });
+                        if (type == XivChatType.Yell) {
+                            if (config.TuneIntoTwitchStreams) {
+                                if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 30000) {
+                                    var strings = message.TextValue.Split(' ');
+                                    foreach (string value in strings) {
+                                        if (value.Contains("twitch.tv")) {
+                                            if (lastStreamURL != value) {
+                                                Task.Run(async () => {
+                                                    string streamURL = TwitchFeedManager.GetServerResponse(value);
+                                                    _audioManager.PlayStream(new AudioGameObject(player), streamURL, SoundType.Livestream);
+                                                    lastStreamURL = value;
+                                                });
+                                                twitchWasPlaying = true;
+                                            }
+                                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                                            twitchSetCooldown.Stop();
+                                            twitchSetCooldown.Reset();
+                                            twitchSetCooldown.Start();
+                                            break;
                                         }
-                                        _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                                        twitchSetCooldown.Stop();
-                                        twitchSetCooldown.Reset();
-                                        twitchSetCooldown.Start();
-                                        break;
                                     }
                                 }
                             }
