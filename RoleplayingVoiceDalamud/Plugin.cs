@@ -1148,10 +1148,12 @@ namespace RoleplayingVoice {
         private void TuneIntoStream(string url, IGameObject audioGameObject) {
             Task.Run(async () => {
                 string streamURL = TwitchFeedManager.GetServerResponse(url);
-                _audioManager.PlayStream(audioGameObject, streamURL);
-                lastStreamURL = url;
-                currentStreamer = url.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/",null);
-                _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+                if (!string.IsNullOrEmpty(streamURL)) {
+                    _audioManager.PlayStream(audioGameObject, streamURL);
+                    lastStreamURL = url;
+                    currentStreamer = url.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+                }
             });
             twitchWasPlaying = true;
             _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
