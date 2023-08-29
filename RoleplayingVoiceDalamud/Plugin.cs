@@ -1113,34 +1113,8 @@ namespace RoleplayingVoice {
                     } else {
                         audioFocus = true;
                     }
-                    if (type == XivChatType.Yell) {
-                        if (config.TuneIntoTwitchStreams) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 30000) {
-                                var strings = message.TextValue.Split(' ');
-                                foreach (string value in strings) {
-                                    if (value.Contains("twitch.tv")) {
-                                        if (lastStreamURL != value) {
-                                            Task.Run(async () => {
-                                                string streamURL = TwitchFeedManager.GetServerResponse(value);
-                                                _audioManager.PlayStream(new AudioGameObject(player), streamURL);
-                                                lastStreamURL = value;
-                                                currentStreamer = value.Replace(@"https://", null).Replace(@"www.twitch.tv/", null);
-                                                _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
-                                            });
-                                            twitchWasPlaying = true;
-                                        }
-                                        _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                                        twitchSetCooldown.Stop();
-                                        twitchSetCooldown.Reset();
-                                        twitchSetCooldown.Start();
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                     if (config.UsePlayerSync) {
-                        PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                         if (CombinedWhitelist().Contains(playerSender)) {
                             Task.Run(async () => {
                                 string value = await _roleplayingVoiceManager.
@@ -1149,6 +1123,33 @@ namespace RoleplayingVoice {
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                 _audioManager.PlayAudio(new AudioGameObject(player), value, SoundType.OtherPlayerTts);
                             });
+                        }
+                    }
+                    if (type == XivChatType.Yell) {
+                        if (config.TuneIntoTwitchStreams) {
+                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 60000) {
+                                var strings = message.TextValue.Split(' ');
+                                foreach (string value in strings) {
+                                    if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                                        var audioGameObject = new AudioGameObject(player);
+                                        if (_audioManager.IsAllowedToStartStream(audioGameObject)) {
+                                            Task.Run(async () => {
+                                                string streamURL = TwitchFeedManager.GetServerResponse(value);
+                                                _audioManager.PlayStream(audioGameObject, streamURL);
+                                                lastStreamURL = value;
+                                                currentStreamer = value.Replace(@"https://", null).Replace(@"www.twitch.tv/", null);
+                                                _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+                                            });
+                                            twitchWasPlaying = true;
+                                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                                            twitchSetCooldown.Stop();
+                                            twitchSetCooldown.Reset();
+                                            twitchSetCooldown.Start();
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
