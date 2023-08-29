@@ -1125,7 +1125,7 @@ namespace RoleplayingVoice {
                             });
                         }
                     }
-                    if (type == XivChatType.Yell) {
+                    if (type == XivChatType.Yell || type == XivChatType.Shout) {
                         if (config.TuneIntoTwitchStreams) {
                             if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 60000) {
                                 var strings = message.TextValue.Split(' ');
@@ -1133,18 +1133,7 @@ namespace RoleplayingVoice {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                         var audioGameObject = new AudioGameObject(player);
                                         if (_audioManager.IsAllowedToStartStream(audioGameObject)) {
-                                            Task.Run(async () => {
-                                                string streamURL = TwitchFeedManager.GetServerResponse(value);
-                                                _audioManager.PlayStream(audioGameObject, streamURL);
-                                                lastStreamURL = value;
-                                                currentStreamer = value.Replace(@"https://", null).Replace(@"www.twitch.tv/", null);
-                                                _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
-                                            });
-                                            twitchWasPlaying = true;
-                                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                                            twitchSetCooldown.Stop();
-                                            twitchSetCooldown.Reset();
-                                            twitchSetCooldown.Start();
+                                            TuneIntoStream(value, audioGameObject);
                                         }
                                     }
                                     break;
@@ -1154,6 +1143,21 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+        }
+
+        private void TuneIntoStream(string url, IGameObject audioGameObject) {
+            Task.Run(async () => {
+                string streamURL = TwitchFeedManager.GetServerResponse(url);
+                _audioManager.PlayStream(audioGameObject, streamURL);
+                lastStreamURL = url;
+                currentStreamer = url.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/",null);
+                _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+            });
+            twitchWasPlaying = true;
+            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+            twitchSetCooldown.Stop();
+            twitchSetCooldown.Reset();
+            twitchSetCooldown.Start();
         }
 
         public static string CleanSenderName(string senderName) {
@@ -1210,18 +1214,22 @@ namespace RoleplayingVoice {
                         AttemptConnection();
                         break;
                     case "twitch":
-                        if (!string.IsNullOrEmpty(currentStreamer)) {
-                            try {
-                                Process.Start(new System.Diagnostics.ProcessStartInfo() {
-                                    FileName = @"https://www.twitch.tv/popout/" + currentStreamer + @"/chat?popout=",
-                                    UseShellExecute = true,
-                                    Verb = "OPEN"
-                                });
-                            } catch {
-
-                            }
+                        if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
+                            TuneIntoStream(splitArgs[1], _playerObject);
                         } else {
-                            _chat.PrintError("There is no active stream");
+                            if (!string.IsNullOrEmpty(currentStreamer)) {
+                                try {
+                                    Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                                        FileName = @"https://www.twitch.tv/popout/" + currentStreamer + @"/chat?popout=",
+                                        UseShellExecute = true,
+                                        Verb = "OPEN"
+                                    });
+                                } catch {
+
+                                }
+                            } else {
+                                _chat.PrintError("There is no active stream");
+                            }
                         }
                         break;
                     default:
