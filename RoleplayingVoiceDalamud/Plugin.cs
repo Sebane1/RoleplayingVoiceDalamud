@@ -1127,7 +1127,7 @@ namespace RoleplayingVoice {
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout) {
                         if (config.TuneIntoTwitchStreams) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 60000) {
+                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 20000) {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
@@ -1135,8 +1135,8 @@ namespace RoleplayingVoice {
                                         if (_audioManager.IsAllowedToStartStream(audioGameObject)) {
                                             TuneIntoStream(value, audioGameObject);
                                         }
+                                        break;
                                     }
-                                    break;
                                 }
                             }
                         }
