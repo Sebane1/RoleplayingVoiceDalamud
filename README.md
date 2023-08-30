@@ -9,7 +9,7 @@ Features:
 
 Repo Link
 ```
-https://github.com/Sebane1/RoleplayingVoiceDalamud/blob/master/repo.json
+https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
 ```
 
 Support Discord:
