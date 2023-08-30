@@ -27,8 +27,8 @@ using Newtonsoft.Json.Linq;
 using PatMe;
 using Penumbra.Api;
 using RoleplayingVoice.Attributes;
-using RoleplayingVoiceCore;
-using RoleplayingVoiceCore.Twitch;
+using RoleplayingMediaCore;
+using RoleplayingMediaCore.Twitch;
 using RoleplayingVoiceDalamud;
 using SoundFilter;
 using System;
@@ -51,15 +51,17 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private readonly Configuration config;
         private readonly WindowSystem windowSystem;
-        private PluginWindow window { get; init; }
-        private RoleplayingVoiceManager _roleplayingVoiceManager;
+        private PluginWindow _window { get; init; }
+
+        private VideoWindow _videoWindow;
+        private RoleplayingMediaManager _roleplayingVoiceManager;
         private Stopwatch stopwatch;
         private Stopwatch cooldown;
         private Stopwatch muteTimer;
         private Stopwatch twitchSetCooldown = new Stopwatch();
         private EmoteReaderHooks _emoteReaderHook;
-        private AudioGameObject _playerObject;
-        private AudioManager _audioManager;
+        private MediaGameObject _playerObject;
+        private MediaManager _mediaManager;
         private ObjectTable _objectTable;
         private bool isDownloadingZip;
         private RaceVoice _raceVoice;
@@ -73,7 +75,7 @@ namespace RoleplayingVoice {
         private List<KeyValuePair<List<string>, int>> penumbraSoundPacks;
         private List<string> combinedSoundList;
         private unsafe Camera* _camera;
-        private AudioCameraObject _audioCamera;
+        private MediaCameraObject _playerCamera;
         private GameConfig _gameConfig;
         private SigScanner _sigScanner;
         private Filter _filter;
@@ -95,7 +97,7 @@ namespace RoleplayingVoice {
 
         public string Name => "Roleplaying Voice";
 
-        public RoleplayingVoiceManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
+        public RoleplayingMediaManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public SigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
 
@@ -120,29 +122,34 @@ namespace RoleplayingVoice {
             // Initialize the UI
             this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
 
-            window = this.pluginInterface.Create<PluginWindow>();
-            window.ClientState = this._clientState;
-            window.Configuration = this.config;
-            window.PluginInterface = this.pluginInterface;
-            window.PluginReference = this;
+            _window = this.pluginInterface.Create<PluginWindow>();
+            _videoWindow = this.pluginInterface.Create<VideoWindow>();
+            _window.ClientState = this._clientState;
+            _window.Configuration = this.config;
+            _window.PluginInterface = this.pluginInterface;
+            _window.PluginReference = this;
             AttemptConnection();
             if (config.ApiKey != null) {
                 InitialzeManager();
             }
 
-            if (window is not null) {
-                this.windowSystem.AddWindow(window);
+            if (_window is not null) {
+                this.windowSystem.AddWindow(_window);
             }
-            window.RequestingReconnect += Window_RequestingReconnect;
-            window.OnMoveFailed += Window_OnMoveFailed;
+            if (_videoWindow is not null) {
+                this.windowSystem.AddWindow(_videoWindow);
+            }
+            _window.RequestingReconnect += Window_RequestingReconnect;
+            _window.OnMoveFailed += Window_OnMoveFailed;
             this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
             // Load all of our commands
             this.commandManager = new PluginCommandManager<Plugin>(this, commands);
             config.OnConfigurationChanged += Config_OnConfigurationChanged;
-            window.Toggle();
-            window.PluginReference = this;
+            _window.Toggle();
+            _videoWindow.Toggle();
+            _window.PluginReference = this;
             _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
             _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             this._chat.ChatMessage += Chat_ChatMessage;
@@ -153,7 +160,7 @@ namespace RoleplayingVoice {
             _clientState.Logout += _clientState_Logout;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _clientState.LeavePvP += _clientState_LeavePvP;
-            window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+            _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
             _dataManager = dataManager;
             _toast = toast;
             _toast.ErrorToast += _toast_ErrorToast;
@@ -184,7 +191,7 @@ namespace RoleplayingVoice {
             }
             string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
             string path = config.CacheFolder + @"\VoicePack\Others";
-            string hash = RoleplayingVoiceManager.Shai1Hash(senderName);
+            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
             string clipPath = path + @"\" + hash;
             if (CombinedWhitelist().Contains(senderName) &&
                 !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
@@ -210,23 +217,23 @@ namespace RoleplayingVoice {
             return list;
         }
         private void framework_Update(Framework framework) {
-            if (config != null && _audioManager != null && _objectTable != null && !disposed) {
+            if (config != null && _mediaManager != null && _objectTable != null && !disposed) {
                 uint voiceVolume = 0;
                 uint masterVolume = 0;
                 uint soundEffectVolume = 0;
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
-                        _audioManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                        _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _audioManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                        _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _audioManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                        _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
                         if (_gameConfig.TryGet(SystemConfigOption.SoundEnv, out soundEffectVolume)) {
-                            _audioManager.SFXVolume = config.LoopingSFXVolume *
+                            _mediaManager.SFXVolume = config.LoopingSFXVolume *
                              ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
                         }
-                        _audioManager.LiveStreamVolume = config.LivestreamVolume * ((float)masterVolume / 100f);
+                        _mediaManager.LiveStreamVolume = config.LivestreamVolume * ((float)masterVolume / 100f);
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
                             if (_filter != null) {
                                 lock (_filter) {
@@ -290,7 +297,7 @@ namespace RoleplayingVoice {
             } catch {
                 _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
             }
-            string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+            string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
             string clipPath = path + @"\" + hash;
             try {
                 if (config.UsePlayerSync) {
@@ -309,12 +316,12 @@ namespace RoleplayingVoice {
                             bool isVoicedEmote = false;
                             string value = characterVoicePack.GetMisc("moving");
                             if (!string.IsNullOrEmpty(value)) {
-                                _audioManager.PlayAudio(new AudioGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
+                                _mediaManager.PlayAudio(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
                                 if (isVoicedEmote) {
                                     MuteVoiceChecK(4000);
                                 }
                             } else {
-                                _audioManager.StopAudio(new AudioGameObject(gameObject));
+                                _mediaManager.StopAudio(new MediaGameObject(gameObject));
                             }
                             //string streamPath = GetStreamingPath(clipPath);
                             //if (!string.IsNullOrEmpty(streamPath)) {
@@ -342,9 +349,9 @@ namespace RoleplayingVoice {
                             bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                         });
                     }
-                    _audioManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
+                    _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
                 } else {
-                    _audioManager.StopAudio(_playerObject);
+                    _mediaManager.StopAudio(_playerObject);
                 }
             }
         }
@@ -481,7 +488,7 @@ namespace RoleplayingVoice {
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         string value = characterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
-                            _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
                         }
                     }
                     cooldown.Restart();
@@ -508,11 +515,12 @@ namespace RoleplayingVoice {
         }
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
-            if (_audioManager != null) {
-                _audioManager.CleanSounds();
+            if (_mediaManager != null) {
+                _mediaManager.CleanSounds();
             }
             if (twitchWasPlaying) {
                 twitchWasPlaying = false;
+                _videoWindow.IsOpen = false;
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
             }
             lastStreamURL = "";
@@ -543,8 +551,8 @@ namespace RoleplayingVoice {
         }
 
         private void UiBuilder_OpenConfigUi() {
-            window.RefreshVoices();
-            window.Toggle();
+            _window.RefreshVoices();
+            _window.Toggle();
         }
         public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
             if (!disposed) {
@@ -571,7 +579,7 @@ namespace RoleplayingVoice {
                 } catch {
                     _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
                 }
-                string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+                string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
                 string clipPath = path + @"\" + hash;
                 try {
                     if (config.UsePlayerSync) {
@@ -592,13 +600,13 @@ namespace RoleplayingVoice {
                                 if (!string.IsNullOrEmpty(value)) {
                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                                    _audioManager.PlayAudio(new AudioGameObject(instigator), value, SoundType.OtherPlayer,
+                                    _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                                     if (isVoicedEmote) {
                                         MuteVoiceChecK(4000);
                                     }
                                 } else {
-                                    _audioManager.StopAudio(new AudioGameObject(instigator));
+                                    _mediaManager.StopAudio(new MediaGameObject(instigator));
                                 }
                                 //string streamPath = GetStreamingPath(clipPath);
                                 //if (!string.IsNullOrEmpty(streamPath)) {
@@ -629,13 +637,13 @@ namespace RoleplayingVoice {
 
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                    _audioManager.PlayAudio(_playerObject, value, SoundType.Emote,
+                    _mediaManager.PlayAudio(_playerObject, value, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     if (isVoicedEmote) {
                         MuteVoiceChecK(10000);
                     }
                 } else {
-                    _audioManager.StopAudio(_playerObject);
+                    _mediaManager.StopAudio(_playerObject);
                 }
             }
         }
@@ -828,13 +836,13 @@ namespace RoleplayingVoice {
         unsafe private void CheckDependancies(bool forceNewAssignments = false) {
             if (_clientState.LocalPlayer != null) {
                 if (_playerObject == null || forceNewAssignments) {
-                    _playerObject = new AudioGameObject(_clientState.LocalPlayer);
+                    _playerObject = new MediaGameObject(_clientState.LocalPlayer);
                 }
-                if (_audioManager == null || forceNewAssignments) {
+                if (_mediaManager == null || forceNewAssignments) {
                     _camera = CameraManager.Instance->GetActiveCamera();
-                    _audioCamera = new AudioCameraObject(_camera);
-                    _audioManager = new AudioManager(_playerObject, _audioCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
-                    _audioManager.OnNewAudioTriggered += _audioManager_OnNewAudioTriggered;
+                    _playerCamera = new MediaCameraObject(_camera);
+                    _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
+                    _videoWindow.MediaManager = _mediaManager;
                 }
             }
         }
@@ -865,7 +873,7 @@ namespace RoleplayingVoice {
 
                         if (!string.IsNullOrEmpty(value) || attackIntended) {
                             if (!attackIntended) {
-                                _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
                             }
                             if (!muteTimer.IsRunning) {
                                 if (_filter != null) {
@@ -897,7 +905,7 @@ namespace RoleplayingVoice {
                 if (senderStrings.Length > 2) {
                     int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
                     string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
-                    string hash = RoleplayingVoiceManager.Shai1Hash(playerSender);
+                    string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
                     string path = config.CacheFolder + @"\VoicePack\Others";
                     string clipPath = path + @"\" + hash;
                     try {
@@ -933,7 +941,7 @@ namespace RoleplayingVoice {
                                             character = item;
                                         }
                                     }
-                                    _audioManager.PlayAudio(new AudioGameObject((PlayerCharacter)character,
+                                    _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
                                     playerSender, character.Position), value, SoundType.OtherPlayer);
                                 });
                                 if (!muteTimer.IsRunning) {
@@ -1091,7 +1099,7 @@ namespace RoleplayingVoice {
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
                         _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                        _audioManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
+                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
                     });
                 }
             } else {
@@ -1121,7 +1129,7 @@ namespace RoleplayingVoice {
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                _audioManager.PlayAudio(new AudioGameObject(player), value, SoundType.OtherPlayerTts);
+                                _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts);
                             });
                         }
                     }
@@ -1131,8 +1139,8 @@ namespace RoleplayingVoice {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                        var audioGameObject = new AudioGameObject(player);
-                                        if (_audioManager.IsAllowedToStartStream(audioGameObject)) {
+                                        var audioGameObject = new MediaGameObject(player);
+                                        if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
                                             TuneIntoStream(value, audioGameObject);
                                         }
                                         break;
@@ -1147,12 +1155,13 @@ namespace RoleplayingVoice {
 
         private void TuneIntoStream(string url, IGameObject audioGameObject) {
             Task.Run(async () => {
-                string streamURL = TwitchFeedManager.GetServerResponse(url);
+                string streamURL = TwitchFeedManager.GetServerResponse(url, TwitchFeedManager.TwitchFeedType._360p);
                 if (!string.IsNullOrEmpty(streamURL)) {
-                    _audioManager.PlayStream(audioGameObject, streamURL);
+                    _mediaManager.PlayStream(audioGameObject, streamURL);
                     lastStreamURL = url;
                     currentStreamer = url.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
                     _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+                    _videoWindow.IsOpen = true;
                 }
             });
             twitchWasPlaying = true;
@@ -1188,9 +1197,9 @@ namespace RoleplayingVoice {
             }
         }
         public void InitialzeManager() {
-            _roleplayingVoiceManager = new RoleplayingVoiceManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
+            _roleplayingVoiceManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
             _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            window.Manager = _roleplayingVoiceManager;
+            _window.Manager = _roleplayingVoiceManager;
         }
         private void UiBuilder_Draw() {
             this.windowSystem.Draw();
@@ -1198,19 +1207,30 @@ namespace RoleplayingVoice {
 
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
+        public void ExecuteCommandA(string command, string args) {
+            OpenConfig(command, args);
+        }
+        [Command("/rpmedia")]
+        [HelpMessage("OpenConfig")]
+        public void ExecuteCommandB(string command, string args) {
+            OpenConfig(command, args);
+        }
         public void OpenConfig(string command, string args) {
             string[] splitArgs = args.Split(' ');
             if (splitArgs.Length > 0) {
                 switch (splitArgs[0].ToLower()) {
                     case "on":
                         config.IsActive = true;
-                        window.Configuration = config;
+                        _window.Configuration = config;
                         this.pluginInterface.SavePluginConfig(config);
                         break;
                     case "off":
                         config.IsActive = false;
-                        window.Configuration = config;
+                        _window.Configuration = config;
                         this.pluginInterface.SavePluginConfig(config);
+                        break;
+                    case "video":
+                        _videoWindow.Toggle();
                         break;
                     case "reload":
                         AttemptConnection();
@@ -1236,9 +1256,9 @@ namespace RoleplayingVoice {
                         break;
                     default:
                         if (config.IsActive) {
-                            window.RefreshVoices();
+                            _window.RefreshVoices();
                         }
-                        window.Toggle();
+                        _window.Toggle();
                         break;
                 }
             }
@@ -1253,10 +1273,13 @@ namespace RoleplayingVoice {
             this.pluginInterface.SavePluginConfig(this.config);
             config.OnConfigurationChanged -= Config_OnConfigurationChanged;
             _chat.ChatMessage -= Chat_ChatMessage;
+            if (_mediaManager != null) {
+                _mediaManager?.Dispose();
+            }
             this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
             this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
             try {
-                _audioManager.OnNewAudioTriggered -= _audioManager_OnNewAudioTriggered;
+                _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
             } catch {
             }
             _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
@@ -1277,7 +1300,6 @@ namespace RoleplayingVoice {
             this.windowSystem.RemoveAllWindows();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
             _networkedClient?.Dispose();
-            _audioManager?.Dispose();
             _filter?.Dispose();
             this.commandManager?.Dispose();
         }

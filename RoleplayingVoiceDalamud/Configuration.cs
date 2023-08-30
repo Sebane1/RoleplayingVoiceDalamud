@@ -1,6 +1,6 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
-using RoleplayingVoiceCore.AudioRecycler;
+using RoleplayingMediaCore.AudioRecycler;
 using System;
 using System.Collections.Generic;
 using System.IO;

@@ -1,12 +1,12 @@
 ﻿using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
-using RoleplayingVoiceCore;
+using RoleplayingMediaCore;
 using System;
 using System.Numerics;
 
 namespace RoleplayingVoiceDalamud {
-    internal class AudioGameObject : IGameObject {
+    internal class MediaGameObject : IGameObject {
         private GameObject _gameObject;
         private string _name = "";
         private Vector3 _position = new Vector3();
@@ -70,14 +70,14 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        public AudioGameObject(GameObject gameObject) {
+        public MediaGameObject(GameObject gameObject) {
             _gameObject = gameObject;
         }
-        public AudioGameObject(string name, Vector3 position) {
+        public MediaGameObject(string name, Vector3 position) {
             _name = name;
             _position = position;
         }
-        public AudioGameObject(GameObject gameObject, string name, Vector3 position) {
+        public MediaGameObject(GameObject gameObject, string name, Vector3 position) {
             _gameObject = gameObject;
             _name = name;
             _position = position;

@@ -5,7 +5,7 @@ using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
-using RoleplayingVoiceCore;
+using RoleplayingMediaCore;
 using System;
 using System.IO;
 using System.Linq;
@@ -22,7 +22,7 @@ using Dalamud.Utility;
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
-        RoleplayingVoiceManager _manager = null;
+        RoleplayingMediaManager _manager = null;
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         private FileDialogManager fileDialogManager;
@@ -137,7 +137,7 @@ namespace RoleplayingVoice {
         }
 
         public DalamudPluginInterface PluginInterface { get; internal set; }
-        public RoleplayingVoiceManager Manager {
+        public RoleplayingMediaManager Manager {
             get => _manager; set {
                 _manager = value;
                 if (_manager != null) {

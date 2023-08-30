@@ -1,12 +1,12 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game;
-using RoleplayingVoiceCore;
+using RoleplayingMediaCore;
 using System.Numerics;
 
 namespace RoleplayingVoiceDalamud {
-    public class AudioCameraObject : IGameObject {
+    public class MediaCameraObject : IGameObject {
         private unsafe Camera* _camera;
 
-        public unsafe AudioCameraObject(Camera* camera) {
+        public unsafe MediaCameraObject(Camera* camera) {
             this._camera = camera;
         }
 
