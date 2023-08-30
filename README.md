@@ -7,5 +7,10 @@ Features:
 - Penumbra support so that you can still sort your Roleplaying Voice sound mods.
 - Partial Mare support (sound is synced via a different service).
 
+Repo Link
+```
+https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
+```
+
 Support Discord:
 https://discord.gg/rtGXwMn7pX
