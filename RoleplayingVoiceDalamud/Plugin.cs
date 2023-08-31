@@ -40,6 +40,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Lumina.Extensions;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.Game.Housing;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -95,6 +98,7 @@ namespace RoleplayingVoice {
         private string currentStreamer;
         private bool twitchWasPlaying;
 
+
         public string Name => "Roleplaying Voice";
 
         public RoleplayingMediaManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
@@ -121,7 +125,6 @@ namespace RoleplayingVoice {
                           ?? this.pluginInterface.Create<Configuration>();
             // Initialize the UI
             this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
-
             _window = this.pluginInterface.Create<PluginWindow>();
             _videoWindow = this.pluginInterface.Create<VideoWindow>();
             _window.ClientState = this._clientState;
@@ -323,10 +326,6 @@ namespace RoleplayingVoice {
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
                             }
-                            //string streamPath = GetStreamingPath(clipPath);
-                            //if (!string.IsNullOrEmpty(streamPath)) {
-                            //    _audioManager.PlayStream(_playerObject, streamPath, SoundType.Livestream);
-                            //}
                         }
                     }
                 }
@@ -500,8 +499,11 @@ namespace RoleplayingVoice {
             CleanSounds();
         }
 
-        private void _clientState_TerritoryChanged(object sender, ushort e) {
+        private unsafe void _clientState_TerritoryChanged(object sender, ushort e) {
             CleanSounds();
+        }
+        private unsafe bool IsResidential() {
+            return HousingManager.Instance()->IsInside() || HousingManager.Instance()->HousingOutdoorTerritory != null;
         }
 
         private void _clientState_Logout(object sender, EventArgs e) {
@@ -608,10 +610,6 @@ namespace RoleplayingVoice {
                                 } else {
                                     _mediaManager.StopAudio(new MediaGameObject(instigator));
                                 }
-                                //string streamPath = GetStreamingPath(clipPath);
-                                //if (!string.IsNullOrEmpty(streamPath)) {
-                                //    _audioManager.PlayStream(_playerObject, streamPath, SoundType.Livestream);
-                                //}
                             }
                         }
                     }
@@ -1134,7 +1132,7 @@ namespace RoleplayingVoice {
                         }
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout) {
-                        if (config.TuneIntoTwitchStreams) {
+                        if (config.TuneIntoTwitchStreams && IsResidential()) {
                             if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 20000) {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {

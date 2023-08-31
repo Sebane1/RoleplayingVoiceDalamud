@@ -15,7 +15,7 @@ namespace RoleplayingVoice {
         TextureWrap textureWrap;
         MediaManager _mediaManager;
         private DalamudPluginInterface _pluginInterface;
-        Stopwatch fpsCounter = new Stopwatch();
+        Stopwatch deadStreamTimer = new Stopwatch();
         private string fpsCount = "";
         int countedFrames = 0;
 
@@ -26,26 +26,32 @@ namespace RoleplayingVoice {
             initialSize = Size;
             SizeCondition = ImGuiCond.None;
             _pluginInterface = pluginInterface;
-            fpsCounter = Stopwatch.StartNew();
+            Position = new Vector2(0, 0);
         }
 
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override void Draw() {
-            Vector2 viewPortSize = ImGui.GetWindowViewport().WorkSize;
-            Position = new Vector2(0, 0);
             if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
                 lock (_mediaManager.LastFrame) {
                     textureWrap = _pluginInterface.UiBuilder.LoadImage(_mediaManager.LastFrame);
-                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(textureWrap.Width, textureWrap.Height));
+                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(500, 281));
                 }
-            }
-            if (fpsCounter.ElapsedMilliseconds > 1000) {
-                fpsCount = countedFrames + "";
-                countedFrames = 0;
-                fpsCounter.Restart();
+                if (deadStreamTimer.IsRunning) {
+                    deadStreamTimer.Stop();
+                    deadStreamTimer.Reset();
+                }
             } else {
-                countedFrames++;
+                if (!deadStreamTimer.IsRunning) {
+                    deadStreamTimer.Start();
+                }
+                if (deadStreamTimer.ElapsedMilliseconds > 5000) {
+                    fpsCount = countedFrames + "";
+                    countedFrames = 0;
+                    deadStreamTimer.Stop();
+                    deadStreamTimer.Reset();
+                    IsOpen = false;
+                }
             }
         }
     }
