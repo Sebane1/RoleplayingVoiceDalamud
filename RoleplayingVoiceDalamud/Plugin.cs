@@ -791,7 +791,7 @@ namespace RoleplayingVoice {
                 System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
-            Regex rgx = new Regex("[^a-zA-Z:/. -]");
+            Regex rgx = new Regex("[^a-zA-Z:/._ -]");
             return rgx.Replace(value, "");
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
