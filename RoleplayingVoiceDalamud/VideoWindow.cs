@@ -18,6 +18,7 @@ namespace RoleplayingVoice {
         Stopwatch deadStreamTimer = new Stopwatch();
         private string fpsCount = "";
         int countedFrames = 0;
+        private bool wasStreaming;
 
         public VideoWindow(DalamudPluginInterface pluginInterface) :
             base("Video Window", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, false) {
@@ -41,16 +42,20 @@ namespace RoleplayingVoice {
                     deadStreamTimer.Stop();
                     deadStreamTimer.Reset();
                 }
+                wasStreaming = true;
             } else {
-                if (!deadStreamTimer.IsRunning) {
-                    deadStreamTimer.Start();
-                }
-                if (deadStreamTimer.ElapsedMilliseconds > 5000) {
-                    fpsCount = countedFrames + "";
-                    countedFrames = 0;
-                    deadStreamTimer.Stop();
-                    deadStreamTimer.Reset();
-                    IsOpen = false;
+                if (wasStreaming) {
+                    if (!deadStreamTimer.IsRunning) {
+                        deadStreamTimer.Start();
+                    }
+                    if (deadStreamTimer.ElapsedMilliseconds > 10000) {
+                        fpsCount = countedFrames + "";
+                        countedFrames = 0;
+                        deadStreamTimer.Stop();
+                        deadStreamTimer.Reset();
+                        IsOpen = false;
+                        wasStreaming = false;
+                    }
                 }
             }
         }

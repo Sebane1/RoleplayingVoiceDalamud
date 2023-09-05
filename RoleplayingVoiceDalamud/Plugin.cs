@@ -791,7 +791,7 @@ namespace RoleplayingVoice {
                 System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
-            Regex rgx = new Regex("[^a-zA-Z -]");
+            Regex rgx = new Regex("[^a-zA-Z:/. -]");
             return rgx.Replace(value, "");
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
@@ -1061,15 +1061,15 @@ namespace RoleplayingVoice {
             }
         }
 
-        public string MakeThirdPerson(string value) {
-            return value.Replace("cast ", "casts ")
-                        .Replace("use", "uses")
-                        .Replace("lose", "loses")
-                        .Replace("hit", "hits")
-                        .Replace("begin", "begins")
-                        .Replace("You", null)
-                        .Replace("!", null);
-        }
+        //public string MakeThirdPerson(string value) {
+        //    return value.Replace("cast ", "casts ")
+        //                .Replace("use", "uses")
+        //                .Replace("lose", "loses")
+        //                .Replace("hit", "hits")
+        //                .Replace("begin", "begins")
+        //                .Replace("You", null)
+        //                .Replace("!", null);
+        //}
         public string RemoveActionPhrases(string value) {
             return value.Replace("Direct hit ", null)
                     .Replace("Critical direct hit ", null)
@@ -1153,12 +1153,14 @@ namespace RoleplayingVoice {
 
         private void TuneIntoStream(string url, IGameObject audioGameObject) {
             Task.Run(async () => {
-                string streamURL = TwitchFeedManager.GetServerResponse(url, TwitchFeedManager.TwitchFeedType._360p);
+                string cleanedURL = RemoveSpecialSymbols(url);
+                string streamURL = TwitchFeedManager.GetServerResponse(cleanedURL, TwitchFeedManager.TwitchFeedType._360p);
                 if (!string.IsNullOrEmpty(streamURL)) {
                     _mediaManager.PlayStream(audioGameObject, streamURL);
-                    lastStreamURL = url;
-                    currentStreamer = url.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch"".");
+                    lastStreamURL = cleanedURL;
+                    currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch""." + 
+                        "\r\nYou can also use \"/rpvoice video\" to toggle the video feed!");
                     _videoWindow.IsOpen = true;
                 }
             });
