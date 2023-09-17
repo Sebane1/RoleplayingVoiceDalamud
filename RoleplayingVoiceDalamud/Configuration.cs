@@ -8,7 +8,7 @@ using System.IO;
 namespace RoleplayingVoice {
     public class Configuration : IPluginConfiguration {
         public event EventHandler OnConfigurationChanged;
-        private string connectionIP = "50.70.229.19";
+        private string connectionIP = "24.77.70.65";
         private float _playerCharacterVolume = 1;
         private float _otherCharacterVolume = 1;
         private float _unfocusedCharacterVolume = 0.5f;
@@ -25,7 +25,22 @@ namespace RoleplayingVoice {
         int IPluginConfiguration.Version { get; set; }
 
         #region Saved configuration values
-        public string ConnectionIP { get => connectionIP; set => connectionIP = value; }
+        public string ConnectionIP {
+            get {
+                if (connectionIP.Contains("50.70.229.19")) {
+                    connectionIP = "24.77.70.65";
+                    return connectionIP;
+                }
+                return connectionIP;
+            }
+            set {
+                if (connectionIP.Contains("50.70.229.19")) {
+                    connectionIP = "24.77.70.65";
+                } else {
+                    connectionIP = value;
+                }
+            }
+        }
         public string ApiKey { get; set; }
         public bool IsActive { get; set; }
         public bool VoicePackIsActive { get; set; }
