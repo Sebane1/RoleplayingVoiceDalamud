@@ -871,7 +871,7 @@ namespace RoleplayingVoice {
 
                         if (!string.IsNullOrEmpty(value) || attackIntended) {
                             if (!attackIntended) {
-                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                             }
                             if (!muteTimer.IsRunning) {
                                 if (_filter != null) {
@@ -940,7 +940,7 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                     _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
-                                    playerSender, character.Position), value, SoundType.OtherPlayer);
+                                    playerSender, character.Position), value, SoundType.OtherPlayerCombat);
                                 });
                                 if (!muteTimer.IsRunning) {
                                     _filter.Muted = true;
