@@ -104,6 +104,16 @@ namespace RoleplayingVoice {
         public RoleplayingMediaManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public SigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
+        internal Filter Filter {
+            get {
+                if (_filter == null) {
+                    _filter = new Filter(this);
+                    _filter.Enable();
+                }
+                return _filter;
+            }
+            set => _filter = value;
+        }
 
         public unsafe Plugin(
             DalamudPluginInterface pi,
@@ -171,8 +181,8 @@ namespace RoleplayingVoice {
             _sigScanner = scanner;
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
-            _filter = new Filter(this);
-            _filter.Enable();
+            Filter = new Filter(this);
+            Filter.Enable();
             _framework = framework;
             _framework.Update += framework_Update;
             RefreshSoundData();
@@ -238,9 +248,9 @@ namespace RoleplayingVoice {
                         }
                         _mediaManager.LiveStreamVolume = config.LivestreamVolume * ((float)masterVolume / 100f);
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
-                            if (_filter != null) {
-                                lock (_filter) {
-                                    _filter.Muted = voiceMuted = false;
+                            if (Filter != null) {
+                                lock (Filter) {
+                                    Filter.Muted = voiceMuted = false;
                                     RefreshPlayerVoiceMuted();
                                     muteTimer.Stop();
                                     muteTimer.Reset();
@@ -376,8 +386,8 @@ namespace RoleplayingVoice {
             });
             if (!config.VoicePackIsActive) {
                 try {
-                    if (_filter != null) {
-                        _filter.Muted = false;
+                    if (Filter != null) {
+                        Filter.Muted = false;
                         voiceMuted = false;
                         RefreshPlayerVoiceMuted();
                     }
@@ -475,7 +485,8 @@ namespace RoleplayingVoice {
             return list;
         }
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
-            _chat.PrintError(e.Message);
+            _chat.PrintError("[Roleplaying Voice] " + e.Message);
+            Dalamud.Logging.PluginLog.LogError(e.Message);
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
@@ -696,8 +707,8 @@ namespace RoleplayingVoice {
         public void MuteVoiceChecK(int length = 20) {
             muteLength = length;
             if (!muteTimer.IsRunning) {
-                if (_filter != null) {
-                    _filter.Muted = voiceMuted = true;
+                if (Filter != null) {
+                    Filter.Muted = voiceMuted = true;
                 }
                 RefreshPlayerVoiceMuted();
                 Dalamud.Logging.PluginLog.Log("Mute Triggered");
@@ -874,8 +885,8 @@ namespace RoleplayingVoice {
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                             }
                             if (!muteTimer.IsRunning) {
-                                if (_filter != null) {
-                                    _filter.Muted = true;
+                                if (Filter != null) {
+                                    Filter.Muted = true;
                                 }
                                 Task.Run(() => {
                                     if (config.UsePlayerSync) {
@@ -886,9 +897,15 @@ namespace RoleplayingVoice {
                                     while (muteTimer.ElapsedMilliseconds < 20) {
                                         Thread.Sleep(20);
                                     }
-                                    lock (_filter) {
-                                        _filter.Muted = false;
-                                        muteTimer.Reset();
+                                    try {
+                                        if (Filter != null) {
+                                            lock (Filter) {
+                                                Filter.Muted = false;
+                                                muteTimer.Reset();
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        Dalamud.Logging.PluginLog.LogError(e.Message);
                                     }
                                 });
                             }
@@ -943,13 +960,13 @@ namespace RoleplayingVoice {
                                     playerSender, character.Position), value, SoundType.OtherPlayerCombat);
                                 });
                                 if (!muteTimer.IsRunning) {
-                                    _filter.Muted = true;
+                                    Filter.Muted = true;
                                     Task.Run(() => {
                                         while (muteTimer.ElapsedMilliseconds < 20) {
                                             Thread.Sleep(20);
                                         }
-                                        lock (_filter) {
-                                            _filter.Muted = false;
+                                        lock (Filter) {
+                                            Filter.Muted = false;
                                         }
                                         muteTimer.Reset();
                                     });
@@ -1159,7 +1176,7 @@ namespace RoleplayingVoice {
                     _mediaManager.PlayStream(audioGameObject, streamURL);
                     lastStreamURL = cleanedURL;
                     currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch""." + 
+                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch""." +
                         "\r\nYou can also use \"/rpvoice video\" to toggle the video feed!");
                     _videoWindow.IsOpen = true;
                 }
@@ -1300,7 +1317,7 @@ namespace RoleplayingVoice {
             this.windowSystem.RemoveAllWindows();
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
             _networkedClient?.Dispose();
-            _filter?.Dispose();
+            Filter?.Dispose();
             this.commandManager?.Dispose();
         }
 
