@@ -1,5 +1,6 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
+using Newtonsoft.Json;
 using RoleplayingMediaCore.AudioRecycler;
 using System;
 using System.Collections.Generic;
@@ -7,8 +8,10 @@ using System.IO;
 
 namespace RoleplayingVoice {
     public class Configuration : IPluginConfiguration {
+        static bool configAlreadyLoaded = true;
         public event EventHandler OnConfigurationChanged;
         private string connectionIP = "24.77.70.65";
+        private bool _hasMigrated = false;
         private float _playerCharacterVolume = 1;
         private float _otherCharacterVolume = 1;
         private float _unfocusedCharacterVolume = 0.5f;
@@ -19,6 +22,7 @@ namespace RoleplayingVoice {
         private bool usePlayerSync = false;
         private bool tuneIntoTwitchStreams = true;
         private bool ignoreWhitelist = true;
+        private bool performEmotesBasedOnWrittenText;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
 
@@ -70,6 +74,8 @@ namespace RoleplayingVoice {
         public string StreamPath { get => streamPath; set => streamPath = value; }
         public float LivestreamVolume { get => _livestreamVolume; set => _livestreamVolume = value; }
         public bool TuneIntoTwitchStreams { get => tuneIntoTwitchStreams; set => tuneIntoTwitchStreams = value; }
+        public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
+        public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

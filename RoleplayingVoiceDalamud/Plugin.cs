@@ -11,11 +11,8 @@ using Dalamud.Game.Gui;
 using Dalamud.Game.Gui.Toast;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using Dalamud.Plugin.Services;
-using ElevenLabs.Voices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Common.Math;
@@ -23,7 +20,6 @@ using FFXIVLooseTextureCompiler.Networking;
 using FFXIVVoicePackCreator;
 using FFXIVVoicePackCreator.VoiceSorting;
 using Lumina.Excel.GeneratedSheets;
-using Newtonsoft.Json.Linq;
 using PatMe;
 using Penumbra.Api;
 using RoleplayingVoice.Attributes;
@@ -39,10 +35,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using Lumina.Extensions;
-using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.Game.Housing;
+using Newtonsoft.Json;
+using XivCommon.Functions;
+using Dalamud.Hooking;
+using System.Windows.Forms;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -57,7 +54,7 @@ namespace RoleplayingVoice {
         private PluginWindow _window { get; init; }
 
         private VideoWindow _videoWindow;
-        private RoleplayingMediaManager _roleplayingVoiceManager;
+        private RoleplayingMediaManager _roleplayingMediaManager;
         private Stopwatch stopwatch;
         private Stopwatch cooldown;
         private Stopwatch muteTimer;
@@ -81,6 +78,7 @@ namespace RoleplayingVoice {
         private MediaCameraObject _playerCamera;
         private GameConfig _gameConfig;
         private SigScanner _sigScanner;
+        private Chat _realChat;
         private Filter _filter;
         public EventHandler OnMuteTimerOver;
         private Framework _framework;
@@ -97,11 +95,12 @@ namespace RoleplayingVoice {
         private string lastStreamURL;
         private string currentStreamer;
         private bool twitchWasPlaying;
+        private Queue<string> messageQueue = new Queue<string>();
+        private Stopwatch messageTimer = new Stopwatch();
 
+        public string Name => "Artemis Roleplaying Kit";
 
-        public string Name => "Roleplaying Voice";
-
-        public RoleplayingMediaManager RoleplayingVoiceManager { get => _roleplayingVoiceManager; set => _roleplayingVoiceManager = value; }
+        public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public SigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
         internal Filter Filter {
@@ -133,6 +132,15 @@ namespace RoleplayingVoice {
             // Get or create a configuration object
             this.config = (Configuration)this.pluginInterface.GetPluginConfig()
                           ?? this.pluginInterface.Create<Configuration>();
+            if (!config.HasMigrated) {
+                string oldConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
+                if (File.Exists(oldConfig)) {
+                    this.config = JsonConvert.DeserializeObject<Configuration>(
+                        File.OpenText(oldConfig).ReadToEnd());
+                    config.HasMigrated = true;
+                }
+            }
             // Initialize the UI
             this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
             _window = this.pluginInterface.Create<PluginWindow>();
@@ -179,6 +187,7 @@ namespace RoleplayingVoice {
             _toast.ErrorToast += _toast_ErrorToast;
             _gameConfig = gameConfig;
             _sigScanner = scanner;
+            _realChat = new Chat(_sigScanner);
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
             Filter = new Filter(this);
@@ -191,7 +200,7 @@ namespace RoleplayingVoice {
         }
 
         private void Window_OnMoveFailed(object sender, EventArgs e) {
-            _chat.PrintError("Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
+            _chat.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
         }
 
         private void gameObjectRedrawn(nint arg1, int arg2) {
@@ -291,6 +300,16 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+            if (messageQueue.Count > 0) {
+                if (!messageTimer.IsRunning) {
+                    messageTimer.Start();
+                } else {
+                    if (messageTimer.ElapsedMilliseconds > 3000) {
+                        _realChat.SendMessage(messageQueue.Dequeue());
+                        messageTimer.Restart();
+                    }
+                }
+            }
         }
 
         private void ObjectIsMoving(string playerName, GameObject gameObject) {
@@ -308,7 +327,7 @@ namespace RoleplayingVoice {
             try {
                 Directory.CreateDirectory(path);
             } catch {
-                _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
             }
             string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
             string clipPath = path + @"\" + hash;
@@ -319,7 +338,7 @@ namespace RoleplayingVoice {
                             if (!Path.Exists(clipPath)) {
                                 isDownloadingZip = true;
                                 await Task.Run(async () => {
-                                    string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                     isDownloadingZip = false;
                                 });
                             }
@@ -355,7 +374,7 @@ namespace RoleplayingVoice {
                 if (!string.IsNullOrEmpty(value)) {
                     if (config.UsePlayerSync) {
                         Task.Run(async () => {
-                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                         });
                     }
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
@@ -457,7 +476,7 @@ namespace RoleplayingVoice {
                                 if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
                                     File.Delete(file);
                                 } else {
-                                    _chat.PrintError(file + " should not be in the cache folder, please remove it.");
+                                    _chat.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
                                 }
                             } catch { }
                         }
@@ -465,7 +484,7 @@ namespace RoleplayingVoice {
                     try {
                         Directory.CreateDirectory(stagingPath);
                     } catch {
-                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                        _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
                     }
                     if (Directory.Exists(stagingPath)) {
                         foreach (string file in Directory.EnumerateFiles(stagingPath)) {
@@ -485,8 +504,8 @@ namespace RoleplayingVoice {
             return list;
         }
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
-            _chat.PrintError("[Roleplaying Voice] " + e.Message);
-            Dalamud.Logging.PluginLog.LogError(e.Message);
+            _chat.PrintError("[Artemis Roleplaying Kit] " + e.Message);
+            Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
@@ -558,8 +577,8 @@ namespace RoleplayingVoice {
                 _networkedClient.Dispose();
             }
             _networkedClient = new NetworkedClient(config.ConnectionIP);
-            if (_roleplayingVoiceManager != null) {
-                _roleplayingVoiceManager.NetworkedClient = _networkedClient;
+            if (_roleplayingMediaManager != null) {
+                _roleplayingMediaManager.NetworkedClient = _networkedClient;
             }
         }
 
@@ -590,7 +609,7 @@ namespace RoleplayingVoice {
                 try {
                     Directory.CreateDirectory(path);
                 } catch {
-                    _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                    _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
                 }
                 string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
                 string clipPath = path + @"\" + hash;
@@ -601,7 +620,7 @@ namespace RoleplayingVoice {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
                                     await Task.Run(async () => {
-                                        string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                         isDownloadingZip = false;
                                     });
                                 }
@@ -640,7 +659,7 @@ namespace RoleplayingVoice {
                 if (!string.IsNullOrEmpty(value)) {
                     if (config.UsePlayerSync) {
                         Task.Run(async () => {
-                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                         });
                     }
 
@@ -682,6 +701,17 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                     list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                                } else {
+                                    soundPackData = directory + @"\arksp";
+                                    if (Path.Exists(soundPackData)) {
+                                        var soundList = new List<string>();
+                                        foreach (string file in Directory.EnumerateFiles(soundPackData)) {
+                                            if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                                                soundList.Add(file);
+                                            }
+                                        }
+                                        list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                                    }
                                 }
                             }
                         }
@@ -793,7 +823,7 @@ namespace RoleplayingVoice {
         }
 
         private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
-            config.CharacterVoices = _roleplayingVoiceManager.CharacterVoices;
+            config.CharacterVoices = _roleplayingMediaManager.CharacterVoices;
             config.Save();
             pluginInterface.SavePluginConfig(config);
         }
@@ -810,7 +840,7 @@ namespace RoleplayingVoice {
             if (!disposed) {
                 CheckDependancies();
                 string playerName = sender.TextValue;
-                if (_roleplayingVoiceManager != null) {
+                if (_roleplayingMediaManager != null) {
                     switch (type) {
                         case XivChatType.Say:
                         case XivChatType.Shout:
@@ -891,7 +921,7 @@ namespace RoleplayingVoice {
                                 Task.Run(() => {
                                     if (config.UsePlayerSync) {
                                         Task.Run(async () => {
-                                            bool success = await _roleplayingVoiceManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                         });
                                     }
                                     while (muteTimer.ElapsedMilliseconds < 20) {
@@ -934,7 +964,7 @@ namespace RoleplayingVoice {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
                                     Task.Run(async () => {
-                                        string value = await _roleplayingVoiceManager.GetZip(playerSender, path);
+                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                         isDownloadingZip = false;
                                     });
                                 }
@@ -978,7 +1008,111 @@ namespace RoleplayingVoice {
                 }
             }
         }
-
+        private async void EmoteReaction(string messageValue) {
+            if (messageValue.Contains("laugh")) {
+                messageQueue.Enqueue(@"/laugh");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else if (messageValue.Contains("chuckle") ||
+                messageValue.Contains("giggles")) {
+                messageQueue.Enqueue(@"/chuckle");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("dance") ||
+                messageValue.Contains("beesknees")) {
+                messageQueue.Enqueue(@"/dance");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("angry") ||
+                messageValue.Contains("furious") ||
+                messageValue.Contains("scream")) {
+                messageQueue.Enqueue(@"/furious");
+            } else
+            if (messageValue.Contains("curse") ||
+                messageValue.Contains("fume")) {
+                messageQueue.Enqueue(@"/fume");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/annoyed");
+            } else
+            if (messageValue.Contains("cheer")) {
+                messageQueue.Enqueue(@"/cheer");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("frustrated") ||
+                messageValue.Contains("annoyed") ||
+                messageValue.Contains("angr")) {
+                messageQueue.Enqueue(@"/angry");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/annoyed");
+            } else
+            if (messageValue.Contains("sulk") ||
+                messageValue.Contains("looks down")) {
+                messageQueue.Enqueue(@"/sulk");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/sad");
+            } else
+            if (messageValue.Contains("upset")) {
+                messageQueue.Enqueue(@"/upset");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/sad");
+            } else
+            if (messageValue.Contains("dote") ||
+                messageValue.Contains("blow kiss") ||
+                messageValue.Contains("kiss")) {
+                messageQueue.Enqueue(@"/blowkiss");
+            } else
+            if (messageValue.Contains("happy")) {
+                messageQueue.Enqueue(@"/happy");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("joy")) {
+                messageQueue.Enqueue(@"/joy");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("smile")) {
+                messageQueue.Enqueue(@"/smile");
+            } else
+            if (messageValue.Contains("sad")) {
+                messageQueue.Enqueue(@"/sad");
+            } else
+            if (messageValue.Contains("cry") ||
+                messageValue.Contains("cry's") ||
+                messageValue.Contains("cries")) {
+                messageQueue.Enqueue(@"/cry");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/sad");
+            } else
+            if (messageValue.Contains("point")) {
+                messageQueue.Enqueue(@"/point");
+            } else
+            if (messageValue.Contains("pose")) {
+                messageQueue.Enqueue(@"/pose");
+                Thread.Sleep(4000);
+                messageQueue.Enqueue(@"/cpose");
+            } else
+            if (messageValue.Contains("panic")) {
+                messageQueue.Enqueue(@"/panic");
+            } else
+            if (messageValue.Contains("gets down") || messageValue.Contains("sits") || messageValue.Contains("falls down")) {
+                if (!messageValue.Contains("ground")) {
+                    messageQueue.Enqueue(@"/groundsit");
+                } else {
+                    messageQueue.Enqueue(@"/sit");
+                }
+            } else
+            if (messageValue.Contains("kneel") || messageValue.Contains("grovel") ||
+                (messageValue.Contains("falls") || messageValue.Contains("knees"))) {
+                messageQueue.Enqueue(@"/grovel");
+            } else
+            if (messageValue.Contains("bow")) {
+                messageQueue.Enqueue(@"/bow");
+            }
+        }
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
             CharacterVoicePack characterVoicePack, ref string value) {
             if (message.TextValue.Contains("hit") ||
@@ -1101,6 +1235,11 @@ namespace RoleplayingVoice {
 
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
+                if (config.PerformEmotesBasedOnWrittenText) {
+                    if (type == XivChatType.CustomEmote) {
+                        Task.Run(() => EmoteReaction(message.TextValue));
+                    }
+                }
                 if (config.IsActive && !string.IsNullOrEmpty(config.ApiKey)) {
                     string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
                     _clientState.LocalPlayer.Name.TextValue)).Split(" ");
@@ -1109,7 +1248,7 @@ namespace RoleplayingVoice {
                         (senderStrings[0] + " " + senderStrings[2]);
                     string playerMessage = message.TextValue;
                     Task.Run(async () => {
-                        string value = await _roleplayingVoiceManager.DoVoice(playerSender, playerMessage,
+                        string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
                         config.Characters[_clientState.LocalPlayer.Name.TextValue],
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
@@ -1140,7 +1279,7 @@ namespace RoleplayingVoice {
                     if (config.UsePlayerSync) {
                         if (CombinedWhitelist().Contains(playerSender)) {
                             Task.Run(async () => {
-                                string value = await _roleplayingVoiceManager.
+                                string value = await _roleplayingMediaManager.
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
@@ -1176,8 +1315,8 @@ namespace RoleplayingVoice {
                     _mediaManager.PlayStream(audioGameObject, streamURL);
                     lastStreamURL = cleanedURL;
                     currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/rpvoice twitch""." +
-                        "\r\nYou can also use \"/rpvoice video\" to toggle the video feed!");
+                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
+                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!");
                     _videoWindow.IsOpen = true;
                 }
             });
@@ -1199,7 +1338,7 @@ namespace RoleplayingVoice {
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 try {
-                    if (_roleplayingVoiceManager == null ||
+                    if (_roleplayingMediaManager == null ||
                         !string.IsNullOrEmpty(config.ApiKey)
                         && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
                         InitialzeManager();
@@ -1214,9 +1353,9 @@ namespace RoleplayingVoice {
             }
         }
         public void InitialzeManager() {
-            _roleplayingVoiceManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
-            _roleplayingVoiceManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            _window.Manager = _roleplayingVoiceManager;
+            _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
+            _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+            _window.Manager = _roleplayingMediaManager;
         }
         private void UiBuilder_Draw() {
             this.windowSystem.Draw();
@@ -1227,9 +1366,14 @@ namespace RoleplayingVoice {
         public void ExecuteCommandA(string command, string args) {
             OpenConfig(command, args);
         }
-        [Command("/rpmedia")]
+        [Command("/ark")]
         [HelpMessage("OpenConfig")]
         public void ExecuteCommandB(string command, string args) {
+            OpenConfig(command, args);
+        }
+        [Command("/artemis")]
+        [HelpMessage("OpenConfig")]
+        public void ExecuteCommandC(string command, string args) {
             OpenConfig(command, args);
         }
         public void OpenConfig(string command, string args) {

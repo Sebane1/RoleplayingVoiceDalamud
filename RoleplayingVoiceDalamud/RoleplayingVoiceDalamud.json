@@ -1,7 +1,7 @@
 {
   "Author": "Sebastina",
-  "Name": "RoleplayingVoice",
-  "Description": "Custom player voices that play alongside your characters speech, synced with others!",
+  "Name": "ArtemisRoleplayingKit",
+  "Description": "Player synced custom voices, Twitch playback integration, and more!",
   "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
   "Tags": []
 }

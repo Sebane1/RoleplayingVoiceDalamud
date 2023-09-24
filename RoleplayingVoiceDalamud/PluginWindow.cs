@@ -67,12 +67,13 @@ namespace RoleplayingVoice {
         private float _livestreamVolume;
         private string _streamPath;
         private bool _tuneIntoTwitchStreams;
+        private bool _performEmotesBasedOnWrittenText;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
         public event EventHandler<MessageEventArgs> OnWindowOperationFailed;
 
-        public PluginWindow() : base("Roleplaying Voice Config") {
+        public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             IsOpen = true;
             Size = new Vector2(400, 550);
             initialSize = Size;
@@ -118,6 +119,7 @@ namespace RoleplayingVoice {
                     _useServer = configuration.UsePlayerSync;
                     _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
+                    _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -202,7 +204,7 @@ namespace RoleplayingVoice {
                     ImGui.EndTabItem();
                 }
 
-                if (ImGui.BeginTabItem("Server")) {
+                if (ImGui.BeginTabItem("Settings")) {
                     DrawServer();
                     ImGui.EndTabItem();
                 }
@@ -394,6 +396,7 @@ namespace RoleplayingVoice {
                 configuration.TuneIntoTwitchStreams = _tuneIntoTwitchStreams;
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
                 configuration.StreamPath = _streamPath;
+                configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -724,6 +727,11 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Tune Into Twitch Streams");
             ImGui.TextWrapped("Intended for venues where DJ's are playing. Audio will play inside the venue as soon as their Twitch URL is advertised in yell chat.");
+
+            ImGui.Checkbox("##useEmoteBasedOnMessageText", ref _performEmotesBasedOnWrittenText);
+            ImGui.SameLine();
+            ImGui.Text("Perform Emotes Based On Written Text");
+            ImGui.TextWrapped("Your character will emote based on what you write in custom emotes. We recommend turning off log messages for emotes before using this feature.");
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {
