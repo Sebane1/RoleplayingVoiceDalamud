@@ -71,4 +71,10 @@
 		</Reference>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="ArtemisRoleplayingKit.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>
