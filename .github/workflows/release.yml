@@ -37,23 +37,23 @@ jobs:
       - name: Write version into manifest
         run: |
           $ver = '${{ github.ref }}' -replace 'refs/tags/',''
-          $path = './RoleplayingVoiceDalamud/bin/Release/net7.0-windows/RoleplayingVoiceDalamud.json'
+          $path = './ArtemisRoleplayingKit/bin/Release/net7.0-windows/ArtemisRoleplayingKit.json'
           $content = get-content -path $path
           $content = $content -replace '0.0.0.0',$ver
           set-content -Path $path -Value $content
 
       - name: Packing Release
         run: |
-          pushd RoleplayingVoiceDalamud/bin/Release/net7.0-windows
-          7z a ../RoleplayingVoiceDalamud.zip *
+          pushd ArtemisRoleplayingKit/bin/Release/net7.0-windows
+          7z a ../ArtemisRoleplayingKit.zip *
           popd
         shell: bash
 
       - name: Create Release
         uses: ncipollo/release-action@v1.12.0
         with:
-          name: RoleplayingVoiceDalamud ${{ github.ref_name }}
-          artifacts: "./RoleplayingVoiceDalamud/bin/Release/*.zip"
+          name: ArtemisRoleplayingKit ${{ github.ref_name }}
+          artifacts: "./ArtemisRoleplayingKit/bin/Release/*.zip"
           tag: ${{ github.ref_name }}
           body: "A build of the Roleplaying Voice plugin. Do not install this manually. Install via the dalamud repo link!"
           omitBodyDuringUpdate: true
@@ -68,9 +68,9 @@ jobs:
           $json = Get-Content -Raw $path | ConvertFrom-Json
           $json[0].AssemblyVersion = $ver
           $json[0].TestingAssemblyVersion = $ver
-          $json[0].DownloadLinkInstall = $json.DownloadLinkInstall -replace '[^/]+/RoleplayingVoiceDalamud.zip',"$ver/RoleplayingVoiceDalamud.zip"
-          $json[0].DownloadLinkTesting = $json.DownloadLinkTesting -replace '[^/]+/RoleplayingVoiceDalamud.zip',"$ver/RoleplayingVoiceDalamud.zip"
-          $json[0].DownloadLinkUpdate = $json.DownloadLinkUpdate -replace '[^/]+/RoleplayingVoiceDalamud.zip',"$ver/RoleplayingVoiceDalamud.zip"
+          $json[0].DownloadLinkInstall = $json.DownloadLinkInstall -replace '[^/]+/ArtemisRoleplayingKit.zip',"$ver/ArtemisRoleplayingKit.zip"
+          $json[0].DownloadLinkTesting = $json.DownloadLinkTesting -replace '[^/]+/ArtemisRoleplayingKit.zip',"$ver/ArtemisRoleplayingKit.zip"
+          $json[0].DownloadLinkUpdate = $json.DownloadLinkUpdate -replace '[^/]+/ArtemisRoleplayingKit.zip',"$ver/ArtemisRoleplayingKit.zip"
           $content = $json | ConvertTo-Json -AsArray
           set-content -Path $path -Value $content
 
