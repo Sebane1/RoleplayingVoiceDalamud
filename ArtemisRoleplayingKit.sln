@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArtemisRoleplayingKit", "ArtemisRoleplayingKit\ArtemisRoleplayingKit.csproj", "{4236EDE1-75F9-4B36-B415-3C4F17DF33E4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RoleplayingVoiceDalamud", "ArtemisRoleplayingKit\RoleplayingVoiceDalamud.csproj", "{4236EDE1-75F9-4B36-B415-3C4F17DF33E4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RoleplayingVoiceCore", "RoleplayingVoiceCore\RoleplayingVoiceCore.csproj", "{C252622B-F64D-419F-9133-6D5718DCD814}"
 EndProject

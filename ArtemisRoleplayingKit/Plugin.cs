@@ -1009,108 +1009,14 @@ namespace RoleplayingVoice {
             }
         }
         private async void EmoteReaction(string messageValue) {
-            if (messageValue.Contains("laugh")) {
-                messageQueue.Enqueue(@"/laugh");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else if (messageValue.Contains("chuckle") ||
-                messageValue.Contains("giggles")) {
-                messageQueue.Enqueue(@"/chuckle");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("dance") ||
-                messageValue.Contains("beesknees")) {
-                messageQueue.Enqueue(@"/dance");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("angry") ||
-                messageValue.Contains("furious") ||
-                messageValue.Contains("scream")) {
-                messageQueue.Enqueue(@"/furious");
-            } else
-            if (messageValue.Contains("curse") ||
-                messageValue.Contains("fume")) {
-                messageQueue.Enqueue(@"/fume");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/annoyed");
-            } else
-            if (messageValue.Contains("cheer")) {
-                messageQueue.Enqueue(@"/cheer");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("frustrated") ||
-                messageValue.Contains("annoyed") ||
-                messageValue.Contains("angr")) {
-                messageQueue.Enqueue(@"/angry");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/annoyed");
-            } else
-            if (messageValue.Contains("sulk") ||
-                messageValue.Contains("looks down")) {
-                messageQueue.Enqueue(@"/sulk");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/sad");
-            } else
-            if (messageValue.Contains("upset")) {
-                messageQueue.Enqueue(@"/upset");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/sad");
-            } else
-            if (messageValue.Contains("dote") ||
-                messageValue.Contains("blow kiss") ||
-                messageValue.Contains("kiss")) {
-                messageQueue.Enqueue(@"/blowkiss");
-            } else
-            if (messageValue.Contains("happy")) {
-                messageQueue.Enqueue(@"/happy");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("joy")) {
-                messageQueue.Enqueue(@"/joy");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("smile")) {
-                messageQueue.Enqueue(@"/smile");
-            } else
-            if (messageValue.Contains("sad")) {
-                messageQueue.Enqueue(@"/sad");
-            } else
-            if (messageValue.Contains("cry") ||
-                messageValue.Contains("cry's") ||
-                messageValue.Contains("cries")) {
-                messageQueue.Enqueue(@"/cry");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/sad");
-            } else
-            if (messageValue.Contains("point")) {
-                messageQueue.Enqueue(@"/point");
-            } else
-            if (messageValue.Contains("pose")) {
-                messageQueue.Enqueue(@"/pose");
-                Thread.Sleep(4000);
-                messageQueue.Enqueue(@"/cpose");
-            } else
-            if (messageValue.Contains("panic")) {
-                messageQueue.Enqueue(@"/panic");
-            } else
-            if (messageValue.Contains("gets down") || messageValue.Contains("sits") || messageValue.Contains("falls down")) {
-                if (!messageValue.Contains("ground")) {
-                    messageQueue.Enqueue(@"/groundsit");
-                } else {
-                    messageQueue.Enqueue(@"/sit");
+            var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
+            foreach (var item in emotes) {
+                if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
+                    if (messageValue.ToLower().Contains(item.Name.RawString.ToLower())) {
+                        messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
+                        break;
+                    }
                 }
-            } else
-            if (messageValue.Contains("kneel") || messageValue.Contains("grovel") ||
-                (messageValue.Contains("falls") || messageValue.Contains("knees"))) {
-                messageQueue.Enqueue(@"/grovel");
-            } else
-            if (messageValue.Contains("bow")) {
-                messageQueue.Enqueue(@"/bow");
             }
         }
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
