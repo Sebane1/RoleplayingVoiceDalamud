@@ -1,4 +1,4 @@
-Roleplaying Voice aims to be the go to plugin for most things related to player sound and expression!
+Artemis Roleplaying Kit aims to be the go to plugin for most things related to sound, and roleplaying quality of life!
 
 Features:
 - AI voicelines for anything you type via Elevenlabs (after providing your own API key).
@@ -6,6 +6,7 @@ Features:
 - Automatic twitch playback allows you to hear your favourite DJ's while inside venues without having to think or manually open a web browser. Everything is in the game world!
 - Penumbra support so that you can still sort your Roleplaying Voice sound mods.
 - Partial Mare support (sound is synced via a different service).
+- Dynamic character emote triggering based on text in custom emotes.
 
 Repo Link
 ```
