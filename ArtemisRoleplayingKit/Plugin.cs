@@ -1019,7 +1019,7 @@ namespace RoleplayingVoice {
             var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
             foreach (var item in emotes) {
                 if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if (messageValue.ToLower().Contains(item.Name.RawString.ToLower())) {
+                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ")) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
@@ -1240,8 +1240,7 @@ namespace RoleplayingVoice {
                     lastStreamURL = cleanedURL;
                     currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
                     _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
-                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" + 
-                        (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
+                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" + (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     _videoWindow.IsOpen = true;
                 }
             });
