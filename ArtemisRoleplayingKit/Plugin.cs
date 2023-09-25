@@ -40,6 +40,8 @@ using Newtonsoft.Json;
 using XivCommon.Functions;
 using Dalamud.Hooking;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
+using System.Security.Policy;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -92,6 +94,7 @@ namespace RoleplayingVoice {
         private int redrawObjectCount;
         private bool staging;
         private string stagingPath;
+        private string potentialStream;
         private string lastStreamURL;
         private string currentStreamer;
         private bool twitchWasPlaying;
@@ -550,15 +553,7 @@ namespace RoleplayingVoice {
             if (_mediaManager != null) {
                 _mediaManager.CleanSounds();
             }
-            if (twitchWasPlaying) {
-                twitchWasPlaying = false;
-                _videoWindow.IsOpen = false;
-                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-            }
-            lastStreamURL = "";
-            currentStreamer = "";
-            twitchSetCooldown.Stop();
-            twitchSetCooldown.Reset();
+            ResetTwitchValues();
             temporaryWhitelist.Clear();
             if (Directory.Exists(path)) {
                 try {
@@ -567,6 +562,18 @@ namespace RoleplayingVoice {
 
                 }
             }
+        }
+        public void ResetTwitchValues() {
+            if (twitchWasPlaying) {
+                twitchWasPlaying = false;
+                _videoWindow.IsOpen = false;
+                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+            }
+            potentialStream = "";
+            lastStreamURL = "";
+            currentStreamer = "";
+            twitchSetCooldown.Stop();
+            twitchSetCooldown.Reset();
         }
         private void Window_RequestingReconnect(object sender, EventArgs e) {
             AttemptConnection();
@@ -1195,7 +1202,7 @@ namespace RoleplayingVoice {
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout) {
                         if (config.TuneIntoTwitchStreams && IsResidential()) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 20000) {
+                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
@@ -1205,6 +1212,17 @@ namespace RoleplayingVoice {
                                         }
                                         break;
                                     }
+                                }
+                            }
+                        } else {
+                            var strings = message.TextValue.Split(' ');
+                            foreach (string value in strings) {
+                                if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                                    potentialStream = value;
+                                    lastStreamURL = value;
+                                    string cleanedURL = RemoveSpecialSymbols(value);
+                                    string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                                    _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
                                 }
                             }
                         }
@@ -1222,7 +1240,8 @@ namespace RoleplayingVoice {
                     lastStreamURL = cleanedURL;
                     currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
                     _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
-                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!");
+                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" + 
+                        (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     _videoWindow.IsOpen = true;
                 }
             });
@@ -1319,6 +1338,18 @@ namespace RoleplayingVoice {
                             } else {
                                 _chat.PrintError("There is no active stream");
                             }
+                        }
+                        break;
+                    case "listen":
+                        if (!string.IsNullOrEmpty(potentialStream)) {
+                            TuneIntoStream(potentialStream, _playerObject);
+                        }
+                        break;
+                    case "endlisten":
+                        if (!IsResidential()) {
+                            _mediaManager.StopStream();
+                            ResetTwitchValues();
+                            potentialStream = "";
                         }
                         break;
                     default:
