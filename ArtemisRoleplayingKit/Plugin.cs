@@ -1019,7 +1019,9 @@ namespace RoleplayingVoice {
             var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
             foreach (var item in emotes) {
                 if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ")) {
+                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ")||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ")) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
