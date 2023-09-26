@@ -606,52 +606,58 @@ namespace RoleplayingVoice {
         }
 
         private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
-            string[] senderStrings = SplitCamelCase(
-            RemoveActionPhrases(RemoveSpecialSymbols(instigator.Name.TextValue))).Split(' ');
-            bool isShoutYell = false;
-            if (senderStrings.Length > 2) {
-                int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
-                string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
-                string path = config.CacheFolder + @"\VoicePack\Others";
+            if (instigator != null) {
                 try {
-                    Directory.CreateDirectory(path);
-                } catch {
-                    _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
-                }
-                string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
-                string clipPath = path + @"\" + hash;
-                try {
-                    if (config.UsePlayerSync) {
-                        if (CombinedWhitelist().Contains(playerSender)) {
-                            if (!isDownloadingZip) {
-                                if (!Path.Exists(clipPath)) {
-                                    isDownloadingZip = true;
-                                    await Task.Run(async () => {
-                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
-                                        isDownloadingZip = false;
-                                    });
-                                }
-                            }
-                            if (Directory.Exists(path)) {
-                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
-                                bool isVoicedEmote = false;
-                                string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
-                                if (!string.IsNullOrEmpty(value)) {
-                                    string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                                    TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                                    _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
-                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
-                                    if (isVoicedEmote) {
-                                        MuteVoiceChecK(4000);
+                    string[] senderStrings = SplitCamelCase(
+                    RemoveActionPhrases(RemoveSpecialSymbols(instigator.Name.TextValue))).Split(' ');
+                    bool isShoutYell = false;
+                    if (senderStrings.Length > 2) {
+                        int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
+                        string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
+                        string path = config.CacheFolder + @"\VoicePack\Others";
+                        try {
+                            Directory.CreateDirectory(path);
+                        } catch {
+                            _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                        }
+                        string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
+                        string clipPath = path + @"\" + hash;
+                        try {
+                            if (config.UsePlayerSync) {
+                                if (CombinedWhitelist().Contains(playerSender)) {
+                                    if (!isDownloadingZip) {
+                                        if (!Path.Exists(clipPath)) {
+                                            isDownloadingZip = true;
+                                            await Task.Run(async () => {
+                                                string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                isDownloadingZip = false;
+                                            });
+                                        }
                                     }
-                                } else {
-                                    _mediaManager.StopAudio(new MediaGameObject(instigator));
+                                    if (Directory.Exists(path)) {
+                                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
+                                        bool isVoicedEmote = false;
+                                        string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
+                                        if (!string.IsNullOrEmpty(value)) {
+                                            string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
+                                            TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                                            _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
+                                             characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                                            if (isVoicedEmote) {
+                                                MuteVoiceChecK(4000);
+                                            }
+                                        } else {
+                                            _mediaManager.StopAudio(new MediaGameObject(instigator));
+                                        }
+                                    }
                                 }
                             }
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
                         }
                     }
-                } catch {
-
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
                 }
             }
         }
@@ -1019,7 +1025,7 @@ namespace RoleplayingVoice {
             var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
             foreach (var item in emotes) {
                 if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ")||
+                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
                         messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
                         messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ")) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
