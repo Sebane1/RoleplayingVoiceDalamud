@@ -1027,7 +1027,10 @@ namespace RoleplayingVoice {
                 if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
                     if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
                         messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ")) {
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") || 
+                        messageValue.ToLower().EndsWith(" " + item.Name.RawString.ToLower())||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed")) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
