@@ -8,7 +8,7 @@
     "TestingAssemblyVersion": "0.1.3.7",
     "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 8,
+    "DalamudApiLevel": 9,
     "IsHide": "False",
     "IsTestingExclusive": "False",
     "DownloadCount": 0,
