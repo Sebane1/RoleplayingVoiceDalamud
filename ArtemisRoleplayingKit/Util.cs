@@ -8,7 +8,7 @@ using ImGuiNET;
 
 namespace RoleplayingVoiceDalamud {
     internal static class Util {
-        internal static bool TryScanText(this SigScanner scanner, string sig, out IntPtr result) {
+        internal static bool TryScanText(this ISigScanner scanner, string sig, out IntPtr result) {
             result = IntPtr.Zero;
             try {
                 result = scanner.ScanText(sig);

@@ -42,12 +42,13 @@ using Dalamud.Hooking;
 using System.Windows.Forms;
 using Microsoft.VisualBasic;
 using System.Security.Policy;
+using Dalamud.Plugin.Services;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         private readonly DalamudPluginInterface pluginInterface;
-        private readonly ChatGui _chat;
-        private readonly ClientState _clientState;
+        private readonly IChatGui _chat;
+        private readonly IClientState _clientState;
 
         private readonly PluginCommandManager<Plugin> commandManager;
         private NetworkedClient _networkedClient;
@@ -64,13 +65,13 @@ namespace RoleplayingVoice {
         private EmoteReaderHooks _emoteReaderHook;
         private MediaGameObject _playerObject;
         private MediaManager _mediaManager;
-        private ObjectTable _objectTable;
+        private IObjectTable _objectTable;
         private bool isDownloadingZip;
         private RaceVoice _raceVoice;
         private string lastPrintedWarning;
         private bool disposed;
-        private DataManager _dataManager;
-        private ToastGui _toast;
+        private IDataManager _dataManager;
+        private IToastGui _toast;
         private bool ignoreAttack;
         private int attackCount;
         private int castingCount;
@@ -78,12 +79,13 @@ namespace RoleplayingVoice {
         private List<string> combinedSoundList;
         private unsafe Camera* _camera;
         private MediaCameraObject _playerCamera;
-        private GameConfig _gameConfig;
-        private SigScanner _sigScanner;
+        private IGameConfig _gameConfig;
+        private ISigScanner _sigScanner;
+        private IGameInteropProvider _interopProvider;
         private Chat _realChat;
         private Filter _filter;
         public EventHandler OnMuteTimerOver;
-        private Framework _framework;
+        private IFramework _framework;
         private bool voiceMuted;
         private int muteLength;
         Dictionary<string, MovingObject> gameObjectPositions = new Dictionary<string, MovingObject>();
@@ -105,7 +107,7 @@ namespace RoleplayingVoice {
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
-        public SigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
+        public ISigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
         internal Filter Filter {
             get {
                 if (_filter == null) {
@@ -117,17 +119,20 @@ namespace RoleplayingVoice {
             set => _filter = value;
         }
 
+        public IGameInteropProvider InteropProvider { get => _interopProvider; set => _interopProvider = value; }
+
         public unsafe Plugin(
             DalamudPluginInterface pi,
-            CommandManager commands,
-            ChatGui chat,
-            ClientState clientState,
-            SigScanner scanner,
-            ObjectTable objectTable,
-            ToastGui toast,
-            DataManager dataManager,
-            GameConfig gameConfig,
-            Framework framework) {
+            ICommandManager commands,
+            IChatGui chat,
+            IClientState clientState,
+            ISigScanner scanner,
+            IObjectTable objectTable,
+            IToastGui toast,
+            IDataManager dataManager,
+            IGameConfig gameConfig,
+            IFramework framework,
+            IGameInteropProvider interopProvider) {
             this.pluginInterface = pi;
             this._chat = chat;
             this._clientState = clientState;
@@ -174,7 +179,7 @@ namespace RoleplayingVoice {
             _window.Toggle();
             _videoWindow.Toggle();
             _window.PluginReference = this;
-            _emoteReaderHook = new EmoteReaderHooks(scanner, clientState, objectTable);
+            _emoteReaderHook = new EmoteReaderHooks(interopProvider, clientState, objectTable);
             _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             this._chat.ChatMessage += Chat_ChatMessage;
             cooldown = new Stopwatch();
@@ -190,6 +195,7 @@ namespace RoleplayingVoice {
             _toast.ErrorToast += _toast_ErrorToast;
             _gameConfig = gameConfig;
             _sigScanner = scanner;
+            _interopProvider = interopProvider;
             _realChat = new Chat(_sigScanner);
             RaceVoice.LoadRacialVoiceInfo();
             CheckDependancies();
@@ -241,7 +247,7 @@ namespace RoleplayingVoice {
             list.AddRange(temporaryWhitelist);
             return list;
         }
-        private void framework_Update(Framework framework) {
+        private void framework_Update(IFramework framework) {
             if (config != null && _mediaManager != null && _objectTable != null && !disposed) {
                 uint voiceVolume = 0;
                 uint masterVolume = 0;
@@ -532,18 +538,18 @@ namespace RoleplayingVoice {
             CleanSounds();
         }
 
-        private unsafe void _clientState_TerritoryChanged(object sender, ushort e) {
+        private unsafe void _clientState_TerritoryChanged(ushort e) {
             CleanSounds();
         }
         private unsafe bool IsResidential() {
             return HousingManager.Instance()->IsInside() || HousingManager.Instance()->HousingOutdoorTerritory != null;
         }
 
-        private void _clientState_Logout(object sender, EventArgs e) {
+        private void _clientState_Logout() {
             CleanSounds();
         }
 
-        private void _clientState_Login(object sender, EventArgs e) {
+        private void _clientState_Login() {
             CleanSounds();
             CheckDependancies(true);
             RefreshSoundData();
@@ -691,31 +697,22 @@ namespace RoleplayingVoice {
 
         public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
-            string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
-            if (Directory.Exists(modPath)) {
-                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                foreach (var directory in Directory.EnumerateDirectories(modPath)) {
-                    string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
-                    var currentModSettings =
-                    Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
-                    Invoke(collection.Item3, relativeDirectory, null, true);
-                    var result = currentModSettings.Item1;
-                    if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
-                        if (currentModSettings.Item2 != null) {
-                            bool enabled = currentModSettings.Item2.Value.Item1;
-                            int priority = currentModSettings.Item2.Value.Item2;
-                            if (enabled) {
-                                string soundPackData = directory + @"\rpvsp";
-                                if (Path.Exists(soundPackData)) {
-                                    var soundList = new List<string>();
-                                    foreach (string file in Directory.EnumerateFiles(soundPackData)) {
-                                        if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                                            soundList.Add(file);
-                                        }
-                                    }
-                                    list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
-                                } else {
-                                    soundPackData = directory + @"\arksp";
+            try {
+                string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
+                if (Directory.Exists(modPath)) {
+                    var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                    foreach (var directory in Directory.EnumerateDirectories(modPath)) {
+                        string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
+                        var currentModSettings =
+                        Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
+                        Invoke(collection.Item3, relativeDirectory, null, true);
+                        var result = currentModSettings.Item1;
+                        if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
+                            if (currentModSettings.Item2 != null) {
+                                bool enabled = currentModSettings.Item2.Value.Item1;
+                                int priority = currentModSettings.Item2.Value.Item2;
+                                if (enabled) {
+                                    string soundPackData = directory + @"\rpvsp";
                                     if (Path.Exists(soundPackData)) {
                                         var soundList = new List<string>();
                                         foreach (string file in Directory.EnumerateFiles(soundPackData)) {
@@ -724,12 +721,25 @@ namespace RoleplayingVoice {
                                             }
                                         }
                                         list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                                    } else {
+                                        soundPackData = directory + @"\arksp";
+                                        if (Path.Exists(soundPackData)) {
+                                            var soundList = new List<string>();
+                                            foreach (string file in Directory.EnumerateFiles(soundPackData)) {
+                                                if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                                                    soundList.Add(file);
+                                                }
+                                            }
+                                            list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+            } catch {
+
             }
             list.Sort((x, y) => y.Value.CompareTo(x.Value));
             if (config != null) {
@@ -891,7 +901,7 @@ namespace RoleplayingVoice {
                     _playerObject = new MediaGameObject(_clientState.LocalPlayer);
                 }
                 if (_mediaManager == null || forceNewAssignments) {
-                    _camera = CameraManager.Instance->GetActiveCamera();
+                    _camera = CameraManager.Instance()->GetActiveCamera();
                     _playerCamera = new MediaCameraObject(_camera);
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _videoWindow.MediaManager = _mediaManager;

@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Interface.Internal;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
@@ -12,7 +13,7 @@ namespace RoleplayingVoice {
     internal class VideoWindow : Window {
         private System.Numerics.Vector2? windowSize;
         private Vector2? initialSize;
-        TextureWrap textureWrap;
+        IDalamudTextureWrap textureWrap;
         MediaManager _mediaManager;
         private DalamudPluginInterface _pluginInterface;
         Stopwatch deadStreamTimer = new Stopwatch();

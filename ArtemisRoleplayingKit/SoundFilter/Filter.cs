@@ -148,19 +148,19 @@ namespace SoundFilter {
 
         internal void Enable() {
             if (this.PlaySpecificSoundHook == null && this.Plugin.SigScanner.TryScanText(Signatures.PlaySpecificSound, out var playPtr)) {
-                this.PlaySpecificSoundHook = Hook<PlaySpecificSoundDelegate>.FromAddress(playPtr, this.PlaySpecificSoundDetour);
+                this.PlaySpecificSoundHook = this.Plugin.InteropProvider.HookFromAddress<PlaySpecificSoundDelegate>(playPtr, this.PlaySpecificSoundDetour);
             }
 
             if (this.GetResourceSyncHook == null && this.Plugin.SigScanner.TryScanText(Signatures.GetResourceSync, out var syncPtr)) {
-                this.GetResourceSyncHook = Hook<GetResourceSyncPrototype>.FromAddress(syncPtr, this.GetResourceSyncDetour);
+                this.GetResourceSyncHook = this.Plugin.InteropProvider.HookFromAddress<GetResourceSyncPrototype>(syncPtr, this.GetResourceSyncDetour);
             }
 
             if (this.GetResourceAsyncHook == null && this.Plugin.SigScanner.TryScanText(Signatures.GetResourceAsync, out var asyncPtr)) {
-                this.GetResourceAsyncHook = Hook<GetResourceAsyncPrototype>.FromAddress(asyncPtr, this.GetResourceAsyncDetour);
+                this.GetResourceAsyncHook = this.Plugin.InteropProvider.HookFromAddress<GetResourceAsyncPrototype>(asyncPtr, this.GetResourceAsyncDetour);
             }
 
             if (this.LoadSoundFileHook == null && this.Plugin.SigScanner.TryScanText(Signatures.LoadSoundFile, out var soundPtr)) {
-                this.LoadSoundFileHook = Hook<LoadSoundFileDelegate>.FromAddress(soundPtr, this.LoadSoundFileDetour);
+                this.LoadSoundFileHook = this.Plugin.InteropProvider.HookFromAddress<LoadSoundFileDelegate>(soundPtr, this.LoadSoundFileDetour);
             }
 
             this.PlaySpecificSoundHook?.Enable();

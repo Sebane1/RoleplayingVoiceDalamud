@@ -18,7 +18,7 @@ namespace XivCommon.Functions {
 
         private ProcessChatBoxDelegate? ProcessChatBox { get; }
 
-        internal Chat(SigScanner scanner) {
+        internal Chat(ISigScanner scanner) {
             if (scanner.TryScanText(Signatures.SendChat, out var processChatBoxPtr)) {
                 this.ProcessChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(processChatBoxPtr);
             }

@@ -4,6 +4,7 @@ using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Logging;
+using Dalamud.Plugin.Services;
 using System;
 using System.Linq;
 
@@ -18,13 +19,14 @@ namespace PatMe {
         private readonly Hook<OnEmoteFuncDelegate> hookEmote;
 
         public bool IsValid = false;
-        private ClientState _clientState;
-        private ObjectTable _objectTable;
+        private IClientState _clientState;
+        private IObjectTable _objectTable;
 
-        public EmoteReaderHooks(SigScanner sigScanner, ClientState clientState, ObjectTable objectTable) {
+        public EmoteReaderHooks(IGameInteropProvider interopProvider, IClientState clientState, IObjectTable objectTable) {
             try {
-                var emoteFuncPtr = sigScanner.ScanText("48 89 5c 24 08 48 89 6c 24 10 48 89 74 24 18 48 89 7c 24 20 41 56 48 83 ec 30 4c 8b 74 24 60 48 8b d9 48 81 c1 60 2f 00 00");
-                hookEmote = Hook<OnEmoteFuncDelegate>.FromAddress(emoteFuncPtr, OnEmoteDetour);
+                var emoteFuncPtr = "48 89 5c 24 08 48 89 6c 24 10 48 89 74 24 18 48 89 7c 24 20 41 56 48 83 ec 30 4c 8b 74 24 60 48 8b d9 48 81 c1 60 2f 00 00";
+                hookEmote = interopProvider.HookFromSignature<OnEmoteFuncDelegate>(emoteFuncPtr, OnEmoteDetour);
+
                 hookEmote.Enable();
 
                 IsValid = true;

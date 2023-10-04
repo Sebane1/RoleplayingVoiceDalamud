@@ -18,6 +18,7 @@ using System.Threading;
 using Dalamud.Game.ClientState.Objects.Enums;
 using System.Collections.Generic;
 using Dalamud.Utility;
+using Dalamud.Plugin.Services;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -26,7 +27,7 @@ namespace RoleplayingVoice {
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         private FileDialogManager fileDialogManager;
-        private ClientState clientState;
+        private IClientState clientState;
 
         private string apiKey = "";
         private string characterVoice = "";
@@ -150,7 +151,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        internal ClientState ClientState {
+        internal IClientState ClientState {
             get => clientState;
             set {
                 clientState = value;
@@ -162,11 +163,11 @@ namespace RoleplayingVoice {
         public Plugin PluginReference { get; internal set; }
         public event EventHandler OnMoveFailed;
 
-        private void ClientState_Logout(object sender, EventArgs e) {
+        private void ClientState_Logout() {
             characterVoice = "None";
         }
 
-        private void ClientState_Login(object sender, EventArgs e) {
+        private void ClientState_Login() {
             if (configuration.Characters != null) {
                 if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
@@ -253,10 +254,10 @@ namespace RoleplayingVoice {
                 configuration.Whitelist.Remove(configuration.Whitelist[_currentWhitelistItem]);
                 Save();
             }
-            ImGui.TextWrapped("Add users to your whitelist in order to be able to hear them (assuming they have Roleplaying Voice)");
+            ImGui.TextWrapped("Add users to your whitelist in order to be able to hear them (assuming they have ARK)");
             ImGui.Dummy(new Vector2(0, 10));
-            ImGui.Checkbox("Sync Via Mare Refresh", ref _ignoreWhitelist);
-            ImGui.TextWrapped("You will hear any user thats refreshed by Mare (effectively relying on your Mare pairs and syncshells)");
+            ImGui.Checkbox("Sync Via Penumbra Refresh", ref _ignoreWhitelist);
+            ImGui.TextWrapped("You will hear any user thats individually refreshed by another plugin (effectively relying on existing pairs from other plugins)");
         }
 
         private void SaveAndClose() {
