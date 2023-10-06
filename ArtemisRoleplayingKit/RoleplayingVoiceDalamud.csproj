@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0-windows</TargetFramework>
 		<LangVersion>9.0</LangVersion>
-		<Version>0.0.5.1</Version>
+		<Version>0.1.4.0</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -28,9 +28,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="2.1.12" />
-		<PackageReference Include="NAudio" Version="2.1.0" />
-		<PackageReference Include="NAudio.WinMM" Version="2.1.0" />
-		<PackageReference Include="Penumbra.Api" Version="1.0.9" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
+		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
+		<PackageReference Include="Penumbra.Api" Version="1.0.11" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -8,7 +8,7 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Linq;
 
-namespace PatMe {
+namespace ArtemisRoleplayingKit {
     /// <summary>
     /// Implementation Based On Findings From PatMe
     /// </summary>

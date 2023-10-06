@@ -32,7 +32,7 @@ namespace SoundFilter {
         // Updated: 5.55
         private const int ResourceDataPointerOffset = 0xB0;
         private const int MusicManagerStreamingOffset = 0x32;
-
+        public event EventHandler<InterceptedSound> OnSoundIntercepted;
         #region Delegates
 
         private delegate void* PlaySpecificSoundDelegate(long a1, int idx);
@@ -68,7 +68,7 @@ namespace SoundFilter {
         private IntPtr NoSoundPtr { get; }
         private IntPtr InfoPtr { get; }
 
-        private List<string> _blacklist;
+        private List<string> _blacklist = new List<string>();
         private bool muted = false;
 
         private IntPtr MusicManager {
@@ -103,6 +103,7 @@ namespace SoundFilter {
         }
 
         public bool Muted { get => muted; set => muted = value; }
+        public List<string> Blacklist { get => _blacklist; set => _blacklist = value; }
 
         public Filter(Plugin plugin) {
             this.Plugin = plugin;
@@ -246,8 +247,11 @@ namespace SoundFilter {
             path = path.ToLowerInvariant();
             var specificPath = $"{path}/{idx}";
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
-            if ((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) {
+            if (((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) || _blacklist.Contains(splitPath)
+                            /*|| (!splitPath.Contains("bgcommon") && !splitPath.StartsWith("music") && !splitPath.Contains(@"sound/foot") ||
+                                !splitPath.Contains("system") && !splitPath.Contains("magic") && !splitPath.Contains("se_vfx_common"))*/) {
                 muted = false;
+                OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
             }
             return false;
