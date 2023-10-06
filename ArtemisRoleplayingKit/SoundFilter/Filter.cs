@@ -247,12 +247,14 @@ namespace SoundFilter {
             path = path.ToLowerInvariant();
             var specificPath = $"{path}/{idx}";
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
-            if (((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) || _blacklist.Contains(splitPath)
-                            /*|| (!splitPath.Contains("bgcommon") && !splitPath.StartsWith("music") && !splitPath.Contains(@"sound/foot") ||
-                                !splitPath.Contains("system") && !splitPath.Contains("magic") && !splitPath.Contains("se_vfx_common"))*/) {
+            if (((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) 
+                || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
                 muted = false;
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
+            } else if ((!string.IsNullOrWhiteSpace(splitPath) && !splitPath.Contains("bgcommon") && !splitPath.StartsWith("music") && !splitPath.Contains(@"sound/foot") &&
+              !splitPath.Contains("system") && !splitPath.Contains("magic") && !splitPath.Contains("se_vfx_common"))) {
+                OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
             }
             return false;
         }

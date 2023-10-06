@@ -23,6 +23,7 @@ namespace RoleplayingVoice {
         private bool tuneIntoTwitchStreams = true;
         private bool ignoreWhitelist = true;
         private bool performEmotesBasedOnWrittenText;
+        private bool seperateSCDModsFromNativeSoundSystem;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
 
@@ -46,7 +47,12 @@ namespace RoleplayingVoice {
             }
         }
         public string ApiKey { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive {
+            set {
+                AiVoiceActive = value;
+            }
+        }
+        public bool AiVoiceActive { get; set; }
         public bool VoicePackIsActive { get; set; }
 
         public CharacterVoices CharacterVoices { get; set; }
@@ -59,6 +65,7 @@ namespace RoleplayingVoice {
         public bool UseAggressiveSplicing { get => useAggressiveCaching; set => useAggressiveCaching = value; }
         public bool UsePlayerSync { get => usePlayerSync; set => usePlayerSync = value; }
         public bool IgnoreWhitelist { get => ignoreWhitelist; set => ignoreWhitelist = value; }
+        public bool MoveSCDBasedModsToPerformanceSlider { get; set; }
         public string CacheFolder { get => cacheFolder; set => cacheFolder = value; }
         public List<string> Whitelist { get => whitelist; set => whitelist = value; }
         public float LoopingSFXVolume {
@@ -76,6 +83,7 @@ namespace RoleplayingVoice {
         public bool TuneIntoTwitchStreams { get => tuneIntoTwitchStreams; set => tuneIntoTwitchStreams = value; }
         public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
+        public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

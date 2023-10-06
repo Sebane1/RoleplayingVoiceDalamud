@@ -42,7 +42,7 @@ namespace RoleplayingVoice {
 
         private bool isServerIPValid = false;
         private bool isApiKeyValid = false;
-        private bool _characterVoiceActive = false;
+        private bool _aiVoiceActive = false;
         private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
         private bool runOnLaunch = true;
@@ -69,6 +69,7 @@ namespace RoleplayingVoice {
         private string _streamPath;
         private bool _tuneIntoTwitchStreams;
         private bool _performEmotesBasedOnWrittenText;
+        private bool _moveSCDBasedModsToPerformanceSlider;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -109,7 +110,7 @@ namespace RoleplayingVoice {
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null &&
                     configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
-                    _characterVoiceActive = configuration.IsActive;
+                    _aiVoiceActive = configuration.AiVoiceActive;
                     _characterVoicePackActive = configuration.VoicePackIsActive;
                     _playerCharacterVolume = configuration.PlayerCharacterVolume;
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
@@ -121,6 +122,7 @@ namespace RoleplayingVoice {
                     _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
+                    _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -188,7 +190,7 @@ namespace RoleplayingVoice {
             } else {
                 characterVoicePack = "None";
             }
-            if (_characterVoiceActive) {
+            if (_aiVoiceActive) {
                 RefreshVoices();
             }
         }
@@ -297,7 +299,7 @@ namespace RoleplayingVoice {
                         Task.Run(() => _manager.ApiValidation(apiKey));
                     }
                 }
-                if (string.IsNullOrWhiteSpace(apiKey) && _characterVoiceActive) {
+                if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
                     isApiKeyValid = false;
                     apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 }
@@ -316,7 +318,7 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && _characterVoiceActive) {
+            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && _aiVoiceActive) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -370,7 +372,7 @@ namespace RoleplayingVoice {
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
             if (save) {
-                if (isApiKeyValid && _characterVoiceActive && apiKeyValidated) {
+                if (isApiKeyValid && _aiVoiceActive && apiKeyValidated) {
                     configuration.ConnectionIP = serverIP;
                     configuration.ApiKey = apiKey;
                     if (clientState.LocalPlayer != null) {
@@ -389,7 +391,7 @@ namespace RoleplayingVoice {
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.LoopingSFXVolume = _loopingSFXVolume;
                 configuration.LivestreamVolume = _livestreamVolume;
-                configuration.IsActive = _characterVoiceActive;
+                configuration.AiVoiceActive = _aiVoiceActive;
                 configuration.VoicePackIsActive = _characterVoicePackActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
                 configuration.CacheFolder = cacheFolder;
@@ -398,6 +400,7 @@ namespace RoleplayingVoice {
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
                 configuration.StreamPath = _streamPath;
                 configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
+                configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -586,7 +589,7 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
 
-            if (isApiKeyValid && clientState.LocalPlayer != null && _characterVoiceActive) {
+            if (isApiKeyValid && clientState.LocalPlayer != null && _aiVoiceActive) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("AI Voice");
@@ -604,20 +607,20 @@ namespace RoleplayingVoice {
                     ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
-              && !isApiKeyValid && _characterVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _characterVoiceActive) {
+              && !isApiKeyValid && _aiVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _aiVoiceActive) {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
-            } else if (!clientState.IsLoggedIn && isApiKeyValid && _characterVoiceActive) {
+            } else if (!clientState.IsLoggedIn && isApiKeyValid && _aiVoiceActive) {
                 voiceComboBox.Contents[0] = "Not logged in";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
             }
-            ImGui.Checkbox("##characterVoiceActive", ref _characterVoiceActive);
+            ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
             ImGui.SameLine();
             ImGui.Text("AI Voice Enabled");
             ImGui.Dummy(new Vector2(0, 10));
@@ -723,6 +726,11 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Allow Sending/Receiving Server Data");
             ImGui.TextWrapped("(Any players with Roleplaying Voice installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
+
+            ImGui.Checkbox("##moveSCDBasedModsToPerformanceSlider", ref _moveSCDBasedModsToPerformanceSlider);
+            ImGui.SameLine();
+            ImGui.Text("Seperate SCD Sounds From BGM Track (Experimental)");
+            ImGui.TextWrapped("Mods that use .scd files will be moved from the BGM channel and use the Performance slider. They'll also be synced via ARK if sync is enabled.");
 
             ImGui.Checkbox("##useTwitchStreams", ref _tuneIntoTwitchStreams);
             ImGui.SameLine();
