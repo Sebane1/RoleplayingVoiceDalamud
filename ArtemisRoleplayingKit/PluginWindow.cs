@@ -725,7 +725,7 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##useServer", ref _useServer);
             ImGui.SameLine();
             ImGui.Text("Allow Sending/Receiving Server Data");
-            ImGui.TextWrapped("(Any players with Roleplaying Voice installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
+            ImGui.TextWrapped("(Any players with ARK installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
 
             ImGui.Checkbox("##moveSCDBasedModsToPerformanceSlider", ref _moveSCDBasedModsToPerformanceSlider);
             ImGui.SameLine();
