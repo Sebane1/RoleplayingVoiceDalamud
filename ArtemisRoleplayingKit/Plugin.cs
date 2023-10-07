@@ -145,80 +145,84 @@ namespace RoleplayingVoice {
             IGameConfig gameConfig,
             IFramework framework,
             IGameInteropProvider interopProvider) {
-            this.pluginInterface = pi;
-            this._chat = chat;
-            this._clientState = clientState;
-
-            // Get or create a configuration object
-            this.config = (Configuration)this.pluginInterface.GetPluginConfig()
+            try {
+                this.pluginInterface = pi;
+                this._chat = chat;
+                this._clientState = clientState;
+                // Get or create a configuration object
+                this.config = (Configuration)this.pluginInterface.GetPluginConfig()
                           ?? this.pluginInterface.Create<Configuration>();
-            if (!config.HasMigrated) {
-                string oldConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
-                if (File.Exists(oldConfig)) {
-                    this.config = JsonConvert.DeserializeObject<Configuration>(
-                        File.OpenText(oldConfig).ReadToEnd());
-                    config.HasMigrated = true;
+
+                if (!config.HasMigrated) {
+                    string oldConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                    + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
+                    if (File.Exists(oldConfig)) {
+                        this.config = JsonConvert.DeserializeObject<Configuration>(
+                            File.OpenText(oldConfig).ReadToEnd());
+                        config.HasMigrated = true;
+                    }
                 }
-            }
-            // Initialize the UI
-            this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
-            _window = this.pluginInterface.Create<PluginWindow>();
-            _videoWindow = this.pluginInterface.Create<VideoWindow>();
-            _window.ClientState = this._clientState;
-            _window.Configuration = this.config;
-            _window.PluginInterface = this.pluginInterface;
-            _window.PluginReference = this;
-            AttemptConnection();
-            if (config.ApiKey != null) {
-                InitialzeManager();
-            }
+                // Initialize the UI
+                this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
+                _window = this.pluginInterface.Create<PluginWindow>();
+                _videoWindow = this.pluginInterface.Create<VideoWindow>();
+                _window.ClientState = this._clientState;
+                _window.Configuration = this.config;
+                _window.PluginInterface = this.pluginInterface;
+                _window.PluginReference = this;
+                AttemptConnection();
+                if (config.ApiKey != null) {
+                    InitialzeManager();
+                }
 
-            if (_window is not null) {
-                this.windowSystem.AddWindow(_window);
-            }
-            if (_videoWindow is not null) {
-                this.windowSystem.AddWindow(_videoWindow);
-            }
-            _window.RequestingReconnect += Window_RequestingReconnect;
-            _window.OnMoveFailed += Window_OnMoveFailed;
-            this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
-            this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
+                if (_window is not null) {
+                    this.windowSystem.AddWindow(_window);
+                }
+                if (_videoWindow is not null) {
+                    this.windowSystem.AddWindow(_videoWindow);
+                }
+                _window.RequestingReconnect += Window_RequestingReconnect;
+                _window.OnMoveFailed += Window_OnMoveFailed;
+                this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
+                this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
-            // Load all of our commands
-            this.commandManager = new PluginCommandManager<Plugin>(this, commands);
-            config.OnConfigurationChanged += Config_OnConfigurationChanged;
-            _window.Toggle();
-            _videoWindow.Toggle();
-            _window.PluginReference = this;
-            _emoteReaderHook = new EmoteReaderHooks(interopProvider, clientState, objectTable);
-            _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
-            this._chat.ChatMessage += Chat_ChatMessage;
-            cooldown = new Stopwatch();
-            muteTimer = new Stopwatch();
-            _objectTable = objectTable;
-            _clientState.Login += _clientState_Login;
-            _clientState.Logout += _clientState_Logout;
-            _clientState.TerritoryChanged += _clientState_TerritoryChanged;
-            _clientState.LeavePvP += _clientState_LeavePvP;
-            _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
-            _dataManager = dataManager;
-            _toast = toast;
-            _toast.ErrorToast += _toast_ErrorToast;
-            _gameConfig = gameConfig;
-            _sigScanner = scanner;
-            _interopProvider = interopProvider;
-            _realChat = new Chat(_sigScanner);
-            RaceVoice.LoadRacialVoiceInfo();
-            CheckDependancies();
-            Filter = new Filter(this);
-            Filter.Enable();
-            _framework = framework;
-            _framework.Update += framework_Update;
-            RefreshSoundData();
-            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
-            Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-            _filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
+                // Load all of our commands
+                this.commandManager = new PluginCommandManager<Plugin>(this, commands);
+                config.OnConfigurationChanged += Config_OnConfigurationChanged;
+                _window.Toggle();
+                _videoWindow.Toggle();
+                _window.PluginReference = this;
+                _emoteReaderHook = new EmoteReaderHooks(interopProvider, clientState, objectTable);
+                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                _dataManager = dataManager;
+                _toast = toast;
+                _toast.ErrorToast += _toast_ErrorToast;
+                _gameConfig = gameConfig;
+                _sigScanner = scanner;
+                _interopProvider = interopProvider;
+                _realChat = new Chat(_sigScanner);
+                this._chat.ChatMessage += Chat_ChatMessage;
+                cooldown = new Stopwatch();
+                muteTimer = new Stopwatch();
+                _objectTable = objectTable;
+                _clientState.Login += _clientState_Login;
+                _clientState.Logout += _clientState_Logout;
+                _clientState.TerritoryChanged += _clientState_TerritoryChanged;
+                _clientState.LeavePvP += _clientState_LeavePvP;
+                _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+                RaceVoice.LoadRacialVoiceInfo();
+                CheckDependancies();
+                Filter = new Filter(this);
+                Filter.Enable();
+                _framework = framework;
+                _framework.Update += framework_Update;
+                RefreshSoundData();
+                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                _filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+            }
         }
 
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
@@ -290,8 +294,8 @@ namespace RoleplayingVoice {
                 if (Directory.Exists(clipPath)) {
                     try {
                         RemoveFiles(clipPath);
-                    } catch {
-
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
                     }
                 }
             } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
@@ -433,8 +437,8 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-
-            } catch {
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
         }
 
@@ -542,7 +546,9 @@ namespace RoleplayingVoice {
                         foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
                             try {
                                 File.Delete(file);
-                            } catch { }
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                            }
                         }
                     }
                     if (Directory.Exists(config.CacheFolder)) {
@@ -553,7 +559,9 @@ namespace RoleplayingVoice {
                                 } else {
                                     _chat.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
                                 }
-                            } catch { }
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                            }
                         }
                     }
                     try {
@@ -565,13 +573,17 @@ namespace RoleplayingVoice {
                         foreach (string file in Directory.EnumerateFiles(stagingPath)) {
                             try {
                                 File.Delete(file);
-                            } catch { }
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                            }
                         }
                     }
                     foreach (var sound in list) {
                         try {
                             File.Copy(sound, Path.Combine(stagingPath, Path.GetFileName(sound)), true);
-                        } catch { }
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                        }
                     }
                     staging = false;
                 }
@@ -630,8 +642,8 @@ namespace RoleplayingVoice {
             if (Directory.Exists(path)) {
                 try {
                     Directory.Delete(path, true);
-                } catch {
-
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
             }
         }
@@ -705,8 +717,8 @@ namespace RoleplayingVoice {
                 foreach (string file in Directory.EnumerateFiles(path)) {
                     try {
                         File.Delete(file);
-                    } catch {
-
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
                     }
                 }
             }
@@ -876,8 +888,8 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-            } catch {
-
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
             list.Sort((x, y) => y.Value.CompareTo(x.Value));
             if (config != null) {
@@ -1497,8 +1509,8 @@ namespace RoleplayingVoice {
                                             UseShellExecute = true,
                                             Verb = "OPEN"
                                         });
-                                    } catch {
-
+                                    } catch (Exception e) {
+                                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
                                     }
                                 } else {
                                     _chat.PrintError("There is no active stream");
@@ -1550,7 +1562,8 @@ namespace RoleplayingVoice {
             }
             try {
                 _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
-            } catch {
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
             _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
             try {
@@ -1558,14 +1571,14 @@ namespace RoleplayingVoice {
                 _clientState.Logout -= _clientState_Logout;
                 _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                 _clientState.LeavePvP -= _clientState_LeavePvP;
-            } catch {
-
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
             _toast.ErrorToast -= _toast_ErrorToast;
             try {
                 _framework.Update -= framework_Update;
-            } catch {
-
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
             Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
             _networkedClient?.Dispose();
