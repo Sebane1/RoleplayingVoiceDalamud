@@ -313,23 +313,26 @@ namespace RoleplayingVoice {
             return list;
         }
         private void framework_Update(IFramework framework) {
-            if (config != null && _mediaManager != null && _objectTable != null && !disposed) {
+            if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
                 uint voiceVolume = 0;
                 uint masterVolume = 0;
                 uint soundEffectVolume = 0;
-                if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
-                    if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
-                        _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
-                            _mediaManager.SFXVolume = config.LoopingSFXVolume *
-                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                try {
+                    if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
+                        if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
+                            _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                            _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                            _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                            if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
+                                _mediaManager.SFXVolume = config.LoopingSFXVolume *
+                                 ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                                _mediaManager.LiveStreamVolume = config.LivestreamVolume *
+                                 ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                            }
                         }
-                        _mediaManager.LiveStreamVolume = config.LivestreamVolume * ((float)masterVolume / 100f);
                         if (muteTimer.ElapsedMilliseconds > muteLength) {
                             if (Filter != null) {
                                 lock (Filter) {
@@ -341,6 +344,8 @@ namespace RoleplayingVoice {
                             }
                         }
                     }
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
                 if (redrawCooldown.ElapsedMilliseconds > 100) {
                     if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
@@ -353,36 +358,44 @@ namespace RoleplayingVoice {
                     redrawCooldown.Reset();
                 }
             }
-            foreach (GameObject gameObject in _objectTable) {
-                string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                if (!string.IsNullOrEmpty(cleanedName)) {
-                    if (gameObjectPositions.ContainsKey(cleanedName)) {
-                        var positionData = gameObjectPositions[cleanedName];
-                        if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                            positionData.LastRotation != gameObject.Rotation) {
-                            if (!positionData.IsMoving) {
-                                ObjectIsMoving(cleanedName, gameObject);
-                                positionData.IsMoving = true;
+            try {
+                foreach (GameObject gameObject in _objectTable) {
+                    string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                    if (!string.IsNullOrEmpty(cleanedName)) {
+                        if (gameObjectPositions.ContainsKey(cleanedName)) {
+                            var positionData = gameObjectPositions[cleanedName];
+                            if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                                positionData.LastRotation != gameObject.Rotation) {
+                                if (!positionData.IsMoving) {
+                                    ObjectIsMoving(cleanedName, gameObject);
+                                    positionData.IsMoving = true;
+                                }
+                            } else {
+                                positionData.IsMoving = false;
                             }
+                            positionData.LastPosition = gameObject.Position;
+                            positionData.LastRotation = gameObject.Rotation;
                         } else {
-                            positionData.IsMoving = false;
+                            gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                         }
-                        positionData.LastPosition = gameObject.Position;
-                        positionData.LastRotation = gameObject.Rotation;
-                    } else {
-                        gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                     }
                 }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
-            if (messageQueue.Count > 0) {
-                if (!messageTimer.IsRunning) {
-                    messageTimer.Start();
-                } else {
-                    if (messageTimer.ElapsedMilliseconds > 3000) {
-                        _realChat.SendMessage(messageQueue.Dequeue());
-                        messageTimer.Restart();
+            try {
+                if (messageQueue.Count > 0) {
+                    if (!messageTimer.IsRunning) {
+                        messageTimer.Start();
+                    } else {
+                        if (messageTimer.ElapsedMilliseconds > 3000) {
+                            _realChat.SendMessage(messageQueue.Dequeue());
+                            messageTimer.Restart();
+                        }
                     }
                 }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
             if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
                 isDownloadingZip = false;
@@ -1544,45 +1557,48 @@ namespace RoleplayingVoice {
         #region IDisposable Support
         protected virtual void Dispose(bool disposing) {
             if (!disposing) return;
-
-            disposed = true;
-            config.Save();
-            this.pluginInterface.SavePluginConfig(this.config);
-            config.OnConfigurationChanged -= Config_OnConfigurationChanged;
-            _chat.ChatMessage -= Chat_ChatMessage;
-            this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
-            this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
-            this.windowSystem.RemoveAllWindows();
-            this.commandManager?.Dispose();
-            if (_mediaManager != null) {
-                _mediaManager?.Dispose();
-            }
-            if (_filter != null) {
-                _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
-            }
             try {
-                _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
+                disposed = true;
+                config.Save();
+                this.pluginInterface.SavePluginConfig(this.config);
+                config.OnConfigurationChanged -= Config_OnConfigurationChanged;
+                _chat.ChatMessage -= Chat_ChatMessage;
+                this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
+                this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
+                this.windowSystem.RemoveAllWindows();
+                this.commandManager?.Dispose();
+                if (_mediaManager != null) {
+                    _mediaManager?.Dispose();
+                }
+                if (_filter != null) {
+                    _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
+                }
+                try {
+                    _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                }
+                _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                try {
+                    _clientState.Login -= _clientState_Login;
+                    _clientState.Logout -= _clientState_Logout;
+                    _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+                    _clientState.LeavePvP -= _clientState_LeavePvP;
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                }
+                _toast.ErrorToast -= _toast_ErrorToast;
+                try {
+                    _framework.Update -= framework_Update;
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                }
+                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+                _networkedClient?.Dispose();
+                Filter?.Dispose();
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
-            _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
-            try {
-                _clientState.Login -= _clientState_Login;
-                _clientState.Logout -= _clientState_Logout;
-                _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
-                _clientState.LeavePvP -= _clientState_LeavePvP;
-            } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
-            }
-            _toast.ErrorToast -= _toast_ErrorToast;
-            try {
-                _framework.Update -= framework_Update;
-            } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
-            }
-            Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
-            _networkedClient?.Dispose();
-            Filter?.Dispose();
         }
 
         public void Dispose() {
