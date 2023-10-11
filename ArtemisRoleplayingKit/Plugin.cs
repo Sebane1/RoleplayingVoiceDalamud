@@ -1073,10 +1073,18 @@ namespace RoleplayingVoice {
                 if (_mediaManager == null || forceNewAssignments) {
                     _camera = CameraManager.Instance()->GetActiveCamera();
                     _playerCamera = new MediaCameraObject(_camera);
+                    if (_mediaManager != null) {
+                        _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                    }
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
+                    _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
                     _videoWindow.MediaManager = _mediaManager;
                 }
             }
+        }
+
+        private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
+            Dalamud.Logging.PluginLog.LogError(e.Exception, e.Exception.Message);
         }
 
         private void _audioManager_OnNewAudioTriggered(object sender, EventArgs e) {
@@ -1432,7 +1440,8 @@ namespace RoleplayingVoice {
                     lastStreamURL = cleanedURL;
                     currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
                     _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
-                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" + (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
+                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
+                        (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     _videoWindow.IsOpen = true;
                 }
             });
@@ -1571,14 +1580,15 @@ namespace RoleplayingVoice {
                 this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
                 this.windowSystem.RemoveAllWindows();
                 this.commandManager?.Dispose();
-                if (_mediaManager != null) {
-                    _mediaManager?.Dispose();
-                }
                 if (_filter != null) {
                     _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
                 }
                 try {
-                    _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
+                    if (_mediaManager != null) {
+                        _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
+                        _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                        _mediaManager?.Dispose();
+                    }
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
