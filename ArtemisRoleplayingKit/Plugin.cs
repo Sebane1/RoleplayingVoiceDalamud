@@ -840,7 +840,9 @@ namespace RoleplayingVoice {
                 foreach (var item in option.Files) {
                     if (item.Key.EndsWith(".scd")) {
                         _filter.Blacklist.Add(item.Key);
-                        _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                        if (!_scdReplacements.ContainsKey(item.Key)) {
+                            _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                        }
                     }
                 }
             }
