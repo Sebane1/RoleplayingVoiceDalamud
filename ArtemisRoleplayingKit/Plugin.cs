@@ -33,83 +33,83 @@ using Newtonsoft.Json;
 using XivCommon.Functions;
 using Dalamud.Plugin.Services;
 using ArtemisRoleplayingKit;
-using FFXIVVoicePackCreator.Json;
 using Group = FFXIVVoicePackCreator.Json.Group;
-using FFXIVVoicePackCreator.SoundData;
 using VfxEditor.ScdFormat;
 using NAudio.Wave;
 using SoundType = RoleplayingMediaCore.SoundType;
-using FFXIVClientStructs.FFXIV.Client.Game.Event;
-using static FFXIVClientStructs.FFXIV.Client.UI.Misc.ConfigModule;
 using Option = FFXIVVoicePackCreator.Json.Option;
 using EventHandler = System.EventHandler;
-using Lumina.Data.Files;
 using ScdFile = VfxEditor.ScdFormat.ScdFile;
-using ImGuizmoNET;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         private readonly DalamudPluginInterface pluginInterface;
         private readonly IChatGui _chat;
         private readonly IClientState _clientState;
+        private IObjectTable _objectTable;
+        private IDataManager _dataManager;
+        private IToastGui _toast;
+        private IGameConfig _gameConfig;
+        private ISigScanner _sigScanner;
+        private IGameInteropProvider _interopProvider;
+        private IFramework _framework;
 
         private readonly PluginCommandManager<Plugin> commandManager;
-        private NetworkedClient _networkedClient;
         private readonly Configuration config;
         private readonly WindowSystem windowSystem;
         private PluginWindow _window { get; init; }
-
+        private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
         private RoleplayingMediaManager _roleplayingMediaManager;
+
         private Stopwatch stopwatch;
         private Stopwatch cooldown;
         private Stopwatch muteTimer;
         private Stopwatch twitchSetCooldown = new Stopwatch();
         private Stopwatch maxDownloadLengthTimer = new Stopwatch();
+        private Stopwatch redrawCooldown = new Stopwatch();
+        private Stopwatch _nativeSoundExpiryTimer = new Stopwatch();
+
         private EmoteReaderHooks _emoteReaderHook;
-        private MediaGameObject _playerObject;
-        private MediaManager _mediaManager;
-        private IObjectTable _objectTable;
-        private bool isDownloadingZip;
-        private RaceVoice _raceVoice;
-        private string lastPrintedWarning;
-        private bool disposed;
-        private IDataManager _dataManager;
-        private IToastGui _toast;
-        private bool ignoreAttack;
-        private int attackCount;
-        private int castingCount;
-        private List<KeyValuePair<List<string>, int>> penumbraSoundPacks;
-        private List<string> combinedSoundList;
-        private unsafe Camera* _camera;
-        private MediaCameraObject _playerCamera;
-        private IGameConfig _gameConfig;
-        private ISigScanner _sigScanner;
-        private IGameInteropProvider _interopProvider;
         private Chat _realChat;
         private Filter _filter;
+        private MediaGameObject _playerObject;
+        private MediaManager _mediaManager;
+        private RaceVoice _raceVoice;
+        private List<KeyValuePair<List<string>, int>> penumbraSoundPacks;
+        private unsafe Camera* _camera;
+        private MediaCameraObject _playerCamera;
+
         public EventHandler OnMuteTimerOver;
-        private IFramework _framework;
-        private bool voiceMuted;
-        private int muteLength;
+
         Dictionary<string, MovingObject> gameObjectPositions = new Dictionary<string, MovingObject>();
         Queue<string> temporaryWhitelistQueue = new Queue<string>();
         List<string> temporaryWhitelist = new List<string>();
-        Stopwatch redrawCooldown = new Stopwatch();
+        private List<string> combinedSoundList;
+
+        private int muteLength;
+        private int attackCount;
+        private int castingCount;
         private int objectsRedrawn;
         private int redrawObjectCount;
         private bool staging;
+        private bool isDownloadingZip;
+        private bool ignoreAttack;
+        private bool disposed;
+        private bool voiceMuted;
+        private bool twitchWasPlaying;
+        private bool _inGameSoundStartedAudio;
+
+        private string lastPrintedWarning;
         private string stagingPath;
         private string potentialStream;
         private string lastStreamURL;
         private string currentStreamer;
-        private bool twitchWasPlaying;
+
         private Queue<string> messageQueue = new Queue<string>();
         private Stopwatch messageTimer = new Stopwatch();
-        Stopwatch _nativeSoundExpiryTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
-        private bool _inGameSoundStartedAudio;
         private WaveStream _nativeAudioStream;
         private string _lastSoundPath;
 
@@ -150,18 +150,21 @@ namespace RoleplayingVoice {
                 this._chat = chat;
                 this._clientState = clientState;
                 // Get or create a configuration object
-                this.config = (Configuration)this.pluginInterface.GetPluginConfig()
-                          ?? this.pluginInterface.Create<Configuration>();
+                //this.config = (Configuration)this.pluginInterface.GetPluginConfig()
+                //          ?? this.pluginInterface.Create<Configuration>();
 
-                if (!config.HasMigrated) {
-                    string oldConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                try {
+                    string currentConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
                     + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
-                    if (File.Exists(oldConfig)) {
+                    if (File.Exists(currentConfig)) {
                         this.config = JsonConvert.DeserializeObject<Configuration>(
-                            File.OpenText(oldConfig).ReadToEnd());
+                            File.OpenText(currentConfig).ReadToEnd());
                         config.HasMigrated = true;
                     }
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
+
                 // Initialize the UI
                 this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
                 _window = this.pluginInterface.Create<PluginWindow>();
@@ -222,6 +225,7 @@ namespace RoleplayingVoice {
                 _filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
         }
 
