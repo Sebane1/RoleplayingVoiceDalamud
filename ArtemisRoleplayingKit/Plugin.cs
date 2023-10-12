@@ -154,13 +154,7 @@ namespace RoleplayingVoice {
                 //          ?? this.pluginInterface.Create<Configuration>();
 
                 try {
-                    string currentConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-                    + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
-                    if (File.Exists(currentConfig)) {
-                        this.config = JsonConvert.DeserializeObject<Configuration>(
-                            File.OpenText(currentConfig).ReadToEnd());
-                        config.HasMigrated = true;
-                    }
+                 this.config = GetConfig();
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
@@ -227,6 +221,16 @@ namespace RoleplayingVoice {
                 Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
+        }
+
+        private Configuration GetConfig() {
+            string currentConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                               + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
+            if (File.Exists(currentConfig)) {
+                return JsonConvert.DeserializeObject<Configuration>(
+                    File.OpenText(currentConfig).ReadToEnd());
+            }
+            return new Configuration(this.pluginInterface);
         }
 
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
@@ -564,7 +568,7 @@ namespace RoleplayingVoice {
                             try {
                                 File.Delete(file);
                             } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                //Dalamud.Logging.PluginLog.LogError(e, e.Message);
                             }
                         }
                     }
@@ -684,9 +688,11 @@ namespace RoleplayingVoice {
             if (_networkedClient != null) {
                 _networkedClient.Dispose();
             }
-            _networkedClient = new NetworkedClient(config.ConnectionIP);
-            if (_roleplayingMediaManager != null) {
-                _roleplayingMediaManager.NetworkedClient = _networkedClient;
+            if (config != null) {
+                _networkedClient = new NetworkedClient(config.ConnectionIP);
+                if (_roleplayingMediaManager != null) {
+                    _roleplayingMediaManager.NetworkedClient = _networkedClient;
+                }
             }
         }
 
