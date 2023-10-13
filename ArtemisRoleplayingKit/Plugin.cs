@@ -154,7 +154,7 @@ namespace RoleplayingVoice {
                 //          ?? this.pluginInterface.Create<Configuration>();
 
                 try {
-                 this.config = GetConfig();
+                    this.config = GetConfig();
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogError(e, e.Message);
                 }
@@ -238,6 +238,7 @@ namespace RoleplayingVoice {
                 ScdFile scdFile = null;
                 if (_scdReplacements.ContainsKey(e.SoundPath)) {
                     if (!e.SoundPath.Contains("vo_emote") && !e.SoundPath.Contains("vo_battle")) {
+                        Dalamud.Logging.PluginLog.Log("Sound Mod Intercepted");
                         scdFile = GetScdFile(e.SoundPath);
                         int i = 0;
                         try {
@@ -265,10 +266,11 @@ namespace RoleplayingVoice {
                 if (scdFile.Audio != null) {
                     if (scdFile.Audio.Count == 1) {
                         _inGameSoundStartedAudio = true;
+                        _nativeSoundExpiryTimer.Stop();
+                        _nativeSoundExpiryTimer.Restart();
                         bool isVorbis = scdFile.Audio[0].Format == SscfWaveFormat.Vorbis;
                         _nativeAudioStream = !isVorbis ? new WaveChannel32(
                         WaveFormatConversionStream.CreatePcmStream(scdFile.Audio[0].Data.GetStream())) : scdFile.Audio[0].Data.GetStream();
-                        _nativeSoundExpiryTimer.Restart();
                     }
                 }
             }
@@ -595,7 +597,7 @@ namespace RoleplayingVoice {
                             try {
                                 File.Delete(file);
                             } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
                         }
                     }
@@ -718,7 +720,8 @@ namespace RoleplayingVoice {
             } else {
                 if (_nativeAudioStream != null) {
                     if (isSending) {
-                        if (_nativeSoundExpiryTimer.ElapsedMilliseconds < 200) {
+                        Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
+                        if (!string.IsNullOrEmpty(_lastSoundPath)) {
                             using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
                                 _nativeAudioStream.Position = 0;
                                 MediaFoundationEncoder.EncodeToMp3(_nativeAudioStream, fileStream);
@@ -726,10 +729,18 @@ namespace RoleplayingVoice {
                             _nativeAudioStream.Position = 0;
                             _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
                             _loopEarlyQueue[_lastSoundPath] = mediaObject;
+                            _lastSoundPath = null;
+                        } else {
+                            Dalamud.Logging.PluginLog.LogWarning("Its been too long to associate " + emote + " to recent sound playback. It has been " + _nativeSoundExpiryTimer.Elapsed.TotalMilliseconds + " milliseconds");
                         }
+                        _nativeSoundExpiryTimer.Reset();
                         _nativeAudioStream = null;
                         _inGameSoundStartedAudio = false;
+                    } else {
+                        Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
                     }
+                } else {
+                    Dalamud.Logging.PluginLog.LogWarning("There is no available audio stream to play");
                 }
             }
         }
@@ -847,7 +858,11 @@ namespace RoleplayingVoice {
                     if (item.Key.EndsWith(".scd")) {
                         _filter.Blacklist.Add(item.Key);
                         if (!_scdReplacements.ContainsKey(item.Key)) {
-                            _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                            try {
+                                _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                            } catch {
+                                Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                            }
                         }
                     }
                 }
