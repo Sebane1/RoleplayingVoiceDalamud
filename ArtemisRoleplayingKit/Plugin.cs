@@ -112,6 +112,11 @@ namespace RoleplayingVoice {
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
         private string _lastSoundPath;
+        private MediaGameObject _lastPlayerToEmote;
+        private string _voice;
+        private string _voicePackPath;
+        private string _voicePackStaging;
+        private string _lastEmoteUsed;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -247,7 +252,13 @@ namespace RoleplayingVoice {
                                 // _loopEarlyQueue.Remove(e.SoundPath);
                             }
                             _lastSoundPath = e.SoundPath;
+                            _mediaManager.StopAudio(_lastPlayerToEmote);
                             QueueSCDTrigger(scdFile);
+                            CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, true);
+                            if (!string.IsNullOrEmpty(_lastSoundPath)) {
+                                _loopEarlyQueue[_lastSoundPath] = _lastPlayerToEmote;
+                                _lastSoundPath = null;
+                            }
                         } catch (Exception ex) {
                             Dalamud.Logging.PluginLog.LogError(ex, ex.Message);
                         }
@@ -704,6 +715,7 @@ namespace RoleplayingVoice {
         }
         public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
             if (!disposed) {
+                _lastPlayerToEmote = new MediaGameObject(instigator);
                 if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
@@ -713,8 +725,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void CheckForValidSCD(PlayerCharacter instigator, string emote = "", string stagingPath = "", bool isSending = false) {
-            var mediaObject = new MediaGameObject(instigator);
+        public void CheckForValidSCD(MediaGameObject mediaObject, string emote = "", string stagingPath = "", bool isSending = false) {
             if (!_inGameSoundStartedAudio) {
                 _mediaManager.StopAudio(mediaObject);
             } else {
@@ -731,9 +742,9 @@ namespace RoleplayingVoice {
                             _loopEarlyQueue[_lastSoundPath] = mediaObject;
                             _lastSoundPath = null;
                         } else {
+                            _nativeSoundExpiryTimer.Reset();
                             Dalamud.Logging.PluginLog.LogWarning("Its been too long to associate " + emote + " to recent sound playback. It has been " + _nativeSoundExpiryTimer.Elapsed.TotalMilliseconds + " milliseconds");
                         }
-                        _nativeSoundExpiryTimer.Reset();
                         _nativeAudioStream = null;
                         _inGameSoundStartedAudio = false;
                     } else {
@@ -806,11 +817,7 @@ namespace RoleplayingVoice {
                                                         MuteVoiceChecK(4000);
                                                     }
                                                 } else {
-                                                    CheckForValidSCD(instigator, value);
-                                                }
-                                                if (!string.IsNullOrEmpty(_lastSoundPath)) {
-                                                    _loopEarlyQueue[_lastSoundPath] = new MediaGameObject(instigator);
-                                                    _lastSoundPath = null;
+                                                    CheckForValidSCD(_lastPlayerToEmote, value);
                                                 }
                                             }
                                         });
@@ -828,26 +835,28 @@ namespace RoleplayingVoice {
         }
         private void SendingEmote(PlayerCharacter instigator, ushort emoteId) {
             if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                string path = config.CacheFolder + @"\VoicePack\" + voice;
-                string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                _voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                _voicePackPath = config.CacheFolder + @"\VoicePack\" + _voice;
+                _voicePackStaging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                 bool isVoicedEmote = false;
-                string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
-                if (!string.IsNullOrEmpty(value)) {
+                _lastEmoteUsed = GetEmoteName(emoteId);
+                string emotePath = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote); 
+                if (!string.IsNullOrEmpty(_lastEmoteUsed)) {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
-                    _mediaManager.PlayAudio(_playerObject, value, SoundType.Emote,
+                    _mediaManager.StopAudio(new MediaGameObject(instigator));
+                    _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     if (isVoicedEmote) {
                         MuteVoiceChecK(10000);
                     }
                 } else {
-                    CheckForValidSCD(instigator, GetEmoteName(emoteId), stagingPath, true);
+                    _mediaManager.StopAudio(new MediaGameObject(instigator));
                 }
                 if (config.UsePlayerSync) {
                     Task.Run(async () => {
-                        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, _voicePackStaging);
                     });
                 }
             }

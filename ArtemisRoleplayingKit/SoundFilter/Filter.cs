@@ -250,6 +250,7 @@ namespace SoundFilter {
             if (((specificPath.Contains("vo_emote") || specificPath.Contains("vo_battle")) && muted) 
                 || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
                 muted = false;
+                Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
             } else if ((!string.IsNullOrWhiteSpace(splitPath) && !splitPath.Contains("bgcommon") && !splitPath.StartsWith("music") && !splitPath.Contains(@"sound/foot") &&

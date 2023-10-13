@@ -6,7 +6,7 @@ using System;
 using System.Numerics;
 
 namespace RoleplayingVoiceDalamud {
-    internal class MediaGameObject : IGameObject {
+    public class MediaGameObject : IGameObject {
         private GameObject _gameObject;
         private string _name = "";
         private Vector3 _position = new Vector3();
