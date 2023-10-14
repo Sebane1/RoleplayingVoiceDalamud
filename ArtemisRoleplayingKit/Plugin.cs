@@ -722,21 +722,23 @@ namespace RoleplayingVoice {
             if (_nativeAudioStream != null) {
                 if (isSending) {
                     Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
-                    MemoryStream diskCopy = new MemoryStream();
                     if (!string.IsNullOrEmpty(soundPath)) {
+                        MemoryStream diskCopy = new MemoryStream();
                         _nativeAudioStream.CopyTo(diskCopy);
                         _nativeAudioStream.Position = 0;
                         _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                         _scdProcessingDelayTimer.Stop();
                         _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                        try {
-                            using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
-                                diskCopy.Position = 0;
-                                MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                        _ = Task.Run(async () => {
+                            try {
+                                using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
+                                    diskCopy.Position = 0;
+                                    MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                                }
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
-                        } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                        }
+                        });
                         soundPath = null;
                     }
                     _nativeAudioStream = null;

@@ -253,9 +253,6 @@ namespace SoundFilter {
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
-            } else if ((!string.IsNullOrWhiteSpace(splitPath) && !splitPath.Contains("bgcommon") && !splitPath.StartsWith("music") && !splitPath.Contains(@"sound/foot") &&
-              !splitPath.Contains("system") && !splitPath.Contains("magic") && !splitPath.Contains("se_vfx_common"))) {
-                OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
             }
             return false;
         }
