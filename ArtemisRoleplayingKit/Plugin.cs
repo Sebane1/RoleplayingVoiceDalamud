@@ -40,6 +40,7 @@ using SoundType = RoleplayingMediaCore.SoundType;
 using Option = FFXIVVoicePackCreator.Json.Option;
 using EventHandler = System.EventHandler;
 using ScdFile = VfxEditor.ScdFormat.ScdFile;
+using NAudio.Vorbis;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -116,6 +117,7 @@ namespace RoleplayingVoice {
         private string _voicePackPath;
         private string _voicePackStaging;
         private string _lastEmoteUsed;
+        private Stopwatch _scdProcessingDelayTimer;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -220,7 +222,7 @@ namespace RoleplayingVoice {
                 RefreshSoundData();
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                 Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-                _filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
+                Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -239,36 +241,26 @@ namespace RoleplayingVoice {
 
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
             if (config.MoveSCDBasedModsToPerformanceSlider) {
-                ScdFile scdFile = null;
-                string soundPath = "";
                 if (_scdReplacements.ContainsKey(e.SoundPath)) {
                     if (!e.SoundPath.Contains("vo_emote") && !e.SoundPath.Contains("vo_battle")) {
                         Dalamud.Logging.PluginLog.Log("Sound Mod Intercepted");
-                        scdFile = GetScdFile(e.SoundPath);
                         int i = 0;
                         try {
-                            //if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
-                            //    _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
-                            //    // _loopEarlyQueue.Remove(e.SoundPath);
-                            //}
-                            soundPath = e.SoundPath;
+                            _scdProcessingDelayTimer = new Stopwatch();
+                            _scdProcessingDelayTimer.Start();
                             _mediaManager.StopAudio(new MediaGameObject(_clientState.LocalPlayer));
-                            QueueSCDTrigger(scdFile);
-                            CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
+                            Task.Run(async () => {
+                                ScdFile scdFile = null;
+                                string soundPath = "";
+                                soundPath = e.SoundPath;
+                                scdFile = GetScdFile(e.SoundPath);
+                                QueueSCDTrigger(scdFile);
+                                CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
+                            });
                         } catch (Exception ex) {
                             Dalamud.Logging.PluginLog.LogWarning(ex, ex.Message);
                         }
                     }
-                } else {
-                    //if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
-                    //    _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
-                    //    // _loopEarlyQueue.Remove(e.SoundPath);
-                    //}
-                    //soundPath = e.SoundPath;
-                    //if (!string.IsNullOrEmpty(soundPath)) {
-                    //    _loopEarlyQueue[soundPath] = _lastPlayerToEmote;
-                    //    soundPath = null;
-                    //}
                 }
             }
         }
@@ -725,26 +717,26 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void CheckForValidSCD(MediaGameObject mediaObject, string emote = "", string stagingPath = "", string soundPath = "", bool isSending = false) {
+        public async void CheckForValidSCD(MediaGameObject mediaObject, string emote = "",
+            string stagingPath = "", string soundPath = "", bool isSending = false) {
             if (_nativeAudioStream != null) {
                 if (isSending) {
                     Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
+                    MemoryStream diskCopy = new MemoryStream();
                     if (!string.IsNullOrEmpty(soundPath)) {
-                        Stopwatch copyTimer = new Stopwatch();
-                        copyTimer.Start();
+                        _nativeAudioStream.CopyTo(diskCopy);
+                        _nativeAudioStream.Position = 0;
+                        _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
+                        _scdProcessingDelayTimer.Stop();
+                        _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
                         try {
                             using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
-                                _nativeAudioStream.Position = 0;
-                                MediaFoundationEncoder.EncodeToMp3(_nativeAudioStream, fileStream);
+                                diskCopy.Position = 0;
+                                MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
                             }
-                        } catch {
-
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                         }
-                        _nativeAudioStream.Position = 0;
-                        _nativeAudioStream.CurrentTime = copyTimer.Elapsed;
-                        copyTimer.Stop();
-                        _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                        _loopEarlyQueue[soundPath] = mediaObject;
                         soundPath = null;
                     }
                     _nativeAudioStream = null;
@@ -819,7 +811,7 @@ namespace RoleplayingVoice {
                                                         MuteVoiceChecK(4000);
                                                     }
                                                 } else {
-                                                    CheckForValidSCD(_lastPlayerToEmote, value);
+                                                    _mediaManager.StopAudio(new MediaGameObject(instigator));
                                                 }
                                             }
                                         });
