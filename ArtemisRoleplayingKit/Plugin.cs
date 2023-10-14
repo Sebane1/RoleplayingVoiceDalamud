@@ -111,7 +111,6 @@ namespace RoleplayingVoice {
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
-        private string _lastSoundPath;
         private MediaGameObject _lastPlayerToEmote;
         private string _voice;
         private string _voicePackPath;
@@ -161,7 +160,7 @@ namespace RoleplayingVoice {
                 try {
                     this.config = GetConfig();
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
 
                 // Initialize the UI
@@ -223,7 +222,7 @@ namespace RoleplayingVoice {
                 Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
                 _filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
         }
@@ -241,34 +240,35 @@ namespace RoleplayingVoice {
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
             if (config.MoveSCDBasedModsToPerformanceSlider) {
                 ScdFile scdFile = null;
+                string soundPath = "";
                 if (_scdReplacements.ContainsKey(e.SoundPath)) {
                     if (!e.SoundPath.Contains("vo_emote") && !e.SoundPath.Contains("vo_battle")) {
                         Dalamud.Logging.PluginLog.Log("Sound Mod Intercepted");
                         scdFile = GetScdFile(e.SoundPath);
                         int i = 0;
                         try {
-                            if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
-                                _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
-                                // _loopEarlyQueue.Remove(e.SoundPath);
-                            }
-                            _lastSoundPath = e.SoundPath;
-                            _mediaManager.StopAudio(_lastPlayerToEmote);
+                            //if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
+                            //    _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
+                            //    // _loopEarlyQueue.Remove(e.SoundPath);
+                            //}
+                            soundPath = e.SoundPath;
+                            _mediaManager.StopAudio(new MediaGameObject(_clientState.LocalPlayer));
                             QueueSCDTrigger(scdFile);
-                            CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, true);
-                            if (!string.IsNullOrEmpty(_lastSoundPath)) {
-                                _loopEarlyQueue[_lastSoundPath] = _lastPlayerToEmote;
-                                _lastSoundPath = null;
-                            }
+                            CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
                         } catch (Exception ex) {
-                            Dalamud.Logging.PluginLog.LogError(ex, ex.Message);
+                            Dalamud.Logging.PluginLog.LogWarning(ex, ex.Message);
                         }
                     }
                 } else {
-                    if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
-                        _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
-                        // _loopEarlyQueue.Remove(e.SoundPath);
-                    }
-                    _lastSoundPath = e.SoundPath;
+                    //if (_loopEarlyQueue.ContainsKey(e.SoundPath)) {
+                    //    _mediaManager.LoopEarly(_loopEarlyQueue[e.SoundPath]);
+                    //    // _loopEarlyQueue.Remove(e.SoundPath);
+                    //}
+                    //soundPath = e.SoundPath;
+                    //if (!string.IsNullOrEmpty(soundPath)) {
+                    //    _loopEarlyQueue[soundPath] = _lastPlayerToEmote;
+                    //    soundPath = null;
+                    //}
                 }
             }
         }
@@ -316,7 +316,7 @@ namespace RoleplayingVoice {
                     try {
                         RemoveFiles(clipPath);
                     } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                     }
                 }
             } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
@@ -366,7 +366,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
                 if (redrawCooldown.ElapsedMilliseconds > 100) {
                     if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
@@ -402,7 +402,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
             try {
                 if (messageQueue.Count > 0) {
@@ -416,7 +416,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
             if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
                 isDownloadingZip = false;
@@ -472,7 +472,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
         }
 
@@ -581,7 +581,7 @@ namespace RoleplayingVoice {
                             try {
                                 File.Delete(file);
                             } catch (Exception e) {
-                                //Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                //Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
                         }
                     }
@@ -594,7 +594,7 @@ namespace RoleplayingVoice {
                                     _chat.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
                                 }
                             } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
                         }
                     }
@@ -616,7 +616,7 @@ namespace RoleplayingVoice {
                         try {
                             File.Copy(sound, Path.Combine(stagingPath, Path.GetFileName(sound)), true);
                         } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                         }
                     }
                     staging = false;
@@ -626,7 +626,7 @@ namespace RoleplayingVoice {
         }
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
             _chat.PrintError("[Artemis Roleplaying Kit] " + e.Message);
-            Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
+            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + e.Message);
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
@@ -677,7 +677,7 @@ namespace RoleplayingVoice {
                 try {
                     Directory.Delete(path, true);
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
             }
         }
@@ -725,34 +725,34 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void CheckForValidSCD(MediaGameObject mediaObject, string emote = "", string stagingPath = "", bool isSending = false) {
-            if (!_inGameSoundStartedAudio) {
-                _mediaManager.StopAudio(mediaObject);
-            } else {
-                if (_nativeAudioStream != null) {
-                    if (isSending) {
-                        Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
-                        if (!string.IsNullOrEmpty(_lastSoundPath)) {
+        public void CheckForValidSCD(MediaGameObject mediaObject, string emote = "", string stagingPath = "", string soundPath = "", bool isSending = false) {
+            if (_nativeAudioStream != null) {
+                if (isSending) {
+                    Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
+                    if (!string.IsNullOrEmpty(soundPath)) {
+                        Stopwatch copyTimer = new Stopwatch();
+                        copyTimer.Start();
+                        try {
                             using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
                                 _nativeAudioStream.Position = 0;
                                 MediaFoundationEncoder.EncodeToMp3(_nativeAudioStream, fileStream);
                             }
-                            _nativeAudioStream.Position = 0;
-                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                            _loopEarlyQueue[_lastSoundPath] = mediaObject;
-                            _lastSoundPath = null;
-                        } else {
-                            _nativeSoundExpiryTimer.Reset();
-                            Dalamud.Logging.PluginLog.LogWarning("Its been too long to associate " + emote + " to recent sound playback. It has been " + _nativeSoundExpiryTimer.Elapsed.TotalMilliseconds + " milliseconds");
+                        } catch {
+
                         }
-                        _nativeAudioStream = null;
-                        _inGameSoundStartedAudio = false;
-                    } else {
-                        Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
+                        _nativeAudioStream.Position = 0;
+                        _nativeAudioStream.CurrentTime = copyTimer.Elapsed;
+                        copyTimer.Stop();
+                        _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
+                        _loopEarlyQueue[soundPath] = mediaObject;
+                        soundPath = null;
                     }
+                    _nativeAudioStream = null;
                 } else {
-                    Dalamud.Logging.PluginLog.LogWarning("There is no available audio stream to play");
+                    Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
                 }
+            } else {
+                Dalamud.Logging.PluginLog.LogWarning("There is no available audio stream to play");
             }
         }
         public void RemoveFiles(string path) {
@@ -763,7 +763,7 @@ namespace RoleplayingVoice {
                     try {
                         File.Delete(file);
                     } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                     }
                 }
             }
@@ -801,6 +801,8 @@ namespace RoleplayingVoice {
                                             }
                                         }
                                         await Task.Run(async () => {
+                                            Stopwatch copyTimer = new Stopwatch();
+                                            copyTimer.Start();
                                             while (isDownloadingZip) {
                                                 Thread.Sleep(100);
                                             }
@@ -812,7 +814,7 @@ namespace RoleplayingVoice {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
-                                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
                                                     if (isVoicedEmote) {
                                                         MuteVoiceChecK(4000);
                                                     }
@@ -825,11 +827,11 @@ namespace RoleplayingVoice {
                                 }
                             }
                         } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
+                            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + e.Message);
                         }
                     }
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError("[Artemis Roleplaying Kit] " + e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + e.Message);
                 }
             }
         }
@@ -841,8 +843,8 @@ namespace RoleplayingVoice {
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                 bool isVoicedEmote = false;
                 _lastEmoteUsed = GetEmoteName(emoteId);
-                string emotePath = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote); 
-                if (!string.IsNullOrEmpty(_lastEmoteUsed)) {
+                string emotePath = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
+                if (!string.IsNullOrEmpty(emotePath)) {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
@@ -852,7 +854,10 @@ namespace RoleplayingVoice {
                         MuteVoiceChecK(10000);
                     }
                 } else {
-                    _mediaManager.StopAudio(new MediaGameObject(instigator));
+                    if (!_inGameSoundStartedAudio) {
+                        _mediaManager.StopAudio(new MediaGameObject(instigator));
+                    }
+                    _inGameSoundStartedAudio = false;
                 }
                 if (config.UsePlayerSync) {
                     Task.Run(async () => {
@@ -938,7 +943,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
             list.Sort((x, y) => y.Value.CompareTo(x.Value));
             if (config != null) {
@@ -1116,7 +1121,7 @@ namespace RoleplayingVoice {
         }
 
         private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
-            Dalamud.Logging.PluginLog.LogError(e.Exception, e.Exception.Message);
+            Dalamud.Logging.PluginLog.LogWarning(e.Exception, e.Exception.Message);
         }
 
         private void _audioManager_OnNewAudioTriggered(object sender, EventArgs e) {
@@ -1168,7 +1173,7 @@ namespace RoleplayingVoice {
                                             }
                                         }
                                     } catch (Exception e) {
-                                        Dalamud.Logging.PluginLog.LogError(e.Message);
+                                        Dalamud.Logging.PluginLog.LogWarning(e.Message);
                                     }
                                 });
                             }
@@ -1568,7 +1573,7 @@ namespace RoleplayingVoice {
                                             Verb = "OPEN"
                                         });
                                     } catch (Exception e) {
-                                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                                     }
                                 } else {
                                     _chat.PrintError("There is no active stream");
@@ -1622,7 +1627,7 @@ namespace RoleplayingVoice {
                         _mediaManager?.Dispose();
                     }
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
                 _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
                 try {
@@ -1631,19 +1636,19 @@ namespace RoleplayingVoice {
                     _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                     _clientState.LeavePvP -= _clientState_LeavePvP;
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
                 _toast.ErrorToast -= _toast_ErrorToast;
                 try {
                     _framework.Update -= framework_Update;
                 } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
             } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
         }
 
