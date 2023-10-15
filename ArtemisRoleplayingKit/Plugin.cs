@@ -41,6 +41,12 @@ using Option = FFXIVVoicePackCreator.Json.Option;
 using EventHandler = System.EventHandler;
 using ScdFile = VfxEditor.ScdFormat.ScdFile;
 using NAudio.Vorbis;
+using System.Windows.Forms;
+using Dalamud.Utility;
+using Microsoft.VisualBasic.Logging;
+using System.Collections.Concurrent;
+using VfxEditor.TmbFormat;
+using ImGuizmoNET;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -110,6 +116,10 @@ namespace RoleplayingVoice {
         private Queue<string> messageQueue = new Queue<string>();
         private Stopwatch messageTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
+        private Dictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
+
+        private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
+
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
         private MediaGameObject _lastPlayerToEmote;
@@ -326,93 +336,95 @@ namespace RoleplayingVoice {
             return list;
         }
         private void framework_Update(IFramework framework) {
-            if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
-                uint voiceVolume = 0;
-                uint masterVolume = 0;
-                uint soundEffectVolume = 0;
-                try {
-                    if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
-                        if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
-                            _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
-                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
-                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
-                                ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
-                                _mediaManager.SFXVolume = config.LoopingSFXVolume *
-                                 ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
-                                _mediaManager.LiveStreamVolume = config.LivestreamVolume *
-                                 ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+            if (!disposed) {
+                if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
+                    uint voiceVolume = 0;
+                    uint masterVolume = 0;
+                    uint soundEffectVolume = 0;
+                    try {
+                        if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
+                            if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
+                                _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                                _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                                _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                                if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
+                                    _mediaManager.SFXVolume = config.LoopingSFXVolume *
+                                     ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                                    _mediaManager.LiveStreamVolume = config.LivestreamVolume *
+                                     ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                                }
+                            }
+                            if (muteTimer.ElapsedMilliseconds > muteLength) {
+                                if (Filter != null) {
+                                    lock (Filter) {
+                                        Filter.Muted = voiceMuted = false;
+                                        RefreshPlayerVoiceMuted();
+                                        muteTimer.Stop();
+                                        muteTimer.Reset();
+                                    }
+                                }
                             }
                         }
-                        if (muteTimer.ElapsedMilliseconds > muteLength) {
-                            if (Filter != null) {
-                                lock (Filter) {
-                                    Filter.Muted = voiceMuted = false;
-                                    RefreshPlayerVoiceMuted();
-                                    muteTimer.Stop();
-                                    muteTimer.Reset();
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                    }
+                    if (redrawCooldown.ElapsedMilliseconds > 100) {
+                        if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
+                            foreach (var item in temporaryWhitelistQueue) {
+                                temporaryWhitelist.Add(item);
+                            }
+                            temporaryWhitelistQueue.Clear();
+                        }
+                        redrawCooldown.Stop();
+                        redrawCooldown.Reset();
+                    }
+                }
+                try {
+                    foreach (GameObject gameObject in _objectTable) {
+                        string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                        if (!string.IsNullOrEmpty(cleanedName)) {
+                            if (gameObjectPositions.ContainsKey(cleanedName)) {
+                                var positionData = gameObjectPositions[cleanedName];
+                                if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                                    positionData.LastRotation != gameObject.Rotation) {
+                                    if (!positionData.IsMoving) {
+                                        ObjectIsMoving(cleanedName, gameObject);
+                                        positionData.IsMoving = true;
+                                    }
+                                } else {
+                                    positionData.IsMoving = false;
                                 }
+                                positionData.LastPosition = gameObject.Position;
+                                positionData.LastRotation = gameObject.Rotation;
+                            } else {
+                                gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                             }
                         }
                     }
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
-                if (redrawCooldown.ElapsedMilliseconds > 100) {
-                    if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
-                        foreach (var item in temporaryWhitelistQueue) {
-                            temporaryWhitelist.Add(item);
-                        }
-                        temporaryWhitelistQueue.Clear();
-                    }
-                    redrawCooldown.Stop();
-                    redrawCooldown.Reset();
-                }
-            }
-            try {
-                foreach (GameObject gameObject in _objectTable) {
-                    string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                    if (!string.IsNullOrEmpty(cleanedName)) {
-                        if (gameObjectPositions.ContainsKey(cleanedName)) {
-                            var positionData = gameObjectPositions[cleanedName];
-                            if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                                positionData.LastRotation != gameObject.Rotation) {
-                                if (!positionData.IsMoving) {
-                                    ObjectIsMoving(cleanedName, gameObject);
-                                    positionData.IsMoving = true;
-                                }
-                            } else {
-                                positionData.IsMoving = false;
-                            }
-                            positionData.LastPosition = gameObject.Position;
-                            positionData.LastRotation = gameObject.Rotation;
+                try {
+                    if (messageQueue.Count > 0 && !disposed) {
+                        if (!messageTimer.IsRunning) {
+                            messageTimer.Start();
                         } else {
-                            gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
+                            if (messageTimer.ElapsedMilliseconds > 3000) {
+                                _realChat.SendMessage(messageQueue.Dequeue());
+                                messageTimer.Restart();
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
-            } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-            }
-            try {
-                if (messageQueue.Count > 0) {
-                    if (!messageTimer.IsRunning) {
-                        messageTimer.Start();
-                    } else {
-                        if (messageTimer.ElapsedMilliseconds > 3000) {
-                            _realChat.SendMessage(messageQueue.Dequeue());
-                            messageTimer.Restart();
-                        }
-                    }
+                if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
+                    isDownloadingZip = false;
+                    maxDownloadLengthTimer.Reset();
                 }
-            } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-            }
-            if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
-                isDownloadingZip = false;
-                maxDownloadLengthTimer.Reset();
             }
         }
 
@@ -500,26 +512,28 @@ namespace RoleplayingVoice {
             RefreshSoundData();
         }
         public async void RefreshSoundData() {
-            _ = Task.Run(async () => {
-                try {
-                    penumbraSoundPacks = await GetPrioritySortedSoundPacks();
-                    combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
-                } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.Error(e.Message);
-                }
-            });
-            if (!config.VoicePackIsActive) {
-                try {
-                    if (Filter != null) {
-                        Filter.Muted = false;
-                        voiceMuted = false;
-                        RefreshPlayerVoiceMuted();
+            if (!disposed) {
+                _ = Task.Run(async () => {
+                    try {
+                        penumbraSoundPacks = await GetPrioritySortedSoundPacks();
+                        combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.Error(e.Message);
                     }
-                } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.Error(e.Message);
+                });
+                if (!config.VoicePackIsActive) {
+                    try {
+                        if (Filter != null) {
+                            Filter.Muted = false;
+                            voiceMuted = false;
+                            RefreshPlayerVoiceMuted();
+                        }
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.Error(e.Message);
+                    }
                 }
+                WriteStreamingPath();
             }
-            WriteStreamingPath();
         }
 
         private void WriteStreamingPath() {
@@ -860,10 +874,14 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void ExtractSCDOptions(Option option, string directory) {
+        public void ExtractPenumbraOptions(Option option, string directory, bool skipScd) {
             if (option != null) {
+                string modName = Path.GetFileName(directory);
+                if (modName.Contains("pineapples")) {
+                    object test = new object();
+                }
                 foreach (var item in option.Files) {
-                    if (item.Key.EndsWith(".scd")) {
+                    if (item.Key.EndsWith(".scd") && !skipScd) {
                         _filter.Blacklist.Add(item.Key);
                         if (!_scdReplacements.ContainsKey(item.Key)) {
                             try {
@@ -873,18 +891,35 @@ namespace RoleplayingVoice {
                             }
                         }
                     }
+                    if (item.Key.EndsWith(".pap")) {
+                        string[] strings = item.Key.Split("/");
+                        string value = strings[strings.Length - 1];
+                        _animationMods[modName] = value;
+                        if (!_papSorting.ContainsKey(value)) {
+                            try {
+                                _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                                { new KeyValuePair<string, bool>(modName, !skipScd) });
+                            } catch {
+                                Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                            }
+                        } else {
+                            _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
+                        }
+                    }
                 }
             }
         }
         public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
             _filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
+            _papSorting?.Clear();
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
             try {
                 string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
                 if (Directory.Exists(modPath)) {
                     var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                    foreach (var directory in Directory.EnumerateDirectories(modPath)) {
+                    string[] directories = Directory.GetDirectories(modPath);
+                    foreach (var directory in directories) {
                         string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
                         var currentModSettings =
                         Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
@@ -901,11 +936,11 @@ namespace RoleplayingVoice {
                                             if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
                                                 if (file.EndsWith("default_mod.json")) {
                                                     Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
-                                                    ExtractSCDOptions(option, directory);
+                                                    ExtractPenumbraOptions(option, directory, false);
                                                 } else {
                                                     Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
                                                     foreach (Option option in group.Options) {
-                                                        ExtractSCDOptions(option, directory);
+                                                        ExtractPenumbraOptions(option, directory, false);
                                                     }
                                                 }
                                             }
@@ -929,6 +964,46 @@ namespace RoleplayingVoice {
                                                 }
                                             }
                                             list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (Directory.Exists(directory)) {
+                                    string modName = Path.GetFileName(directory);
+                                    if (modName.ToLower().Contains("pine")) {
+                                        object test = new object();
+                                    }
+                                    foreach (string file in Directory.EnumerateFiles(directory)) {
+                                        if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
+                                            if (file.EndsWith("default_mod.json")) {
+                                                Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
+                                                ExtractPenumbraOptions(option, directory, true);
+                                            } else {
+                                                Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
+                                                foreach (Option option in group.Options) {
+                                                    ExtractPenumbraOptions(option, directory, true);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if (Directory.Exists(directory)) {
+                                string modName = Path.GetFileName(directory);
+                                if (modName.Contains("pine")) {
+                                    object test = new object();
+                                }
+                                foreach (string file in Directory.EnumerateFiles(directory)) {
+                                    if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
+                                        if (file.EndsWith("default_mod.json")) {
+                                            Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
+                                            ExtractPenumbraOptions(option, directory, true);
+                                        } else {
+                                            Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
+                                            foreach (Option option in group.Options) {
+                                                ExtractPenumbraOptions(option, directory, true);
+                                            }
                                         }
                                     }
                                 }
@@ -1056,7 +1131,7 @@ namespace RoleplayingVoice {
                 System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
-            Regex rgx = new Regex("[^a-zA-Z:/._ -]");
+            Regex rgx = new Regex(@"[^a-zA-Z:/._\ -]");
             return rgx.Replace(value, "");
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
@@ -1555,6 +1630,52 @@ namespace RoleplayingVoice {
                         case "reload":
                             AttemptConnection();
                             break;
+                        case "anim":
+                            var list = CreateEmoteList(_dataManager);
+                            if (splitArgs.Length > 1) {
+                                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                                string emote = "";
+                                string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
+                                foreach (string key in _animationMods.Keys) {
+                                    if (key.ToLower().Contains(commandArguments)) {
+                                        foreach (var mod in _papSorting[_animationMods[key]]) {
+                                            if (mod.Key.ToLower().Contains(key.ToLower().Trim())) {
+                                                if (!mod.Value) {
+                                                    messageQueue.Enqueue("/penumbra mod enable " + collection.Item3 + "|" + key);
+                                                    messageQueue.Enqueue("/penumbra redraw self");
+                                                    _mediaManager.CleanNonStreamingSounds();
+                                                }
+                                                if (list.ContainsKey(_animationMods[key])) {
+                                                    foreach (var value in list[_animationMods[key]]) {
+                                                        emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                        break;
+                                                    }
+                                                    break;
+                                                }
+                                                break;
+                                            } else if (mod.Value) {
+                                                messageQueue.Enqueue("/penumbra mod disable " + collection.Item3 + "|" + mod.Key);
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(emote)) {
+                                    _mediaManager.StopAudio(_playerObject);
+                                    messageQueue.Enqueue(emote);
+                                }
+                            } else {
+                                string danceModList = "You can choose from the following animation mods \r\n";
+                                _chat.Print(danceModList);
+                                foreach (string key in _animationMods.Keys) {
+                                    string[] strings = _animationMods[key].Split("/");
+                                    string option = strings[strings.Length - 1];
+                                    if (list.ContainsKey(option)) {
+                                        _chat.Print(key);
+                                    }
+                                }
+                            }
+                            break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
                                 TuneIntoStream(splitArgs[1], _playerObject);
@@ -1595,6 +1716,65 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+        }
+
+        private IReadOnlyDictionary<string, IReadOnlyList<Emote>> CreateEmoteList(IDataManager gameData) {
+            var sheet = gameData.GetExcelSheet<Emote>()!;
+            var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();
+
+            void AddEmote(string? key, Emote emote) {
+                if (key.IsNullOrEmpty())
+                    return;
+
+                key = key.ToLowerInvariant();
+                if (storage.TryGetValue(key, out var emotes))
+                    emotes.Add(emote);
+                else
+                    storage[key] = new ConcurrentBag<Emote> { emote };
+            }
+
+            var options = new ParallelOptions {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+            };
+            var seenTmbs = new ConcurrentDictionary<string, TmbFile>();
+
+            void ProcessEmote(Emote emote) {
+                var emoteTmbs = new HashSet<string>(8);
+                var tmbs = new Queue<string>(8);
+
+                foreach (var timeline in emote.ActionTimeline.Where(t => t.Row != 0 && t.Value != null).Select(t => t.Value!)) {
+                    var key = timeline.Key.ToDalamudString().TextValue;
+                    AddEmote(Path.GetFileName(key) + ".pap", emote);
+                }
+
+                while (tmbs.TryDequeue(out var tmbPath)) {
+                    if (!emoteTmbs.Add(tmbPath))
+                        continue;
+                    AddEmote(Path.GetFileName(tmbPath), emote);
+                }
+            }
+
+            Parallel.ForEach(sheet.Where(n => n.Name.RawData.Length > 0), options, ProcessEmote);
+
+            var sit = sheet.GetRow(50)!;
+            AddEmote("s_pose01_loop.pap", sit);
+            AddEmote("s_pose02_loop.pap", sit);
+            AddEmote("s_pose03_loop.pap", sit);
+            AddEmote("s_pose04_loop.pap", sit);
+            AddEmote("s_pose05_loop.pap", sit);
+
+            var sitOnGround = sheet.GetRow(52)!;
+            AddEmote("j_pose01_loop.pap", sitOnGround);
+            AddEmote("j_pose02_loop.pap", sitOnGround);
+            AddEmote("j_pose03_loop.pap", sitOnGround);
+            AddEmote("j_pose04_loop.pap", sitOnGround);
+
+            var doze = sheet.GetRow(13)!;
+            AddEmote("l_pose01_loop.pap", doze);
+            AddEmote("l_pose02_loop.pap", doze);
+            AddEmote("l_pose03_loop.pap", doze);
+
+            return storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
         }
 
 
