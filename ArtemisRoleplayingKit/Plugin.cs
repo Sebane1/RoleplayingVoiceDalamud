@@ -749,7 +749,11 @@ namespace RoleplayingVoice {
                     if (!string.IsNullOrEmpty(soundPath)) {
                         try {
                             MemoryStream diskCopy = new MemoryStream();
-                            _nativeAudioStream.CopyTo(diskCopy);
+                            try {
+                                _nativeAudioStream.CopyTo(diskCopy);
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            }
                             _nativeAudioStream.Position = 0;
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
@@ -1236,7 +1240,9 @@ namespace RoleplayingVoice {
                         string path = config.CacheFolder + @"\VoicePack\" + voice;
                         string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                         bool attackIntended = false;
+                        Stopwatch characterSoundImportTimer = Stopwatch.StartNew();
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                        Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + voice + " took " + characterSoundImportTimer.ElapsedMilliseconds + " milliseconds to load.");
                         if (!message.TextValue.Contains("cancel")) {
                             if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
                                 LocalPlayerCombat(playerName, message, type, characterVoicePack, ref value, ref attackIntended);
@@ -1247,7 +1253,10 @@ namespace RoleplayingVoice {
 
                         if (!string.IsNullOrEmpty(value) || attackIntended) {
                             if (!attackIntended) {
+                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+                                Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
+                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                             }
                             if (!muteTimer.IsRunning) {
                                 if (Filter != null) {
