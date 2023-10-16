@@ -47,6 +47,8 @@ using Microsoft.VisualBasic.Logging;
 using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
 using ImGuizmoNET;
+using Penumbra.Api.Enums;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -260,12 +262,16 @@ namespace RoleplayingVoice {
                             _scdProcessingDelayTimer.Start();
                             _mediaManager.StopAudio(new MediaGameObject(_clientState.LocalPlayer));
                             Task.Run(async () => {
-                                ScdFile scdFile = null;
-                                string soundPath = "";
-                                soundPath = e.SoundPath;
-                                scdFile = GetScdFile(e.SoundPath);
-                                QueueSCDTrigger(scdFile);
-                                CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
+                                try {
+                                    ScdFile scdFile = null;
+                                    string soundPath = "";
+                                    soundPath = e.SoundPath;
+                                    scdFile = GetScdFile(e.SoundPath);
+                                    QueueSCDTrigger(scdFile);
+                                    CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
+                                } catch (Exception ex) {
+                                    Dalamud.Logging.PluginLog.LogWarning(ex, ex.Message);
+                                }
                             });
                         } catch (Exception ex) {
                             Dalamud.Logging.PluginLog.LogWarning(ex, ex.Message);
@@ -412,8 +418,12 @@ namespace RoleplayingVoice {
                         if (!messageTimer.IsRunning) {
                             messageTimer.Start();
                         } else {
-                            if (messageTimer.ElapsedMilliseconds > 3000) {
-                                _realChat.SendMessage(messageQueue.Dequeue());
+                            if (messageTimer.ElapsedMilliseconds > 1000) {
+                                try {
+                                    _realChat.SendMessage(messageQueue.Dequeue());
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                }
                                 messageTimer.Restart();
                             }
                         }
@@ -508,7 +518,7 @@ namespace RoleplayingVoice {
                 _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
             }
         }
-        private void modSettingChanged(Penumbra.Api.Enums.ModSettingChange arg1, string arg2, string arg3, bool arg4) {
+        private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
             RefreshSoundData();
         }
         public async void RefreshSoundData() {
@@ -737,25 +747,29 @@ namespace RoleplayingVoice {
                 if (isSending) {
                     Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
                     if (!string.IsNullOrEmpty(soundPath)) {
-                        MemoryStream diskCopy = new MemoryStream();
-                        _nativeAudioStream.CopyTo(diskCopy);
-                        _nativeAudioStream.Position = 0;
-                        _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
-                        _scdProcessingDelayTimer.Stop();
-                        _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                        _ = Task.Run(async () => {
-                            try {
-                                using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
-                                    diskCopy.Position = 0;
-                                    MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                        try {
+                            MemoryStream diskCopy = new MemoryStream();
+                            _nativeAudioStream.CopyTo(diskCopy);
+                            _nativeAudioStream.Position = 0;
+                            _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
+                            _scdProcessingDelayTimer.Stop();
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
+                            _ = Task.Run(async () => {
+                                try {
+                                    using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
+                                        diskCopy.Position = 0;
+                                        MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                                    }
+                                    _nativeAudioStream = null;
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                                 }
-                            } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                            }
-                        });
-                        soundPath = null;
+                            });
+                            soundPath = null;
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
                     }
-                    _nativeAudioStream = null;
                 } else {
                     Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
                 }
@@ -874,41 +888,74 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void ExtractPenumbraOptions(Option option, string directory, bool skipScd) {
+        public void ExtractSCDOptions(Option option, string directory) {
             if (option != null) {
-                string modName = Path.GetFileName(directory);
-                if (modName.Contains("pineapples")) {
-                    object test = new object();
-                }
+                ;
                 foreach (var item in option.Files) {
-                    if (item.Key.EndsWith(".scd") && !skipScd) {
+                    if (item.Key.EndsWith(".scd")) {
                         _filter.Blacklist.Add(item.Key);
                         if (!_scdReplacements.ContainsKey(item.Key)) {
                             try {
                                 _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                                Dalamud.Logging.PluginLog.LogVerbose("Found: " + item.Value);
                             } catch {
                                 Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                             }
-                        }
-                    }
-                    if (item.Key.EndsWith(".pap")) {
-                        string[] strings = item.Key.Split("/");
-                        string value = strings[strings.Length - 1];
-                        _animationMods[modName] = value;
-                        if (!_papSorting.ContainsKey(value)) {
-                            try {
-                                _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
-                                { new KeyValuePair<string, bool>(modName, !skipScd) });
-                            } catch {
-                                Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
-                            }
-                        } else {
-                            _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
                         }
                     }
                 }
             }
         }
+
+        public void ExtractPapFiles(Option option, string directory, bool skipScd) {
+            string modName = Path.GetFileName(directory);
+            int papFilesFound = 0;
+            foreach (var item in option.Files) {
+                if (item.Key.EndsWith(".pap")) {
+                    string[] strings = item.Key.Split("/");
+                    string value = strings[strings.Length - 1];
+                    _animationMods[modName] = value;
+                    papFilesFound++;
+                    if (!_papSorting.ContainsKey(value)) {
+                        try {
+                            _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                            { new KeyValuePair<string, bool>(modName, !skipScd) });
+                            Dalamud.Logging.PluginLog.LogVerbose("Found: " + item.Value);
+                        } catch {
+                            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                        }
+                    } else {
+                        _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
+                    }
+                }
+            }
+        }
+
+        public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
+            foreach (string file in Directory.GetFiles(directory)) {
+                if (file.EndsWith(".pap")) {
+                    string[] strings = file.Split("\\");
+                    string value = strings[strings.Length - 1];
+                    _animationMods[modName] = value;
+                    if (!_papSorting.ContainsKey(value)) {
+                        try {
+                            _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                            { new KeyValuePair<string, bool>(modName, false) });
+                        } catch {
+                            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
+                        }
+                    } else {
+                        _papSorting[value].Add(new KeyValuePair<string, bool>(modName, false));
+                    }
+                }
+            }
+            if (levels < maxLevels) {
+                foreach (string file in Directory.GetDirectories(directory)) {
+                    RecursivelyFindPapFiles(modName, file, levels + 1, maxLevels);
+                }
+            }
+        }
+
         public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
             _filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
@@ -920,42 +967,50 @@ namespace RoleplayingVoice {
                     var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
                     string[] directories = Directory.GetDirectories(modPath);
                     foreach (var directory in directories) {
-                        string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
-                        var currentModSettings =
-                        Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
-                        Invoke(collection.Item3, relativeDirectory, null, true);
-                        var result = currentModSettings.Item1;
-                        if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
-                            if (currentModSettings.Item2 != null) {
-                                bool enabled = currentModSettings.Item2.Value.Item1;
-                                int priority = currentModSettings.Item2.Value.Item2;
-                                if (enabled) {
-                                    string soundPackData = directory + @"\rpvsp";
-                                    if (Directory.Exists(directory)) {
-                                        foreach (string file in Directory.EnumerateFiles(directory)) {
-                                            if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
-                                                if (file.EndsWith("default_mod.json")) {
-                                                    Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
-                                                    ExtractPenumbraOptions(option, directory, false);
-                                                } else {
-                                                    Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
-                                                    foreach (Option option in group.Options) {
-                                                        ExtractPenumbraOptions(option, directory, false);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (Path.Exists(soundPackData)) {
-                                        var soundList = new List<string>();
-                                        foreach (string file in Directory.EnumerateFiles(soundPackData)) {
-                                            if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                                                soundList.Add(file);
-                                            }
-                                        }
-                                        list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                        Dalamud.Logging.PluginLog.LogVerbose("Examining: " + directory);
+                        Option option = null;
+                        Group group = null;
+                        if (Directory.Exists(directory)) {
+                            string modName = Path.GetFileName(directory);
+                            foreach (string file in Directory.EnumerateFiles(directory)) {
+                                if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
+                                    if (file.EndsWith("default_mod.json")) {
+                                        option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
                                     } else {
-                                        soundPackData = directory + @"\arksp";
+                                        group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
+                                    }
+                                }
+                            }
+                        }
+                        if (option != null) {
+                            ExtractPapFiles(option, directory, true);
+                        }
+                        if (group != null) {
+                            foreach (Option groupOption in group.Options) {
+                                ExtractPapFiles(groupOption, directory, true);
+                            }
+                        }
+                        try {
+                            string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
+                            var currentModSettings =
+                            Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
+                            Invoke(collection.Item3, relativeDirectory, null, true);
+                            var result = currentModSettings.Item1;
+                            if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
+                                if (currentModSettings.Item2 != null) {
+                                    bool enabled = currentModSettings.Item2.Value.Item1;
+                                    int priority = currentModSettings.Item2.Value.Item2;
+                                    if (enabled) {
+                                        if (option != null) {
+                                            ExtractSCDOptions(option, directory);
+                                        }
+                                        if (group != null) {
+                                            foreach (Option groupOption in group.Options) {
+                                                ExtractSCDOptions(groupOption, directory);
+                                            }
+                                        }
+
+                                        string soundPackData = directory + @"\rpvsp";
                                         if (Path.Exists(soundPackData)) {
                                             var soundList = new List<string>();
                                             foreach (string file in Directory.EnumerateFiles(soundPackData)) {
@@ -964,50 +1019,23 @@ namespace RoleplayingVoice {
                                                 }
                                             }
                                             list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
-                                        }
-                                    }
-                                }
-                            } else {
-                                if (Directory.Exists(directory)) {
-                                    string modName = Path.GetFileName(directory);
-                                    if (modName.ToLower().Contains("pine")) {
-                                        object test = new object();
-                                    }
-                                    foreach (string file in Directory.EnumerateFiles(directory)) {
-                                        if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
-                                            if (file.EndsWith("default_mod.json")) {
-                                                Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
-                                                ExtractPenumbraOptions(option, directory, true);
-                                            } else {
-                                                Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
-                                                foreach (Option option in group.Options) {
-                                                    ExtractPenumbraOptions(option, directory, true);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            if (Directory.Exists(directory)) {
-                                string modName = Path.GetFileName(directory);
-                                if (modName.Contains("pine")) {
-                                    object test = new object();
-                                }
-                                foreach (string file in Directory.EnumerateFiles(directory)) {
-                                    if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
-                                        if (file.EndsWith("default_mod.json")) {
-                                            Option option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
-                                            ExtractPenumbraOptions(option, directory, true);
                                         } else {
-                                            Group group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
-                                            foreach (Option option in group.Options) {
-                                                ExtractPenumbraOptions(option, directory, true);
+                                            soundPackData = directory + @"\arksp";
+                                            if (Path.Exists(soundPackData)) {
+                                                var soundList = new List<string>();
+                                                foreach (string file in Directory.EnumerateFiles(soundPackData)) {
+                                                    if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                                                        soundList.Add(file);
+                                                    }
+                                                }
+                                                list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
                                             }
                                         }
                                     }
                                 }
                             }
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                         }
                     }
                 }
@@ -1633,36 +1661,50 @@ namespace RoleplayingVoice {
                         case "anim":
                             var list = CreateEmoteList(_dataManager);
                             if (splitArgs.Length > 1) {
-                                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
                                 string emote = "";
+                                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                                Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
                                 string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
-                                foreach (string key in _animationMods.Keys) {
-                                    if (key.ToLower().Contains(commandArguments)) {
-                                        foreach (var mod in _papSorting[_animationMods[key]]) {
-                                            if (mod.Key.ToLower().Contains(key.ToLower().Trim())) {
-                                                if (!mod.Value) {
-                                                    messageQueue.Enqueue("/penumbra mod enable " + collection.Item3 + "|" + key);
-                                                    messageQueue.Enqueue("/penumbra redraw self");
+                                Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+                                foreach (string modName in _animationMods.Keys) {
+                                    if (modName.ToLower().Contains(commandArguments)) {
+                                        var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                                        _mediaManager.StopAudio(_playerObject);
+                                        Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                                        if (_papSorting.ContainsKey(_animationMods[modName])) {
+                                            var sortedList = _papSorting[_animationMods[modName]];
+                                            foreach (var mod in sortedList) {
+                                                if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
                                                     _mediaManager.CleanNonStreamingSounds();
-                                                }
-                                                if (list.ContainsKey(_animationMods[key])) {
-                                                    foreach (var value in list[_animationMods[key]]) {
-                                                        emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                        break;
+                                                    if (string.IsNullOrEmpty(emote)) {
+                                                        if (list.ContainsKey(_animationMods[modName])) {
+                                                            foreach (var value in list[_animationMods[modName]]) {
+                                                                emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                                Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
+                                                            }
+                                                        }
                                                     }
-                                                    break;
+                                                } else {
+                                                    if (!alreadyDisabled.ContainsKey(mod.Key)) {
+                                                        // Thread.Sleep(100);
+                                                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
+                                                        alreadyDisabled[mod.Key] = true;
+                                                        Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                    }
                                                 }
-                                                break;
-                                            } else if (mod.Value) {
-                                                messageQueue.Enqueue("/penumbra mod disable " + collection.Item3 + "|" + mod.Key);
                                             }
                                         }
                                         break;
                                     }
                                 }
                                 if (!string.IsNullOrEmpty(emote)) {
-                                    _mediaManager.StopAudio(_playerObject);
-                                    messageQueue.Enqueue(emote);
+                                    //Thread.Sleep(1000);
+                                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                                    Task.Run(() => {
+                                        Thread.Sleep(1000);
+                                        messageQueue.Enqueue(emote);
+                                        _mediaManager.StopAudio(_playerObject);
+                                    });
                                 }
                             } else {
                                 string danceModList = "You can choose from the following animation mods \r\n";
@@ -1784,7 +1826,7 @@ namespace RoleplayingVoice {
             try {
                 disposed = true;
                 config.Save();
-                this.pluginInterface.SavePluginConfig(this.config);
+                //this.pluginInterface.SavePluginConfig(this.config);
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;
                 _chat.ChatMessage -= Chat_ChatMessage;
                 this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
