@@ -40,15 +40,10 @@ using SoundType = RoleplayingMediaCore.SoundType;
 using Option = FFXIVVoicePackCreator.Json.Option;
 using EventHandler = System.EventHandler;
 using ScdFile = VfxEditor.ScdFormat.ScdFile;
-using NAudio.Vorbis;
-using System.Windows.Forms;
 using Dalamud.Utility;
-using Microsoft.VisualBasic.Logging;
 using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
-using ImGuizmoNET;
 using Penumbra.Api.Enums;
-using FFXIVClientStructs.FFXIV.Client.Game.Event;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -130,7 +125,7 @@ namespace RoleplayingVoice {
         private string _voicePackStaging;
         private string _lastEmoteUsed;
         private Stopwatch _scdProcessingDelayTimer;
-
+        private List<string> _animationModsAlreadyTriggered = new List<string>();
         public string Name => "Artemis Roleplaying Kit";
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
@@ -749,26 +744,30 @@ namespace RoleplayingVoice {
                     if (!string.IsNullOrEmpty(soundPath)) {
                         try {
                             MemoryStream diskCopy = new MemoryStream();
-                            try {
-                                _nativeAudioStream.CopyTo(diskCopy);
-                            } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            if (!_mediaManager.LowPerformanceMode) {
+                                try {
+                                    _nativeAudioStream.CopyTo(diskCopy);
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                }
                             }
                             _nativeAudioStream.Position = 0;
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
                             _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                            _ = Task.Run(async () => {
-                                try {
-                                    using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
-                                        diskCopy.Position = 0;
-                                        MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                            if (!_mediaManager.LowPerformanceMode) {
+                                _ = Task.Run(async () => {
+                                    try {
+                                        using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
+                                            diskCopy.Position = 0;
+                                            MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                                        }
+                                        _nativeAudioStream = null;
+                                    } catch (Exception e) {
+                                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                                     }
-                                    _nativeAudioStream = null;
-                                } catch (Exception e) {
-                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                                }
-                            });
+                                });
+                            }
                             soundPath = null;
                         } catch (Exception e) {
                             Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
@@ -1649,6 +1648,15 @@ namespace RoleplayingVoice {
                 string[] splitArgs = args.Split(' ');
                 if (splitArgs.Length > 0) {
                     switch (splitArgs[0].ToLower()) {
+                        case "help":
+                            _chat.Print("on (Enable AI Voice)\r\n" +
+                             "off (Disable AI Voice)\r\n" +
+                             "video (toggle twitch stream video)\r\n" +
+                             "listen (tune into a publically shared twitch stream)\r\n" +
+                             "endlisten (end a publically shared twitch stream)\r\n" +
+                             "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
+                             "twitch [twitch url] (forcibly tunes into a twitch stream locally)");
+                            break;
                         case "on":
                             config.AiVoiceActive = true;
                             _window.Configuration = config;
@@ -1671,39 +1679,43 @@ namespace RoleplayingVoice {
                             var list = CreateEmoteList(_dataManager);
                             if (splitArgs.Length > 1) {
                                 string emote = "";
+                                string foundModName = "";
                                 var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
                                 Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
                                 string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
                                 Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
-                                foreach (string modName in _animationMods.Keys) {
-                                    if (modName.ToLower().Contains(commandArguments)) {
-                                        var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                                        _mediaManager.StopAudio(_playerObject);
-                                        Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
-                                        if (_papSorting.ContainsKey(_animationMods[modName])) {
-                                            var sortedList = _papSorting[_animationMods[modName]];
-                                            foreach (var mod in sortedList) {
-                                                if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
-                                                    _mediaManager.CleanNonStreamingSounds();
-                                                    if (string.IsNullOrEmpty(emote)) {
-                                                        if (list.ContainsKey(_animationMods[modName])) {
-                                                            foreach (var value in list[_animationMods[modName]]) {
-                                                                emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                                Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
+                                for (int i = 0; i < 5 && string.IsNullOrEmpty(emote); i++) {
+                                    foreach (string modName in _animationMods.Keys) {
+                                        if (modName.ToLower().Contains(commandArguments)) {
+                                            var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                                            _mediaManager.StopAudio(_playerObject);
+                                            Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                                            if (_papSorting.ContainsKey(_animationMods[modName])) {
+                                                var sortedList = _papSorting[_animationMods[modName]];
+                                                foreach (var mod in sortedList) {
+                                                    if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
+                                                        _mediaManager.CleanNonStreamingSounds();
+                                                        if (string.IsNullOrEmpty(emote)) {
+                                                            if (list.ContainsKey(_animationMods[modName])) {
+                                                                foreach (var value in list[_animationMods[modName]]) {
+                                                                    emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                                    foundModName = modName;
+                                                                    Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                } else {
-                                                    if (!alreadyDisabled.ContainsKey(mod.Key)) {
-                                                        // Thread.Sleep(100);
-                                                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
-                                                        alreadyDisabled[mod.Key] = true;
-                                                        Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                    } else {
+                                                        if (!alreadyDisabled.ContainsKey(mod.Key)) {
+                                                            // Thread.Sleep(100);
+                                                            var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
+                                                            alreadyDisabled[mod.Key] = true;
+                                                            Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                        }
                                                     }
                                                 }
                                             }
+                                            break;
                                         }
-                                        break;
                                     }
                                 }
                                 if (!string.IsNullOrEmpty(emote)) {
@@ -1712,6 +1724,11 @@ namespace RoleplayingVoice {
                                     Task.Run(() => {
                                         Thread.Sleep(1000);
                                         messageQueue.Enqueue(emote);
+                                        if (!_animationModsAlreadyTriggered.Contains(foundModName)) {
+                                            Thread.Sleep(2000);
+                                            messageQueue.Enqueue(emote);
+                                            _animationModsAlreadyTriggered.Add(foundModName);
+                                        }
                                         _mediaManager.StopAudio(_playerObject);
                                     });
                                 }
