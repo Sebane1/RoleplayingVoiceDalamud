@@ -4,7 +4,7 @@ Features:
 - AI voicelines for anything you type via Elevenlabs (after providing your own API key).
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility
 - Automatic twitch playback allows you to hear your favourite DJ's while inside venues without having to think or manually open a web browser. Everything is in the game world!
-- Penumbra support so that you can still sort your Roleplaying Voice sound mods.
+- Penumbra support so that you can still sort your Artemis Roleplaying Kit sound mods.
 - Partial Mare support (sound is synced via a different service).
 - Dynamic character emote triggering based on text in custom emotes.
 - Automated mod switching for animation mods. Just enter the mod name you want to trigger.
