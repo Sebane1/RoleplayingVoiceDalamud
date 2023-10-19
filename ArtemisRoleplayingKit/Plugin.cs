@@ -1061,7 +1061,7 @@ namespace RoleplayingVoice {
             }
             return list;
         }
-        public void MuteVoiceChecK(int length = 20) {
+        public void MuteVoiceChecK(int length = 4000) {
             muteLength = length;
             if (!muteTimer.IsRunning) {
                 if (Filter != null) {
