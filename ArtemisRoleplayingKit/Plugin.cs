@@ -47,6 +47,7 @@ using Penumbra.Api.Enums;
 
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
+        #region Fields
         private readonly DalamudPluginInterface pluginInterface;
         private readonly IChatGui _chat;
         private readonly IClientState _clientState;
@@ -145,7 +146,8 @@ namespace RoleplayingVoice {
         public IGameInteropProvider InteropProvider { get => _interopProvider; set => _interopProvider = value; }
 
         public Configuration Config => config;
-
+        #endregion
+        #region Plugin Initiialization
         public unsafe Plugin(
             DalamudPluginInterface pi,
             ICommandManager commands,
@@ -158,6 +160,7 @@ namespace RoleplayingVoice {
             IGameConfig gameConfig,
             IFramework framework,
             IGameInteropProvider interopProvider) {
+            #region Constructor
             try {
                 this.pluginInterface = pi;
                 this._chat = chat;
@@ -234,8 +237,10 @@ namespace RoleplayingVoice {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
+            #endregion
         }
-
+        #endregion Plugin Initiialization
+        #region Configuration
         private Configuration GetConfig() {
             string currentConfig = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
                                + @"\XIVLauncher\pluginConfigs\RoleplayingVoiceDalamud.json";
@@ -245,7 +250,202 @@ namespace RoleplayingVoice {
             }
             return new Configuration(this.pluginInterface);
         }
-
+        private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
+            config.CharacterVoices = _roleplayingMediaManager.CharacterVoices;
+            config.Save();
+            pluginInterface.SavePluginConfig(config);
+        }
+        unsafe private void CheckDependancies(bool forceNewAssignments = false) {
+            if (_clientState.LocalPlayer != null) {
+                if (_playerObject == null || forceNewAssignments) {
+                    _playerObject = new MediaGameObject(_clientState.LocalPlayer);
+                }
+                if (_mediaManager == null || forceNewAssignments) {
+                    _camera = CameraManager.Instance()->GetActiveCamera();
+                    _playerCamera = new MediaCameraObject(_camera);
+                    if (_mediaManager != null) {
+                        _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                    }
+                    _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
+                    _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
+                    _videoWindow.MediaManager = _mediaManager;
+                }
+            }
+        }
+        private void Config_OnConfigurationChanged(object sender, EventArgs e) {
+            if (config != null) {
+                try {
+                    if (_roleplayingMediaManager == null ||
+                        !string.IsNullOrEmpty(config.ApiKey)
+                        && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
+                        InitialzeManager();
+                    }
+                    if (_networkedClient != null) {
+                        _networkedClient.UpdateIPAddress(config.ConnectionIP);
+                    }
+                } catch {
+                    InitialzeManager();
+                }
+                RefreshSoundData();
+            }
+        }
+        public void InitialzeManager() {
+            _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
+            _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+            _window.Manager = _roleplayingMediaManager;
+        }
+        private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
+            RefreshSoundData();
+        }
+        #endregion
+        #region Sound Management
+        private void framework_Update(IFramework framework) {
+            if (!disposed) {
+                if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
+                    CheckVolumeLevels();
+                    CheckForNewRefreshes();
+                }
+                CheckForMovingObjects();
+                CheckForNewDynamicEmoteRequests();
+                CheckForDownloadCancellation();
+            }
+        }
+        private void Chat_ChatMessage(XivChatType type, uint senderId,
+        ref SeString sender, ref SeString message, ref bool isHandled) {
+            if (!disposed) {
+                CheckDependancies();
+                string playerName = sender.TextValue;
+                if (_roleplayingMediaManager != null) {
+                    switch (type) {
+                        case XivChatType.Say:
+                        case XivChatType.Shout:
+                        case XivChatType.Yell:
+                        case XivChatType.CustomEmote:
+                        case XivChatType.Party:
+                        case XivChatType.CrossParty:
+                        case XivChatType.TellIncoming:
+                        case XivChatType.TellOutgoing:
+                            ChatText(playerName, message, type, senderId);
+                            break;
+                        case (XivChatType)2729:
+                        case (XivChatType)2091:
+                        case (XivChatType)2234:
+                        case (XivChatType)2730:
+                        case (XivChatType)2219:
+                        case (XivChatType)2859:
+                        case (XivChatType)2731:
+                        case (XivChatType)2106:
+                        case (XivChatType)10409:
+                        case (XivChatType)8235:
+                        case (XivChatType)9001:
+                            BattleText(playerName, message, type);
+                            break;
+                    }
+                } else {
+                    InitialzeManager();
+                }
+            }
+        }
+        private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
+            if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
+                if (config.PerformEmotesBasedOnWrittenText) {
+                    if (type == XivChatType.CustomEmote) {
+                        Task.Run(() => EmoteReaction(message.TextValue));
+                    }
+                }
+                if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
+                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
+                    _clientState.LocalPlayer.Name.TextValue)).Split(" ");
+                    string playerSender = senderStrings.Length == 2 ?
+                        (senderStrings[0] + " " + senderStrings[1]) :
+                        (senderStrings[0] + " " + senderStrings[2]);
+                    string playerMessage = message.TextValue;
+                    Task.Run(async () => {
+                        string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
+                        config.Characters[_clientState.LocalPlayer.Name.TextValue],
+                        type == XivChatType.CustomEmote,
+                        config.PlayerCharacterVolume,
+                        _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
+                    });
+                }
+            } else {
+                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
+                bool isShoutYell = false;
+                if (senderStrings.Length > 2) {
+                    string playerSender = senderStrings[0] + " " + senderStrings[2];
+                    string playerMessage = message.TextValue;
+                    bool audioFocus = false;
+                    if (_clientState.LocalPlayer.TargetObject != null) {
+                        if (_clientState.LocalPlayer.TargetObject.ObjectKind ==
+                            ObjectKind.Player) {
+                            audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender
+                                || type == XivChatType.Party
+                                || type == XivChatType.CrossParty || isShoutYell;
+                            isShoutYell = type == XivChatType.Shout
+                                || type == XivChatType.Yell;
+                        }
+                    } else {
+                        audioFocus = true;
+                    }
+                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                    if (config.UsePlayerSync) {
+                        if (GetCombinedWhitelist().Contains(playerSender)) {
+                            Task.Run(async () => {
+                                string value = await _roleplayingMediaManager.
+                                GetSound(playerSender, playerMessage, audioFocus ?
+                                config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                                _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
+                                _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts);
+                            });
+                        }
+                    }
+                    if (type == XivChatType.Yell || type == XivChatType.Shout) {
+                        if (config.TuneIntoTwitchStreams && IsResidential()) {
+                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
+                                var strings = message.TextValue.Split(' ');
+                                foreach (string value in strings) {
+                                    if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                                        var audioGameObject = new MediaGameObject(player);
+                                        if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
+                                            TuneIntoStream(value, audioGameObject);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            var strings = message.TextValue.Split(' ');
+                            foreach (string value in strings) {
+                                if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                                    potentialStream = value;
+                                    lastStreamURL = value;
+                                    string cleanedURL = RemoveSpecialSymbols(value);
+                                    string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                                    _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
+            if (config.VoicePackIsActive) {
+                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                    if (!cooldown.IsRunning || cooldown.ElapsedMilliseconds > 3000) {
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                        string value = characterVoicePack.GetMisc(message.TextValue);
+                        if (!string.IsNullOrEmpty(value)) {
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                        }
+                    }
+                    cooldown.Restart();
+                }
+            }
+        }
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
             if (config.MoveSCDBasedModsToPerformanceSlider) {
                 if (_scdReplacements.ContainsKey(e.SoundPath)) {
@@ -275,164 +475,329 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private void QueueSCDTrigger(ScdFile scdFile) {
-            if (scdFile != null) {
-                if (scdFile.Audio != null) {
-                    if (scdFile.Audio.Count == 1) {
-                        _inGameSoundStartedAudio = true;
-                        _nativeSoundExpiryTimer.Stop();
-                        _nativeSoundExpiryTimer.Restart();
-                        bool isVorbis = scdFile.Audio[0].Format == SscfWaveFormat.Vorbis;
-                        _nativeAudioStream = !isVorbis ? new WaveChannel32(
-                        WaveFormatConversionStream.CreatePcmStream(scdFile.Audio[0].Data.GetStream())) : scdFile.Audio[0].Data.GetStream();
-                    }
-                }
-            }
-        }
-        private ScdFile GetScdFile(string soundPath) {
-            using (FileStream fileStream = new FileStream(_scdReplacements[soundPath], FileMode.Open, FileAccess.Read)) {
-                using (BinaryReader reader = new BinaryReader(fileStream)) {
-                    return new ScdFile(reader);
-                }
-            }
-        }
-
-        private void Window_OnMoveFailed(object sender, EventArgs e) {
-            _chat.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
-        }
-
-        private void gameObjectRedrawn(nint arg1, int arg2) {
-            if (!redrawCooldown.IsRunning) {
-                redrawCooldown.Start();
-                redrawObjectCount = _objectTable.Count<GameObject>();
-            }
-            if (redrawCooldown.IsRunning) {
-                objectsRedrawn++;
-            }
-            string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
-            string path = config.CacheFolder + @"\VoicePack\Others";
-            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-            string clipPath = path + @"\" + hash;
-            if (CombinedWhitelist().Contains(senderName) &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                if (Directory.Exists(clipPath)) {
-                    try {
-                        RemoveFiles(clipPath);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                    }
-                }
-            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                temporaryWhitelistQueue.Enqueue(senderName);
-            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                RefreshSoundData();
-            }
-        }
-
-        List<string> CombinedWhitelist() {
-            List<string> list = new List<string>();
-            list.AddRange(config.Whitelist);
-            list.AddRange(temporaryWhitelist);
-            return list;
-        }
-        private void framework_Update(IFramework framework) {
+        public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
             if (!disposed) {
-                if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
-                    uint voiceVolume = 0;
-                    uint masterVolume = 0;
-                    uint soundEffectVolume = 0;
-                    try {
-                        if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
-                            if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
-                                _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
-                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                                _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
-                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                                _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
-                                    ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                                if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
-                                    _mediaManager.SFXVolume = config.LoopingSFXVolume *
-                                     ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
-                                    _mediaManager.LiveStreamVolume = config.LivestreamVolume *
-                                     ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
-                                }
-                            }
-                            if (muteTimer.ElapsedMilliseconds > muteLength) {
-                                if (Filter != null) {
-                                    lock (Filter) {
-                                        Filter.Muted = voiceMuted = false;
-                                        RefreshPlayerVoiceMuted();
-                                        muteTimer.Stop();
-                                        muteTimer.Reset();
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                _lastPlayerToEmote = new MediaGameObject(instigator);
+                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
+                    if (config.VoicePackIsActive) {
+                        SendingEmote(instigator, emoteId);
                     }
-                    if (redrawCooldown.ElapsedMilliseconds > 100) {
-                        if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
-                            foreach (var item in temporaryWhitelistQueue) {
-                                temporaryWhitelist.Add(item);
-                            }
-                            temporaryWhitelistQueue.Clear();
-                        }
-                        redrawCooldown.Stop();
-                        redrawCooldown.Reset();
-                    }
-                }
-                try {
-                    foreach (GameObject gameObject in _objectTable) {
-                        string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                        if (!string.IsNullOrEmpty(cleanedName)) {
-                            if (gameObjectPositions.ContainsKey(cleanedName)) {
-                                var positionData = gameObjectPositions[cleanedName];
-                                if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                                    positionData.LastRotation != gameObject.Rotation) {
-                                    if (!positionData.IsMoving) {
-                                        ObjectIsMoving(cleanedName, gameObject);
-                                        positionData.IsMoving = true;
-                                    }
-                                } else {
-                                    positionData.IsMoving = false;
-                                }
-                                positionData.LastPosition = gameObject.Position;
-                                positionData.LastRotation = gameObject.Rotation;
-                            } else {
-                                gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                }
-                try {
-                    if (messageQueue.Count > 0 && !disposed) {
-                        if (!messageTimer.IsRunning) {
-                            messageTimer.Start();
-                        } else {
-                            if (messageTimer.ElapsedMilliseconds > 1000) {
-                                try {
-                                    _realChat.SendMessage(messageQueue.Dequeue());
-                                } catch (Exception e) {
-                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                                }
-                                messageTimer.Restart();
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                }
-                if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
-                    isDownloadingZip = false;
-                    maxDownloadLengthTimer.Reset();
+                } else {
+                    Task.Run(() => ReceivingEmote(instigator, emoteId));
                 }
             }
         }
+        private void CheckForNewRefreshes() {
+            if (redrawCooldown.ElapsedMilliseconds > 100) {
+                if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
+                    foreach (var item in temporaryWhitelistQueue) {
+                        temporaryWhitelist.Add(item);
+                    }
+                    temporaryWhitelistQueue.Clear();
+                }
+                redrawCooldown.Stop();
+                redrawCooldown.Reset();
+            }
+        }
+        private void CheckForMovingObjects() {
+            try {
+                foreach (GameObject gameObject in _objectTable) {
+                    string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                    if (!string.IsNullOrEmpty(cleanedName)) {
+                        if (gameObjectPositions.ContainsKey(cleanedName)) {
+                            var positionData = gameObjectPositions[cleanedName];
+                            if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                                positionData.LastRotation != gameObject.Rotation) {
+                                if (!positionData.IsMoving) {
+                                    ObjectIsMoving(cleanedName, gameObject);
+                                    positionData.IsMoving = true;
+                                }
+                            } else {
+                                positionData.IsMoving = false;
+                            }
+                            positionData.LastPosition = gameObject.Position;
+                            positionData.LastRotation = gameObject.Rotation;
+                        } else {
+                            gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+            }
+        }
+        #region Audio Volume
+        private void CheckVolumeLevels() {
+            uint voiceVolume = 0;
+            uint masterVolume = 0;
+            uint soundEffectVolume = 0;
+            try {
+                if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
+                    if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
+                        _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
+                            _mediaManager.SFXVolume = config.LoopingSFXVolume *
+                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                            _mediaManager.LiveStreamVolume = config.LivestreamVolume *
+                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                        }
+                    }
+                    if (muteTimer.ElapsedMilliseconds > muteLength) {
+                        if (Filter != null) {
+                            lock (Filter) {
+                                Filter.Muted = voiceMuted = false;
+                                RefreshPlayerVoiceMuted();
+                                muteTimer.Stop();
+                                muteTimer.Reset();
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+            }
+        }
+        public void MuteVoiceChecK(int length = 4000) {
+            muteLength = length;
+            if (!muteTimer.IsRunning) {
+                if (Filter != null) {
+                    Filter.Muted = voiceMuted = true;
+                }
+                RefreshPlayerVoiceMuted();
+                Dalamud.Logging.PluginLog.Log("Mute Triggered");
+                muteTimer.Start();
+            }
+        }
+        private void RefreshPlayerVoiceMuted() {
+            if (voiceMuted) {
+                _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
+            } else {
+                _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+            }
+        }
+        #endregion
+        #region Combat
+        private void BattleText(string playerName, SeString message, XivChatType type) {
+            CheckDependancies();
+            if (type != (XivChatType)8235 || message.TextValue.Contains("You")) {
+                if (config.VoicePackIsActive) {
+                    string value = "";
+                    string playerMessage = message.TextValue;
+                    string[] values = message.TextValue.Split(' ');
+                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                        bool attackIntended = false;
+                        Stopwatch characterSoundImportTimer = Stopwatch.StartNew();
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                        Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + voice + " took " + characterSoundImportTimer.ElapsedMilliseconds + " milliseconds to load.");
+                        if (!message.TextValue.Contains("cancel")) {
+                            if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                LocalPlayerCombat(playerName, message, type, characterVoicePack, ref value, ref attackIntended);
+                            } else {
+                                PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
+                            }
+                        }
 
+                        if (!string.IsNullOrEmpty(value) || attackIntended) {
+                            if (!attackIntended) {
+                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+                                Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
+                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+                            }
+                            if (!muteTimer.IsRunning) {
+                                if (Filter != null) {
+                                    Filter.Muted = true;
+                                }
+                                Task.Run(() => {
+                                    if (config.UsePlayerSync) {
+                                        Task.Run(async () => {
+                                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                                        });
+                                    }
+                                    while (muteTimer.ElapsedMilliseconds < 20) {
+                                        Thread.Sleep(20);
+                                    }
+                                    try {
+                                        if (Filter != null) {
+                                            lock (Filter) {
+                                                Filter.Muted = false;
+                                                muteTimer.Reset();
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        Dalamud.Logging.PluginLog.LogWarning(e.Message);
+                                    }
+                                });
+                            }
+                            muteTimer.Restart();
+                        }
+                    }
+                }
+            } else {
+                string[] senderStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(message.TextValue))).Split(' ');
+                string[] messageStrings = RemoveActionPhrases(RemoveSpecialSymbols(message.TextValue)).Split(' ');
+                bool isShoutYell = false;
+                if (senderStrings.Length > 2) {
+                    int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
+                    string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
+                    string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
+                    string path = config.CacheFolder + @"\VoicePack\Others";
+                    string clipPath = path + @"\" + hash;
+                    try {
+                        Directory.CreateDirectory(path);
+                    } catch {
+                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                    }
+                    if (config.UsePlayerSync) {
+                        if (GetCombinedWhitelist().Contains(playerSender)) {
+                            if (!isDownloadingZip) {
+                                if (!Path.Exists(clipPath)) {
+                                    isDownloadingZip = true;
+                                    maxDownloadLengthTimer.Restart();
+                                    Task.Run(async () => {
+                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                        isDownloadingZip = false;
+                                    });
+                                }
+                            }
+                            if (Path.Exists(clipPath) && !isDownloadingZip) {
+                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
+                                string value = "";
+                                if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                    OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
+                                } else {
+                                    PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
+                                }
+                                Task.Run(async () => {
+                                    GameObject character = null;
+                                    foreach (var item in _objectTable) {
+                                        string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
+                                        string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
+                                        if (playerNameStrings.Contains(playerSender)) {
+                                            character = item;
+                                        }
+                                    }
+                                    _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
+                                    playerSender, character.Position), value, SoundType.OtherPlayerCombat);
+                                });
+                                if (!muteTimer.IsRunning) {
+                                    Filter.Muted = true;
+                                    Task.Run(() => {
+                                        while (muteTimer.ElapsedMilliseconds < 20) {
+                                            Thread.Sleep(20);
+                                        }
+                                        lock (Filter) {
+                                            Filter.Muted = false;
+                                        }
+                                        muteTimer.Reset();
+                                    });
+                                }
+                                muteTimer.Restart();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        private void LocalPlayerCombat(string playerName, SeString message,
+    XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
+            if (type == (XivChatType)2729 ||
+            type == (XivChatType)2091) {
+                value = characterVoicePack.GetMisc(message.TextValue);
+                if (string.IsNullOrEmpty(value)) {
+                    if (attackCount == 0) {
+                        value = characterVoicePack.GetAction(message.TextValue);
+                        attackCount++;
+                    } else {
+                        attackCount++;
+                        if (attackCount >= 3) {
+                            attackCount = 0;
+                        }
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2234) {
+                value = characterVoicePack.GetDeath();
+            } else if (type == (XivChatType)2730) {
+                value = characterVoicePack.GetMissed();
+            } else if (type == (XivChatType)2219) {
+                if (message.TextValue.Contains("ready") ||
+                    message.TextValue.Contains("readies")) {
+                    value = characterVoicePack.GetMisc(message.TextValue);
+                    if (string.IsNullOrEmpty(value)) {
+                        value = characterVoicePack.GetReadying(message.TextValue);
+                    }
+                    attackCount = 0;
+                    castingCount = 0;
+                } else {
+                    if (castingCount == 0) {
+                        value = characterVoicePack.GetCastingHeal();
+                        castingCount++;
+                    } else {
+                        castingCount++;
+                        if (attackCount >= 3) {
+                            castingCount = 0;
+                        }
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2731) {
+                if (message.TextValue.Contains("ready") ||
+                    message.TextValue.Contains("readies")) {
+                    value = characterVoicePack.GetMisc(message.TextValue);
+                    if (string.IsNullOrEmpty(value)) {
+                        value = characterVoicePack.GetReadying(message.TextValue);
+                    }
+                    attackCount = 0;
+                    castingCount = 0;
+                } else {
+                    if (castingCount == 0) {
+                        value = characterVoicePack.GetCastingAttack();
+                        castingCount++;
+                    } else {
+                        castingCount++;
+                        if (castingCount >= 3) {
+                            castingCount = 0;
+                        }
+                        attackIntended = true;
+                    }
+                }
+            } else if (type == (XivChatType)2106) {
+                value = characterVoicePack.GetRevive();
+            } else if (type == (XivChatType)10409) {
+                value = characterVoicePack.GetHurt();
+            }
+        }
+        private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
+            CharacterVoicePack characterVoicePack, ref string value) {
+            if (message.TextValue.Contains("hit") ||
+              message.TextValue.Contains("uses") ||
+              message.TextValue.Contains("casts")) {
+                value = characterVoicePack.GetAction(message.TextValue);
+            } else if (message.TextValue.Contains("defeated")) {
+                value = characterVoicePack.GetDeath();
+            } else if (message.TextValue.Contains("miss")) {
+                value = characterVoicePack.GetMissed();
+            } else if (message.TextValue.Contains("readies")) {
+                value = characterVoicePack.GetReadying(message.TextValue);
+            } else if (message.TextValue.Contains("casting")) {
+                value = characterVoicePack.GetCastingAttack();
+            } else if (message.TextValue.Contains("revive")) {
+                value = characterVoicePack.GetRevive();
+            } else if (message.TextValue.Contains("damage")) {
+                value = characterVoicePack.GetHurt();
+            }
+        }
+        #endregion
+        #region Player Movement Trigger
         private void ObjectIsMoving(string playerName, GameObject gameObject) {
             if (_clientState.LocalPlayer != null) {
                 if (playerName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
@@ -454,7 +819,7 @@ namespace RoleplayingVoice {
             string clipPath = path + @"\" + hash;
             try {
                 if (config.UsePlayerSync) {
-                    if (CombinedWhitelist().Contains(playerSender)) {
+                    if (GetCombinedWhitelist().Contains(playerSender)) {
                         if (!isDownloadingZip) {
                             if (!Path.Exists(clipPath)) {
                                 isDownloadingZip = true;
@@ -505,17 +870,141 @@ namespace RoleplayingVoice {
                 }
             }
         }
-
-        private void RefreshPlayerVoiceMuted() {
-            if (voiceMuted) {
-                _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
-            } else {
-                _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+        #endregion
+        #region Crafting Checks
+        private void PlayerCrafting(string playerName, SeString message,
+            XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
+            value = characterVoicePack.GetMisc(message.TextValue);
+            if (string.IsNullOrEmpty(value)) {
+                value = characterVoicePack.GetReadying(message.TextValue);
             }
         }
-        private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
-            RefreshSoundData();
+        public bool IsDicipleOfTheHand(string value) {
+            List<string> jobs = new List<string>() { "ALC", "ARM", "BSM", "CUL", "CRP", "GSM", "LTW", "WVR" };
+            return jobs.Contains(value.ToUpper());
         }
+        #endregion
+        #region SCD Management
+        public async void CheckForValidSCD(MediaGameObject mediaObject, string emote = "",
+    string stagingPath = "", string soundPath = "", bool isSending = false) {
+            if (_nativeAudioStream != null) {
+                if (isSending) {
+                    Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
+                    if (!string.IsNullOrEmpty(soundPath)) {
+                        try {
+                            MemoryStream diskCopy = new MemoryStream();
+                            if (!_mediaManager.LowPerformanceMode) {
+                                try {
+                                    _nativeAudioStream.CopyTo(diskCopy);
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                }
+                            }
+                            _nativeAudioStream.Position = 0;
+                            _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
+                            _scdProcessingDelayTimer.Stop();
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
+                            if (!_mediaManager.LowPerformanceMode) {
+                                _ = Task.Run(async () => {
+                                    try {
+                                        using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
+                                            diskCopy.Position = 0;
+                                            MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
+                                        }
+                                        _nativeAudioStream = null;
+                                    } catch (Exception e) {
+                                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                    }
+                                });
+                            }
+                            soundPath = null;
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                    }
+                } else {
+                    Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
+                }
+            } else {
+                Dalamud.Logging.PluginLog.LogWarning("There is no available audio stream to play");
+            }
+        }
+        private void QueueSCDTrigger(ScdFile scdFile) {
+            if (scdFile != null) {
+                if (scdFile.Audio != null) {
+                    if (scdFile.Audio.Count == 1) {
+                        _inGameSoundStartedAudio = true;
+                        _nativeSoundExpiryTimer.Stop();
+                        _nativeSoundExpiryTimer.Restart();
+                        bool isVorbis = scdFile.Audio[0].Format == SscfWaveFormat.Vorbis;
+                        _nativeAudioStream = !isVorbis ? new WaveChannel32(
+                        WaveFormatConversionStream.CreatePcmStream(scdFile.Audio[0].Data.GetStream())) : scdFile.Audio[0].Data.GetStream();
+                    }
+                }
+            }
+        }
+        private ScdFile GetScdFile(string soundPath) {
+            using (FileStream fileStream = new FileStream(_scdReplacements[soundPath], FileMode.Open, FileAccess.Read)) {
+                using (BinaryReader reader = new BinaryReader(fileStream)) {
+                    return new ScdFile(reader);
+                }
+            }
+        }
+        #endregion
+        #endregion
+        #region Dynamic Emoting
+        private void CheckForNewDynamicEmoteRequests() {
+            try {
+                if (messageQueue.Count > 0 && !disposed) {
+                    if (!messageTimer.IsRunning) {
+                        messageTimer.Start();
+                    } else {
+                        if (messageTimer.ElapsedMilliseconds > 1000) {
+                            try {
+                                _realChat.SendMessage(messageQueue.Dequeue());
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            }
+                            messageTimer.Restart();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+            }
+        }
+        private async void EmoteReaction(string messageValue) {
+            var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
+            foreach (var item in emotes) {
+                if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
+                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
+                        messageValue.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed")) {
+                        messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
+                        break;
+                    }
+                }
+            }
+        }
+        #endregion
+        #region Sound Sync
+        private void CheckForDownloadCancellation() {
+            if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
+                isDownloadingZip = false;
+                maxDownloadLengthTimer.Reset();
+            }
+        }
+        List<string> GetCombinedWhitelist() {
+            List<string> list = new List<string>();
+            list.AddRange(config.Whitelist);
+            list.AddRange(temporaryWhitelist);
+            return list;
+        }
+        #endregion
+        #region Collect Sound Data
         public async void RefreshSoundData() {
             if (!disposed) {
                 _ = Task.Run(async () => {
@@ -537,28 +1026,8 @@ namespace RoleplayingVoice {
                         Dalamud.Logging.PluginLog.Error(e.Message);
                     }
                 }
-                WriteStreamingPath();
             }
         }
-
-        private void WriteStreamingPath() {
-            if (!string.IsNullOrEmpty(config.StreamPath)) {
-                var writer = File.CreateText(Path.Combine(stagingPath, "streaming.strm"));
-                writer.WriteLine(config.StreamPath);
-                writer.Flush();
-                writer.Close();
-                writer.Dispose();
-            }
-        }
-        private string GetStreamingPath(string directory) {
-            string path = Path.Combine(directory, "streaming.strm");
-            if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
-                var writer = File.OpenText(path);
-                return writer.ReadToEnd();
-            }
-            return "";
-        }
-
         public async Task<List<string>> GetCombinedSoundList(List<KeyValuePair<List<string>, int>> sounds) {
             List<string> list = new List<string>();
             Dictionary<string, bool> keyValuePairs = new Dictionary<string, bool>();
@@ -635,25 +1104,47 @@ namespace RoleplayingVoice {
             });
             return list;
         }
-        private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
-            _chat.PrintError("[Artemis Roleplaying Kit] " + e.Message);
-            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + e.Message);
-        }
-
-        private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
-            if (config.VoicePackIsActive) {
-                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (!cooldown.IsRunning || cooldown.ElapsedMilliseconds > 3000) {
-                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        string path = config.CacheFolder + @"\VoicePack\" + voice;
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
-                        string value = characterVoicePack.GetMisc(message.TextValue);
-                        if (!string.IsNullOrEmpty(value)) {
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
-                        }
+        #endregion
+        #region Data Cleanup
+        public void RemoveFiles(string path) {
+            try {
+                Directory.Delete(path, true);
+            } catch {
+                foreach (string file in Directory.EnumerateFiles(path)) {
+                    try {
+                        File.Delete(file);
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                     }
-                    cooldown.Restart();
                 }
+            }
+        }
+        private void gameObjectRedrawn(nint arg1, int arg2) {
+            if (!redrawCooldown.IsRunning) {
+                redrawCooldown.Start();
+                redrawObjectCount = _objectTable.Count<GameObject>();
+            }
+            if (redrawCooldown.IsRunning) {
+                objectsRedrawn++;
+            }
+            string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+            string path = config.CacheFolder + @"\VoicePack\Others";
+            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+            string clipPath = path + @"\" + hash;
+            if (GetCombinedWhitelist().Contains(senderName) &&
+                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                if (Directory.Exists(clipPath)) {
+                    try {
+                        RemoveFiles(clipPath);
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                    }
+                }
+            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                temporaryWhitelistQueue.Enqueue(senderName);
+            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                RefreshSoundData();
             }
         }
 
@@ -704,6 +1195,8 @@ namespace RoleplayingVoice {
             twitchSetCooldown.Stop();
             twitchSetCooldown.Reset();
         }
+        #endregion
+        #region Connection Attempts
         private void Window_RequestingReconnect(object sender, EventArgs e) {
             AttemptConnection();
         }
@@ -719,80 +1212,8 @@ namespace RoleplayingVoice {
                 }
             }
         }
-
-        private void UiBuilder_OpenConfigUi() {
-            _window.RefreshVoices();
-            _window.Toggle();
-        }
-        public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
-            if (!disposed) {
-                _lastPlayerToEmote = new MediaGameObject(instigator);
-                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
-                    if (config.VoicePackIsActive) {
-                        SendingEmote(instigator, emoteId);
-                    }
-                } else {
-                    Task.Run(() => ReceivingEmote(instigator, emoteId));
-                }
-            }
-        }
-        public async void CheckForValidSCD(MediaGameObject mediaObject, string emote = "",
-            string stagingPath = "", string soundPath = "", bool isSending = false) {
-            if (_nativeAudioStream != null) {
-                if (isSending) {
-                    Dalamud.Logging.PluginLog.Log("Emote Trigger Detected");
-                    if (!string.IsNullOrEmpty(soundPath)) {
-                        try {
-                            MemoryStream diskCopy = new MemoryStream();
-                            if (!_mediaManager.LowPerformanceMode) {
-                                try {
-                                    _nativeAudioStream.CopyTo(diskCopy);
-                                } catch (Exception e) {
-                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                                }
-                            }
-                            _nativeAudioStream.Position = 0;
-                            _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
-                            _scdProcessingDelayTimer.Stop();
-                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
-                            if (!_mediaManager.LowPerformanceMode) {
-                                _ = Task.Run(async () => {
-                                    try {
-                                        using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
-                                            diskCopy.Position = 0;
-                                            MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
-                                        }
-                                        _nativeAudioStream = null;
-                                    } catch (Exception e) {
-                                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                                    }
-                                });
-                            }
-                            soundPath = null;
-                        } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                        }
-                    }
-                } else {
-                    Dalamud.Logging.PluginLog.LogWarning("Not currently sending");
-                }
-            } else {
-                Dalamud.Logging.PluginLog.LogWarning("There is no available audio stream to play");
-            }
-        }
-        public void RemoveFiles(string path) {
-            try {
-                Directory.Delete(path, true);
-            } catch {
-                foreach (string file in Directory.EnumerateFiles(path)) {
-                    try {
-                        File.Delete(file);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                    }
-                }
-            }
-        }
+        #endregion
+        #region Emote Processing
         private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
             if (instigator != null) {
                 try {
@@ -812,7 +1233,7 @@ namespace RoleplayingVoice {
                         string clipPath = path + @"\" + hash;
                         try {
                             if (config.UsePlayerSync) {
-                                if (CombinedWhitelist().Contains(playerSender)) {
+                                if (GetCombinedWhitelist().Contains(playerSender)) {
                                     if (!isDownloadingZip) {
                                         if (!Path.Exists(clipPath) || !File.Exists(clipPath + @"\" + GetEmoteName(emoteId) + ".mp3")) {
                                             if (Path.Exists(clipPath)) {
@@ -891,6 +1312,88 @@ namespace RoleplayingVoice {
                 }
             }
         }
+        private string GetEmoteName(ushort emoteId) {
+            Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
+            return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
+        }
+        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
+            Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
+            Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
+            Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
+            Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
+
+            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString());
+            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name);
+            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
+            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
+            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
+
+            characterVoicePack.EmoteIndex = -1;
+            isVoicedEmote = true;
+            switch (emoteId) {
+                case 1:
+                    characterVoicePack.EmoteIndex = 0;
+                    break;
+                case 2:
+                    characterVoicePack.EmoteIndex = 1;
+                    break;
+                case 3:
+                    characterVoicePack.EmoteIndex = 2;
+                    break;
+                case 6:
+                    characterVoicePack.EmoteIndex = 3;
+                    break;
+                case 13:
+                    characterVoicePack.EmoteIndex = 4;
+                    break;
+                case 14:
+                    characterVoicePack.EmoteIndex = 5;
+                    break;
+                case 17:
+                    characterVoicePack.EmoteIndex = 6;
+                    break;
+                case 20:
+                    characterVoicePack.EmoteIndex = 7;
+                    break;
+                case 21:
+                    characterVoicePack.EmoteIndex = 8;
+                    break;
+                case 24:
+                    characterVoicePack.EmoteIndex = 9;
+                    break;
+                case 37:
+                    characterVoicePack.EmoteIndex = 10;
+                    break;
+                case 40:
+                    characterVoicePack.EmoteIndex = 11;
+                    break;
+                case 42:
+                    characterVoicePack.EmoteIndex = 12;
+                    break;
+                case 48:
+                    characterVoicePack.EmoteIndex = 13;
+                    break;
+                default:
+                    isVoicedEmote = false;
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(emotePathId)) {
+                return emotePathId;
+            } else if (!string.IsNullOrEmpty(emotePathEnglish)) {
+                return emotePathEnglish;
+            } else if (!string.IsNullOrEmpty(emotePathFrench)) {
+                return emotePathFrench;
+            } else if (!string.IsNullOrEmpty(emotePathGerman)) {
+                return emotePathGerman;
+            } else if (!string.IsNullOrEmpty(emotePathJapanese)) {
+                return emotePathJapanese;
+            }
+            return string.Empty;
+        }
+
+        #endregion Emote Processing
+        #region Penumbra Parsing
         public void ExtractSCDOptions(Option option, string directory) {
             if (option != null) {
                 ;
@@ -1061,101 +1564,21 @@ namespace RoleplayingVoice {
             }
             return list;
         }
-        public void MuteVoiceChecK(int length = 4000) {
-            muteLength = length;
-            if (!muteTimer.IsRunning) {
-                if (Filter != null) {
-                    Filter.Muted = voiceMuted = true;
-                }
-                RefreshPlayerVoiceMuted();
-                Dalamud.Logging.PluginLog.Log("Mute Triggered");
-                muteTimer.Start();
-            }
+        #endregion
+        #region String Sanitization
+        public string RemoveActionPhrases(string value) {
+            return value.Replace("Direct hit ", null)
+                    .Replace("Critical direct hit ", null)
+                    .Replace("Critical ", null)
+                    .Replace("Direct ", null)
+                    .Replace("direct ", null);
         }
-        private string GetEmoteName(ushort emoteId) {
-            Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
-            return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
-        }
-        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
-            Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
-            Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
-            Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
-            Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
-
-            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString());
-            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name);
-            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
-            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
-            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
-
-            characterVoicePack.EmoteIndex = -1;
-            isVoicedEmote = true;
-            switch (emoteId) {
-                case 1:
-                    characterVoicePack.EmoteIndex = 0;
-                    break;
-                case 2:
-                    characterVoicePack.EmoteIndex = 1;
-                    break;
-                case 3:
-                    characterVoicePack.EmoteIndex = 2;
-                    break;
-                case 6:
-                    characterVoicePack.EmoteIndex = 3;
-                    break;
-                case 13:
-                    characterVoicePack.EmoteIndex = 4;
-                    break;
-                case 14:
-                    characterVoicePack.EmoteIndex = 5;
-                    break;
-                case 17:
-                    characterVoicePack.EmoteIndex = 6;
-                    break;
-                case 20:
-                    characterVoicePack.EmoteIndex = 7;
-                    break;
-                case 21:
-                    characterVoicePack.EmoteIndex = 8;
-                    break;
-                case 24:
-                    characterVoicePack.EmoteIndex = 9;
-                    break;
-                case 37:
-                    characterVoicePack.EmoteIndex = 10;
-                    break;
-                case 40:
-                    characterVoicePack.EmoteIndex = 11;
-                    break;
-                case 42:
-                    characterVoicePack.EmoteIndex = 12;
-                    break;
-                case 48:
-                    characterVoicePack.EmoteIndex = 13;
-                    break;
-                default:
-                    isVoicedEmote = false;
-                    break;
-            }
-
-            if (!string.IsNullOrEmpty(emotePathId)) {
-                return emotePathId;
-            } else if (!string.IsNullOrEmpty(emotePathEnglish)) {
-                return emotePathEnglish;
-            } else if (!string.IsNullOrEmpty(emotePathFrench)) {
-                return emotePathFrench;
-            } else if (!string.IsNullOrEmpty(emotePathGerman)) {
-                return emotePathGerman;
-            } else if (!string.IsNullOrEmpty(emotePathJapanese)) {
-                return emotePathJapanese;
-            }
-            return string.Empty;
-        }
-
-        private void _roleplayingVoiceManager_VoicesUpdated(object sender, EventArgs e) {
-            config.CharacterVoices = _roleplayingMediaManager.CharacterVoices;
-            config.Save();
-            pluginInterface.SavePluginConfig(config);
+        public static string CleanSenderName(string senderName) {
+            string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(senderName)).Split(" ");
+            string playerSender = senderStrings.Length == 1 ? senderStrings[0] : senderStrings.Length == 2 ?
+                (senderStrings[0] + " " + senderStrings[1]) :
+                (senderStrings[0] + " " + senderStrings[2]);
+            return playerSender;
         }
         public static string SplitCamelCase(string input) {
             return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1",
@@ -1165,414 +1588,8 @@ namespace RoleplayingVoice {
             Regex rgx = new Regex(@"[^a-zA-Z:/._\ -]");
             return rgx.Replace(value, "");
         }
-        private void Chat_ChatMessage(XivChatType type, uint senderId,
-            ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (!disposed) {
-                CheckDependancies();
-                string playerName = sender.TextValue;
-                if (_roleplayingMediaManager != null) {
-                    switch (type) {
-                        case XivChatType.Say:
-                        case XivChatType.Shout:
-                        case XivChatType.Yell:
-                        case XivChatType.CustomEmote:
-                        case XivChatType.Party:
-                        case XivChatType.CrossParty:
-                        case XivChatType.TellIncoming:
-                        case XivChatType.TellOutgoing:
-                            ChatText(playerName, message, type, senderId);
-                            break;
-                        case (XivChatType)2729:
-                        case (XivChatType)2091:
-                        case (XivChatType)2234:
-                        case (XivChatType)2730:
-                        case (XivChatType)2219:
-                        case (XivChatType)2859:
-                        case (XivChatType)2731:
-                        case (XivChatType)2106:
-                        case (XivChatType)10409:
-                        case (XivChatType)8235:
-                        case (XivChatType)9001:
-                            BattleText(playerName, message, type);
-                            break;
-                    }
-                } else {
-                    InitialzeManager();
-                }
-            }
-        }
-
-        unsafe private void CheckDependancies(bool forceNewAssignments = false) {
-            if (_clientState.LocalPlayer != null) {
-                if (_playerObject == null || forceNewAssignments) {
-                    _playerObject = new MediaGameObject(_clientState.LocalPlayer);
-                }
-                if (_mediaManager == null || forceNewAssignments) {
-                    _camera = CameraManager.Instance()->GetActiveCamera();
-                    _playerCamera = new MediaCameraObject(_camera);
-                    if (_mediaManager != null) {
-                        _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
-                    }
-                    _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
-                    _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
-                    _videoWindow.MediaManager = _mediaManager;
-                }
-            }
-        }
-
-        private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
-            Dalamud.Logging.PluginLog.LogWarning(e.Exception, e.Exception.Message);
-        }
-
-        private void _audioManager_OnNewAudioTriggered(object sender, EventArgs e) {
-        }
-
-        private void BattleText(string playerName, SeString message, XivChatType type) {
-            CheckDependancies();
-            if (type != (XivChatType)8235 || message.TextValue.Contains("You")) {
-                if (config.VoicePackIsActive) {
-                    string value = "";
-                    string playerMessage = message.TextValue;
-                    string[] values = message.TextValue.Split(' ');
-                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        string path = config.CacheFolder + @"\VoicePack\" + voice;
-                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                        bool attackIntended = false;
-                        Stopwatch characterSoundImportTimer = Stopwatch.StartNew();
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
-                        Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + voice + " took " + characterSoundImportTimer.ElapsedMilliseconds + " milliseconds to load.");
-                        if (!message.TextValue.Contains("cancel")) {
-                            if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
-                                LocalPlayerCombat(playerName, message, type, characterVoicePack, ref value, ref attackIntended);
-                            } else {
-                                PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(value) || attackIntended) {
-                            if (!attackIntended) {
-                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
-                                Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
-                                Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
-                            }
-                            if (!muteTimer.IsRunning) {
-                                if (Filter != null) {
-                                    Filter.Muted = true;
-                                }
-                                Task.Run(() => {
-                                    if (config.UsePlayerSync) {
-                                        Task.Run(async () => {
-                                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
-                                        });
-                                    }
-                                    while (muteTimer.ElapsedMilliseconds < 20) {
-                                        Thread.Sleep(20);
-                                    }
-                                    try {
-                                        if (Filter != null) {
-                                            lock (Filter) {
-                                                Filter.Muted = false;
-                                                muteTimer.Reset();
-                                            }
-                                        }
-                                    } catch (Exception e) {
-                                        Dalamud.Logging.PluginLog.LogWarning(e.Message);
-                                    }
-                                });
-                            }
-                            muteTimer.Restart();
-                        }
-                    }
-                }
-            } else {
-                string[] senderStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(message.TextValue))).Split(' ');
-                string[] messageStrings = RemoveActionPhrases(RemoveSpecialSymbols(message.TextValue)).Split(' ');
-                bool isShoutYell = false;
-                if (senderStrings.Length > 2) {
-                    int offset = !string.IsNullOrEmpty(senderStrings[0]) ? 0 : 1;
-                    string playerSender = senderStrings[0 + offset] + " " + senderStrings[2 + offset];
-                    string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
-                    string path = config.CacheFolder + @"\VoicePack\Others";
-                    string clipPath = path + @"\" + hash;
-                    try {
-                        Directory.CreateDirectory(path);
-                    } catch {
-                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administrative access!");
-                    }
-                    if (config.UsePlayerSync) {
-                        if (CombinedWhitelist().Contains(playerSender)) {
-                            if (!isDownloadingZip) {
-                                if (!Path.Exists(clipPath)) {
-                                    isDownloadingZip = true;
-                                    maxDownloadLengthTimer.Restart();
-                                    Task.Run(async () => {
-                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
-                                        isDownloadingZip = false;
-                                    });
-                                }
-                            }
-                            if (Path.Exists(clipPath) && !isDownloadingZip) {
-                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
-                                string value = "";
-                                if (!IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
-                                    OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
-                                } else {
-                                    PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
-                                }
-                                Task.Run(async () => {
-                                    GameObject character = null;
-                                    foreach (var item in _objectTable) {
-                                        string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
-                                        string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
-                                        if (playerNameStrings.Contains(playerSender)) {
-                                            character = item;
-                                        }
-                                    }
-                                    _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
-                                    playerSender, character.Position), value, SoundType.OtherPlayerCombat);
-                                });
-                                if (!muteTimer.IsRunning) {
-                                    Filter.Muted = true;
-                                    Task.Run(() => {
-                                        while (muteTimer.ElapsedMilliseconds < 20) {
-                                            Thread.Sleep(20);
-                                        }
-                                        lock (Filter) {
-                                            Filter.Muted = false;
-                                        }
-                                        muteTimer.Reset();
-                                    });
-                                }
-                                muteTimer.Restart();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        private async void EmoteReaction(string messageValue) {
-            var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
-            foreach (var item in emotes) {
-                if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
-                        messageValue.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed")) {
-                        messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
-                        break;
-                    }
-                }
-            }
-        }
-        private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
-            CharacterVoicePack characterVoicePack, ref string value) {
-            if (message.TextValue.Contains("hit") ||
-              message.TextValue.Contains("uses") ||
-              message.TextValue.Contains("casts")) {
-                value = characterVoicePack.GetAction(message.TextValue);
-            } else if (message.TextValue.Contains("defeated")) {
-                value = characterVoicePack.GetDeath();
-            } else if (message.TextValue.Contains("miss")) {
-                value = characterVoicePack.GetMissed();
-            } else if (message.TextValue.Contains("readies")) {
-                value = characterVoicePack.GetReadying(message.TextValue);
-            } else if (message.TextValue.Contains("casting")) {
-                value = characterVoicePack.GetCastingAttack();
-            } else if (message.TextValue.Contains("revive")) {
-                value = characterVoicePack.GetRevive();
-            } else if (message.TextValue.Contains("damage")) {
-                value = characterVoicePack.GetHurt();
-            }
-        }
-
-        private void PlayerCrafting(string playerName, SeString message,
-            XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
-            value = characterVoicePack.GetMisc(message.TextValue);
-            if (string.IsNullOrEmpty(value)) {
-                value = characterVoicePack.GetReadying(message.TextValue);
-            }
-        }
-
-        private void LocalPlayerCombat(string playerName, SeString message,
-            XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
-            if (type == (XivChatType)2729 ||
-            type == (XivChatType)2091) {
-                value = characterVoicePack.GetMisc(message.TextValue);
-                if (string.IsNullOrEmpty(value)) {
-                    if (attackCount == 0) {
-                        value = characterVoicePack.GetAction(message.TextValue);
-                        attackCount++;
-                    } else {
-                        attackCount++;
-                        if (attackCount >= 3) {
-                            attackCount = 0;
-                        }
-                        attackIntended = true;
-                    }
-                }
-            } else if (type == (XivChatType)2234) {
-                value = characterVoicePack.GetDeath();
-            } else if (type == (XivChatType)2730) {
-                value = characterVoicePack.GetMissed();
-            } else if (type == (XivChatType)2219) {
-                if (message.TextValue.Contains("ready") ||
-                    message.TextValue.Contains("readies")) {
-                    value = characterVoicePack.GetMisc(message.TextValue);
-                    if (string.IsNullOrEmpty(value)) {
-                        value = characterVoicePack.GetReadying(message.TextValue);
-                    }
-                    attackCount = 0;
-                    castingCount = 0;
-                } else {
-                    if (castingCount == 0) {
-                        value = characterVoicePack.GetCastingHeal();
-                        castingCount++;
-                    } else {
-                        castingCount++;
-                        if (attackCount >= 3) {
-                            castingCount = 0;
-                        }
-                        attackIntended = true;
-                    }
-                }
-            } else if (type == (XivChatType)2731) {
-                if (message.TextValue.Contains("ready") ||
-                    message.TextValue.Contains("readies")) {
-                    value = characterVoicePack.GetMisc(message.TextValue);
-                    if (string.IsNullOrEmpty(value)) {
-                        value = characterVoicePack.GetReadying(message.TextValue);
-                    }
-                    attackCount = 0;
-                    castingCount = 0;
-                } else {
-                    if (castingCount == 0) {
-                        value = characterVoicePack.GetCastingAttack();
-                        castingCount++;
-                    } else {
-                        castingCount++;
-                        if (castingCount >= 3) {
-                            castingCount = 0;
-                        }
-                        attackIntended = true;
-                    }
-                }
-            } else if (type == (XivChatType)2106) {
-                value = characterVoicePack.GetRevive();
-            } else if (type == (XivChatType)10409) {
-                value = characterVoicePack.GetHurt();
-            }
-        }
-
-        //public string MakeThirdPerson(string value) {
-        //    return value.Replace("cast ", "casts ")
-        //                .Replace("use", "uses")
-        //                .Replace("lose", "loses")
-        //                .Replace("hit", "hits")
-        //                .Replace("begin", "begins")
-        //                .Replace("You", null)
-        //                .Replace("!", null);
-        //}
-        public string RemoveActionPhrases(string value) {
-            return value.Replace("Direct hit ", null)
-                    .Replace("Critical direct hit ", null)
-                    .Replace("Critical ", null)
-                    .Replace("Direct ", null)
-                    .Replace("direct ", null);
-        }
-        public bool IsDicipleOfTheHand(string value) {
-            List<string> jobs = new List<string>() { "ALC", "ARM", "BSM", "CUL", "CRP", "GSM", "LTW", "WVR" };
-            return jobs.Contains(value.ToUpper());
-        }
-
-        private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
-            if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
-                if (config.PerformEmotesBasedOnWrittenText) {
-                    if (type == XivChatType.CustomEmote) {
-                        Task.Run(() => EmoteReaction(message.TextValue));
-                    }
-                }
-                if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
-                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
-                    _clientState.LocalPlayer.Name.TextValue)).Split(" ");
-                    string playerSender = senderStrings.Length == 2 ?
-                        (senderStrings[0] + " " + senderStrings[1]) :
-                        (senderStrings[0] + " " + senderStrings[2]);
-                    string playerMessage = message.TextValue;
-                    Task.Run(async () => {
-                        string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
-                        config.Characters[_clientState.LocalPlayer.Name.TextValue],
-                        type == XivChatType.CustomEmote,
-                        config.PlayerCharacterVolume,
-                        _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
-                    });
-                }
-            } else {
-                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
-                bool isShoutYell = false;
-                if (senderStrings.Length > 2) {
-                    string playerSender = senderStrings[0] + " " + senderStrings[2];
-                    string playerMessage = message.TextValue;
-                    bool audioFocus = false;
-                    if (_clientState.LocalPlayer.TargetObject != null) {
-                        if (_clientState.LocalPlayer.TargetObject.ObjectKind ==
-                            ObjectKind.Player) {
-                            audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender
-                                || type == XivChatType.Party
-                                || type == XivChatType.CrossParty || isShoutYell;
-                            isShoutYell = type == XivChatType.Shout
-                                || type == XivChatType.Yell;
-                        }
-                    } else {
-                        audioFocus = true;
-                    }
-                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
-                    if (config.UsePlayerSync) {
-                        if (CombinedWhitelist().Contains(playerSender)) {
-                            Task.Run(async () => {
-                                string value = await _roleplayingMediaManager.
-                                GetSound(playerSender, playerMessage, audioFocus ?
-                                config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                                _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts);
-                            });
-                        }
-                    }
-                    if (type == XivChatType.Yell || type == XivChatType.Shout) {
-                        if (config.TuneIntoTwitchStreams && IsResidential()) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
-                                var strings = message.TextValue.Split(' ');
-                                foreach (string value in strings) {
-                                    if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                        var audioGameObject = new MediaGameObject(player);
-                                        if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
-                                            TuneIntoStream(value, audioGameObject);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            var strings = message.TextValue.Split(' ');
-                            foreach (string value in strings) {
-                                if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                    potentialStream = value;
-                                    lastStreamURL = value;
-                                    string cleanedURL = RemoveSpecialSymbols(value);
-                                    string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                                    _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
+        #endregion
+        #region Twitch Management
         private void TuneIntoStream(string url, IGameObject audioGameObject) {
             Task.Run(async () => {
                 string cleanedURL = RemoveSpecialSymbols(url);
@@ -1593,41 +1610,17 @@ namespace RoleplayingVoice {
             twitchSetCooldown.Reset();
             twitchSetCooldown.Start();
         }
-
-        public static string CleanSenderName(string senderName) {
-            string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(senderName)).Split(" ");
-            string playerSender = senderStrings.Length == 1 ? senderStrings[0] : senderStrings.Length == 2 ?
-                (senderStrings[0] + " " + senderStrings[1]) :
-                (senderStrings[0] + " " + senderStrings[2]);
-            return playerSender;
-        }
-
-        private void Config_OnConfigurationChanged(object sender, EventArgs e) {
-            if (config != null) {
-                try {
-                    if (_roleplayingMediaManager == null ||
-                        !string.IsNullOrEmpty(config.ApiKey)
-                        && config.ApiKey.All(c => char.IsAsciiLetterOrDigit(c))) {
-                        InitialzeManager();
-                    }
-                    if (_networkedClient != null) {
-                        _networkedClient.UpdateIPAddress(config.ConnectionIP);
-                    }
-                } catch {
-                    InitialzeManager();
-                }
-                RefreshSoundData();
-            }
-        }
-        public void InitialzeManager() {
-            _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
-            _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            _window.Manager = _roleplayingMediaManager;
-        }
+        #endregion
+        #region UI Management
         private void UiBuilder_Draw() {
             this.windowSystem.Draw();
         }
-
+        private void UiBuilder_OpenConfigUi() {
+            _window.RefreshVoices();
+            _window.Toggle();
+        }
+        #endregion
+        #region Chat Commands
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
         public void ExecuteCommandA(string command, string args) {
@@ -1676,73 +1669,7 @@ namespace RoleplayingVoice {
                             AttemptConnection();
                             break;
                         case "anim":
-                            var list = CreateEmoteList(_dataManager);
-                            if (splitArgs.Length > 1) {
-                                string emote = "";
-                                string foundModName = "";
-                                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                                Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-                                string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
-                                Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
-                                for (int i = 0; i < 5 && string.IsNullOrEmpty(emote); i++) {
-                                    foreach (string modName in _animationMods.Keys) {
-                                        if (modName.ToLower().Contains(commandArguments)) {
-                                            var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                                            _mediaManager.StopAudio(_playerObject);
-                                            Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
-                                            if (_papSorting.ContainsKey(_animationMods[modName])) {
-                                                var sortedList = _papSorting[_animationMods[modName]];
-                                                foreach (var mod in sortedList) {
-                                                    if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
-                                                        _mediaManager.CleanNonStreamingSounds();
-                                                        if (string.IsNullOrEmpty(emote)) {
-                                                            if (list.ContainsKey(_animationMods[modName])) {
-                                                                foreach (var value in list[_animationMods[modName]]) {
-                                                                    emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                                    foundModName = modName;
-                                                                    Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        if (!alreadyDisabled.ContainsKey(mod.Key)) {
-                                                            // Thread.Sleep(100);
-                                                            var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
-                                                            alreadyDisabled[mod.Key] = true;
-                                                            Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (!string.IsNullOrEmpty(emote)) {
-                                    //Thread.Sleep(1000);
-                                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
-                                    Task.Run(() => {
-                                        Thread.Sleep(1000);
-                                        messageQueue.Enqueue(emote);
-                                        if (!_animationModsAlreadyTriggered.Contains(foundModName)) {
-                                            Thread.Sleep(2000);
-                                            messageQueue.Enqueue(emote);
-                                            _animationModsAlreadyTriggered.Add(foundModName);
-                                        }
-                                        _mediaManager.StopAudio(_playerObject);
-                                    });
-                                }
-                            } else {
-                                string danceModList = "You can choose from the following animation mods \r\n";
-                                _chat.Print(danceModList);
-                                foreach (string key in _animationMods.Keys) {
-                                    string[] strings = _animationMods[key].Split("/");
-                                    string option = strings[strings.Length - 1];
-                                    if (list.ContainsKey(option)) {
-                                        _chat.Print(key);
-                                    }
-                                }
-                            }
+                            CheckAnimationMods(splitArgs, args);
                             break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
@@ -1781,6 +1708,76 @@ namespace RoleplayingVoice {
                             }
                             _window.Toggle();
                             break;
+                    }
+                }
+            }
+        }
+        #endregion
+        #region Trigger Animation Mods
+        private void CheckAnimationMods(string[] splitArgs, string args) {
+            var list = CreateEmoteList(_dataManager);
+            if (splitArgs.Length > 1) {
+                string emote = "";
+                string foundModName = "";
+                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+                string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
+                Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+                for (int i = 0; i < 5 && string.IsNullOrEmpty(emote); i++) {
+                    foreach (string modName in _animationMods.Keys) {
+                        if (modName.ToLower().Contains(commandArguments)) {
+                            var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                            _mediaManager.StopAudio(_playerObject);
+                            Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                            if (_papSorting.ContainsKey(_animationMods[modName])) {
+                                var sortedList = _papSorting[_animationMods[modName]];
+                                foreach (var mod in sortedList) {
+                                    if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
+                                        _mediaManager.CleanNonStreamingSounds();
+                                        if (string.IsNullOrEmpty(emote)) {
+                                            if (list.ContainsKey(_animationMods[modName])) {
+                                                foreach (var value in list[_animationMods[modName]]) {
+                                                    emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                    foundModName = modName;
+                                                    Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        if (!alreadyDisabled.ContainsKey(mod.Key)) {
+                                            // Thread.Sleep(100);
+                                            var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
+                                            alreadyDisabled[mod.Key] = true;
+                                            Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(emote)) {
+                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                    Task.Run(() => {
+                        Thread.Sleep(1000);
+                        messageQueue.Enqueue(emote);
+                        if (!_animationModsAlreadyTriggered.Contains(foundModName)) {
+                            Thread.Sleep(2000);
+                            messageQueue.Enqueue(emote);
+                            _animationModsAlreadyTriggered.Add(foundModName);
+                        }
+                        _mediaManager.StopAudio(_playerObject);
+                    });
+                }
+            } else {
+                string danceModList = "You can choose from the following animation mods \r\n";
+                _chat.Print(danceModList);
+                foreach (string key in _animationMods.Keys) {
+                    string[] strings = _animationMods[key].Split("/");
+                    string option = strings[strings.Length - 1];
+                    if (list.ContainsKey(option)) {
+                        _chat.Print(key);
                     }
                 }
             }
@@ -1845,7 +1842,19 @@ namespace RoleplayingVoice {
             return storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
         }
 
-
+        #endregion
+        #region Error Logging
+        private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
+            _chat.PrintError("[Artemis Roleplaying Kit] " + e.Message);
+            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + e.Message);
+        }
+        private void Window_OnMoveFailed(object sender, EventArgs e) {
+            _chat.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
+        }
+        private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
+            Dalamud.Logging.PluginLog.LogWarning(e.Exception, e.Exception.Message);
+        }
+        #endregion
         #region IDisposable Support
         protected virtual void Dispose(bool disposing) {
             if (!disposing) return;
@@ -1864,7 +1873,6 @@ namespace RoleplayingVoice {
                 }
                 try {
                     if (_mediaManager != null) {
-                        _mediaManager.OnNewMediaTriggered -= _audioManager_OnNewAudioTriggered;
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                         _mediaManager?.Dispose();
                     }
