@@ -1,4 +1,5 @@
-﻿using Dalamud.Game;
+﻿#region Usings
+using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -44,7 +45,7 @@ using Dalamud.Utility;
 using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
-
+#endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         #region Fields
