@@ -575,10 +575,14 @@ namespace RoleplayingVoice {
             }
         }
         private void RefreshPlayerVoiceMuted() {
-            if (voiceMuted) {
-                _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
-            } else {
-                _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+            try {
+                if (voiceMuted) {
+                    _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
+                } else {
+                    _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+                }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e.Message);
             }
         }
         #endregion
@@ -1157,7 +1161,7 @@ namespace RoleplayingVoice {
             CleanSounds();
         }
         private unsafe bool IsResidential() {
-            return HousingManager.Instance()->IsInside() || HousingManager.Instance()->HousingOutdoorTerritory != null;
+            return HousingManager.Instance()->IsInside() || HousingManager.Instance()->OutdoorTerritory != null;
         }
 
         private void _clientState_Logout() {
@@ -1188,7 +1192,11 @@ namespace RoleplayingVoice {
             if (twitchWasPlaying) {
                 twitchWasPlaying = false;
                 _videoWindow.IsOpen = false;
-                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                try {
+                    _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                }catch(Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                }
             }
             potentialStream = "";
             lastStreamURL = "";
@@ -1606,7 +1614,11 @@ namespace RoleplayingVoice {
                 }
             });
             twitchWasPlaying = true;
-            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+            try {
+                _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+            }catch(Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+            }
             twitchSetCooldown.Stop();
             twitchSetCooldown.Reset();
             twitchSetCooldown.Start();
