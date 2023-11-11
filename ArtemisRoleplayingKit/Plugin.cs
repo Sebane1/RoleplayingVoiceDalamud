@@ -440,7 +440,7 @@ namespace RoleplayingVoice {
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         string value = characterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerVoice);
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                         }
                     }
                     cooldown.Restart();
