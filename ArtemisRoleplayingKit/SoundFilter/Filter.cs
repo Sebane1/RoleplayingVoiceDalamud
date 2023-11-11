@@ -27,6 +27,7 @@ namespace SoundFilter {
             internal const string LoadSoundFile = "E8 ?? ?? ?? ?? 48 85 C0 75 04 B0 F6";
 
             internal const string MusicManagerOffset = "48 89 87 ?? ?? ?? ?? 49 8B CF E8 ?? ?? ?? ?? 48 8B 8F";
+
         }
 
         // Updated: 5.55
@@ -247,9 +248,8 @@ namespace SoundFilter {
             path = path.ToLowerInvariant();
             var specificPath = $"{path}/{idx}";
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
-            if ((/*specificPath.Contains("vo_emote") || */(specificPath.Contains("vo_battle") && muted && Plugin.Config.VoicePackIsActive))
+            if ((specificPath.Contains("vo_battle") && muted)
                 || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
-                muted = false;
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;

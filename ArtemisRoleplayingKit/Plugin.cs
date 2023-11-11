@@ -70,7 +70,7 @@ namespace RoleplayingVoice {
 
         private Stopwatch stopwatch;
         private Stopwatch cooldown;
-        private Stopwatch muteTimer;
+        private Stopwatch _muteTimer;
         private Stopwatch twitchSetCooldown = new Stopwatch();
         private Stopwatch maxDownloadLengthTimer = new Stopwatch();
         private Stopwatch redrawCooldown = new Stopwatch();
@@ -93,7 +93,7 @@ namespace RoleplayingVoice {
         List<string> temporaryWhitelist = new List<string>();
         private List<string> combinedSoundList;
 
-        private int muteLength;
+        private int _muteLength = 4000;
         private int attackCount;
         private int castingCount;
         private int objectsRedrawn;
@@ -217,7 +217,7 @@ namespace RoleplayingVoice {
                 _realChat = new Chat(_sigScanner);
                 this._chat.ChatMessage += Chat_ChatMessage;
                 cooldown = new Stopwatch();
-                muteTimer = new Stopwatch();
+                _muteTimer = new Stopwatch();
                 _objectTable = objectTable;
                 _clientState.Login += _clientState_Login;
                 _clientState.Logout += _clientState_Logout;
@@ -548,13 +548,14 @@ namespace RoleplayingVoice {
                              ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
                         }
                     }
-                    if (muteTimer.ElapsedMilliseconds > muteLength) {
+                    if (_muteTimer.ElapsedMilliseconds > _muteLength) {
                         if (Filter != null) {
                             lock (Filter) {
                                 Filter.Muted = voiceMuted = false;
                                 RefreshPlayerVoiceMuted();
-                                muteTimer.Stop();
-                                muteTimer.Reset();
+                                _muteTimer.Stop();
+                                _muteTimer.Reset();
+                                Dalamud.Logging.PluginLog.Debug("Voice Mute End");
                             }
                         }
                     }
@@ -563,16 +564,16 @@ namespace RoleplayingVoice {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
         }
-        public void MuteVoiceChecK(int length = 4000) {
-            muteLength = length;
-            if (!muteTimer.IsRunning) {
+        public void MuteVoiceChecK(int length = 6000) {
+            if (!_muteTimer.IsRunning) {
                 if (Filter != null) {
                     Filter.Muted = voiceMuted = true;
                 }
                 RefreshPlayerVoiceMuted();
                 Dalamud.Logging.PluginLog.Log("Mute Triggered");
-                muteTimer.Start();
             }
+            _muteTimer.Restart();
+            _muteLength = length;
         }
         private void RefreshPlayerVoiceMuted() {
             try {
@@ -617,7 +618,7 @@ namespace RoleplayingVoice {
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                                 Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                             }
-                            if (!muteTimer.IsRunning) {
+                            if (!_muteTimer.IsRunning) {
                                 if (Filter != null) {
                                     Filter.Muted = true;
                                 }
@@ -627,22 +628,23 @@ namespace RoleplayingVoice {
                                             bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                         });
                                     }
-                                    while (muteTimer.ElapsedMilliseconds < 20) {
-                                        Thread.Sleep(20);
-                                    }
-                                    try {
-                                        if (Filter != null) {
-                                            lock (Filter) {
-                                                Filter.Muted = false;
-                                                muteTimer.Reset();
-                                            }
-                                        }
-                                    } catch (Exception e) {
-                                        Dalamud.Logging.PluginLog.LogWarning(e.Message);
-                                    }
+                                    //while (_muteTimer.ElapsedMilliseconds < 20) {
+                                    //    Thread.Sleep(20);
+                                    //}
+                                    //try {
+                                    //    if (Filter != null) {
+                                    //        lock (Filter) {
+                                    //            Filter.Muted = false;
+                                    //            _muteTimer.Reset();
+                                    //        }
+                                    //    }
+                                    //} catch (Exception e) {
+                                    //    Dalamud.Logging.PluginLog.LogWarning(e.Message);
+                                    //}
                                 });
                             }
-                            muteTimer.Restart();
+                            Dalamud.Logging.PluginLog.Debug("Battle Voice Muted");
+                            _muteTimer.Restart();
                         }
                     }
                 }
@@ -693,19 +695,20 @@ namespace RoleplayingVoice {
                                     _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
                                     playerSender, character.Position), value, SoundType.OtherPlayerCombat);
                                 });
-                                if (!muteTimer.IsRunning) {
+                                if (!_muteTimer.IsRunning) {
                                     Filter.Muted = true;
-                                    Task.Run(() => {
-                                        while (muteTimer.ElapsedMilliseconds < 20) {
-                                            Thread.Sleep(20);
-                                        }
-                                        lock (Filter) {
-                                            Filter.Muted = false;
-                                        }
-                                        muteTimer.Reset();
-                                    });
+                                    //Task.Run(() => {
+                                    //    while (_muteTimer.ElapsedMilliseconds < 20) {
+                                    //        Thread.Sleep(20);
+                                    //    }
+                                    //    lock (Filter) {
+                                    //        Filter.Muted = false;
+                                    //    }
+                                    //    _muteTimer.Reset();
+                                    //});
                                 }
-                                muteTimer.Restart();
+                                _muteLength = 500;
+                                _muteTimer.Restart();
                             }
                         }
                     }
@@ -842,7 +845,7 @@ namespace RoleplayingVoice {
                             if (!string.IsNullOrEmpty(value)) {
                                 _mediaManager.PlayAudio(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
                                 if (isVoicedEmote) {
-                                    MuteVoiceChecK(4000);
+                                    MuteVoiceChecK(6000);
                                 }
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
@@ -1194,7 +1197,7 @@ namespace RoleplayingVoice {
                 _videoWindow.IsOpen = false;
                 try {
                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                }catch(Exception e) {
+                } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
             }
@@ -1271,7 +1274,7 @@ namespace RoleplayingVoice {
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
                                                     if (isVoicedEmote) {
-                                                        MuteVoiceChecK(4000);
+                                                        MuteVoiceChecK(6000);
                                                     }
                                                 } else {
                                                     _mediaManager.StopAudio(new MediaGameObject(instigator));
@@ -1616,7 +1619,7 @@ namespace RoleplayingVoice {
             twitchWasPlaying = true;
             try {
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-            }catch(Exception e) {
+            } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
             twitchSetCooldown.Stop();
