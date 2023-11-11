@@ -53,12 +53,12 @@ namespace RoleplayingVoiceDalamud {
                         _death.Add(file);
                     } else if (file.ToLower().Contains("limit")) {
                         _readying.Add(file);
-                        AddMisc("shield wall", file);
+                        AddMisc("shieldwall", file);
                         AddMisc("stronghold", file);
-                        AddMisc("last bastion", file);
-                        AddMisc("land waker", file);
-                        AddMisc("dark force", file);
-                        AddMisc("gunmetal soul", file);
+                        AddMisc("lastbastion", file);
+                        AddMisc("landwaker", file);
+                        AddMisc("darkforce", file);
+                        AddMisc("gunmetalsoul", file);
                     } else if (file.ToLower().Contains("casting heal")) {
                         _castingHeal.Add(file);
                     } else if (file.ToLower().Contains("casting")) {
@@ -68,6 +68,12 @@ namespace RoleplayingVoiceDalamud {
                         _missed.Add(file);
                     } else if (file.ToLower().Contains("revive")) {
                         _revive.Add(file);
+                    } else if (file.ToLower().Contains("battle error")) {
+                        AddMisc("invalidtarget", file);
+                        AddMisc("targetisnotinrange", file);
+                        AddMisc("targetisnotinlineofsight", file);
+                        AddMisc("cannotuse", file);
+                        AddMisc("notyetready", file);
                     } else {
                         string name = Path.GetFileNameWithoutExtension(file);
                         string strippedName = StripNonCharacters(name).ToLower();
@@ -87,7 +93,9 @@ namespace RoleplayingVoiceDalamud {
             if (!_misc.ContainsKey(category)) {
                 _misc[category] = new List<string>();
             }
-            _misc[category].Add(file);
+            if (!_misc[category].Contains(file)) {
+                _misc[category].Add(file);
+            }
         }
 
         public string GetAction(string value) {
