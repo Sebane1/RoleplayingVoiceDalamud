@@ -401,7 +401,7 @@ namespace RoleplayingVoice {
                             });
                         }
                     }
-                    if (type == XivChatType.Yell || type == XivChatType.Shout) {
+                    if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                         if (config.TuneIntoTwitchStreams && IsResidential()) {
                             if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
                                 var strings = message.TextValue.Split(' ');
@@ -409,7 +409,10 @@ namespace RoleplayingVoice {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                         var audioGameObject = new MediaGameObject(player);
                                         if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
-                                            TuneIntoStream(value, audioGameObject);
+                                            TuneIntoStream(value
+                                                .Trim('(').Trim(')')
+                                                .Trim('[').Trim(']')
+                                                .Trim('!'), audioGameObject);
                                         }
                                         break;
                                     }
