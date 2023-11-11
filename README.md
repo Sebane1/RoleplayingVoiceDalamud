@@ -9,10 +9,14 @@ Features:
 - Dynamic character emote triggering based on text in custom emotes.
 - Automated mod switching for animation mods. Just enter the mod name you want to trigger.
 
-Repo Link
+Repo Link:
 ```
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
 ```
+
+Troubleshooting Plugin Load issues:
+- Try setting Dalamud to use legacy injection.
+![XIVLauncher_uV53FScwMr](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/1161d176-0f77-446d-8169-3be6da012b67)
 
 Support Discord:
 https://discord.gg/rtGXwMn7pX
