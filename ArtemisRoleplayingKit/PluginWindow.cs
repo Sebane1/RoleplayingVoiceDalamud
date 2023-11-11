@@ -688,6 +688,19 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##characterVoicePackActive", ref _characterVoicePackActive);
             ImGui.SameLine();
             ImGui.Text("Voice Pack Enabled");
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.TextWrapped("Artemis Roleplaying Kit relies on donations to continue development. Please consider tossing a dollar if you enjoy using the plugin.");
+            if (ImGui.Button("Donate", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                Process process = new Process();
+                try {
+                    // true is the default, but it is important not to set it to false
+                    process.StartInfo.UseShellExecute = true;
+                    process.StartInfo.FileName = "https://ko-fi.com/sebastina";
+                    process.Start();
+                } catch (Exception e) {
+
+                }
+            }
         }
 
         private void DrawVolume() {

@@ -53,6 +53,12 @@ namespace RoleplayingVoiceDalamud {
                         _death.Add(file);
                     } else if (file.ToLower().Contains("limit")) {
                         _readying.Add(file);
+                        AddMisc("shield wall", file);
+                        AddMisc("stronghold", file);
+                        AddMisc("last bastion", file);
+                        AddMisc("land waker", file);
+                        AddMisc("dark force", file);
+                        AddMisc("gunmetal soul", file);
                     } else if (file.ToLower().Contains("casting heal")) {
                         _castingHeal.Add(file);
                     } else if (file.ToLower().Contains("casting")) {
@@ -66,10 +72,7 @@ namespace RoleplayingVoiceDalamud {
                         string name = Path.GetFileNameWithoutExtension(file);
                         string strippedName = StripNonCharacters(name).ToLower();
                         string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                        if (!_misc.ContainsKey(final)) {
-                            _misc[final] = new List<string>();
-                        }
-                        _misc[final].Add(file);
+                        AddMisc(final, file);
                     }
                 }
             }
@@ -78,6 +81,13 @@ namespace RoleplayingVoiceDalamud {
             Regex rgx = new Regex("[^a-zA-Z]");
             str = rgx.Replace(str, "");
             return str;
+        }
+
+        private void AddMisc(string category, string file) {
+            if (!_misc.ContainsKey(category)) {
+                _misc[category] = new List<string>();
+            }
+            _misc[category].Add(file);
         }
 
         public string GetAction(string value) {
