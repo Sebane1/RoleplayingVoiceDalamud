@@ -1530,28 +1530,10 @@ namespace RoleplayingVoice {
                                                 ExtractSCDOptions(groupOption, directory);
                                             }
                                         }
-
                                         string soundPackData = directory + @"\rpvsp";
-                                        if (Path.Exists(soundPackData)) {
-                                            var soundList = new List<string>();
-                                            foreach (string file in Directory.EnumerateFiles(soundPackData)) {
-                                                if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                                                    soundList.Add(file);
-                                                }
-                                            }
-                                            list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
-                                        } else {
-                                            soundPackData = directory + @"\arksp";
-                                            if (Path.Exists(soundPackData)) {
-                                                var soundList = new List<string>();
-                                                foreach (string file in Directory.EnumerateFiles(soundPackData)) {
-                                                    if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                                                        soundList.Add(file);
-                                                    }
-                                                }
-                                                list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
-                                            }
-                                        }
+                                        string soundPackData2 = directory + @"\arksp";
+                                        GetSoundPackData(soundPackData, priority, list);
+                                        GetSoundPackData(soundPackData2, priority, list);
                                     }
                                 }
                             }
@@ -1578,6 +1560,18 @@ namespace RoleplayingVoice {
                 }
             }
             return list;
+        }
+
+        private void GetSoundPackData(string soundPackData, int priority, List<KeyValuePair<List<string>, int>> list) {
+            if (Path.Exists(soundPackData)) {
+                var soundList = new List<string>();
+                foreach (string file in Directory.EnumerateFiles(soundPackData)) {
+                    if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                        soundList.Add(file);
+                    }
+                }
+                list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+            }
         }
         #endregion
         #region String Sanitization
