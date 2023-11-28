@@ -350,7 +350,9 @@ namespace RoleplayingVoice {
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
                 if (config.PerformEmotesBasedOnWrittenText) {
-                    if (type == XivChatType.CustomEmote || message.TextValue.Split("\"").Length == 2) {
+                    if (type == XivChatType.CustomEmote || 
+                        message.TextValue.Split("\"").Length > 1 || 
+                        message.TextValue.Contains("*")) {
                         Task.Run(() => EmoteReaction(message.TextValue));
                     }
                 }
@@ -986,17 +988,24 @@ namespace RoleplayingVoice {
         }
         private async void EmoteReaction(string messageValue) {
             var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
+            string[] messageEmotes = messageValue.Replace("*", " ").Split("\"");
+            string emoteString = " ";
+            for (int i = 1; i < messageEmotes.Length + 1; i++) {
+                if ((i + 1) % 2 == 0) {
+                    emoteString += messageEmotes[i - 1] + " ";
+                }
+            }
             foreach (var item in emotes) {
                 if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if ((messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing ") ||
-                        messageValue.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing") && item.Name.RawString.Length < 4)
-                        || (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower()))) {
+                    if ((emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing ") ||
+                        emoteString.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing") && item.Name.RawString.Length < 4)
+                        || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()))) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
