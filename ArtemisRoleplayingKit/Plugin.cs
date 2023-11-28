@@ -350,7 +350,7 @@ namespace RoleplayingVoice {
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
                 if (config.PerformEmotesBasedOnWrittenText) {
-                    if (type == XivChatType.CustomEmote) {
+                    if (type == XivChatType.CustomEmote || message.TextValue.Split("\"").Length == 2) {
                         Task.Run(() => EmoteReaction(message.TextValue));
                     }
                 }
@@ -995,7 +995,7 @@ namespace RoleplayingVoice {
                         messageValue.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
                         messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
                         messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
-                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing") && item.Name.RawString.Length < 4 ) 
+                        messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing") && item.Name.RawString.Length < 4)
                         || (messageValue.ToLower().Contains(" " + item.Name.RawString.ToLower()))) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
