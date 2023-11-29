@@ -128,6 +128,8 @@ namespace RoleplayingVoice {
         private string _lastEmoteUsed;
         private Stopwatch _scdProcessingDelayTimer;
         private List<string> _animationModsAlreadyTriggered = new List<string>();
+        private int otherPlayerCombatTrigger;
+
         public string Name => "Artemis Roleplaying Kit";
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
@@ -339,6 +341,7 @@ namespace RoleplayingVoice {
                         case (XivChatType)10409:
                         case (XivChatType)8235:
                         case (XivChatType)9001:
+                        case (XivChatType)4139:
                             BattleText(playerName, message, type);
                             break;
                     }
@@ -350,8 +353,8 @@ namespace RoleplayingVoice {
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
                 if (config.PerformEmotesBasedOnWrittenText) {
-                    if (type == XivChatType.CustomEmote || 
-                        message.TextValue.Split("\"").Length > 1 || 
+                    if (type == XivChatType.CustomEmote ||
+                        message.TextValue.Split("\"").Length > 1 ||
                         message.TextValue.Contains("*")) {
                         Task.Run(() => EmoteReaction(message.TextValue));
                     }
@@ -595,7 +598,7 @@ namespace RoleplayingVoice {
         #region Combat
         private void BattleText(string playerName, SeString message, XivChatType type) {
             CheckDependancies();
-            if (type != (XivChatType)8235 || message.TextValue.Contains("You")) {
+            if ((type != (XivChatType)8235 && type != (XivChatType)4139) || message.TextValue.Contains("You")) {
                 if (config.VoicePackIsActive) {
                     string value = "";
                     string playerMessage = message.TextValue;
@@ -690,16 +693,21 @@ namespace RoleplayingVoice {
                                 }
                                 Task.Run(async () => {
                                     GameObject character = null;
-                                    foreach (var item in _objectTable) {
-                                        string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
-                                        string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
-                                        if (playerSenderStrings.Contains(playerSender)) {
-                                            character = item;
-                                            break;
+                                    if (otherPlayerCombatTrigger > 6 || type == (XivChatType)4139) {
+                                        foreach (var item in _objectTable) {
+                                            string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
+                                            string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
+                                            if (playerSenderStrings.Contains(playerSender)) {
+                                                character = item;
+                                                break;
+                                            }
                                         }
+                                        _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
+                                        playerSender, character.Position), value, SoundType.OtherPlayerCombat);
+                                        otherPlayerCombatTrigger = 0;
+                                    } else {
+                                        otherPlayerCombatTrigger++;
                                     }
-                                    _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
-                                    playerSender, character.Position), value, SoundType.OtherPlayerCombat);
                                 });
                                 if (!_muteTimer.IsRunning) {
                                     Filter.Muted = true;
