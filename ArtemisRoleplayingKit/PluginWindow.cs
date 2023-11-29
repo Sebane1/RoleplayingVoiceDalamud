@@ -730,6 +730,17 @@ namespace RoleplayingVoice {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
 
+            if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                Process process = new Process();
+                try {
+                    process.StartInfo.UseShellExecute = true;
+                    process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
+                    process.Start();
+                } catch (Exception e) {
+
+                }
+            }
+
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
             ImGui.SameLine();
