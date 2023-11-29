@@ -693,8 +693,9 @@ namespace RoleplayingVoice {
                                     foreach (var item in _objectTable) {
                                         string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
                                         string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
-                                        if (playerNameStrings.Contains(playerSender)) {
+                                        if (playerSenderStrings.Contains(playerSender)) {
                                             character = item;
+                                            break;
                                         }
                                     }
                                     _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
@@ -702,15 +703,6 @@ namespace RoleplayingVoice {
                                 });
                                 if (!_muteTimer.IsRunning) {
                                     Filter.Muted = true;
-                                    //Task.Run(() => {
-                                    //    while (_muteTimer.ElapsedMilliseconds < 20) {
-                                    //        Thread.Sleep(20);
-                                    //    }
-                                    //    lock (Filter) {
-                                    //        Filter.Muted = false;
-                                    //    }
-                                    //    _muteTimer.Reset();
-                                    //});
                                 }
                                 _muteLength = 500;
                                 _muteTimer.Restart();
@@ -987,7 +979,7 @@ namespace RoleplayingVoice {
             }
         }
         private async void EmoteReaction(string messageValue) {
-            var emotes = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English);
+            var emotes = _dataManager.GetExcelSheet<Emote>();
             string[] messageEmotes = messageValue.Replace("*", " ").Split("\"");
             string emoteString = " ";
             for (int i = 1; i < messageEmotes.Length + 1; i++) {
@@ -1004,8 +996,8 @@ namespace RoleplayingVoice {
                         emoteString.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
                         emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
                         emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing") && item.Name.RawString.Length < 4)
-                        || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()))) {
+                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing"))
+                        || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()) && item.Name.RawString.Length > 3)) {
                         messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
@@ -1286,6 +1278,7 @@ namespace RoleplayingVoice {
                                                 if (!string.IsNullOrEmpty(value)) {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                                     TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                                                    copyTimer.Stop();
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
                                                     if (isVoicedEmote) {
