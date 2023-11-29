@@ -253,6 +253,8 @@ namespace SoundFilter {
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
+            } else if (specificPath.Contains("/strm/")){
+                return true;
             }
             return false;
         }

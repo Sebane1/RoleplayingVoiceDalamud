@@ -45,6 +45,7 @@ using Dalamud.Utility;
 using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
+using RoleplayingVoiceCore;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -129,6 +130,7 @@ namespace RoleplayingVoice {
         private Stopwatch _scdProcessingDelayTimer;
         private List<string> _animationModsAlreadyTriggered = new List<string>();
         private int otherPlayerCombatTrigger;
+        private SpeechToTextManager _speechToTextManager;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -273,8 +275,21 @@ namespace RoleplayingVoice {
                     _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
                     _videoWindow.MediaManager = _mediaManager;
                 }
+                if (_speechToTextManager == null || forceNewAssignments) {
+                    _speechToTextManager = new SpeechToTextManager(Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
+                    _speechToTextManager.RecordingFinished += _speechToTextManager_RecordingFinished;
+                }
             }
         }
+
+        private void _speechToTextManager_RecordingFinished(object sender, EventArgs e) {
+            if (!_speechToTextManager.RpMode) {
+                messageQueue.Enqueue(_speechToTextManager.FinalText);
+            } else {
+                messageQueue.Enqueue("\"" + _speechToTextManager.FinalText + "\"");
+            }
+        }
+
         private void Config_OnConfigurationChanged(object sender, EventArgs e) {
             if (config != null) {
                 try {
@@ -1674,7 +1689,9 @@ namespace RoleplayingVoice {
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
-                             "twitch [twitch url] (forcibly tunes into a twitch stream locally)");
+                             "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
+                             "record (Converts spoken speech to in game chat)\r\n" +
+                             "record (Converts spoken speech to in game chat, but adds roleplaying quotes)");
                             break;
                         case "on":
                             config.AiVoiceActive = true;
@@ -1727,6 +1744,16 @@ namespace RoleplayingVoice {
                                 ResetTwitchValues();
                                 potentialStream = "";
                             }
+                            break;
+                        case "record":
+                            _chat.Print("Speech To Text Started");
+                            _speechToTextManager.RpMode = false;
+                            _speechToTextManager.RecordAudio();
+                            break;
+                        case "recordrp":
+                            _chat.Print("Speech To Text Started");
+                            _speechToTextManager.RpMode = true;
+                            _speechToTextManager.RecordAudio();
                             break;
                         default:
                             if (config.AiVoiceActive) {
