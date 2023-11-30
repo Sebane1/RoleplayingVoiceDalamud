@@ -70,6 +70,7 @@ namespace RoleplayingVoice {
         private RoleplayingMediaManager _roleplayingMediaManager;
 
         private Stopwatch stopwatch;
+        private Stopwatch _timeSinceLastEmoteDone = new Stopwatch();
         private Stopwatch cooldown;
         private Stopwatch _muteTimer;
         private Stopwatch twitchSetCooldown = new Stopwatch();
@@ -113,8 +114,9 @@ namespace RoleplayingVoice {
         private string lastStreamURL;
         private string currentStreamer;
 
-        private Queue<string> messageQueue = new Queue<string>();
-        private Stopwatch messageTimer = new Stopwatch();
+        private Queue<string> _messageQueue = new Queue<string>();
+        private Queue<string> _fastMessageQueue = new Queue<string>();
+        private Stopwatch _messageTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
         private Dictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
 
@@ -129,8 +131,9 @@ namespace RoleplayingVoice {
         private string _lastEmoteUsed;
         private Stopwatch _scdProcessingDelayTimer;
         private List<string> _animationModsAlreadyTriggered = new List<string>();
-        private int otherPlayerCombatTrigger;
+        private int _otherPlayerCombatTrigger;
         private SpeechToTextManager _speechToTextManager;
+        private ushort _lastEmoteTriggered;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -151,6 +154,8 @@ namespace RoleplayingVoice {
         public IGameInteropProvider InteropProvider { get => _interopProvider; set => _interopProvider = value; }
 
         public Configuration Config => config;
+
+        public Stopwatch TimeSinceLastEmoteDone { get => _timeSinceLastEmoteDone; set => _timeSinceLastEmoteDone = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -284,9 +289,9 @@ namespace RoleplayingVoice {
 
         private void _speechToTextManager_RecordingFinished(object sender, EventArgs e) {
             if (!_speechToTextManager.RpMode) {
-                messageQueue.Enqueue(_speechToTextManager.FinalText);
+                _messageQueue.Enqueue(_speechToTextManager.FinalText);
             } else {
-                messageQueue.Enqueue("\"" + _speechToTextManager.FinalText + "\"");
+                _messageQueue.Enqueue("\"" + _speechToTextManager.FinalText + "\"");
             }
         }
 
@@ -506,8 +511,18 @@ namespace RoleplayingVoice {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
+                    _timeSinceLastEmoteDone.Restart();
+                    _lastEmoteTriggered = emoteId;
                 } else {
                     Task.Run(() => ReceivingEmote(instigator, emoteId));
+                    if (_timeSinceLastEmoteDone.ElapsedMilliseconds < 1000 && _timeSinceLastEmoteDone.IsRunning && _timeSinceLastEmoteDone.ElapsedMilliseconds > 20) {
+                        if (instigator != null) {
+                            if (Vector3.Distance(instigator.Position, _clientState.LocalPlayer.Position) < 3) {
+                                _fastMessageQueue.Enqueue(GetEmoteCommand(_lastEmoteTriggered).ToLower());
+                                _timeSinceLastEmoteDone.Stop();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -708,7 +723,7 @@ namespace RoleplayingVoice {
                                 }
                                 Task.Run(async () => {
                                     GameObject character = null;
-                                    if (otherPlayerCombatTrigger > 6 || type == (XivChatType)4139) {
+                                    if (_otherPlayerCombatTrigger > 6 || type == (XivChatType)4139) {
                                         foreach (var item in _objectTable) {
                                             string[] playerNameStrings = SplitCamelCase(RemoveActionPhrases(RemoveSpecialSymbols(item.Name.TextValue))).Split(' ');
                                             string playerSenderStrings = playerNameStrings[0 + offset] + " " + playerNameStrings[2 + offset];
@@ -719,9 +734,9 @@ namespace RoleplayingVoice {
                                         }
                                         _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
                                         playerSender, character.Position), value, SoundType.OtherPlayerCombat);
-                                        otherPlayerCombatTrigger = 0;
+                                        _otherPlayerCombatTrigger = 0;
                                     } else {
-                                        otherPlayerCombatTrigger++;
+                                        _otherPlayerCombatTrigger++;
                                     }
                                 });
                                 if (!_muteTimer.IsRunning) {
@@ -983,18 +998,25 @@ namespace RoleplayingVoice {
         #region Dynamic Emoting
         private void CheckForNewDynamicEmoteRequests() {
             try {
-                if (messageQueue.Count > 0 && !disposed) {
-                    if (!messageTimer.IsRunning) {
-                        messageTimer.Start();
+                if (_messageQueue.Count > 0 && !disposed) {
+                    if (!_messageTimer.IsRunning) {
+                        _messageTimer.Start();
                     } else {
-                        if (messageTimer.ElapsedMilliseconds > 1000) {
+                        if (_messageTimer.ElapsedMilliseconds > 1000) {
                             try {
-                                _realChat.SendMessage(messageQueue.Dequeue());
+                                _realChat.SendMessage(_messageQueue.Dequeue());
                             } catch (Exception e) {
                                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
-                            messageTimer.Restart();
+                            _messageTimer.Restart();
                         }
+                    }
+                }
+                if (_fastMessageQueue.Count > 0 && !disposed) {
+                    try {
+                        _realChat.SendMessage(_fastMessageQueue.Dequeue());
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                     }
                 }
             } catch (Exception e) {
@@ -1021,7 +1043,7 @@ namespace RoleplayingVoice {
                         emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
                         emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing"))
                         || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()) && item.Name.RawString.Length > 3)) {
-                        messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
+                        _messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
                         break;
                     }
                 }
@@ -1358,6 +1380,10 @@ namespace RoleplayingVoice {
         private string GetEmoteName(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
             return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
+        }
+        private string GetEmoteCommand(ushort emoteId) {
+            Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
+            return CleanSenderName(emote.TextCommand.Value.Command.RawString).Replace(" ", "").ToLower();
         }
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
             Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
@@ -1814,10 +1840,10 @@ namespace RoleplayingVoice {
                     Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                     Task.Run(() => {
                         Thread.Sleep(1000);
-                        messageQueue.Enqueue(emote);
+                        _messageQueue.Enqueue(emote);
                         if (!_animationModsAlreadyTriggered.Contains(foundModName)) {
                             Thread.Sleep(2000);
-                            messageQueue.Enqueue(emote);
+                            _messageQueue.Enqueue(emote);
                             _animationModsAlreadyTriggered.Add(foundModName);
                         }
                         _mediaManager.StopAudio(_playerObject);
