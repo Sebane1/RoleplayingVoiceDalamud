@@ -8,6 +8,7 @@ Features:
 - Partial Mare support (sound is synced via a different service).
 - Dynamic character emote triggering based on text in custom emotes.
 - Automated mod switching for animation mods. Just enter the mod name you want to trigger.
+- Hands free speech to text typing leveraging AI trained speech recognition.
 
 Repo Link:
 ```
