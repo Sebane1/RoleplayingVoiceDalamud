@@ -666,19 +666,6 @@ namespace RoleplayingVoice {
                                             bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                         });
                                     }
-                                    //while (_muteTimer.ElapsedMilliseconds < 20) {
-                                    //    Thread.Sleep(20);
-                                    //}
-                                    //try {
-                                    //    if (Filter != null) {
-                                    //        lock (Filter) {
-                                    //            Filter.Muted = false;
-                                    //            _muteTimer.Reset();
-                                    //        }
-                                    //    }
-                                    //} catch (Exception e) {
-                                    //    Dalamud.Logging.PluginLog.LogWarning(e.Message);
-                                    //}
                                 });
                             }
                             Dalamud.Logging.PluginLog.Debug("Battle Voice Muted");
@@ -782,7 +769,10 @@ namespace RoleplayingVoice {
                     castingCount = 0;
                 } else {
                     if (castingCount == 0) {
-                        value = characterVoicePack.GetCastingHeal();
+                        value = characterVoicePack.GetMisc(message.TextValue);
+                        if (string.IsNullOrEmpty(value)) {
+                            value = characterVoicePack.GetCastingHeal();
+                        }
                         castingCount++;
                     } else {
                         castingCount++;
@@ -803,7 +793,10 @@ namespace RoleplayingVoice {
                     castingCount = 0;
                 } else {
                     if (castingCount == 0) {
-                        value = characterVoicePack.GetCastingAttack();
+                        value = characterVoicePack.GetMisc(message.TextValue);
+                        if (string.IsNullOrEmpty(value)) {
+                            value = characterVoicePack.GetCastingAttack();
+                        }
                         castingCount++;
                     } else {
                         castingCount++;
