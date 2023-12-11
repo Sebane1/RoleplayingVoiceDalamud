@@ -718,7 +718,7 @@ namespace RoleplayingVoice {
             ImGui.SliderFloat("##loopingSFX", ref _loopingSFXVolume, 0.000001f, 2);
             ImGui.Text("Livestream Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 1);
+            ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
         }
 
         private void DrawServer() {

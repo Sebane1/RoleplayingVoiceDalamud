@@ -46,6 +46,7 @@ using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
+using static FFXIVClientStructs.FFXIV.Client.Graphics.Scene.Object;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -134,6 +135,7 @@ namespace RoleplayingVoice {
         private int _otherPlayerCombatTrigger;
         private SpeechToTextManager _speechToTextManager;
         private ushort _lastEmoteTriggered;
+        private bool _hasBeenInitialized;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -176,15 +178,8 @@ namespace RoleplayingVoice {
                 this._chat = chat;
                 this._clientState = clientState;
                 // Get or create a configuration object
-                //this.config = (Configuration)this.pluginInterface.GetPluginConfig()
-                //          ?? this.pluginInterface.Create<Configuration>();
-
-                try {
-                    this.config = GetConfig();
-                } catch (Exception e) {
-                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                }
-
+                this.config = (Configuration)this.pluginInterface.GetPluginConfig()
+                          ?? this.pluginInterface.Create<Configuration>();
                 // Initialize the UI
                 this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
                 _window = this.pluginInterface.Create<PluginWindow>();
@@ -193,10 +188,6 @@ namespace RoleplayingVoice {
                 _window.Configuration = this.config;
                 _window.PluginInterface = this.pluginInterface;
                 _window.PluginReference = this;
-                AttemptConnection();
-                if (config.ApiKey != null) {
-                    InitialzeManager();
-                }
 
                 if (_window is not null) {
                     this.windowSystem.AddWindow(_window);
@@ -204,50 +195,60 @@ namespace RoleplayingVoice {
                 if (_videoWindow is not null) {
                     this.windowSystem.AddWindow(_videoWindow);
                 }
-                _window.RequestingReconnect += Window_RequestingReconnect;
-                _window.OnMoveFailed += Window_OnMoveFailed;
+                cooldown = new Stopwatch();
+                _muteTimer = new Stopwatch();
                 this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
                 this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
                 // Load all of our commands
                 this.commandManager = new PluginCommandManager<Plugin>(this, commands);
-                config.OnConfigurationChanged += Config_OnConfigurationChanged;
                 _window.Toggle();
                 _videoWindow.Toggle();
-                _window.PluginReference = this;
-                _emoteReaderHook = new EmoteReaderHooks(interopProvider, clientState, objectTable);
-                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
                 _dataManager = dataManager;
                 _toast = toast;
-                _toast.ErrorToast += _toast_ErrorToast;
                 _gameConfig = gameConfig;
                 _sigScanner = scanner;
                 _interopProvider = interopProvider;
-                _realChat = new Chat(_sigScanner);
-                this._chat.ChatMessage += Chat_ChatMessage;
-                cooldown = new Stopwatch();
-                _muteTimer = new Stopwatch();
                 _objectTable = objectTable;
-                _clientState.Login += _clientState_Login;
-                _clientState.Logout += _clientState_Logout;
-                _clientState.TerritoryChanged += _clientState_TerritoryChanged;
-                _clientState.LeavePvP += _clientState_LeavePvP;
-                _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
-                RaceVoice.LoadRacialVoiceInfo();
-                CheckDependancies();
-                Filter = new Filter(this);
-                Filter.Enable();
                 _framework = framework;
                 _framework.Update += framework_Update;
-                RefreshSoundData();
-                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
-                Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-                Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
             #endregion
+        }
+
+        private void InitializeEverything() {
+            try {
+                AttemptConnection();
+                if (config.ApiKey != null) {
+                    InitialzeManager();
+                }
+                _window.RequestingReconnect += Window_RequestingReconnect;
+                _window.OnMoveFailed += Window_OnMoveFailed;
+                config.OnConfigurationChanged += Config_OnConfigurationChanged;
+                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTable);
+                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                _realChat = new Chat(_sigScanner);
+                RaceVoice.LoadRacialVoiceInfo();
+                CheckDependancies();
+                Filter = new Filter(this);
+                Filter.Enable();
+                Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
+                RefreshSoundData();
+                _chat.ChatMessage += Chat_ChatMessage;
+                _clientState.Login += _clientState_Login;
+                _clientState.Logout += _clientState_Logout;
+                _clientState.TerritoryChanged += _clientState_TerritoryChanged;
+                _clientState.LeavePvP += _clientState_LeavePvP;
+                _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
+            }
         }
         #endregion Plugin Initiialization
         #region Configuration
@@ -324,6 +325,10 @@ namespace RoleplayingVoice {
         #region Sound Management
         private void framework_Update(IFramework framework) {
             if (!disposed) {
+                if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
+                    InitializeEverything();
+                    _hasBeenInitialized = true;
+                }
                 if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
                     CheckVolumeLevels();
                     CheckForNewRefreshes();
@@ -1063,7 +1068,7 @@ namespace RoleplayingVoice {
                 _ = Task.Run(async () => {
                     try {
                         penumbraSoundPacks = await GetPrioritySortedSoundPacks();
-                        combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                      combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                     } catch (Exception e) {
                         Dalamud.Logging.PluginLog.Error(e.Message);
                     }
@@ -1525,7 +1530,7 @@ namespace RoleplayingVoice {
         }
 
         public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
-            _filter.Blacklist?.Clear();
+            Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
             _papSorting?.Clear();
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
@@ -1933,7 +1938,6 @@ namespace RoleplayingVoice {
             try {
                 disposed = true;
                 config.Save();
-                //this.pluginInterface.SavePluginConfig(this.config);
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;
                 _chat.ChatMessage -= Chat_ChatMessage;
                 this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
@@ -1951,7 +1955,6 @@ namespace RoleplayingVoice {
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
-                _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
                 try {
                     _clientState.Login -= _clientState_Login;
                     _clientState.Logout -= _clientState_Logout;
@@ -1969,6 +1972,9 @@ namespace RoleplayingVoice {
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
+                if (_emoteReaderHook.OnEmote != null) {
+                    _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                }
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
