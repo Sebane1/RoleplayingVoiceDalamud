@@ -47,6 +47,7 @@ using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
 using static FFXIVClientStructs.FFXIV.Client.Graphics.Scene.Object;
+using Dalamud.Plugin.Ipc;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -70,13 +71,14 @@ namespace RoleplayingVoice {
         private VideoWindow _videoWindow;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
-        private Stopwatch stopwatch;
+        private Stopwatch _stopwatch;
         private Stopwatch _timeSinceLastEmoteDone = new Stopwatch();
-        private Stopwatch cooldown;
+        private Stopwatch _cooldown;
         private Stopwatch _muteTimer;
-        private Stopwatch twitchSetCooldown = new Stopwatch();
-        private Stopwatch maxDownloadLengthTimer = new Stopwatch();
-        private Stopwatch redrawCooldown = new Stopwatch();
+        private Stopwatch _twitchSetCooldown = new Stopwatch();
+        private Stopwatch _maxDownloadLengthTimer = new Stopwatch();
+        private Stopwatch _redrawCooldown = new Stopwatch();
+        private Stopwatch _catalogueTimer = new Stopwatch();
         private Stopwatch _nativeSoundExpiryTimer = new Stopwatch();
 
         private EmoteReaderHooks _emoteReaderHook;
@@ -120,8 +122,10 @@ namespace RoleplayingVoice {
         private Stopwatch _messageTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
         private Dictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
+        private Dictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
 
         private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
+        private Dictionary<string, string> _modelMods = new Dictionary<string, string>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
@@ -136,7 +140,17 @@ namespace RoleplayingVoice {
         private SpeechToTextManager _speechToTextManager;
         private ushort _lastEmoteTriggered;
         private bool _hasBeenInitialized;
-
+        private bool _catalogueMods;
+        private List<string> _modelModList;
+        private int _catalogueIndex;
+        private ICallGateSubscriber<(int, int)> _glamourerApiVersions;
+        private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
+        private ICallGateSubscriber<GameObject, string> _glamourerApplyOnlyEquipment;
+        private ICallGateSubscriber<string, GameObject, uint, object> _glamourerApplyAll;
+        private ICallGateSubscriber<Character, uint, object> _glamourerRevert;
+        private ICallGateSubscriber<string, uint, object> _glamourerRevertByName;
+        private ICallGateSubscriber<string, uint, bool> _glamourerUnlock;
+        uint LockCode = 0x6D617265;
         public string Name => "Artemis Roleplaying Kit";
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
@@ -195,7 +209,7 @@ namespace RoleplayingVoice {
                 if (_videoWindow is not null) {
                     this.windowSystem.AddWindow(_videoWindow);
                 }
-                cooldown = new Stopwatch();
+                _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
                 this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
                 this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
@@ -212,6 +226,9 @@ namespace RoleplayingVoice {
                 _objectTable = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
+
+                _glamourerApplyAll = pi.GetIpcSubscriber<string, GameObject?, uint, object>("Glamourer.ApplyAllToCharacterLock");
+                _glamourerApplyAll.InvokeAction("", _clientState.LocalPlayer, LockCode);
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -336,8 +353,28 @@ namespace RoleplayingVoice {
                 CheckForMovingObjects();
                 CheckForNewDynamicEmoteRequests();
                 CheckForDownloadCancellation();
+                CheckCataloging();
             }
         }
+
+        private void CheckCataloging() {
+            if (_catalogueMods) {
+                if (_catalogueIndex < _modelModList.Count) {
+                    if (_catalogueTimer.ElapsedMilliseconds > 1000) {
+                        CheckClothingMods(_modelModList[_catalogueIndex++]);
+                        _catalogueTimer.Restart();
+                        Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                    }
+                } else {
+                    _catalogueIndex = 0;
+                    _catalogueMods = false;
+                    _chat.Print("Done Catalog");
+                    _catalogueTimer.Reset();
+                }
+
+            }
+        }
+
         private void Chat_ChatMessage(XivChatType type, uint senderId,
         ref SeString sender, ref SeString message, ref bool isHandled) {
             if (!disposed) {
@@ -433,7 +470,7 @@ namespace RoleplayingVoice {
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                         if (config.TuneIntoTwitchStreams && IsResidential()) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
+                            if (!_twitchSetCooldown.IsRunning || _twitchSetCooldown.ElapsedMilliseconds > 10000) {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
@@ -467,7 +504,7 @@ namespace RoleplayingVoice {
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (!cooldown.IsRunning || cooldown.ElapsedMilliseconds > 3000) {
+                    if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 3000) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                         string path = config.CacheFolder + @"\VoicePack\" + voice;
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
@@ -476,7 +513,7 @@ namespace RoleplayingVoice {
                             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                         }
                     }
-                    cooldown.Restart();
+                    _cooldown.Restart();
                 }
             }
         }
@@ -532,15 +569,15 @@ namespace RoleplayingVoice {
             }
         }
         private void CheckForNewRefreshes() {
-            if (redrawCooldown.ElapsedMilliseconds > 100) {
+            if (_redrawCooldown.ElapsedMilliseconds > 100) {
                 if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
                     foreach (var item in temporaryWhitelistQueue) {
                         temporaryWhitelist.Add(item);
                     }
                     temporaryWhitelistQueue.Clear();
                 }
-                redrawCooldown.Stop();
-                redrawCooldown.Reset();
+                _redrawCooldown.Stop();
+                _redrawCooldown.Reset();
             }
         }
         private void CheckForMovingObjects() {
@@ -698,7 +735,7 @@ namespace RoleplayingVoice {
                             if (!isDownloadingZip) {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
-                                    maxDownloadLengthTimer.Restart();
+                                    _maxDownloadLengthTimer.Restart();
                                     Task.Run(async () => {
                                         string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                         isDownloadingZip = false;
@@ -864,7 +901,7 @@ namespace RoleplayingVoice {
                         if (!isDownloadingZip) {
                             if (!Path.Exists(clipPath)) {
                                 isDownloadingZip = true;
-                                maxDownloadLengthTimer.Restart();
+                                _maxDownloadLengthTimer.Restart();
                                 await Task.Run(async () => {
                                     string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                     isDownloadingZip = false;
@@ -1050,9 +1087,9 @@ namespace RoleplayingVoice {
         #endregion
         #region Sound Sync
         private void CheckForDownloadCancellation() {
-            if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
+            if (_maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
                 isDownloadingZip = false;
-                maxDownloadLengthTimer.Reset();
+                _maxDownloadLengthTimer.Reset();
             }
         }
         List<string> GetCombinedWhitelist() {
@@ -1067,8 +1104,8 @@ namespace RoleplayingVoice {
             if (!disposed) {
                 _ = Task.Run(async () => {
                     try {
-                        penumbraSoundPacks = await GetPrioritySortedSoundPacks();
-                      combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                        penumbraSoundPacks = await GetPrioritySortedModPacks();
+                        combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                     } catch (Exception e) {
                         Dalamud.Logging.PluginLog.Error(e.Message);
                     }
@@ -1178,11 +1215,11 @@ namespace RoleplayingVoice {
             }
         }
         private void gameObjectRedrawn(nint arg1, int arg2) {
-            if (!redrawCooldown.IsRunning) {
-                redrawCooldown.Start();
+            if (!_redrawCooldown.IsRunning) {
+                _redrawCooldown.Start();
                 redrawObjectCount = _objectTable.Count<GameObject>();
             }
-            if (redrawCooldown.IsRunning) {
+            if (_redrawCooldown.IsRunning) {
                 objectsRedrawn++;
             }
             string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
@@ -1254,8 +1291,8 @@ namespace RoleplayingVoice {
             potentialStream = "";
             lastStreamURL = "";
             currentStreamer = "";
-            twitchSetCooldown.Stop();
-            twitchSetCooldown.Reset();
+            _twitchSetCooldown.Stop();
+            _twitchSetCooldown.Reset();
         }
         #endregion
         #region Connection Attempts
@@ -1301,7 +1338,7 @@ namespace RoleplayingVoice {
                                             if (Path.Exists(clipPath)) {
                                                 RemoveFiles(clipPath);
                                                 isDownloadingZip = true;
-                                                maxDownloadLengthTimer.Restart();
+                                                _maxDownloadLengthTimer.Restart();
                                                 await Task.Run(async () => {
                                                     string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                                     isDownloadingZip = false;
@@ -1504,6 +1541,30 @@ namespace RoleplayingVoice {
             }
         }
 
+        public void ExtractMdlFiles(Option option, string directory, bool skipScd) {
+            string modName = Path.GetFileName(directory);
+            int mdlFilesFound = 0;
+            foreach (var item in option.Files) {
+                if (item.Key.EndsWith(".mdl")) {
+                    string[] strings = item.Key.Split("/");
+                    string value = strings[strings.Length - 1];
+                    _modelMods[modName] = value;
+                    mdlFilesFound++;
+                    if (!_papSorting.ContainsKey(value)) {
+                        try {
+                            _mdlSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                            { new KeyValuePair<string, bool>(modName, !skipScd) });
+                            Dalamud.Logging.PluginLog.LogVerbose("Found: " + item.Value);
+                        } catch {
+                            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                        }
+                    } else {
+                        _mdlSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
+                    }
+                }
+            }
+        }
+
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
             foreach (string file in Directory.GetFiles(directory)) {
                 if (file.EndsWith(".pap")) {
@@ -1529,10 +1590,11 @@ namespace RoleplayingVoice {
             }
         }
 
-        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
+        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks() {
             Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
             _papSorting?.Clear();
+            _mdlSorting?.Clear();
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
             try {
                 string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
@@ -1557,10 +1619,12 @@ namespace RoleplayingVoice {
                         }
                         if (option != null) {
                             ExtractPapFiles(option, directory, true);
+                            ExtractMdlFiles(option, directory, true);
                         }
                         if (group != null) {
                             foreach (Option groupOption in group.Options) {
                                 ExtractPapFiles(groupOption, directory, true);
+                                ExtractMdlFiles(groupOption, directory, true);
                             }
                         }
                         try {
@@ -1671,9 +1735,9 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
-            twitchSetCooldown.Stop();
-            twitchSetCooldown.Reset();
-            twitchSetCooldown.Start();
+            _twitchSetCooldown.Stop();
+            _twitchSetCooldown.Reset();
+            _twitchSetCooldown.Start();
         }
         #endregion
         #region UI Management
@@ -1715,7 +1779,7 @@ namespace RoleplayingVoice {
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
-                             "record (Converts spoken speech to in game chat, but adds roleplaying quotes)");
+                             "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)");
                             break;
                         case "on":
                             config.AiVoiceActive = true;
@@ -1778,6 +1842,13 @@ namespace RoleplayingVoice {
                             _chat.Print("Speech To Text Started");
                             _speechToTextManager.RpMode = true;
                             _speechToTextManager.RecordAudio();
+                            break;
+                        case "catalogue":
+                            _chat.Print("Creating Thumbnails For All Clothing Mods");
+                            _catalogueMods = true;
+                            _modelModList = new List<string>();
+                            _modelModList.AddRange(_modelMods.Keys);
+                            _catalogueTimer.Start();
                             break;
                         default:
                             if (config.AiVoiceActive) {
@@ -1919,6 +1990,40 @@ namespace RoleplayingVoice {
             return storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
         }
 
+        #endregion
+        #region Trigger Clothing Mods
+        private void CheckClothingMods(string modelMod) {
+            string foundModName = "";
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            foreach (string modName in _modelMods.Keys) {
+                if (modName.ToLower().Contains(modelMod.ToLower())) {
+                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                    Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                    try {
+                        var sortedList = _mdlSorting[_modelMods[modName]];
+                        foreach (var mod in sortedList) {
+                            if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
+                                if (string.IsNullOrEmpty(modelMod)) {
+                                    foundModName = modName;
+                                }
+                            } else {
+                                if (!alreadyDisabled.ContainsKey(mod.Key)) {
+                                    // Thread.Sleep(100);
+                                    var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
+                                    alreadyDisabled[mod.Key] = true;
+                                    Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                }
+                            }
+                        }
+                    } catch {
+
+                    }
+                    break;
+                }
+            }
+        }
         #endregion
         #region Error Logging
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
