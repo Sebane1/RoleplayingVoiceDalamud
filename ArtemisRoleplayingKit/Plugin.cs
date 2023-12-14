@@ -48,6 +48,18 @@ using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
 using static FFXIVClientStructs.FFXIV.Client.Graphics.Scene.Object;
 using Dalamud.Plugin.Ipc;
+using Newtonsoft.Json.Linq;
+using Lumina.Excel.GeneratedSheets2;
+using SixLabors.ImageSharp.PixelFormats;
+using System.Buffers.Text;
+using Emote = Lumina.Excel.GeneratedSheets.Emote;
+using Glamourer.Utility;
+using System.Windows.Forms;
+using RoleplayingVoiceDalamud.Glamourer;
+using Item = Lumina.Excel.GeneratedSheets.Item;
+using ImGuizmoNET;
+using NAudio.SoundFont;
+using static Lumina.Models.Models.Model;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -125,7 +137,7 @@ namespace RoleplayingVoice {
         private Dictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
 
         private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
-        private Dictionary<string, string> _modelMods = new Dictionary<string, string>();
+        private Dictionary<string, CharacterCustomization> _modelMods = new Dictionary<string, CharacterCustomization>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
@@ -143,14 +155,14 @@ namespace RoleplayingVoice {
         private bool _catalogueMods;
         private List<string> _modelModList;
         private int _catalogueIndex;
-        private ICallGateSubscriber<(int, int)> _glamourerApiVersions;
         private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
-        private ICallGateSubscriber<GameObject, string> _glamourerApplyOnlyEquipment;
-        private ICallGateSubscriber<string, GameObject, uint, object> _glamourerApplyAll;
-        private ICallGateSubscriber<Character, uint, object> _glamourerRevert;
-        private ICallGateSubscriber<string, uint, object> _glamourerRevertByName;
-        private ICallGateSubscriber<string, uint, bool> _glamourerUnlock;
+        private ICallGateSubscriber<string, string, object> _glamourerApplyAll;
         uint LockCode = 0x6D617265;
+        private bool ignoreModSettingChanged;
+        private int _catalogueStage;
+        private string _lastModNameChecked;
+        private CharacterCustomization _characterCustomizationTest;
+
         public string Name => "Artemis Roleplaying Kit";
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
@@ -226,9 +238,6 @@ namespace RoleplayingVoice {
                 _objectTable = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
-
-                _glamourerApplyAll = pi.GetIpcSubscriber<string, GameObject?, uint, object>("Glamourer.ApplyAllToCharacterLock");
-                _glamourerApplyAll.InvokeAction("", _clientState.LocalPlayer, LockCode);
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -253,7 +262,7 @@ namespace RoleplayingVoice {
                 Filter = new Filter(this);
                 Filter.Enable();
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
-                RefreshSoundData();
+                RefreshData(false);
                 _chat.ChatMessage += Chat_ChatMessage;
                 _clientState.Login += _clientState_Login;
                 _clientState.Logout += _clientState_Logout;
@@ -262,6 +271,8 @@ namespace RoleplayingVoice {
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                 Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
+                _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -327,7 +338,7 @@ namespace RoleplayingVoice {
                 } catch {
                     InitialzeManager();
                 }
-                RefreshSoundData();
+                RefreshData();
             }
         }
         public void InitialzeManager() {
@@ -336,7 +347,7 @@ namespace RoleplayingVoice {
             _window.Manager = _roleplayingMediaManager;
         }
         private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
-            RefreshSoundData();
+            RefreshData();
         }
         #endregion
         #region Sound Management
@@ -360,21 +371,49 @@ namespace RoleplayingVoice {
         private void CheckCataloging() {
             if (_catalogueMods) {
                 if (_catalogueIndex < _modelModList.Count) {
-                    if (_catalogueTimer.ElapsedMilliseconds > 1000) {
-                        CheckClothingMods(_modelModList[_catalogueIndex++]);
+                    if (_catalogueTimer.ElapsedMilliseconds > 2000) {
+                        ignoreModSettingChanged = true;
+                        string modelMod = _modelModList[_catalogueIndex];
+                        if (_catalogueStage == 0) {
+                            CheckClothingMods(modelMod);
+                            _chat.Print("Refresh: " + modelMod);
+                            //Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                            _catalogueStage++;
+                        } else if (_catalogueStage == 1) {
+                            var customization = _modelMods[modelMod];
+                            var json = JsonConvert.SerializeObject(customization);
+                            var compressed = json.Compress(6);
+                            string base64 = System.Convert.ToBase64String(compressed);
+                            _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
+                            _catalogueStage++;
+                        } else {
+                            _catalogueIndex++;
+                            _catalogueStage = 0;
+                        }
                         _catalogueTimer.Restart();
-                        Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                     }
                 } else {
                     _catalogueIndex = 0;
                     _catalogueMods = false;
+                    ignoreModSettingChanged = false;
                     _chat.Print("Done Catalog");
                     _catalogueTimer.Reset();
                 }
 
             }
         }
-
+        private void PrintCustomization(CharacterCustomization customization) {
+            _chat.Print("Head: " + customization.Equipment.Head.ItemId +
+                        ", Body: " + customization.Equipment.Body.ItemId +
+                        ", Hands: " + customization.Equipment.Hands.ItemId +
+                        ", Legs: " + customization.Equipment.Legs.ItemId +
+                        ", Feet: " + customization.Equipment.Feet.ItemId +
+                        ", Ears: " + customization.Equipment.Ears.ItemId +
+                        ", Neck: " + customization.Equipment.Neck.ItemId +
+                        ", Wrists: " + customization.Equipment.Wrists.ItemId +
+                        ", RFinger: " + customization.Equipment.RFinger.ItemId +
+                        ", LFinger: " + customization.Equipment.LFinger.ItemId);
+        }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
         ref SeString sender, ref SeString message, ref bool isHandled) {
             if (!disposed) {
@@ -1100,11 +1139,11 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Collect Sound Data
-        public async void RefreshSoundData() {
+        public async void RefreshData(bool skipModelData = true) {
             if (!disposed) {
                 _ = Task.Run(async () => {
                     try {
-                        penumbraSoundPacks = await GetPrioritySortedModPacks();
+                        penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
                         combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                     } catch (Exception e) {
                         Dalamud.Logging.PluginLog.Error(e.Message);
@@ -1215,31 +1254,33 @@ namespace RoleplayingVoice {
             }
         }
         private void gameObjectRedrawn(nint arg1, int arg2) {
-            if (!_redrawCooldown.IsRunning) {
-                _redrawCooldown.Start();
-                redrawObjectCount = _objectTable.Count<GameObject>();
-            }
-            if (_redrawCooldown.IsRunning) {
-                objectsRedrawn++;
-            }
-            string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
-            string path = config.CacheFolder + @"\VoicePack\Others";
-            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-            string clipPath = path + @"\" + hash;
-            if (GetCombinedWhitelist().Contains(senderName) &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                if (Directory.Exists(clipPath)) {
-                    try {
-                        RemoveFiles(clipPath);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                    }
+            if (!disposed) {
+                if (!_redrawCooldown.IsRunning) {
+                    _redrawCooldown.Start();
+                    redrawObjectCount = _objectTable.Count<GameObject>();
                 }
-            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                temporaryWhitelistQueue.Enqueue(senderName);
-            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                RefreshSoundData();
+                if (_redrawCooldown.IsRunning) {
+                    objectsRedrawn++;
+                }
+                string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+                string path = config.CacheFolder + @"\VoicePack\Others";
+                string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+                string clipPath = path + @"\" + hash;
+                if (GetCombinedWhitelist().Contains(senderName) &&
+                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    if (Directory.Exists(clipPath)) {
+                        try {
+                            RemoveFiles(clipPath);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                    }
+                } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    temporaryWhitelistQueue.Enqueue(senderName);
+                } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    RefreshData();
+                }
             }
         }
 
@@ -1261,7 +1302,7 @@ namespace RoleplayingVoice {
         private void _clientState_Login() {
             CleanSounds();
             CheckDependancies(true);
-            RefreshSoundData();
+            RefreshData();
         }
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
@@ -1541,28 +1582,86 @@ namespace RoleplayingVoice {
             }
         }
 
-        public void ExtractMdlFiles(Option option, string directory, bool skipScd) {
+        public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
             string modName = Path.GetFileName(directory);
             int mdlFilesFound = 0;
+            CharacterCustomization characterCustomization = null;
+            if (!_modelMods.ContainsKey(modName)) {
+                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                var bytes = System.Convert.FromBase64String(customizationValue);
+                var version = bytes[0];
+                version = bytes.DecompressToString(out var decompressed);
+                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                CleanEquipment(characterCustomization);
+            } else {
+                characterCustomization = _modelMods[modName];
+            }
             foreach (var item in option.Files) {
-                if (item.Key.EndsWith(".mdl")) {
-                    string[] strings = item.Key.Split("/");
-                    string value = strings[strings.Length - 1];
-                    _modelMods[modName] = value;
+                if (item.Key.Contains(".mdl")) {
+                    _lastModNameChecked = modName;
+                    characterCustomization = SetEquipmentFromPath(item.Key, characterCustomization);
                     mdlFilesFound++;
-                    if (!_papSorting.ContainsKey(value)) {
-                        try {
-                            _mdlSorting.Add(value, new List<KeyValuePair<string, bool>>()
-                            { new KeyValuePair<string, bool>(modName, !skipScd) });
-                            Dalamud.Logging.PluginLog.LogVerbose("Found: " + item.Value);
-                        } catch {
-                            Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
-                        }
-                    } else {
-                        _mdlSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
+                }
+            }
+            if (mdlFilesFound > 0) {
+                _modelMods[modName] = characterCustomization;
+            }
+        }
+
+        public long GetModelID(string model) {
+            string[] strings = model.Split("/");
+            long newValue = 0;
+            foreach (string value in strings) {
+                if (value.StartsWith("e") || value.StartsWith("a")) {
+                    try {
+                        newValue = long.Parse(value.Replace("e", "").Replace("a", "").TrimStart('0'));
+                    } catch {
                     }
                 }
             }
+            if (newValue > 10000) {
+                _chat.Print(model);
+            }
+            return newValue;
+        }
+
+        public CharacterCustomization SetEquipmentFromPath(string path, CharacterCustomization characterCustomization) {
+            long newValue = GetModelID(path);
+            if (newValue > 0) {
+                if (path.Contains("met.mdl")) {
+                    characterCustomization.Equipment.Head.ItemId = newValue;
+                } else if (path.Contains("ear.mdl")) {
+                    characterCustomization.Equipment.Ears.ItemId = newValue;
+                } else if (path.Contains("neck.mdl")) {
+                    characterCustomization.Equipment.Neck.ItemId = newValue;
+                } else if (path.Contains("top.mdl")) {
+                    characterCustomization.Equipment.Body.ItemId = newValue;
+                } else if (path.Contains("dwn.mdl")) {
+                    characterCustomization.Equipment.Legs.ItemId = newValue;
+                } else if (path.Contains("glv.mdl")) {
+                    characterCustomization.Equipment.Hands.ItemId = newValue;
+                } else if (path.Contains("rir.mdl")) {
+                    characterCustomization.Equipment.LFinger.ItemId = newValue;
+                    characterCustomization.Equipment.RFinger.ItemId = newValue;
+                } else if (path.Contains("sho.mdl")) {
+                    characterCustomization.Equipment.Feet.ItemId = newValue;
+                } else if (path.Contains("wrs.mdl")) {
+                    characterCustomization.Equipment.Wrists.ItemId = newValue;
+                }
+            }
+            return characterCustomization;
+        }
+        public void CleanEquipment(CharacterCustomization characterCustomization) {
+            characterCustomization.Equipment.Head.ItemId = 0;
+            characterCustomization.Equipment.Ears.ItemId = 0;
+            characterCustomization.Equipment.Neck.ItemId = 0;
+            characterCustomization.Equipment.Body.ItemId = 0;
+            characterCustomization.Equipment.Legs.ItemId = 0;
+            characterCustomization.Equipment.Hands.ItemId = 0;
+            characterCustomization.Equipment.LFinger.ItemId = 0;
+            characterCustomization.Equipment.RFinger.ItemId = 0;
+            characterCustomization.Equipment.Feet.ItemId = 0;
+            characterCustomization.Equipment.Wrists.ItemId = 0;
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
@@ -1590,7 +1689,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks() {
+        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks(bool skipModelData) {
             Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
             _papSorting?.Clear();
@@ -1604,27 +1703,33 @@ namespace RoleplayingVoice {
                     foreach (var directory in directories) {
                         Dalamud.Logging.PluginLog.LogVerbose("Examining: " + directory);
                         Option option = null;
-                        Group group = null;
+                        List<Group> groups = new List<Group>();
+                        string modName = Path.GetFileName(directory);
                         if (Directory.Exists(directory)) {
-                            string modName = Path.GetFileName(directory);
                             foreach (string file in Directory.EnumerateFiles(directory)) {
                                 if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
                                     if (file.EndsWith("default_mod.json")) {
                                         option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
                                     } else {
-                                        group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
+                                        groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
                                     }
                                 }
                             }
                         }
                         if (option != null) {
                             ExtractPapFiles(option, directory, true);
-                            ExtractMdlFiles(option, directory, true);
+                            if (!skipModelData) {
+                                ExtractMdlFiles(option, directory, true);
+                            }
                         }
-                        if (group != null) {
-                            foreach (Option groupOption in group.Options) {
-                                ExtractPapFiles(groupOption, directory, true);
-                                ExtractMdlFiles(groupOption, directory, true);
+                        foreach (Group group in groups) {
+                            if (group != null) {
+                                foreach (Option groupOption in group.Options) {
+                                    ExtractPapFiles(groupOption, directory, true);
+                                    if (!skipModelData) {
+                                        ExtractMdlFiles(groupOption, directory, true);
+                                    }
+                                }
                             }
                         }
                         try {
@@ -1641,9 +1746,11 @@ namespace RoleplayingVoice {
                                         if (option != null) {
                                             ExtractSCDOptions(option, directory);
                                         }
-                                        if (group != null) {
-                                            foreach (Option groupOption in group.Options) {
-                                                ExtractSCDOptions(groupOption, directory);
+                                        foreach (Group group in groups) {
+                                            if (group != null) {
+                                                foreach (Option groupOption in group.Options) {
+                                                    ExtractSCDOptions(groupOption, directory);
+                                                }
                                             }
                                         }
                                         string soundPackData = directory + @"\rpvsp";
@@ -1850,6 +1957,23 @@ namespace RoleplayingVoice {
                             _modelModList.AddRange(_modelMods.Keys);
                             _catalogueTimer.Start();
                             break;
+                        case "glamhold":
+                            string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                            var bytes = System.Convert.FromBase64String(customizationValue);
+                            var version = bytes[0];
+                            version = bytes.DecompressToString(out var decompressed);
+                            _characterCustomizationTest = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                            PrintCustomization(_characterCustomizationTest);
+                            //CleanEquipment(characterCustomization);
+                            _chat.Print("Glam held.");
+                            break;
+                        case "glamapply":
+                            var json = JsonConvert.SerializeObject(_characterCustomizationTest);
+                            var compressed = json.Compress(6);
+                            string base64 = System.Convert.ToBase64String(compressed);
+                            _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
+                            _chat.Print("Glam test complete");
+                            break;
                         default:
                             if (config.AiVoiceActive) {
                                 _window.RefreshVoices();
@@ -2000,27 +2124,9 @@ namespace RoleplayingVoice {
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
                     var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                    Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
-                    try {
-                        var sortedList = _mdlSorting[_modelMods[modName]];
-                        foreach (var mod in sortedList) {
-                            if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
-                                if (string.IsNullOrEmpty(modelMod)) {
-                                    foundModName = modName;
-                                }
-                            } else {
-                                if (!alreadyDisabled.ContainsKey(mod.Key)) {
-                                    // Thread.Sleep(100);
-                                    var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
-                                    alreadyDisabled[mod.Key] = true;
-                                    Dalamud.Logging.PluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
-                                }
-                            }
-                        }
-                    } catch {
-
-                    }
                     break;
+                } else {
+                    var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
                 }
             }
         }

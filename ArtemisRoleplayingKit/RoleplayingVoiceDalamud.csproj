@@ -31,6 +31,7 @@
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
 		<PackageReference Include="Penumbra.Api" Version="1.0.11" />
+		<PackageReference Include="Penumbra.String" Version="1.0.4" />
 	</ItemGroup>
 
 	<ItemGroup>

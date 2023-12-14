@@ -513,7 +513,7 @@ namespace RoleplayingVoice {
             }
             if (PluginInterface != null) {
                 try {
-                    PluginReference.RefreshSoundData();
+                    PluginReference.RefreshData();
                 } catch (Exception ex) { }
             }
         }
