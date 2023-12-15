@@ -8,6 +8,7 @@ using RoleplayingMediaCore;
 using System;
 using System.Diagnostics;
 using static Penumbra.Api.Ipc;
+using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {
     internal class VideoWindow : Window {

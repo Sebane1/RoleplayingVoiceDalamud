@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector3 = System.Numerics.Vector3;
 
 namespace RoleplayingVoiceDalamud {
     public class MovingObject {

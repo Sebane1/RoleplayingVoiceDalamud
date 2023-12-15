@@ -60,6 +60,8 @@ using Item = Lumina.Excel.GeneratedSheets.Item;
 using ImGuizmoNET;
 using NAudio.SoundFont;
 using static Lumina.Models.Models.Model;
+using Vector3 = System.Numerics.Vector3;
+using Penumbra.GameData.Structs;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -162,6 +164,9 @@ namespace RoleplayingVoice {
         private int _catalogueStage;
         private string _lastModNameChecked;
         private CharacterCustomization _characterCustomizationTest;
+        private (bool, bool, string) _currentClothingCollection;
+        private List<object> _currentClothingChangedItems;
+        private int _currentChangedItemIndex;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -371,24 +376,47 @@ namespace RoleplayingVoice {
         private void CheckCataloging() {
             if (_catalogueMods) {
                 if (_catalogueIndex < _modelModList.Count) {
-                    if (_catalogueTimer.ElapsedMilliseconds > 2000) {
+                    if (_catalogueTimer.ElapsedMilliseconds > 1000) {
                         ignoreModSettingChanged = true;
                         string modelMod = _modelModList[_catalogueIndex];
                         if (_catalogueStage == 0) {
-                            CheckClothingMods(modelMod);
+                            SetClothingMods(modelMod);
                             _chat.Print("Refresh: " + modelMod);
-                            //Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                            _currentClothingCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                            _currentClothingChangedItems = new List<object>();
+                            _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
                             _catalogueStage++;
                         } else if (_catalogueStage == 1) {
-                            var customization = _modelMods[modelMod];
-                            var json = JsonConvert.SerializeObject(customization);
-                            var compressed = json.Compress(6);
-                            string base64 = System.Convert.ToBase64String(compressed);
-                            _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
-                            _catalogueStage++;
+                            if (_currentChangedItemIndex < _currentClothingChangedItems.Count) {
+                                try {
+                                    EquipItem item = (EquipItem)_currentClothingChangedItems[_currentChangedItemIndex];
+                                    CharacterCustomization characterCustomization = null;
+                                    if (!_modelMods.ContainsKey(modelMod)) {
+                                        string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                                        var bytes = System.Convert.FromBase64String(customizationValue);
+                                        var version = bytes[0];
+                                        version = bytes.DecompressToString(out var decompressed);
+                                        characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                                        CleanEquipment(characterCustomization);
+                                    }
+                                    SetEquipment(item, characterCustomization); 
+                                    var json = JsonConvert.SerializeObject(characterCustomization);
+                                    var compressed = json.Compress(6);
+                                    string base64 = System.Convert.ToBase64String(compressed);
+                                    PrintCustomization(characterCustomization);
+                                    _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
+                                } catch (Exception e){
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                }
+                                _currentChangedItemIndex++;
+                            } else {
+                                _catalogueStage++;
+                            }
                         } else {
                             _catalogueIndex++;
                             _catalogueStage = 0;
+                            _currentChangedItemIndex = 0;
                         }
                         _catalogueTimer.Restart();
                     }
@@ -402,6 +430,7 @@ namespace RoleplayingVoice {
 
             }
         }
+
         private void PrintCustomization(CharacterCustomization customization) {
             _chat.Print("Head: " + customization.Equipment.Head.ItemId +
                         ", Body: " + customization.Equipment.Body.ItemId +
@@ -1585,36 +1614,23 @@ namespace RoleplayingVoice {
         public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
             string modName = Path.GetFileName(directory);
             int mdlFilesFound = 0;
-            CharacterCustomization characterCustomization = null;
-            if (!_modelMods.ContainsKey(modName)) {
-                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                CleanEquipment(characterCustomization);
-            } else {
-                characterCustomization = _modelMods[modName];
-            }
             foreach (var item in option.Files) {
                 if (item.Key.Contains(".mdl")) {
-                    _lastModNameChecked = modName;
-                    characterCustomization = SetEquipmentFromPath(item.Key, characterCustomization);
                     mdlFilesFound++;
                 }
             }
             if (mdlFilesFound > 0) {
-                _modelMods[modName] = characterCustomization;
+                _modelMods[modName] = null;
             }
         }
 
-        public long GetModelID(string model) {
+        public ulong GetModelID(string model) {
             string[] strings = model.Split("/");
-            long newValue = 0;
+            ulong newValue = 0;
             foreach (string value in strings) {
                 if (value.StartsWith("e") || value.StartsWith("a")) {
                     try {
-                        newValue = long.Parse(value.Replace("e", "").Replace("a", "").TrimStart('0'));
+                        newValue = ulong.Parse(value.Replace("e", "").Replace("a", "").TrimStart('0'));
                     } catch {
                     }
                 }
@@ -1625,29 +1641,43 @@ namespace RoleplayingVoice {
             return newValue;
         }
 
-        public CharacterCustomization SetEquipmentFromPath(string path, CharacterCustomization characterCustomization) {
-            long newValue = GetModelID(path);
-            if (newValue > 0) {
-                if (path.Contains("met.mdl")) {
-                    characterCustomization.Equipment.Head.ItemId = newValue;
-                } else if (path.Contains("ear.mdl")) {
-                    characterCustomization.Equipment.Ears.ItemId = newValue;
-                } else if (path.Contains("neck.mdl")) {
-                    characterCustomization.Equipment.Neck.ItemId = newValue;
-                } else if (path.Contains("top.mdl")) {
-                    characterCustomization.Equipment.Body.ItemId = newValue;
-                } else if (path.Contains("dwn.mdl")) {
-                    characterCustomization.Equipment.Legs.ItemId = newValue;
-                } else if (path.Contains("glv.mdl")) {
-                    characterCustomization.Equipment.Hands.ItemId = newValue;
-                } else if (path.Contains("rir.mdl")) {
-                    characterCustomization.Equipment.LFinger.ItemId = newValue;
-                    characterCustomization.Equipment.RFinger.ItemId = newValue;
-                } else if (path.Contains("sho.mdl")) {
-                    characterCustomization.Equipment.Feet.ItemId = newValue;
-                } else if (path.Contains("wrs.mdl")) {
-                    characterCustomization.Equipment.Wrists.ItemId = newValue;
+        public uint GetItemID(ulong modelId, uint offset) {
+            for (uint i = 0; i < _dataManager.GetExcelSheet<Item>().RowCount; i++) {
+                Item item = _dataManager.GetExcelSheet<Item>().GetRow(i);
+                if (item.ModelMain == modelId) {
+                    return i + offset;
                 }
+            }
+            return 0;
+        }
+
+        public CharacterCustomization SetEquipment(EquipItem equipItem, CharacterCustomization characterCustomization) {
+            switch (equipItem.Type) {
+                case Penumbra.GameData.Enums.FullEquipType.Ears:
+                    characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Neck:
+                    characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Body:
+                    characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Legs:
+                    characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Hands:
+                    characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Finger:
+                    characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
+                    characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Feet:
+                    characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Wrists:
+                    characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
+                    break;
             }
             return characterCustomization;
         }
@@ -1963,7 +1993,7 @@ namespace RoleplayingVoice {
                             var version = bytes[0];
                             version = bytes.DecompressToString(out var decompressed);
                             _characterCustomizationTest = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                            PrintCustomization(_characterCustomizationTest);
+                            PrintCustomization(_characterCustomizationTest); ;
                             //CleanEquipment(characterCustomization);
                             _chat.Print("Glam held.");
                             break;
@@ -1973,6 +2003,9 @@ namespace RoleplayingVoice {
                             string base64 = System.Convert.ToBase64String(compressed);
                             _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
                             _chat.Print("Glam test complete");
+                            break;
+                        case "glamchanged":
+
                             break;
                         default:
                             if (config.AiVoiceActive) {
@@ -2116,7 +2149,7 @@ namespace RoleplayingVoice {
 
         #endregion
         #region Trigger Clothing Mods
-        private void CheckClothingMods(string modelMod) {
+        private void SetClothingMods(string modelMod) {
             string foundModName = "";
             var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
