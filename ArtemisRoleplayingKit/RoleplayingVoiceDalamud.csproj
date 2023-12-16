@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>net7.0-windows</TargetFramework>
-		<LangVersion>11.0</LangVersion>
+		<LangVersion>9.0</LangVersion>
 		<Version>0.1.4.0</Version>
 	</PropertyGroup>
 
@@ -30,11 +30,12 @@
 		<PackageReference Include="DalamudPackager" Version="2.1.12" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
-		<PackageReference Include="Penumbra.Api" Version="1.0.11" />
-		<PackageReference Include="Penumbra.String" Version="1.0.4" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
+	  <ProjectReference Include="..\Penumbra.GameData\Penumbra.GameData.csproj" />
+	  <ProjectReference Include="..\Penumbra.String\Penumbra.String.csproj" />
 	  <ProjectReference Include="..\RoleplayingVoiceCore\RoleplayingVoiceCore.csproj">
 	    <ReferenceOutputAssembly>True</ReferenceOutputAssembly>
 	  </ProjectReference>

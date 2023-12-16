@@ -1,3 +1,12 @@
 [submodule "RoleplayingVoiceCore"]
 	path = RoleplayingVoiceCore
 	url = https://github.com/Sebane1/RoleplayingVoiceCore
+[submodule "Penumbra.GameData"]
+	path = Penumbra.GameData
+	url = https://github.com/Ottermandias/Penumbra.GameData.git
+[submodule "Penumbra.Api"]
+	path = Penumbra.Api
+	url = https://github.com/Ottermandias/Penumbra.Api
+[submodule "Penumbra.String"]
+	path = Penumbra.String
+	url = https://github.com/Ottermandias/Penumbra.String
