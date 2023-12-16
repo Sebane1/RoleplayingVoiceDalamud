@@ -62,6 +62,10 @@ using NAudio.SoundFont;
 using static Lumina.Models.Models.Model;
 using Vector3 = System.Numerics.Vector3;
 using Penumbra.GameData.Structs;
+using System.Drawing.Imaging;
+using System.Drawing;
+using Rectangle = System.Drawing.Rectangle;
+using System.Runtime.InteropServices;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -167,6 +171,8 @@ namespace RoleplayingVoice {
         private (bool, bool, string) _currentClothingCollection;
         private List<object> _currentClothingChangedItems;
         private int _currentChangedItemIndex;
+        private string _currentModelMod;
+        private EquipObject _currentClothingItem;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -376,47 +382,65 @@ namespace RoleplayingVoice {
         private void CheckCataloging() {
             if (_catalogueMods) {
                 if (_catalogueIndex < _modelModList.Count) {
-                    if (_catalogueTimer.ElapsedMilliseconds > 1000) {
+                    if (_catalogueTimer.ElapsedMilliseconds > 1000 || (_catalogueTimer.ElapsedMilliseconds > 500 && _currentChangedItemIndex > 0)) {
                         ignoreModSettingChanged = true;
-                        string modelMod = _modelModList[_catalogueIndex];
                         if (_catalogueStage == 0) {
-                            SetClothingMods(modelMod);
-                            _chat.Print("Refresh: " + modelMod);
-                            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                             _currentClothingCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                            _currentClothingChangedItems = new List<object>();
-                            _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
+                            while (_catalogueIndex < _modelModList.Count) {
+                                _currentModelMod = _modelModList[_catalogueIndex];
+                                SetClothingMods(_currentModelMod);
+                                _chat.Print("Refresh: " + _currentModelMod); ;
+                                _currentClothingChangedItems = new List<object>();
+                                _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
+                                if (_currentClothingChangedItems.Count > 0 && !_currentModelMod.ToLower().Contains("megapack")
+                                    && !_currentModelMod.ToLower().Contains("mega pack")) {
+                                    break;
+                                } else {
+                                    _catalogueIndex++;
+                                }
+                            }
+                            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                             _catalogueStage++;
                         } else if (_catalogueStage == 1) {
                             if (_currentChangedItemIndex < _currentClothingChangedItems.Count) {
-                                try {
-                                    EquipItem item = (EquipItem)_currentClothingChangedItems[_currentChangedItemIndex];
-                                    CharacterCustomization characterCustomization = null;
-                                    if (!_modelMods.ContainsKey(modelMod)) {
-                                        string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
-                                        var bytes = System.Convert.FromBase64String(customizationValue);
-                                        var version = bytes[0];
-                                        version = bytes.DecompressToString(out var decompressed);
-                                        characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                                        CleanEquipment(characterCustomization);
+                                bool equipmentFound = false;
+                                while (!equipmentFound && _currentChangedItemIndex < _currentClothingChangedItems.Count) {
+                                    try {
+                                        string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
+                                        new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
+                                        if (equipItemJson.Length > 200) {
+                                            _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                                            CharacterCustomization characterCustomization = null;
+                                            string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                                            var bytes = System.Convert.FromBase64String(customizationValue);
+                                            var version = bytes[0];
+                                            version = bytes.DecompressToString(out var decompressed);
+                                            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                                            CleanEquipment(characterCustomization);
+                                            equipmentFound = SetEquipment(_currentClothingItem, characterCustomization);
+                                            if (equipmentFound) {
+                                                Task.Run(delegate {
+                                                    Thread.Sleep(100);
+                                                    TakeScreenshot();
+                                                });
+                                            } else {
+                                                _currentChangedItemIndex++;
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        _currentChangedItemIndex = _currentClothingChangedItems.Count;
                                     }
-                                    SetEquipment(item, characterCustomization); 
-                                    var json = JsonConvert.SerializeObject(characterCustomization);
-                                    var compressed = json.Compress(6);
-                                    string base64 = System.Convert.ToBase64String(compressed);
-                                    PrintCustomization(characterCustomization);
-                                    _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
-                                } catch (Exception e){
-                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                    _currentChangedItemIndex++;
                                 }
-                                _currentChangedItemIndex++;
                             } else {
-                                _catalogueStage++;
+                                _catalogueStage = 3;
                             }
                         } else {
                             _catalogueIndex++;
                             _catalogueStage = 0;
                             _currentChangedItemIndex = 0;
+                            _currentClothingChangedItems.Clear();
+                            _currentClothingItem = null;
                         }
                         _catalogueTimer.Restart();
                     }
@@ -430,7 +454,28 @@ namespace RoleplayingVoice {
 
             }
         }
-
+        private void TakeScreenshot() {
+            if (_currentClothingItem != null) {
+                try {
+                    NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
+                } catch { }
+                Rectangle bounds = Screen.GetBounds(Point.Empty);
+                using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height)) {
+                    using (Graphics g = Graphics.FromImage(bitmap)) {
+                        g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                    }
+                    Directory.CreateDirectory(Path.Combine(config.CacheFolder, "ClothingCatalogue\\"));
+                    CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)).Save(Path.Combine(config.CacheFolder,
+                     "ClothingCatalogue\\" + _currentModelMod +
+                     "-" + _currentClothingItem.Type + "-" +
+                     _currentClothingItem.ItemId.Id + ".jpg"), ImageFormat.Jpeg);
+                }
+            }
+        }
+        private static Image CropImage(Image img, Rectangle cropArea) {
+            Bitmap bmpImage = new Bitmap(img);
+            return bmpImage.Clone(cropArea, bmpImage.PixelFormat);
+        }
         private void PrintCustomization(CharacterCustomization customization) {
             _chat.Print("Head: " + customization.Equipment.Head.ItemId +
                         ", Body: " + customization.Equipment.Body.ItemId +
@@ -1651,35 +1696,48 @@ namespace RoleplayingVoice {
             return 0;
         }
 
-        public CharacterCustomization SetEquipment(EquipItem equipItem, CharacterCustomization characterCustomization) {
+        public bool SetEquipment(EquipObject equipItem, CharacterCustomization characterCustomization) {
+            bool changed = false;
             switch (equipItem.Type) {
                 case Penumbra.GameData.Enums.FullEquipType.Ears:
                     characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Neck:
                     characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Body:
                     characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Legs:
                     characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Hands:
                     characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Finger:
                     characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
                     characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Feet:
                     characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Wrists:
                     characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
+                    changed = true;
                     break;
             }
-            return characterCustomization;
+            var json = JsonConvert.SerializeObject(characterCustomization);
+            var compressed = json.Compress(6);
+            string base64 = System.Convert.ToBase64String(compressed);
+            _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
+            return changed;
         }
         public void CleanEquipment(CharacterCustomization characterCustomization) {
             characterCustomization.Equipment.Head.ItemId = 0;
@@ -1982,6 +2040,7 @@ namespace RoleplayingVoice {
                             break;
                         case "catalogue":
                             _chat.Print("Creating Thumbnails For All Clothing Mods");
+                            CleanSlate();
                             _catalogueMods = true;
                             _modelModList = new List<string>();
                             _modelModList.AddRange(_modelMods.Keys);
@@ -2161,6 +2220,17 @@ namespace RoleplayingVoice {
                 } else {
                     var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
                 }
+            }
+        }
+        private void CleanSlate() {
+            string foundModName = "";
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, "Bibo+ Skin Installer - Detailed Skin v1.0.2", "", true);
+            Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, "Eve - Female Body Gen3", "", true);
+            Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, "Sebby 2.0", "", true);
+            foreach (string modName in _modelMods.Keys) {
+                var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
             }
         }
         #endregion
