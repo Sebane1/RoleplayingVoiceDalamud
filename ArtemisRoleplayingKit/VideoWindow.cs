@@ -24,7 +24,7 @@ namespace RoleplayingVoice {
 
         public VideoWindow(DalamudPluginInterface pluginInterface) :
             base("Video Window", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, false) {
-            IsOpen = true;
+            //IsOpen = true;
             windowSize = Size = new Vector2(640, 360);
             initialSize = Size;
             SizeCondition = ImGuiCond.None;
