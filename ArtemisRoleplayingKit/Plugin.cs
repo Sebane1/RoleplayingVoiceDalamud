@@ -1999,6 +1999,7 @@ namespace RoleplayingVoice {
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
+                             "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)");
                             break;
