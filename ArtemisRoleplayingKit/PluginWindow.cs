@@ -719,6 +719,9 @@ namespace RoleplayingVoice {
             ImGui.Text("Livestream Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
+            if (ImGui.Button("Volume Fix", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                PluginReference.MediaManager.VolumeFix();
+            }
         }
 
         private void DrawServer() {

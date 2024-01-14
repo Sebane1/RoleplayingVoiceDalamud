@@ -188,6 +188,7 @@ namespace RoleplayingVoice {
         public Configuration Config => config;
 
         public Stopwatch TimeSinceLastEmoteDone { get => _timeSinceLastEmoteDone; set => _timeSinceLastEmoteDone = value; }
+        public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
