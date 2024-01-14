@@ -616,7 +616,7 @@ namespace RoleplayingVoice {
                                             TuneIntoStream(value
                                                 .Trim('(').Trim(')')
                                                 .Trim('[').Trim(']')
-                                                .Trim('!'), audioGameObject, false);
+                                                .Trim('!').Trim('@'), audioGameObject, false);
                                         }
                                         break;
                                     }
