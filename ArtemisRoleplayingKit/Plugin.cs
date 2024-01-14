@@ -10,11 +10,9 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using FFXIVClientStructs.FFXIV.Common.Math;
 using FFXIVLooseTextureCompiler.Networking;
 using FFXIVVoicePackCreator;
 using FFXIVVoicePackCreator.VoiceSorting;
-using Lumina.Excel.GeneratedSheets;
 using Penumbra.Api;
 using RoleplayingVoice.Attributes;
 using RoleplayingMediaCore;
@@ -46,7 +44,17 @@ using System.Collections.Concurrent;
 using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
-using static FFXIVClientStructs.FFXIV.Client.Graphics.Scene.Object;
+using Dalamud.Plugin.Ipc;
+using Emote = Lumina.Excel.GeneratedSheets.Emote;
+using Glamourer.Utility;
+using System.Windows.Forms;
+using RoleplayingVoiceDalamud.Glamourer;
+using Item = Lumina.Excel.GeneratedSheets.Item;
+using Vector3 = System.Numerics.Vector3;
+using System.Drawing.Imaging;
+using System.Drawing;
+using Rectangle = System.Drawing.Rectangle;
+using static Lumina.Models.Models.Model;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -68,15 +76,18 @@ namespace RoleplayingVoice {
         private PluginWindow _window { get; init; }
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
+        private CatalogueWindow _catalogueWindow;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
-        private Stopwatch stopwatch;
+        private Stopwatch _stopwatch;
         private Stopwatch _timeSinceLastEmoteDone = new Stopwatch();
-        private Stopwatch cooldown;
+        private Stopwatch _cooldown;
         private Stopwatch _muteTimer;
-        private Stopwatch twitchSetCooldown = new Stopwatch();
-        private Stopwatch maxDownloadLengthTimer = new Stopwatch();
-        private Stopwatch redrawCooldown = new Stopwatch();
+        private Stopwatch _streamSetCooldown = new Stopwatch();
+        private Stopwatch _maxDownloadLengthTimer = new Stopwatch();
+        private Stopwatch _redrawCooldown = new Stopwatch();
+        private Stopwatch _catalogueTimer = new Stopwatch();
+        private Stopwatch _catalogueOffsetTimer = new Stopwatch();
         private Stopwatch _nativeSoundExpiryTimer = new Stopwatch();
 
         private EmoteReaderHooks _emoteReaderHook;
@@ -106,22 +117,24 @@ namespace RoleplayingVoice {
         private bool ignoreAttack;
         private bool disposed;
         private bool voiceMuted;
-        private bool twitchWasPlaying;
+        private bool streamWasPlaying;
         private bool _inGameSoundStartedAudio;
 
         private string lastPrintedWarning;
         private string stagingPath;
         private string potentialStream;
         private string lastStreamURL;
-        private string currentStreamer;
+        private string _currentStreamer;
 
         private Queue<string> _messageQueue = new Queue<string>();
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
         private Dictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
+        private Dictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
 
         private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
+        private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
@@ -136,6 +149,23 @@ namespace RoleplayingVoice {
         private SpeechToTextManager _speechToTextManager;
         private ushort _lastEmoteTriggered;
         private bool _hasBeenInitialized;
+        private string[] _currentScreenshotList;
+        private bool _catalogueMods;
+        private List<string> _modelModList;
+        private int _catalogueIndex;
+        private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
+        private ICallGateSubscriber<string, string, object> _glamourerApplyAll;
+        uint LockCode = 0x6D617265;
+        private bool ignoreModSettingChanged;
+        private int _catalogueStage;
+        private string _lastModNameChecked;
+        private CharacterCustomization _characterCustomizationTest;
+        private (bool, bool, string) _currentClothingCollection;
+        private List<object> _currentClothingChangedItems;
+        private int _currentChangedItemIndex;
+        private string _currentModelMod;
+        private EquipObject _currentClothingItem;
+        private bool _catalogueScreenShotTaken = false;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -184,6 +214,7 @@ namespace RoleplayingVoice {
                 this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
                 _window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
+                _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
                 _window.ClientState = this._clientState;
                 _window.Configuration = this.config;
                 _window.PluginInterface = this.pluginInterface;
@@ -195,15 +226,16 @@ namespace RoleplayingVoice {
                 if (_videoWindow is not null) {
                     this.windowSystem.AddWindow(_videoWindow);
                 }
-                cooldown = new Stopwatch();
+                if (_catalogueWindow is not null) {
+                    this.windowSystem.AddWindow(_catalogueWindow);
+                }
+                _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
                 this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
                 this.pluginInterface.UiBuilder.OpenConfigUi += UiBuilder_OpenConfigUi;
 
                 // Load all of our commands
                 this.commandManager = new PluginCommandManager<Plugin>(this, commands);
-                _window.Toggle();
-                _videoWindow.Toggle();
                 _dataManager = dataManager;
                 _toast = toast;
                 _gameConfig = gameConfig;
@@ -236,15 +268,18 @@ namespace RoleplayingVoice {
                 Filter = new Filter(this);
                 Filter.Enable();
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
-                RefreshSoundData();
+                RefreshData(false);
                 _chat.ChatMessage += Chat_ChatMessage;
                 _clientState.Login += _clientState_Login;
                 _clientState.Logout += _clientState_Logout;
                 _clientState.TerritoryChanged += _clientState_TerritoryChanged;
                 _clientState.LeavePvP += _clientState_LeavePvP;
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+                _catalogueWindow.Plugin = this;
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                 Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
+                _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -310,7 +345,7 @@ namespace RoleplayingVoice {
                 } catch {
                     InitialzeManager();
                 }
-                RefreshSoundData();
+                RefreshData();
             }
         }
         public void InitialzeManager() {
@@ -319,7 +354,7 @@ namespace RoleplayingVoice {
             _window.Manager = _roleplayingMediaManager;
         }
         private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
-            RefreshSoundData();
+            RefreshData();
         }
         #endregion
         #region Sound Management
@@ -336,7 +371,146 @@ namespace RoleplayingVoice {
                 CheckForMovingObjects();
                 CheckForNewDynamicEmoteRequests();
                 CheckForDownloadCancellation();
+                CheckCataloging();
             }
+        }
+
+        private void CheckCataloging() {
+            if (_catalogueMods) {
+                if (_catalogueIndex < _modelModList.Count) {
+                    if ((_catalogueTimer.ElapsedMilliseconds > (3000 + _catalogueOffsetTimer.ElapsedMilliseconds) && _currentChangedItemIndex == 0) ||
+                        (_catalogueScreenShotTaken)) {
+                        ignoreModSettingChanged = true;
+                        _catalogueScreenShotTaken = false;
+                        if (_catalogueStage == 0) {
+                            _currentClothingCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                            _catalogueOffsetTimer.Restart();
+                            while (_catalogueIndex < _modelModList.Count) {
+                                _currentModelMod = _modelModList[_catalogueIndex];
+                                if (!AlreadyHasScreenShots(_currentModelMod) && !_currentModelMod.ToLower().Contains("megapack")
+                                && !_currentModelMod.ToLower().Contains("mega pack")) {
+                                    SetClothingMod(_currentModelMod);
+                                    _currentClothingChangedItems = new List<object>();
+                                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
+                                    SetDependancies(_currentModelMod);
+                                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                                    break;
+                                } else {
+                                    _catalogueIndex++;
+                                }
+                            }
+                            _catalogueOffsetTimer.Stop();
+                            _catalogueStage++;
+                        } else if (_catalogueStage == 1) {
+                            if (_currentChangedItemIndex < _currentClothingChangedItems.Count) {
+                                bool equipmentFound = false;
+                                while (!equipmentFound && _currentChangedItemIndex < _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
+                                    try {
+                                        string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
+                                        new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
+                                        if (equipItemJson.Length > 200) {
+                                            _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                                            CharacterCustomization characterCustomization = null;
+                                            string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                                            var bytes = System.Convert.FromBase64String(customizationValue);
+                                            var version = bytes[0];
+                                            version = bytes.DecompressToString(out var decompressed);
+                                            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                                            CleanEquipment(characterCustomization);
+                                            equipmentFound = SetEquipment(_currentClothingItem, characterCustomization);
+                                            if (equipmentFound) {
+                                                var clothingItem = _currentClothingItem;
+                                                _chat.Print("Screenshotting item " + clothingItem.Name);
+                                                Task.Run(delegate {
+                                                    try {
+                                                        NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
+                                                    } catch { }
+                                                    Thread.Sleep(400);
+                                                    TakeScreenshot(clothingItem);
+                                                });
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                    }
+                                    _currentChangedItemIndex++;
+                                    if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
+                                        _catalogueIndex++;
+                                        _catalogueStage = 0;
+                                        _currentChangedItemIndex = 0;
+                                        _currentClothingItem = null;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _catalogueTimer.Restart();
+                    }
+                } else {
+                    _catalogueIndex = 0;
+                    _catalogueMods = false;
+                    ignoreModSettingChanged = false;
+                    _chat.Print("Done Catalog");
+                    _catalogueTimer.Reset();
+                    RefreshData();
+                    _catalogueWindow.ScanCatalogue();
+                }
+
+            }
+        }
+        public void WearOutfit(EquipObject item) {
+            //CleanSlate();
+            SetClothingMod(item.Name, false);
+            SetDependancies(item.Name, false);
+            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+            CharacterCustomization characterCustomization = null;
+            string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+            var bytes = System.Convert.FromBase64String(customizationValue);
+            var version = bytes[0];
+            version = bytes.DecompressToString(out var decompressed);
+            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+            SetEquipment(item, characterCustomization);
+        }
+        private bool AlreadyHasScreenShots(string name) {
+            //_chat.Print(name);
+            foreach (var item in _currentScreenshotList) {
+                if (Path.GetFileNameWithoutExtension(item.ToLower()).Contains(name.ToLower())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void TakeScreenshot(EquipObject clothingItem) {
+            if (clothingItem != null) {
+                Rectangle bounds = Screen.GetBounds(Point.Empty);
+                using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height)) {
+                    using (Graphics g = Graphics.FromImage(bitmap)) {
+                        g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                    }
+                    Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+                    new Bitmap(CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)), 250, 250).Save(Path.Combine(config.CacheFolder,
+                      "ClothingCatalogue\\" + _currentModelMod +
+                      "@" + clothingItem.Type + "@" +
+                      clothingItem.ItemId.Id + ".jpg"), ImageFormat.Jpeg);
+                }
+            }
+            _catalogueScreenShotTaken = true;
+        }
+        private static Image CropImage(Image img, Rectangle cropArea) {
+            Bitmap bmpImage = new Bitmap(img);
+            return bmpImage.Clone(cropArea, bmpImage.PixelFormat);
+        }
+        private void PrintCustomization(CharacterCustomization customization) {
+            _chat.Print("Head: " + customization.Equipment.Head.ItemId +
+                        ", Body: " + customization.Equipment.Body.ItemId +
+                        ", Hands: " + customization.Equipment.Hands.ItemId +
+                        ", Legs: " + customization.Equipment.Legs.ItemId +
+                        ", Feet: " + customization.Equipment.Feet.ItemId +
+                        ", Ears: " + customization.Equipment.Ears.ItemId +
+                        ", Neck: " + customization.Equipment.Neck.ItemId +
+                        ", Wrists: " + customization.Equipment.Wrists.ItemId +
+                        ", RFinger: " + customization.Equipment.RFinger.ItemId +
+                        ", LFinger: " + customization.Equipment.LFinger.ItemId);
         }
         private void Chat_ChatMessage(XivChatType type, uint senderId,
         ref SeString sender, ref SeString message, ref bool isHandled) {
@@ -433,7 +607,7 @@ namespace RoleplayingVoice {
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                         if (config.TuneIntoTwitchStreams && IsResidential()) {
-                            if (!twitchSetCooldown.IsRunning || twitchSetCooldown.ElapsedMilliseconds > 10000) {
+                            if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
                                 var strings = message.TextValue.Split(' ');
                                 foreach (string value in strings) {
                                     if (value.Contains("twitch.tv") && lastStreamURL != value) {
@@ -442,7 +616,7 @@ namespace RoleplayingVoice {
                                             TuneIntoStream(value
                                                 .Trim('(').Trim(')')
                                                 .Trim('[').Trim(']')
-                                                .Trim('!'), audioGameObject);
+                                                .Trim('!').Trim('@'), audioGameObject, false);
                                         }
                                         break;
                                     }
@@ -467,7 +641,7 @@ namespace RoleplayingVoice {
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (!cooldown.IsRunning || cooldown.ElapsedMilliseconds > 3000) {
+                    if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 3000) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                         string path = config.CacheFolder + @"\VoicePack\" + voice;
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
@@ -476,7 +650,7 @@ namespace RoleplayingVoice {
                             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
                         }
                     }
-                    cooldown.Restart();
+                    _cooldown.Restart();
                 }
             }
         }
@@ -532,15 +706,15 @@ namespace RoleplayingVoice {
             }
         }
         private void CheckForNewRefreshes() {
-            if (redrawCooldown.ElapsedMilliseconds > 100) {
+            if (_redrawCooldown.ElapsedMilliseconds > 100) {
                 if (temporaryWhitelistQueue.Count < redrawObjectCount - 1) {
                     foreach (var item in temporaryWhitelistQueue) {
                         temporaryWhitelist.Add(item);
                     }
                     temporaryWhitelistQueue.Clear();
                 }
-                redrawCooldown.Stop();
-                redrawCooldown.Reset();
+                _redrawCooldown.Stop();
+                _redrawCooldown.Reset();
             }
         }
         private void CheckForMovingObjects() {
@@ -698,7 +872,7 @@ namespace RoleplayingVoice {
                             if (!isDownloadingZip) {
                                 if (!Path.Exists(clipPath)) {
                                     isDownloadingZip = true;
-                                    maxDownloadLengthTimer.Restart();
+                                    _maxDownloadLengthTimer.Restart();
                                     Task.Run(async () => {
                                         string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                         isDownloadingZip = false;
@@ -864,7 +1038,7 @@ namespace RoleplayingVoice {
                         if (!isDownloadingZip) {
                             if (!Path.Exists(clipPath)) {
                                 isDownloadingZip = true;
-                                maxDownloadLengthTimer.Restart();
+                                _maxDownloadLengthTimer.Restart();
                                 await Task.Run(async () => {
                                     string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                     isDownloadingZip = false;
@@ -1050,9 +1224,9 @@ namespace RoleplayingVoice {
         #endregion
         #region Sound Sync
         private void CheckForDownloadCancellation() {
-            if (maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
+            if (_maxDownloadLengthTimer.ElapsedMilliseconds > 30000) {
                 isDownloadingZip = false;
-                maxDownloadLengthTimer.Reset();
+                _maxDownloadLengthTimer.Reset();
             }
         }
         List<string> GetCombinedWhitelist() {
@@ -1063,12 +1237,13 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Collect Sound Data
-        public async void RefreshSoundData() {
+        public async void RefreshData(bool skipModelData = true) {
             if (!disposed) {
+                _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
                 _ = Task.Run(async () => {
                     try {
-                        penumbraSoundPacks = await GetPrioritySortedSoundPacks();
-                      combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                        penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
+                        combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                     } catch (Exception e) {
                         Dalamud.Logging.PluginLog.Error(e.Message);
                     }
@@ -1178,31 +1353,33 @@ namespace RoleplayingVoice {
             }
         }
         private void gameObjectRedrawn(nint arg1, int arg2) {
-            if (!redrawCooldown.IsRunning) {
-                redrawCooldown.Start();
-                redrawObjectCount = _objectTable.Count<GameObject>();
-            }
-            if (redrawCooldown.IsRunning) {
-                objectsRedrawn++;
-            }
-            string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
-            string path = config.CacheFolder + @"\VoicePack\Others";
-            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-            string clipPath = path + @"\" + hash;
-            if (GetCombinedWhitelist().Contains(senderName) &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                if (Directory.Exists(clipPath)) {
-                    try {
-                        RemoveFiles(clipPath);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                    }
+            if (!disposed) {
+                if (!_redrawCooldown.IsRunning) {
+                    _redrawCooldown.Start();
+                    redrawObjectCount = _objectTable.Count<GameObject>();
                 }
-            } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                temporaryWhitelistQueue.Enqueue(senderName);
-            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                RefreshSoundData();
+                if (_redrawCooldown.IsRunning) {
+                    objectsRedrawn++;
+                }
+                string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+                string path = config.CacheFolder + @"\VoicePack\Others";
+                string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+                string clipPath = path + @"\" + hash;
+                if (GetCombinedWhitelist().Contains(senderName) &&
+                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    if (Directory.Exists(clipPath)) {
+                        try {
+                            RemoveFiles(clipPath);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                    }
+                } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    temporaryWhitelistQueue.Enqueue(senderName);
+                } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    RefreshData();
+                }
             }
         }
 
@@ -1224,7 +1401,7 @@ namespace RoleplayingVoice {
         private void _clientState_Login() {
             CleanSounds();
             CheckDependancies(true);
-            RefreshSoundData();
+            RefreshData();
         }
         public void CleanSounds() {
             string path = config.CacheFolder + @"\VoicePack\Others";
@@ -1242,8 +1419,8 @@ namespace RoleplayingVoice {
             }
         }
         public void ResetTwitchValues() {
-            if (twitchWasPlaying) {
-                twitchWasPlaying = false;
+            if (streamWasPlaying) {
+                streamWasPlaying = false;
                 _videoWindow.IsOpen = false;
                 try {
                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
@@ -1253,9 +1430,9 @@ namespace RoleplayingVoice {
             }
             potentialStream = "";
             lastStreamURL = "";
-            currentStreamer = "";
-            twitchSetCooldown.Stop();
-            twitchSetCooldown.Reset();
+            _currentStreamer = "";
+            _streamSetCooldown.Stop();
+            _streamSetCooldown.Reset();
         }
         #endregion
         #region Connection Attempts
@@ -1301,7 +1478,7 @@ namespace RoleplayingVoice {
                                             if (Path.Exists(clipPath)) {
                                                 RemoveFiles(clipPath);
                                                 isDownloadingZip = true;
-                                                maxDownloadLengthTimer.Restart();
+                                                _maxDownloadLengthTimer.Restart();
                                                 await Task.Run(async () => {
                                                     string value = await _roleplayingMediaManager.GetZip(playerSender, path);
                                                     isDownloadingZip = false;
@@ -1504,6 +1681,96 @@ namespace RoleplayingVoice {
             }
         }
 
+        public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
+            string modName = Path.GetFileName(directory);
+            int mdlFilesFound = 0;
+            foreach (var item in option.Files) {
+                if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
+                    && !directory.Contains("Hrothgar & Viera Hats") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
+                    && GetModelID(item.Key) != 279 && GetModelID(item.Key) != 9903) {
+                    mdlFilesFound++;
+                }
+            }
+            if (mdlFilesFound > 0) {
+                _modelMods[modName] = null;
+            }
+        }
+
+        public ulong GetModelID(string model) {
+            string[] strings = model.Split("/");
+            ulong newValue = 0;
+            foreach (string value in strings) {
+                if (value.StartsWith("e") || value.StartsWith("a")) {
+                    try {
+                        newValue = ulong.Parse(value.Replace("e", "").Replace("a", "").TrimStart('0'));
+                    } catch {
+                    }
+                }
+            }
+            if (newValue > 10000) {
+                _chat.Print(model);
+            }
+            return newValue;
+        }
+
+        public bool SetEquipment(EquipObject equipItem, CharacterCustomization characterCustomization) {
+            bool changed = false;
+            switch (equipItem.Type) {
+                case Penumbra.GameData.Enums.FullEquipType.Ears:
+                    characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Neck:
+                    characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Body:
+                    characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Legs:
+                    characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Hands:
+                    characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Finger:
+                    characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
+                    characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Feet:
+                    characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Wrists:
+                    characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+            }
+            if (changed) {
+                var json = JsonConvert.SerializeObject(characterCustomization);
+                var compressed = json.Compress(6);
+                string base64 = System.Convert.ToBase64String(compressed);
+                _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
+            }
+            return changed;
+        }
+        public void CleanEquipment(CharacterCustomization characterCustomization) {
+            characterCustomization.Equipment.Head.ItemId = 0;
+            characterCustomization.Equipment.Ears.ItemId = 0;
+            characterCustomization.Equipment.Neck.ItemId = 0;
+            characterCustomization.Equipment.Body.ItemId = 0;
+            characterCustomization.Equipment.Legs.ItemId = 0;
+            characterCustomization.Equipment.Hands.ItemId = 0;
+            characterCustomization.Equipment.LFinger.ItemId = 0;
+            characterCustomization.Equipment.RFinger.ItemId = 0;
+            characterCustomization.Equipment.Feet.ItemId = 0;
+            characterCustomization.Equipment.Wrists.ItemId = 0;
+        }
+
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
             foreach (string file in Directory.GetFiles(directory)) {
                 if (file.EndsWith(".pap")) {
@@ -1529,10 +1796,11 @@ namespace RoleplayingVoice {
             }
         }
 
-        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedSoundPacks() {
+        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks(bool skipModelData) {
             Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
             _papSorting?.Clear();
+            _mdlSorting?.Clear();
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
             try {
                 string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
@@ -1542,25 +1810,33 @@ namespace RoleplayingVoice {
                     foreach (var directory in directories) {
                         Dalamud.Logging.PluginLog.LogVerbose("Examining: " + directory);
                         Option option = null;
-                        Group group = null;
+                        List<Group> groups = new List<Group>();
+                        string modName = Path.GetFileName(directory);
                         if (Directory.Exists(directory)) {
-                            string modName = Path.GetFileName(directory);
                             foreach (string file in Directory.EnumerateFiles(directory)) {
                                 if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
                                     if (file.EndsWith("default_mod.json")) {
                                         option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
                                     } else {
-                                        group = JsonConvert.DeserializeObject<Group>(File.ReadAllText(file));
+                                        groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
                                     }
                                 }
                             }
                         }
                         if (option != null) {
                             ExtractPapFiles(option, directory, true);
+                            if (!skipModelData) {
+                                ExtractMdlFiles(option, directory, true);
+                            }
                         }
-                        if (group != null) {
-                            foreach (Option groupOption in group.Options) {
-                                ExtractPapFiles(groupOption, directory, true);
+                        foreach (Group group in groups) {
+                            if (group != null) {
+                                foreach (Option groupOption in group.Options) {
+                                    ExtractPapFiles(groupOption, directory, true);
+                                    if (!skipModelData) {
+                                        ExtractMdlFiles(groupOption, directory, true);
+                                    }
+                                }
                             }
                         }
                         try {
@@ -1577,9 +1853,11 @@ namespace RoleplayingVoice {
                                         if (option != null) {
                                             ExtractSCDOptions(option, directory);
                                         }
-                                        if (group != null) {
-                                            foreach (Option groupOption in group.Options) {
-                                                ExtractSCDOptions(groupOption, directory);
+                                        foreach (Group group in groups) {
+                                            if (group != null) {
+                                                foreach (Option groupOption in group.Options) {
+                                                    ExtractSCDOptions(groupOption, directory);
+                                                }
                                             }
                                         }
                                         string soundPackData = directory + @"\rpvsp";
@@ -1650,30 +1928,37 @@ namespace RoleplayingVoice {
             return rgx.Replace(value, "");
         }
         #endregion
-        #region Twitch Management
-        private void TuneIntoStream(string url, IGameObject audioGameObject) {
+        #region Stream Management
+        private void TuneIntoStream(string url, IGameObject audioGameObject, bool isNotTwitch) {
             Task.Run(async () => {
                 string cleanedURL = RemoveSpecialSymbols(url);
-                string streamURL = TwitchFeedManager.GetServerResponse(cleanedURL, TwitchFeedManager.TwitchFeedType._360p);
+                string streamURL = isNotTwitch ? url : TwitchFeedManager.GetServerResponse(cleanedURL, TwitchFeedManager.TwitchFeedType._360p);
                 if (!string.IsNullOrEmpty(streamURL)) {
                     _mediaManager.PlayStream(audioGameObject, streamURL);
                     lastStreamURL = cleanedURL;
-                    currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                    _chat.Print(@"Tuning into " + currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
-                        "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
-                        (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
+                    if (!isNotTwitch) {
+                        _currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                        _chat.Print(@"Tuning into " + _currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
+                            "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
+                            (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
+                    } else {
+                        _currentStreamer = "RTMP Streamer";
+                        _chat.Print(@"Tuning into a custom RTMP stream!" +
+                            "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
+                            (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
+                    }
                     _videoWindow.IsOpen = true;
                 }
             });
-            twitchWasPlaying = true;
+            streamWasPlaying = true;
             try {
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
-            twitchSetCooldown.Stop();
-            twitchSetCooldown.Reset();
-            twitchSetCooldown.Start();
+            _streamSetCooldown.Stop();
+            _streamSetCooldown.Reset();
+            _streamSetCooldown.Start();
         }
         #endregion
         #region UI Management
@@ -1714,8 +1999,9 @@ namespace RoleplayingVoice {
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
+                             "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
-                             "record (Converts spoken speech to in game chat, but adds roleplaying quotes)");
+                             "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)");
                             break;
                         case "on":
                             config.AiVoiceActive = true;
@@ -1740,12 +2026,12 @@ namespace RoleplayingVoice {
                             break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
-                                TuneIntoStream(splitArgs[1], _playerObject);
+                                TuneIntoStream(splitArgs[1], _playerObject, false);
                             } else {
-                                if (!string.IsNullOrEmpty(currentStreamer)) {
+                                if (!string.IsNullOrEmpty(_currentStreamer)) {
                                     try {
                                         Process.Start(new System.Diagnostics.ProcessStartInfo() {
-                                            FileName = @"https://www.twitch.tv/popout/" + currentStreamer + @"/chat?popout=",
+                                            FileName = @"https://www.twitch.tv/popout/" + _currentStreamer + @"/chat?popout=",
                                             UseShellExecute = true,
                                             Verb = "OPEN"
                                         });
@@ -1757,9 +2043,14 @@ namespace RoleplayingVoice {
                                 }
                             }
                             break;
+                        case "rtmp":
+                            if (splitArgs.Length > 1 && splitArgs[1].Contains("rtmp")) {
+                                TuneIntoStream(splitArgs[1], _playerObject, true);
+                            }
+                            break;
                         case "listen":
                             if (!string.IsNullOrEmpty(potentialStream)) {
-                                TuneIntoStream(potentialStream, _playerObject);
+                                TuneIntoStream(potentialStream, _playerObject, false);
                             }
                             break;
                         case "endlisten":
@@ -1778,6 +2069,20 @@ namespace RoleplayingVoice {
                             _chat.Print("Speech To Text Started");
                             _speechToTextManager.RpMode = true;
                             _speechToTextManager.RecordAudio();
+                            break;
+                        case "catalogue":
+                            if (splitArgs.Length > 1 && splitArgs[1] == "scan") {
+                                _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
+                                _chat.Print("Creating Thumbnails For New Clothing Mods");
+                                CleanSlate();
+                                _catalogueMods = true;
+                                _modelModList = new List<string>();
+                                _modelModList.AddRange(_modelMods.Keys);
+                                _catalogueWindow.ScanCatalogue();
+                                _catalogueTimer.Start();
+                            } else {
+                                _catalogueWindow.IsOpen = true;
+                            }
                             break;
                         default:
                             if (config.AiVoiceActive) {
@@ -1919,6 +2224,68 @@ namespace RoleplayingVoice {
             return storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
         }
 
+        #endregion
+        #region Trigger Clothing Mods
+        private void SetClothingMod(string modelMod, bool disableOtherMods = true) {
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            int lowestPriority = 10;
+            foreach (string modName in _modelMods.Keys) {
+                if (modName.ToLower().Contains(modelMod.ToLower())) {
+                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 11);
+                } else {
+                    if (disableOtherMods) {
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+                    } else {
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+                    }
+                }
+            }
+        }
+        private void SetDependancies(string modelMod, bool disableOtherMods = true) {
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            int lowestPriority = 10;
+            foreach (string modName in _modelMods.Keys) {
+                if (modName.ToLower().Contains(modelMod.ToLower())) {
+                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 11);
+                } else {
+                    if (FindStringMatch(modelMod, modName)) {
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 10);
+                    } else if (disableOtherMods) {
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+                    } else {
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+                    }
+                }
+            }
+        }
+        private bool FindStringMatch(string sourceMod, string comparisonMod) {
+            string[] strings = sourceMod.Split(' ');
+            foreach (string value in strings) {
+                string loweredValue = value.ToLower();
+                if (comparisonMod.ToLower().Contains(loweredValue)
+                  && loweredValue.Length > 4 && !loweredValue.Contains("[") && !loweredValue.Contains("]")
+                  && !loweredValue.Contains("by") && !loweredValue.Contains("update")
+                  && !loweredValue.Contains("megapack") && !comparisonMod.Contains("megapack")) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        private void CleanSlate() {
+            string foundModName = "";
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            foreach (string modName in _modelMods.Keys) {
+                var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+            }
+        }
         #endregion
         #region Error Logging
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {

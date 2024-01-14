@@ -7,6 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RoleplayingVoiceDalamud", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RoleplayingVoiceCore", "RoleplayingVoiceCore\RoleplayingVoiceCore.csproj", "{C252622B-F64D-419F-9133-6D5718DCD814}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penumbra.GameData", "Penumbra.GameData\Penumbra.GameData.csproj", "{7186A0EA-21A3-4947-9CEC-42F061BED32B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penumbra.String", "Penumbra.String\Penumbra.String.csproj", "{B4729B33-43DF-4331-88B9-373979C6A5D1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penumbra.Api", "Penumbra.Api\Penumbra.Api.csproj", "{754BD16D-1308-4B6F-8447-D818FD94CB54}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +27,18 @@ Global
 		{C252622B-F64D-419F-9133-6D5718DCD814}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C252622B-F64D-419F-9133-6D5718DCD814}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C252622B-F64D-419F-9133-6D5718DCD814}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7186A0EA-21A3-4947-9CEC-42F061BED32B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7186A0EA-21A3-4947-9CEC-42F061BED32B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7186A0EA-21A3-4947-9CEC-42F061BED32B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7186A0EA-21A3-4947-9CEC-42F061BED32B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4729B33-43DF-4331-88B9-373979C6A5D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4729B33-43DF-4331-88B9-373979C6A5D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4729B33-43DF-4331-88B9-373979C6A5D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4729B33-43DF-4331-88B9-373979C6A5D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

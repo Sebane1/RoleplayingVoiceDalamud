@@ -76,7 +76,7 @@ namespace RoleplayingVoice {
         public event EventHandler<MessageEventArgs> OnWindowOperationFailed;
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
-            IsOpen = true;
+            //IsOpen = true;
             Size = new Vector2(400, 600);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
@@ -513,7 +513,7 @@ namespace RoleplayingVoice {
             }
             if (PluginInterface != null) {
                 try {
-                    PluginReference.RefreshSoundData();
+                    PluginReference.RefreshData();
                 } catch (Exception ex) { }
             }
         }
