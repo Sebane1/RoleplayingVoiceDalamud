@@ -70,6 +70,7 @@ namespace RoleplayingVoice {
         private bool _tuneIntoTwitchStreams;
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
+        private bool _npcSpeechGenerationDisabled;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -123,6 +124,7 @@ namespace RoleplayingVoice {
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
+                    _npcSpeechGenerationDisabled = configuration.NpcSpeechGenerationDisabled;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -215,10 +217,34 @@ namespace RoleplayingVoice {
                     DrawWhitelist();
                     ImGui.EndTabItem();
                 }
+                if (ImGui.BeginTabItem("NPC Dialogue")) {
+                    DrawNPCDialogue();
+                    ImGui.EndTabItem();
+                }
                 ImGui.EndTabBar();
             }
             DrawErrors();
             SaveAndClose();
+        }
+
+        private void DrawNPCDialogue() {
+            if (ImGui.Button("Contribute Your Voice!", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                Process process = new Process();
+                try {
+                    // true is the default, but it is important not to set it to false
+                    process.StartInfo.UseShellExecute = true;
+                    process.StartInfo.FileName = "https://forms.gle/JrarUbRpnhNyEThAA";
+                    process.Start();
+                } catch (Exception e) {
+
+                }
+            }
+            ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached." +
+                "\r\n\r\nWe're looking to the community for voice contributions, as well as help stress testing the system."+
+                "\r\n\r\nThe more this feature is used, the faster it will become for everyone." +
+                "\r\n\r\nMany NPC's do not yet have their own unique voice yet. You can help with this!" +
+                "\r\n\r\nThe end goal is to have voice dialogue for nearly every corner of the game.\r\n\r\n");
+            ImGui.Checkbox("Disable Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
         }
 
         private void DrawWhitelist() {
@@ -401,6 +427,7 @@ namespace RoleplayingVoice {
                 configuration.StreamPath = _streamPath;
                 configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
                 configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
+                configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];

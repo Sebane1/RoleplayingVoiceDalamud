@@ -34,6 +34,7 @@ namespace SoundFilter {
         private const int ResourceDataPointerOffset = 0xB0;
         private const int MusicManagerStreamingOffset = 0x32;
         public event EventHandler<InterceptedSound> OnSoundIntercepted;
+        public event EventHandler<InterceptedSound> OnCutsceneAudioDetected;
         #region Delegates
 
         private delegate void* PlaySpecificSoundDelegate(long a1, int idx);
@@ -226,7 +227,8 @@ namespace SoundFilter {
             return ret;
         }
 
-        private void* CallOriginalResourceHandler(bool isSync, IntPtr pFileManager, uint* pCategoryId, char* pResourceType, uint* pResourceHash, char* pPath, void* pUnknown, bool isUnknown) {
+        private void* CallOriginalResourceHandler(bool isSync, IntPtr pFileManager, uint* pCategoryId, char* pResourceType, 
+            uint* pResourceHash, char* pPath, void* pUnknown, bool isUnknown) {
             return isSync
                 ? this.GetResourceSyncHook!.Original(pFileManager, pCategoryId, pResourceType, pResourceHash, pPath, pUnknown)
                 : this.GetResourceAsyncHook!.Original(pFileManager, pCategoryId, pResourceType, pResourceHash, pPath, pUnknown, isUnknown);
@@ -250,11 +252,15 @@ namespace SoundFilter {
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
             if ((specificPath.Contains("vo_battle") && muted)
                 || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
+                
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
-            } else if (specificPath.Contains("/strm/")){
+            } else if (specificPath.Contains("/strm/")) {
                 return true;
+            }
+            if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man"))) {
+                OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
             }
             return false;
         }

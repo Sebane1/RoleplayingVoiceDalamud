@@ -1,0 +1,59 @@
+﻿using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Plugin.Services;
+using System;
+
+namespace RoleplayingVoiceDalamud.Voice {
+    public abstract class AddonManager : IDisposable {
+        private readonly IClientState clientState;
+        private readonly ICondition condition;
+        private readonly IGameGui gui;
+        private readonly IDisposable subscription;
+        private readonly string name;
+        private IClientState _clientState;
+
+        protected nint Address { get; set; }
+
+        protected AddonManager(IFramework framework, IClientState clientState, ICondition condition, IGameGui gui, string name) {
+            this.clientState = clientState;
+            this.condition = condition;
+            this.gui = gui;
+            this.name = name;
+
+            //var onUpdate = Observable.Create((IObserver<IFramework> observer) =>
+            //{
+            //    framework.Update += Handle;
+            //    return () => { framework.Update -= Handle; };
+
+            //    void Handle(IFramework f) {
+            //        observer.OnNext(f);
+            //    }
+            //});
+
+            //this.subscription = onUpdate
+            //    .Subscribe(_ => UpdateAddonAddress());
+            _clientState = clientState;
+            _clientState.Login += ClientState_Login;
+            UpdateAddonAddress();
+        }
+
+        private void ClientState_Login() {
+            UpdateAddonAddress();
+        }
+
+        private void UpdateAddonAddress() {
+            if (!this.clientState.IsLoggedIn || this.condition[ConditionFlag.CreatingCharacter]) {
+                Address = nint.Zero;
+                return;
+            }
+
+            if (Address == nint.Zero) {
+                Address = this.gui.GetAddonByName(this.name);
+            }
+        }
+
+        public void Dispose() {
+            this.subscription.Dispose();
+            _clientState.Login -= ClientState_Login;
+        }
+    }
+}

@@ -24,6 +24,7 @@ namespace RoleplayingVoice {
         private bool ignoreWhitelist = true;
         private bool performEmotesBasedOnWrittenText;
         private bool seperateSCDModsFromNativeSoundSystem;
+        private bool _npcSpeechGenerationDisabled;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
 
@@ -84,6 +85,8 @@ namespace RoleplayingVoice {
         public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
+        public bool NpcSpeechGenerationDisabled { get => _npcSpeechGenerationDisabled; set => _npcSpeechGenerationDisabled = value; }
+
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

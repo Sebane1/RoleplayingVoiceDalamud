@@ -24,7 +24,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FFXIVClientStructs.FFXIV.Client.Game.Housing;
@@ -49,12 +48,12 @@ using Emote = Lumina.Excel.GeneratedSheets.Emote;
 using Glamourer.Utility;
 using System.Windows.Forms;
 using RoleplayingVoiceDalamud.Glamourer;
-using Item = Lumina.Excel.GeneratedSheets.Item;
 using Vector3 = System.Numerics.Vector3;
 using System.Drawing.Imaging;
 using System.Drawing;
 using Rectangle = System.Drawing.Rectangle;
-using static Lumina.Models.Models.Model;
+using RoleplayingVoiceDalamud.Voice;
+using System.Text.RegularExpressions;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -166,6 +165,9 @@ namespace RoleplayingVoice {
         private string _currentModelMod;
         private EquipObject _currentClothingItem;
         private bool _catalogueScreenShotTaken = false;
+        private NPCVoiceManager _npcVoiceManager;
+        private AddonTalkManager _addonTalkManager;
+        private AddonTalkHandler _addonTalkHandler;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -189,6 +191,8 @@ namespace RoleplayingVoice {
 
         public Stopwatch TimeSinceLastEmoteDone { get => _timeSinceLastEmoteDone; set => _timeSinceLastEmoteDone = value; }
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
+        public NPCVoiceManager NpcVoiceManager { get => _npcVoiceManager; set => _npcVoiceManager = value; }
+        public IDataManager DataManager { get => _dataManager; set => _dataManager = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -202,7 +206,9 @@ namespace RoleplayingVoice {
             IDataManager dataManager,
             IGameConfig gameConfig,
             IFramework framework,
-            IGameInteropProvider interopProvider) {
+            IGameInteropProvider interopProvider,
+            ICondition condition,
+            IGameGui gameGui) {
             #region Constructor
             try {
                 this.pluginInterface = pi;
@@ -245,6 +251,9 @@ namespace RoleplayingVoice {
                 _objectTable = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
+                _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
+                _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
+                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this);
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -530,6 +539,10 @@ namespace RoleplayingVoice {
                         case XivChatType.TellOutgoing:
                             ChatText(playerName, message, type, senderId);
                             break;
+                        case XivChatType.NPCDialogue:
+                        case XivChatType.NPCDialogueAnnouncements:
+                            //NPCText(playerName, message, type, senderId);
+                            break;
                         case (XivChatType)2729:
                         case (XivChatType)2091:
                         case (XivChatType)2234:
@@ -550,6 +563,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
             if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
                 if (config.PerformEmotesBasedOnWrittenText) {
@@ -1159,7 +1173,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private ScdFile GetScdFile(string soundPath) {
+        public ScdFile GetScdFile(string soundPath) {
             using (FileStream fileStream = new FileStream(_scdReplacements[soundPath], FileMode.Open, FileAccess.Read)) {
                 using (BinaryReader reader = new BinaryReader(fileStream)) {
                     return new ScdFile(reader);
@@ -1921,8 +1935,8 @@ namespace RoleplayingVoice {
             return playerSender;
         }
         public static string SplitCamelCase(string input) {
-            return System.Text.RegularExpressions.Regex.Replace(input, "([A-Z])", " $1",
-                System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
+            return Regex.Replace(input, "([A-Z])", " $1",
+                RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
             Regex rgx = new Regex(@"[^a-zA-Z:/._\ -]");
