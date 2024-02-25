@@ -17,6 +17,7 @@ namespace RoleplayingVoice {
         private float _unfocusedCharacterVolume = 0.5f;
         private float _loopingSFXVolume = 1;
         private float _livestreamVolume = 1;
+        private float _npcVolume = 1;
         bool useAggressiveCaching = true;
         private string cacheFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
         private bool usePlayerSync = false;
@@ -72,7 +73,7 @@ namespace RoleplayingVoice {
         public float LoopingSFXVolume {
             get => _loopingSFXVolume; set {
                 if (value == 0) {
-                    LoopingSFXVolume = 1;
+                    _loopingSFXVolume = 1;
                 } else {
                     _loopingSFXVolume = value;
                 }
@@ -86,6 +87,15 @@ namespace RoleplayingVoice {
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
         public bool NpcSpeechGenerationDisabled { get => _npcSpeechGenerationDisabled; set => _npcSpeechGenerationDisabled = value; }
+        public float NpcVolume {
+            get => _npcVolume; set {
+                if (value == 0) {
+                    _npcVolume = 1;
+                } else {
+                    _npcVolume = value;
+                }
+            }
+        }
 
         #endregion
 

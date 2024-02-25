@@ -54,9 +54,9 @@ namespace RoleplayingVoice {
         private Vector2? initialSize;
         private Vector2? changedSize;
 
-        private float _playerCharacterVolume;
-        private float _otherCharacterVolume;
-        private float _unfocusedCharacterVolume;
+        private float _playerCharacterVolume = 1;
+        private float _otherCharacterVolume = 1;
+        private float _unfocusedCharacterVolume = 1;
         private bool _useServer;
         private bool _ignoreWhitelist;
         private int _currentWhitelistItem = 0;
@@ -65,7 +65,8 @@ namespace RoleplayingVoice {
         private string _newVoicePackName = "";
         private bool _characterVoicePackActive;
         private float _loopingSFXVolume = 1;
-        private float _livestreamVolume;
+        private float _livestreamVolume = 1;
+        private float _npcVolume = 1;
         private string _streamPath;
         private bool _tuneIntoTwitchStreams;
         private bool _performEmotesBasedOnWrittenText;
@@ -118,6 +119,7 @@ namespace RoleplayingVoice {
                     _unfocusedCharacterVolume = configuration.UnfocusedCharacterVolume;
                     _loopingSFXVolume = configuration.LoopingSFXVolume;
                     _livestreamVolume = configuration.LivestreamVolume;
+                    _npcVolume = configuration.NpcVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
                     _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
@@ -417,6 +419,7 @@ namespace RoleplayingVoice {
                 configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
                 configuration.LoopingSFXVolume = _loopingSFXVolume;
                 configuration.LivestreamVolume = _livestreamVolume;
+                configuration.NpcVolume = _npcVolume;
                 configuration.AiVoiceActive = _aiVoiceActive;
                 configuration.VoicePackIsActive = _characterVoicePackActive;
                 configuration.UseAggressiveSplicing = _aggressiveCaching;
@@ -746,6 +749,9 @@ namespace RoleplayingVoice {
             ImGui.Text("Livestream Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
+            ImGui.Text("NPC Volume");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 1);
             if (ImGui.Button("Volume Fix", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 PluginReference.MediaManager.VolumeFix();
             }

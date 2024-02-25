@@ -58,7 +58,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     if (state.Text != _lastText) {
                         _lastText = state.Text;
                         if (!_blockAudioGeneration) {
-                            NPCText(state.Speaker, state.Text);
+                            NPCText(state.Speaker, state.Text.TrimStart('.'));
                         } else {
 #if DEBUG
                             if (_currentDialoguePath != null) {
