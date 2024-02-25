@@ -290,6 +290,9 @@ namespace RoleplayingVoice {
                 Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
                 _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
                 _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
+                if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
+                    _chat.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
+                }
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -479,6 +482,19 @@ namespace RoleplayingVoice {
             version = bytes.DecompressToString(out var decompressed);
             characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
             SetEquipment(item, characterCustomization);
+        }
+        public int GetRace(PlayerCharacter playerCharacter) {
+            try {
+                CharacterCustomization characterCustomization = null;
+                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                var bytes = System.Convert.FromBase64String(customizationValue);
+                var version = bytes[0];
+                version = bytes.DecompressToString(out var decompressed);
+                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                return characterCustomization.Customize.Race.Value;
+            } catch {
+                return playerCharacter.Customize[(int)CustomizeIndex.Race];
+            }
         }
         private bool AlreadyHasScreenShots(string name) {
             //_chat.Print(name);
@@ -1512,7 +1528,7 @@ namespace RoleplayingVoice {
                                                 string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
                                                 if (!string.IsNullOrEmpty(value)) {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                                                    TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                                                    TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
@@ -1547,7 +1563,7 @@ namespace RoleplayingVoice {
                 string emotePath = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
                 if (!string.IsNullOrEmpty(emotePath)) {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                    TimeCodeData data = RaceVoice.TimeCodeData[instigator.Customize[(int)CustomizeIndex.Race] + "_" + gender];
+                    TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
                     _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
