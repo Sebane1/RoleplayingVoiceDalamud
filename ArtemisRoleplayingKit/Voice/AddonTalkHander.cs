@@ -100,8 +100,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 _hook.SendAsyncKey(Keys.NumPad0);
                                 _hook.SendSyncKey(Keys.NumPad0);
                                 _currentDialoguePath = null;
-#endif
                             }
+#endif
                         }
                         _blockAudioGeneration = false;
                     }
