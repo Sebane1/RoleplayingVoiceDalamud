@@ -74,6 +74,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Temulun", "Tun");
             values.Add("Vira Battlemaid", "Vaid");
             values.Add("Tsukuyomi", "Tomi");
+            values.Add("Katliss", "Kliss");
+            values.Add("Theyler", "Ter");
             //values.Add("Jessie", "Jjaye");
 
             values.Add("Emet-Selch", "Eselch");
