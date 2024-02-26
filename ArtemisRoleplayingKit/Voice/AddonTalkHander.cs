@@ -1,23 +1,18 @@
 ﻿using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
 using NAudio.Lame;
 using NAudio.Wave;
-using RoleplayingMediaCore;
 using RoleplayingVoice;
-using RoleplayingVoiceCore;
 using SoundFilter;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Pipes;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
-using XivCommon.Functions;
 using SoundType = RoleplayingMediaCore.SoundType;
 
 namespace RoleplayingVoiceDalamud.Voice {
@@ -155,14 +150,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                 string value = ConvertRomanNumberals(message.TextValue);
                 KeyValuePair<Stream, bool> stream = await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender);
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
-                new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.08f));
+                new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.09f));
             } catch {
             }
         }
         private float CalculatePitchBasedOnName(string value, float range) {
-            float letterIndex = 0;
             string lowered = value.ToLower();
-            float pitches = 26;
             Random random = new Random(value.GetHashCode());
             return 1 + (((float)random.Next(-100, 100) / 100f) * range);
         }
