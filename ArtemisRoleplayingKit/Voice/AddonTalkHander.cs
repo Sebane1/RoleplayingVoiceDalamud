@@ -30,6 +30,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _blockAudioGeneration;
         private InterceptedSound _currentDialoguePath;
         private FFXIVHook _hook;
+        private MediaGameObject _currentSpeechObject;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
             IClientState clientState, Plugin plugin) {
@@ -105,10 +106,22 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                         _blockAudioGeneration = false;
                     }
+                } else {
+                    if (_currentSpeechObject != null) {
+                        _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                        _currentSpeechObject = null;
+                        _lastText = "";
+                    }
                 }
             }
         }
-
+        public string RemoveNumerals(string text) {
+            string value = text;
+            for (int i = 25; i > 1; i--) {
+                value = value.Replace(Numerals.Roman.To(i), i.ToString());
+            }
+            return value;
+        }
         public ScdFile GetScdFile(string soundPath) {
             if (_plugin.DataManager.FileExists(_currentDialoguePath.SoundPath)) {
                 try {
@@ -136,10 +149,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                     }
                 }
-                _plugin.MediaManager.PlayAudioStream(new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer),
-               new Mp3FileReader(await _plugin.NpcVoiceManager.GetCharacterAudio(message.TextValue, npcName, gender)), SoundType.NPC);
+                _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
+                string value = RemoveNumerals(message.TextValue);
+                _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
+               new Mp3FileReader(await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender)), SoundType.NPC);
             } catch {
-
             }
         }
 
