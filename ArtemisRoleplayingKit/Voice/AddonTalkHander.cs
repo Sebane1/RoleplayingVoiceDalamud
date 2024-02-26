@@ -119,7 +119,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         public string ConvertRomanNumberals(string text) {
             string value = text;
-            for (int i = 25; i > 1; i--) {
+            for (int i = 25; i > 5; i--) {
                 value = value.Replace(Numerals.Roman.To(i), i.ToString());
             }
             return value;
