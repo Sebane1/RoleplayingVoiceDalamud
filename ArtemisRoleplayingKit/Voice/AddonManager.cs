@@ -18,19 +18,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             this.condition = condition;
             this.gui = gui;
             this.name = name;
-
-            //var onUpdate = Observable.Create((IObserver<IFramework> observer) =>
-            //{
-            //    framework.Update += Handle;
-            //    return () => { framework.Update -= Handle; };
-
-            //    void Handle(IFramework f) {
-            //        observer.OnNext(f);
-            //    }
-            //});
-
-            //this.subscription = onUpdate
-            //    .Subscribe(_ => UpdateAddonAddress());
             _clientState = clientState;
             _clientState.Login += ClientState_Login;
             UpdateAddonAddress();

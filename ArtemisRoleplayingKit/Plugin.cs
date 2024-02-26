@@ -1151,7 +1151,7 @@ namespace RoleplayingVoice {
                             _nativeAudioStream.Position = 0;
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
-                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop);
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, 1);
                             if (!_mediaManager.LowPerformanceMode) {
                                 _ = Task.Run(async () => {
                                     try {

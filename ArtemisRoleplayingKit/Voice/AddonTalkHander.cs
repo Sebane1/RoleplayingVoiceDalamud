@@ -11,11 +11,13 @@ using RoleplayingVoice;
 using RoleplayingVoiceCore;
 using SoundFilter;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
+using XivCommon.Functions;
 using SoundType = RoleplayingMediaCore.SoundType;
 
 namespace RoleplayingVoiceDalamud.Voice {
@@ -151,12 +153,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = ConvertRomanNumberals(message.TextValue);
+                KeyValuePair<Stream, bool> stream = await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender);
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
-               new Mp3FileReader(await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender)), SoundType.NPC);
+                new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.08f));
             } catch {
             }
         }
-
+        private float CalculatePitchBasedOnName(string value, float range) {
+            float letterIndex = 0;
+            string lowered = value.ToLower();
+            float pitches = 26;
+            Random random = new Random(value.GetHashCode());
+            return 1 + (((float)random.Next(-100, 100) / 100f) * range);
+        }
         private AddonTalkState GetTalkAddonState() {
             if (!this.addonTalkManager.IsVisible()) {
                 return default;
