@@ -115,7 +115,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        public string RemoveNumerals(string text) {
+        public string ConvertRomanNumberals(string text) {
             string value = text;
             for (int i = 25; i > 1; i--) {
                 value = value.Replace(Numerals.Roman.To(i), i.ToString());
@@ -150,7 +150,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
-                string value = RemoveNumerals(message.TextValue);
+                string value = ConvertRomanNumberals(message.TextValue);
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
                new Mp3FileReader(await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender)), SoundType.NPC);
             } catch {

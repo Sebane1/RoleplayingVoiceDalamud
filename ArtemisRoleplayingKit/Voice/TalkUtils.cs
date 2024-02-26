@@ -34,19 +34,23 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private static unsafe string ReadTextNode(AtkTextNode* textNode)
         {
-            if (textNode == null) return "";
+            try {
+                if (textNode == null) return "";
 
-            var textPtr = textNode->NodeText.StringPtr;
-            var textLength = textNode->NodeText.BufUsed - 1; // Null-terminated; chop off the null byte
-            if (textLength is <= 0 or > int.MaxValue) return "";
+                var textPtr = textNode->NodeText.StringPtr;
+                var textLength = textNode->NodeText.BufUsed - 1; // Null-terminated; chop off the null byte
+                if (textLength is <= 0 or > int.MaxValue) return "";
 
-            var textBytes = new byte[textLength];
-            Marshal.Copy((nint)textPtr, textBytes, 0, (int)textLength);
-            var seString = SeString.Parse(textBytes);
-            return seString.TextValue
-                .Trim()
-                .Replace("\n", "")
-                .Replace("\r", "");
+                var textBytes = new byte[textLength];
+                Marshal.Copy((nint)textPtr, textBytes, 0, (int)textLength);
+                var seString = SeString.Parse(textBytes);
+                return seString.TextValue
+                    .Trim()
+                    .Replace("\n", "")
+                    .Replace("\r", "");
+            } catch {
+                return "";
+            }
         }
 
         public static string StripAngleBracketedText(string text)
