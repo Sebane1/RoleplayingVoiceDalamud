@@ -136,19 +136,21 @@ namespace RoleplayingVoiceDalamud.Voice {
         private async void NPCText(string npcName, SeString message) {
             try {
                 bool gender = false;
-                GameObject npcObject = null;
+                byte race = 0;
+                Character npcObject = null;
                 foreach (var item in objects) {
                     if (item.Name.TextValue == npcName) {
                         Character character = item as Character;
                         if (character != null) {
                             gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
+                            race = character.Customize[(int)CustomizeIndex.Race];
                             npcObject = character;
                         }
                     }
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = ConvertRomanNumberals(message.TextValue);
-                KeyValuePair<Stream, bool> stream = await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender);
+                KeyValuePair<Stream, bool> stream = await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, race == 8 ? "Aet" : "");
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
                 new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.09f));
             } catch {
