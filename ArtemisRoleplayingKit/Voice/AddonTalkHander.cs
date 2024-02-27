@@ -153,7 +153,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = ConvertRomanNumberals(message.TextValue);
-                KeyValuePair<Stream, bool> stream = await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, race == 8 ? "Aet" : "");
+                KeyValuePair<Stream, bool> stream =
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race));
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
                 new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.09f));
             } catch {
@@ -173,6 +174,23 @@ namespace RoleplayingVoiceDalamud.Voice {
             return addonTalkText != null
                 ? new AddonTalkState(addonTalkText.Speaker, addonTalkText.Text)
                 : default;
+        }
+
+        public string PickVoiceBasedOnNameAndRace(string npcName, int race) {
+            switch (race) {
+                case 8:
+                    return PickVeiraVoice(new Random(GetSimpleHash(npcName)).Next(0, 3));
+            }
+            return "";
+        }
+
+        public string PickVeiraVoice(int voice) {
+            string[] voices = new string[] {
+                "Aet",
+                "Cet",
+                "Uet"
+            };
+            return voices[voice];
         }
     }
 }
