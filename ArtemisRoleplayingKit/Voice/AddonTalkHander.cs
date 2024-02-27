@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
 using SoundType = RoleplayingMediaCore.SoundType;
@@ -132,7 +133,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return null;
             }
         }
-
+        private static int GetSimpleHash(string s) {
+            return s.Select(a => (int)a).Sum();
+        }
         private async void NPCText(string npcName, SeString message) {
             try {
                 bool gender = false;
@@ -158,7 +161,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private float CalculatePitchBasedOnName(string value, float range) {
             string lowered = value.ToLower();
-            Random random = new Random(value.GetHashCode());
+            Random random = new Random(GetSimpleHash(value));
             return 1 + (((float)random.Next(-100, 100) / 100f) * range);
         }
         private AddonTalkState GetTalkAddonState() {
