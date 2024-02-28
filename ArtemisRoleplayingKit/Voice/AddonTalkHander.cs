@@ -169,6 +169,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Alphinaud", "Alphinau"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Alisae", "Allizay"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigo", "Ala Meego"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigan", "Ala Meegan"));
             string newValue = value;
             foreach (KeyValuePair<string, string> pronunciation in phoneticPronunciations) {
                 newValue = newValue.Replace(pronunciation.Key, value);

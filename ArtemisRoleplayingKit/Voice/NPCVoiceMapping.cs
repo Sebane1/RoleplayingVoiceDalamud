@@ -148,6 +148,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
             values.Add("???", "Lbrea");
+            values.Add("Ifrit", "Rava");
 
             values.Add("Varis zos Galvus", "Vzosgal");
             values.Add("Zenos", "Zyaegal");
