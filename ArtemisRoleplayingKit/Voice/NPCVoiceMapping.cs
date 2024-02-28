@@ -128,7 +128,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Elidibus", "Ebus");
             values.Add("Hermes", "Hes");
             values.Add("Meteion", "Mion");
-            values.Add("Meteion", "Mion");
             values.Add("Hythlodaeus", "Hdaeus");
             values.Add("Venat", "Vnat");
             values.Add("Lahabrea", "Lbrea");
