@@ -143,24 +143,20 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Fandaniel", "Fdaniel");
             values.Add("Asahi", "Fdaniel");
             values.Add("Midgardsormr", "Msrmr");
-            //values.Add("Athena", "Aena");
-            //values.Add("Erichthonios", "Erich");
+            values.Add("Worldly Affairs Official", "Wao");
+            values.Add("Tattooed Man", "Beggarly");
+            values.Add("Sevrin", "Sard");
+            values.Add("Masked Mage", "Lbrea");
+            values.Add("???", "Lbrea");
 
-            //values.Add("Solus", "Szosgal");
             values.Add("Varis zos Galvus", "Vzosgal");
             values.Add("Zenos", "Zyaegal");
             values.Add("Gaius", "Gvanbael");
-            ////values.Add("Nael", "Nvandarn");
-            //values.Add("Livia", "Lsasjun");
             values.Add("Nero", "Ntolscae");
-            //values.Add("Rhitahtyn", "Rsasarv");
-
             values.Add("Runar", "Rar");
-
             values.Add("Estinien", "Ewyrm");
             values.Add("Ysayle", "Ydango");
             values.Add("Iceheart", "Ydango");
-            //values.Add("Thordan", "Tviii");
             values.Add("Count Edmont de Fortemps", "Edefort");
             values.Add("Emmanellain", "Emmdefort");
 

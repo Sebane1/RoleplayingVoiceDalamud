@@ -152,7 +152,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
-                string value = ConvertRomanNumberals(message.TextValue);
+                string value = PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue));
                 string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race),
@@ -162,10 +162,25 @@ namespace RoleplayingVoiceDalamud.Voice {
             } catch {
             }
         }
+
+        private string PhoneticLexiconCorrection(string value) {
+            List<KeyValuePair<string, string>> phoneticPronunciations = new List<KeyValuePair<string, string>>();
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Urianger", "Uriawnjay"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Alphinaud", "Alphinau"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Alisae", "Allizay"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigo", "Ala Meego"));
+            string newValue = value;
+            foreach (KeyValuePair<string, string> pronunciation in phoneticPronunciations) {
+                newValue = newValue.Replace(pronunciation.Key, value);
+            }
+            return newValue;
+        }
+
         private float CalculatePitchBasedOnName(string value, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
-            return 1 + (((float)random.Next(-100, 100) / 100f) * range);
+            bool isTinyRace = lowered.Contains("way");
+            return (isTinyRace ? 1.3f : 1) + (((float)random.Next(-100, 100) / 100f) * range);
         }
         private AddonTalkState GetTalkAddonState() {
             if (!this.addonTalkManager.IsVisible()) {
