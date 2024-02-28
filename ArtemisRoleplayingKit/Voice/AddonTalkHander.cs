@@ -195,6 +195,11 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public string PickVoiceBasedOnNameAndRace(string npcName, int race) {
+            foreach(KeyValuePair<string,string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
+                if (npcName.Contains(voice.Key)) {
+                    return voice.Value;
+                }
+            }
             switch (race) {
                 case 8:
                     return PickVeiraVoice(new Random(GetSimpleHash(npcName)).Next(0, 3));

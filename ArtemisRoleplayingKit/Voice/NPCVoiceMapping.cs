@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace RoleplayingVoiceDalamud.Voice {
     public class NPCVoiceMapping {
@@ -144,7 +145,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Asahi", "Fdaniel");
             values.Add("Midgardsormr", "Msrmr");
             values.Add("Worldly Affairs Official", "Wao");
-            values.Add("Tattooed Man", "Beggarly");
+
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
             values.Add("???", "Lbrea");
@@ -165,6 +166,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Gosetsu", "Gever");
             values.Add("Yotsuyu", "Ygoeb");
 
+            return values;
+        }
+        public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {
+            List<KeyValuePair<string, string>> values = new List<KeyValuePair<string, string>>();
+            values.Add(new KeyValuePair<string, string>("Tattooed Man", "Beggarly"));
+            values.Add(new KeyValuePair<string, string>("Storm Officer", "Beggarly"));
+            values.Add(new KeyValuePair<string, string>("Flame Sergeant", "Beggarly"));
+            values.Add(new KeyValuePair<string, string>("Traitorous Flame Soldier", "Beggarly"));
             return values;
         }
     }
