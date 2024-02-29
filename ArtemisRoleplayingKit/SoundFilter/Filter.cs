@@ -227,7 +227,7 @@ namespace SoundFilter {
             return ret;
         }
 
-        private void* CallOriginalResourceHandler(bool isSync, IntPtr pFileManager, uint* pCategoryId, char* pResourceType, 
+        private void* CallOriginalResourceHandler(bool isSync, IntPtr pFileManager, uint* pCategoryId, char* pResourceType,
             uint* pResourceHash, char* pPath, void* pUnknown, bool isUnknown) {
             return isSync
                 ? this.GetResourceSyncHook!.Original(pFileManager, pCategoryId, pResourceType, pResourceHash, pPath, pUnknown)
@@ -252,7 +252,7 @@ namespace SoundFilter {
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
             if ((specificPath.Contains("vo_battle") && muted)
                 || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
-                
+
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
@@ -260,7 +260,8 @@ namespace SoundFilter {
                 return true;
             }
             if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man"))) {
-                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes) {
+                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes
+                    && !specificPath.Contains("600") && !specificPath.Contains("503")) {
                     return true;
                 }
                 OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
