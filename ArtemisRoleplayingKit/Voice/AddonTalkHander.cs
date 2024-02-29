@@ -171,7 +171,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue));
-                _plugin.Chat.Print(value);
                 string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race),
