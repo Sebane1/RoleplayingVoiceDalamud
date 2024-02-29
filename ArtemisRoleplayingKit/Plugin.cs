@@ -2036,7 +2036,10 @@ namespace RoleplayingVoice {
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
-                             "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)");
+                             "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
+                             "textadvance (Toggles automatic text advancement when community provided dialoge finishes)\r\n" +
+                             "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n",
+                             "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)");
                             break;
                         case "on":
                             config.AiVoiceActive = true;
@@ -2104,6 +2107,33 @@ namespace RoleplayingVoice {
                             _chat.Print("Speech To Text Started");
                             _speechToTextManager.RpMode = true;
                             _speechToTextManager.RecordAudio();
+                            break;
+                        case "textadvance":
+                            config.AutoTextAdvance = !config.AutoTextAdvance;
+                            if (config.AutoTextAdvance) {
+                                _chat.Print("Auto Text Advance Enabled");
+                            } else {
+                                _chat.Print("Auto Text Advance Disabled");
+                            }
+                            config.Save();
+                            break;
+                        case "npcvoice":
+                            config.NpcSpeechGenerationDisabled = !config.NpcSpeechGenerationDisabled;
+                            if (config.AutoTextAdvance) {
+                                _chat.Print("Npc Voice Disabled");
+                            } else {
+                                _chat.Print("Npc Voice Enabled");
+                            }
+                            config.Save();
+                            break;
+                        case "arrvoice":
+                            config.ReplaceVoicedARRCutscenes = !config.ReplaceVoicedARRCutscenes;
+                            if (config.ReplaceVoicedARRCutscenes) {
+                                _chat.Print("ARR Voice Replaced");
+                            } else {
+                                _chat.Print("ARR Voice Vanilla");
+                            }
+                            config.Save();
                             break;
                         case "catalogue":
                             if (splitArgs.Length > 1 && splitArgs[1] == "scan") {

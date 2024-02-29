@@ -179,6 +179,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Riol", "Mciv"));
             values.Add(new KeyValuePair<string, string>("Titan", "Rava"));
             values.Add(new KeyValuePair<string, string>("Garuda", "Hyn"));
+            values.Add(new KeyValuePair<string, string>("Baderon", "Mciv"));
             return values;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {

@@ -251,7 +251,7 @@ namespace RoleplayingVoice {
                 "\r\n\r\nMany NPC's do not yet have their own unique voice yet. You can help with this!" +
                 "\r\n\r\nThe end goal is to have voice dialogue for nearly every corner of the game.\r\n\r\n");
             ImGui.Checkbox("Disable Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
-            ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes", ref _npcAutoTextAdvance);
+            ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
         }
 
@@ -759,7 +759,7 @@ namespace RoleplayingVoice {
             ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
             ImGui.Text("NPC Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 1);
+            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 0.7f);
             if (ImGui.Button("Volume Fix", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 PluginReference.MediaManager.VolumeFix();
             }

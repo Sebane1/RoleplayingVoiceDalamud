@@ -263,7 +263,7 @@ namespace SoundFilter {
                 return true;
             }
             if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man"))) {
-                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes) {
+                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes && !Plugin.Config.NpcSpeechGenerationDisabled) {
                     OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
                     return true;
                 } else {

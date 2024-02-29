@@ -17,7 +17,7 @@ namespace RoleplayingVoice {
         private float _unfocusedCharacterVolume = 0.5f;
         private float _loopingSFXVolume = 1;
         private float _livestreamVolume = 1;
-        private float _npcVolume = 1;
+        private float _npcVolume = 0.7f;
         bool useAggressiveCaching = true;
         private string cacheFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
         private bool usePlayerSync = false;
