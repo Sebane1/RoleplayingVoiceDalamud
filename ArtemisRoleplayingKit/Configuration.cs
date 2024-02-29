@@ -28,6 +28,8 @@ namespace RoleplayingVoice {
         private bool _npcSpeechGenerationDisabled;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
+        private bool _autoTextAdvance = true;
+        private bool _replaceVoicedARRCutscenes = true;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -96,6 +98,9 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
+        public bool AutoTextAdvance { get => _autoTextAdvance; set => _autoTextAdvance = value; }
+        public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
 
         #endregion
 

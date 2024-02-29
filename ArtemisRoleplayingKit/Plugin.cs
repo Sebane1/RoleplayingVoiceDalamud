@@ -193,6 +193,8 @@ namespace RoleplayingVoice {
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
         public NPCVoiceManager NpcVoiceManager { get => _npcVoiceManager; set => _npcVoiceManager = value; }
         public IDataManager DataManager { get => _dataManager; set => _dataManager = value; }
+
+        public IChatGui Chat => _chat;
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -1151,7 +1153,7 @@ namespace RoleplayingVoice {
                             _nativeAudioStream.Position = 0;
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
-                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, 1);
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1);
                             if (!_mediaManager.LowPerformanceMode) {
                                 _ = Task.Run(async () => {
                                     try {

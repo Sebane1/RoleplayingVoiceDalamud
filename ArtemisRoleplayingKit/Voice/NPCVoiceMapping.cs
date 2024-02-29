@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace RoleplayingVoiceDalamud.Voice {
     public class NPCVoiceMapping {
@@ -15,7 +14,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Ilberd", "Ird");
 
             values.Add("Y'shtola", "Yrhul");
+            values.Add("Cultured Conjurer", "Yrhul");
             values.Add("Thancred", "Twaters");
+            values.Add("Charming Pugilist", "Twaters");
             values.Add("Tataru", "Taru");
             values.Add("Yda", "Lhext");
             values.Add("Lyse", "Lhext");
@@ -35,6 +36,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Kan-E-Senna", "Kes");
             values.Add("Merlwyb", "Mbloe");
             values.Add("Nanamo Ul Namo", "Nulnamo");
+            values.Add("Lilira", "Nulnamo");
             values.Add("Aymeric", "Adeborel");
             values.Add("Lucia", "Lcia");
             values.Add("Raubahn", "Rahn");
@@ -174,6 +176,21 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Storm Officer", "Beggarly"));
             values.Add(new KeyValuePair<string, string>("Flame Sergeant", "Beggarly"));
             values.Add(new KeyValuePair<string, string>("Traitorous Flame Soldier", "Beggarly"));
+            values.Add(new KeyValuePair<string, string>("Riol", "Mciv"));
+            values.Add(new KeyValuePair<string, string>("Titan", "Rava"));
+            values.Add(new KeyValuePair<string, string>("Garuda", "Hyn"));
+            return values;
+        }
+        public static List<KeyValuePair<string, bool>> GetEchoType() {
+            List<KeyValuePair<string, bool>> values = new List<KeyValuePair<string, bool>>();
+            values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
+            values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
+            return values;
+        }
+        public static List<KeyValuePair<string, float>> GetPitchValues() {
+            List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
+            values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
             return values;
         }
     }

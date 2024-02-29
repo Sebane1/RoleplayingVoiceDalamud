@@ -3,6 +3,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using Lumina.Excel.GeneratedSheets;
 using NAudio.Lame;
 using NAudio.Wave;
 using RoleplayingVoice;
@@ -12,9 +14,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
 using SoundType = RoleplayingMediaCore.SoundType;
+using Task = System.Threading.Tasks.Task;
 
 namespace RoleplayingVoiceDalamud.Voice {
     public class AddonTalkHandler {
@@ -29,6 +34,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private InterceptedSound _currentDialoguePath;
         private FFXIVHook _hook;
         private MediaGameObject _currentSpeechObject;
+        private bool _startedNewDialogue;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
             IClientState clientState, Plugin plugin) {
@@ -57,7 +63,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     if (state.Text != _lastText) {
                         _lastText = state.Text;
                         if (!_blockAudioGeneration) {
-                            NPCText(state.Speaker, state.Text.TrimStart('.'));
+                            await NPCText(state.Speaker, state.Text.TrimStart('.'));
                         } else {
 #if DEBUG
                             if (_currentDialoguePath != null) {
@@ -95,24 +101,36 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         Dalamud.Logging.PluginLog.LogError(e, e.Message);
                                     }
                                 }
-                                _hook.FocusWindow();
-                                _hook.SendAsyncKey(Keys.NumPad0);
-                                _hook.SendSyncKey(Keys.NumPad0);
-                                _currentDialoguePath = null;
+                                //_hook.FocusWindow();
+                                //_hook.SendAsyncKey(Keys.NumPad0);
+                                //_hook.SendSyncKey(Keys.NumPad0);
+                                //_currentDialoguePath = null;
                             }
 #endif
                         }
                         _blockAudioGeneration = false;
+                    } else {
+                        //bool value = await _plugin.MediaManager.CheckAudioStreamIsPlaying(_currentSpeechObject);
+                        //if (!value && _startedNewDialogue) {
+                        //    _hook.FocusWindow();
+                        //    _hook.SendAsyncKey(Keys.NumPad0);
+                        //    _hook.SendSyncKey(Keys.NumPad0);
+                        //    _startedNewDialogue = false;
+                        //}
                     }
                 } else {
                     if (_currentSpeechObject != null) {
-                        _plugin.MediaManager.StopAudio(_currentSpeechObject);
-                        _currentSpeechObject = null;
-                        _lastText = "";
+                        var otherData = _clientState.LocalPlayer.OnlineStatus;
+                        if (otherData.Id != 15) {
+                            _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                            _currentSpeechObject = null;
+                            _lastText = "";
+                        }
                     }
                 }
             }
         }
+
         public string ConvertRomanNumberals(string text) {
             string value = text;
             for (int i = 25; i > 5; i--) {
@@ -136,7 +154,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
-        private async void NPCText(string npcName, SeString message) {
+        private async Task<bool> NPCText(string npcName, SeString message) {
             try {
                 bool gender = false;
                 byte race = 0;
@@ -153,16 +171,43 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue));
+                _plugin.Chat.Print(value);
                 string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race),
                 value.Contains(mainCharacterName[0]) || value.Contains(mainCharacterName[1]));
-                _plugin.MediaManager.PlayAudioStream(_currentSpeechObject,
-                new Mp3FileReader(stream.Key), SoundType.NPC, stream.Value ? 1 : CalculatePitchBasedOnName(npcName, 0.09f));
+                var mp3Stream = new Mp3FileReader(stream.Key);
+                _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, mp3Stream
+                , SoundType.NPC, true, CheckIfshouldUseSmbPitch(npcName), stream.Value ? CheckForDefinedPitch(npcName) : CalculatePitchBasedOnName(npcName, 0.09f), 0,
+               _plugin.Config.AutoTextAdvance ? delegate {
+                   _hook.FocusWindow();
+                   _hook.SendAsyncKey(Keys.NumPad0);
+                   _hook.SendSyncKey(Keys.NumPad0);
+               }
+                : null);
+                _startedNewDialogue = true;
             } catch {
             }
+            return true;
         }
 
+        private bool CheckIfshouldUseSmbPitch(string npcName) {
+            foreach (var value in NPCVoiceMapping.GetEchoType()) {
+                if (npcName.Contains(value.Key)) {
+                    return value.Value;
+                }
+            }
+            return false;
+        }
+
+        private float CheckForDefinedPitch(string npcName) {
+            foreach (var value in NPCVoiceMapping.GetPitchValues()) {
+                if (npcName.Contains(value.Key)) {
+                    return value.Value;
+                }
+            }
+            return 1;
+        }
         private string PhoneticLexiconCorrection(string value) {
             List<KeyValuePair<string, string>> phoneticPronunciations = new List<KeyValuePair<string, string>>();
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Urianger", "Uriawnjay"));
@@ -170,9 +215,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Alisae", "Allizay"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigo", "Ala Meego"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigan", "Ala Meegan"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("gysahl", "gisawl"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Ramuh", "Ramoo"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Papalymo", "Papaleemo"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Gridania", "Gridawnia"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Ascian", "Assiyin"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("─", ","));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("...?", "?"));
             string newValue = value;
             foreach (KeyValuePair<string, string> pronunciation in phoneticPronunciations) {
-                newValue = newValue.Replace(pronunciation.Key, value);
+                newValue = newValue.Replace(pronunciation.Key, pronunciation.Value);
             }
             return newValue;
         }
@@ -195,7 +247,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public string PickVoiceBasedOnNameAndRace(string npcName, int race) {
-            foreach(KeyValuePair<string,string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
+            foreach (KeyValuePair<string, string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
                 if (npcName.Contains(voice.Key)) {
                     return voice.Value;
                 }

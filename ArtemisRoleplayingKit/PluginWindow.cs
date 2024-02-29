@@ -72,6 +72,8 @@ namespace RoleplayingVoice {
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
         private bool _npcSpeechGenerationDisabled;
+        private bool _npcAutoTextAdvance;
+        private bool _replaceVoicedARRCutscenes;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -127,6 +129,8 @@ namespace RoleplayingVoice {
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _npcSpeechGenerationDisabled = configuration.NpcSpeechGenerationDisabled;
+                    _npcAutoTextAdvance = configuration.AutoTextAdvance;
+                    _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -242,11 +246,13 @@ namespace RoleplayingVoice {
                 }
             }
             ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached." +
-                "\r\n\r\nWe're looking to the community for voice contributions, as well as help stress testing the system."+
+                "\r\n\r\nWe're looking to the community for voice contributions, as well as help stress testing the system." +
                 "\r\n\r\nThe more this feature is used, the faster it will become for everyone." +
                 "\r\n\r\nMany NPC's do not yet have their own unique voice yet. You can help with this!" +
                 "\r\n\r\nThe end goal is to have voice dialogue for nearly every corner of the game.\r\n\r\n");
             ImGui.Checkbox("Disable Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
+            ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes", ref _npcAutoTextAdvance);
+            ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
         }
 
         private void DrawWhitelist() {
@@ -431,6 +437,8 @@ namespace RoleplayingVoice {
                 configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
                 configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
                 configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
+                configuration.AutoTextAdvance = _npcAutoTextAdvance;
+                configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];

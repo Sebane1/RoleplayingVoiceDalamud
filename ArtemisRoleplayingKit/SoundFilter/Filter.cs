@@ -260,6 +260,9 @@ namespace SoundFilter {
                 return true;
             }
             if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man"))) {
+                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes) {
+                    return true;
+                }
                 OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
             }
             return false;
