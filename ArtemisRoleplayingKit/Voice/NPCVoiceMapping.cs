@@ -5,7 +5,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         public static Dictionary<string, string> GetVoiceMappings() {
             Dictionary<string, string> values = new Dictionary<string, string>();
             values.Add("Alphinaud", "Alev");
+            values.Add("Self-assured Youth", "Alev");
             values.Add("Alisaie", "Alilev");
+            values.Add("Cynical Girl", "Alilev");
             values.Add("Haurchefant", "HFort");
             values.Add("Artoirel", "Afort");
             values.Add("Charibert", "Cbert");
@@ -45,6 +47,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Marques", "Cnangarl");
             values.Add("Cid", "Cnangarl");
             values.Add("Biggs", "Bman");
+            values.Add("Airship Crewman", "Bman");
             values.Add("Wedge", "Wman");
             values.Add("Vidofnir", "Vnir");
             values.Add("House", "Hfk");
@@ -186,12 +189,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             List<KeyValuePair<string, bool>> values = new List<KeyValuePair<string, bool>>();
             values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
             values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
+            //values.Add(new KeyValuePair<string, bool>("Mother Miournne", true));
             return values;
         }
         public static List<KeyValuePair<string, float>> GetPitchValues() {
             List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
             values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
             values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
+            values.Add(new KeyValuePair<string, float>("Mother Miounne", 0.8f));
             return values;
         }
     }

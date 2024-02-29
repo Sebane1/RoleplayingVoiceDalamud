@@ -39,6 +39,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _textIsPresent;
         private bool _alreadyAddedEvent;
         Stopwatch _passthroughTimer = new Stopwatch();
+        private string _lastPathTriggered;
+
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
@@ -73,7 +75,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
                 var state = GetTalkAddonState();
-                if (state != null && !string.IsNullOrEmpty(state.Text) && state.Speaker != "???") {
+                if (state != null && !string.IsNullOrEmpty(state.Text) && state.Speaker != "???" && state.Speaker != "All") {
                     _textIsPresent = true;
                     if (state.Text != _lastText) {
                         _lastText = state.Text;
@@ -85,6 +87,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 #endif
                         }
                         _currentDialoguePath = null;
+                        _blockAudioGeneration = false;
                     } else {
                         //bool value = await _plugin.MediaManager.CheckAudioStreamIsPlaying(_currentSpeechObject);
                         //if (!value && _startedNewDialogue) {
@@ -96,19 +99,22 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 } else {
                     if (_currentDialoguePath != null && !_blockAudioGeneration && _passthroughTimer.ElapsedMilliseconds >= 20) {
-                        ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
-                        WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                        try {
-                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                            _plugin.MediaManager.PlayAudioStream(new MediaGameObject(_clientState.LocalPlayer),
-                                pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
-                                    _hook.FocusWindow();
-                                    _hook.SendAsyncKey(Keys.NumPad0);
-                                    _hook.SendSyncKey(Keys.NumPad0);
-                                }
-                            : null);
-                        } catch (Exception e) {
-                            _plugin.Chat.Print(e.Message);
+                        if (_lastPathTriggered != _currentDialoguePath.SoundPath) {
+                            _lastPathTriggered = _currentDialoguePath.SoundPath;
+                            ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
+                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                            try {
+                                var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                                _plugin.MediaManager.PlayAudioStream(new DummyObject(),
+                                    pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
+                                        // _hook.FocusWindow();
+                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                        //_hook.SendSyncKey(Keys.NumPad0);
+                                    }
+                                : null);
+                            } catch (Exception e) {
+                                //_plugin.Chat.Print(e.Message);
+                            }
                         }
                         _currentDialoguePath = null;
                     }
@@ -123,7 +129,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     _textIsPresent = false;
                 }
-                _blockAudioGeneration = false;
             }
         }
 
@@ -216,9 +221,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, mp3Stream
                 , SoundType.NPC, true, CheckIfshouldUseSmbPitch(npcName), stream.Value ? CheckForDefinedPitch(npcName) : CalculatePitchBasedOnName(npcName, 0.09f), 0,
                _plugin.Config.AutoTextAdvance ? delegate {
-                   _hook.FocusWindow();
+                   //_hook.FocusWindow();
                    _hook.SendAsyncKey(Keys.NumPad0);
-                   _hook.SendSyncKey(Keys.NumPad0);
+                   //_hook.SendSyncKey(Keys.NumPad0);
                }
                 : null);
                 _startedNewDialogue = true;
@@ -259,6 +264,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Papalymo", "Papaleemo"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Gridania", "Gridawnia"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ascian", "Assiyin"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("magitek", "majitech"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Sahagin", "Sahawgin"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("sahagin", "sahawgin"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Eorzea", "Aorzea"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("─", ","));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("...?", "?"));
             string newValue = value;
