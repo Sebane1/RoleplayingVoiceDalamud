@@ -209,11 +209,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 }
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
-                string value = PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue));
-                string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
+                string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race),
-                value.Contains(mainCharacterName[0]) || value.Contains(mainCharacterName[1]));
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value, npcName, gender, PickVoiceBasedOnNameAndRace(npcName, race), false);
                 var mp3Stream = new Mp3FileReader(stream.Key);
                 _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, mp3Stream
                 , SoundType.NPC, true, CheckIfshouldUseSmbPitch(npcName), stream.Value ? CheckForDefinedPitch(npcName) : CalculatePitchBasedOnName(npcName, 0.09f), 0,
@@ -228,7 +226,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return true;
         }
-
+        private string StripPlayerNameFromNPCDialogue(string value) {
+            string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
+            return value.Replace(mainCharacterName[0], null).Replace(mainCharacterName[1], null);
+        }
         private bool CheckIfshouldUseSmbPitch(string npcName) {
             foreach (var value in NPCVoiceMapping.GetEchoType()) {
                 if (npcName.Contains(value.Key)) {
