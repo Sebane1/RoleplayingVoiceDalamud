@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -25,6 +26,10 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public static unsafe AddonTalkText ReadTalkAddon(AddonTalk* talkAddon)
         {
+            string a = ReadTextNode(talkAddon->AtkTextNode220);
+            string b = ReadTextNode(talkAddon->AtkTextNode238);
+            string c = ReadTextNode(talkAddon->AtkTextNode240);
+            string d = ReadTextNode(talkAddon->AtkTextNode248);
             return new AddonTalkText
             {
                 Speaker = ReadTextNode(talkAddon->AtkTextNode220),

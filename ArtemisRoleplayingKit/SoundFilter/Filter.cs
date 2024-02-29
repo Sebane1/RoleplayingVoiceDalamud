@@ -13,6 +13,7 @@ using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.System.Resource.Handle;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud;
+using RoleplayingVoiceDalamud.Voice;
 
 namespace SoundFilter {
     /// <summary>
@@ -57,6 +58,8 @@ namespace SoundFilter {
 
         private Hook<LoadSoundFileDelegate>? LoadSoundFileHook { get; set; }
         public Plugin Plugin { get; }
+
+        private AddonTalkHandler _addonTalkhandler;
 
         #endregion
 
@@ -107,9 +110,9 @@ namespace SoundFilter {
         public bool Muted { get => muted; set => muted = value; }
         public List<string> Blacklist { get => _blacklist; set => _blacklist = value; }
 
-        public Filter(Plugin plugin) {
+        public Filter(Plugin plugin, AddonTalkHandler addonTalkHander) {
             this.Plugin = plugin;
-
+            _addonTalkhandler = addonTalkHander;
             this.WasStreamingEnabled = this.Streaming;
             this.Streaming = false;
 
@@ -260,13 +263,17 @@ namespace SoundFilter {
                 return true;
             }
             if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man"))) {
-                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes
-                    && !specificPath.Contains("600") && !specificPath.Contains("503")) {
+                if (specificPath.Contains("vo_man") && Plugin.Config.ReplaceVoicedARRCutscenes) {
+                    OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
                     return true;
+                } else {
+                    OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
                 }
-                OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
             }
             return false;
+        }
+        public bool IsCutsceneDetectionNull() {
+            return OnCutsceneAudioDetected == null;
         }
         private IntPtr LoadSoundFileDetour(IntPtr resourceHandle, uint a2) {
             var ret = this.LoadSoundFileHook!.Original(resourceHandle, a2);

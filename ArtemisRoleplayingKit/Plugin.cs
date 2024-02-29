@@ -177,7 +177,7 @@ namespace RoleplayingVoice {
         internal Filter Filter {
             get {
                 if (_filter == null) {
-                    _filter = new Filter(this);
+                    _filter = new Filter(this, _addonTalkHandler);
                     _filter.Enable();
                 }
                 return _filter;
@@ -277,7 +277,7 @@ namespace RoleplayingVoice {
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();
                 CheckDependancies();
-                Filter = new Filter(this);
+                Filter = new Filter(this, _addonTalkHandler);
                 Filter.Enable();
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
                 RefreshData(false);
