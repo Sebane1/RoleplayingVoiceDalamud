@@ -91,8 +91,8 @@ namespace RoleplayingVoice {
         public bool NpcSpeechGenerationDisabled { get => _npcSpeechGenerationDisabled; set => _npcSpeechGenerationDisabled = value; }
         public float NpcVolume {
             get => _npcVolume; set {
-                if (value == 0) {
-                    _npcVolume = 1;
+                if (value == 0 || value > 0.7f) {
+                    _npcVolume = 0.7f;
                 } else {
                     _npcVolume = value;
                 }
