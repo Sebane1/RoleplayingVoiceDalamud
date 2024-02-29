@@ -183,6 +183,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Titan", "Rava"));
             values.Add(new KeyValuePair<string, string>("Garuda", "Hyn"));
             values.Add(new KeyValuePair<string, string>("Baderon", "Mciv"));
+            values.Add(new KeyValuePair<string, string>("Frixio", "Moya"));
             return values;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {
@@ -197,6 +198,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
             values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
             values.Add(new KeyValuePair<string, float>("Mother Miounne", 0.8f));
+            values.Add(new KeyValuePair<string, float>("Frixio", 1.1f));
             return values;
         }
     }
