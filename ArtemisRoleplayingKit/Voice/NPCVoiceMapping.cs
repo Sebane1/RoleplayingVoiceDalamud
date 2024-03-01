@@ -22,6 +22,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Tataru", "Taru");
             values.Add("Yda", "Lhext");
             values.Add("Lyse", "Lhext");
+            values.Add("Animated Pugilist", "Lhext");
             values.Add("Urianger", "Uauger");
             values.Add("Masked Man", "Uauger");
             values.Add("G'raha", "Gia");
@@ -30,6 +31,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Ryne", "Mward");
             //values.Add("Louisoix", "Leve");
             values.Add("Papalymo", "Ptotol");
+            values.Add("Short-tempered Thaumaturge", "Ptotol");
             //values.Add("Moenbryda", "Mwilf");
             //values.Add("F'lhaminn", "Fqesh");
             values.Add("Krile", "Kmayerbal");
@@ -132,6 +134,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Matsya", "Mya");
             values.Add("Mehvan", "Mvan");
             values.Add("Elidibus", "Ebus");
+            values.Add("White-robed Ascian", "Ebus");
             values.Add("Hermes", "Hes");
             values.Add("Meteion", "Mion");
             values.Add("Hythlodaeus", "Hdaeus");
@@ -184,21 +187,28 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Garuda", "Hyn"));
             values.Add(new KeyValuePair<string, string>("Baderon", "Mciv"));
             values.Add(new KeyValuePair<string, string>("Frixio", "Moya"));
+            values.Add(new KeyValuePair<string, string>("Raya-O-Senna", "Kes"));
+            values.Add(new KeyValuePair<string, string>("Livia sas Junius", "Ygoeb"));
+            values.Add(new KeyValuePair<string, string>("Teledji Adeledji", "Lito"));
             return values;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {
             List<KeyValuePair<string, bool>> values = new List<KeyValuePair<string, bool>>();
             values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
             values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
+            values.Add(new KeyValuePair<string, bool>("Livia sas Junius", true));
             //values.Add(new KeyValuePair<string, bool>("Mother Miournne", true));
             return values;
         }
         public static List<KeyValuePair<string, float>> GetPitchValues() {
             List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
             values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Livia sas Junius", 0.9f));
             values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
             values.Add(new KeyValuePair<string, float>("Mother Miounne", 0.8f));
             values.Add(new KeyValuePair<string, float>("Frixio", 1.1f));
+            values.Add(new KeyValuePair<string, float>("Raya-O-Senna", 1.05f));
+            values.Add(new KeyValuePair<string, float>("Teledji Adeledji", 1.1f));
             return values;
         }
     }
