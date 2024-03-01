@@ -83,32 +83,22 @@ namespace RoleplayingVoiceDalamud.Voice {
 #endif
                         _currentDialoguePath = null;
                         _blockAudioGeneration = false;
-                    } else {
-                        //bool value = await _plugin.MediaManager.CheckAudioStreamIsPlaying(_currentSpeechObject);
-                        //if (!value && _startedNewDialogue) {
-                        //    _hook.FocusWindow();
-                        //    _hook.SendAsyncKey(Keys.NumPad0);
-                        //    _hook.SendSyncKey(Keys.NumPad0);
-                        //    _startedNewDialogue = false;
-                        //}
                     }
                 } else {
                     if (_currentDialoguePath != null && !_blockAudioGeneration && _passthroughTimer.ElapsedMilliseconds >= 20) {
                         if (_lastPathTriggered != _currentDialoguePath.SoundPath) {
                             _lastPathTriggered = _currentDialoguePath.SoundPath;
-                            ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
-                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
                             try {
+                                ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
+                                WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                 var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                 _plugin.MediaManager.PlayAudioStream(new DummyObject(),
                                     pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
-                                        // _hook.FocusWindow();
                                         _hook.SendAsyncKey(Keys.NumPad0);
-                                        //_hook.SendSyncKey(Keys.NumPad0);
                                     }
                                 : null);
                             } catch (Exception e) {
-                                //_plugin.Chat.Print(e.Message);
+                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
                             }
                         }
                         _currentDialoguePath = null;
@@ -130,41 +120,45 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void DumpCurrentAudio() {
-            if (_currentDialoguePath != null) {
-                Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
-                string name = "";
-                string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
-                string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
-                FileInfo fileInfo = null;
-                try {
-                    fileInfo = new FileInfo(path);
-                } catch {
-
-                }
-                if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-                    ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
-                    WaveStream stream = scdFile.Audio[0].Data.GetStream();
+            try {
+                if (_currentDialoguePath != null) {
+                    Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
+                    string name = "";
+                    string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
+                    string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
+                    FileInfo fileInfo = null;
                     try {
-                        var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                        using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
-                            pcmStream.CopyTo(fileStreamWave);
-                            fileStreamWave.Close();
-                            fileStreamWave.Dispose();
-                        }
-                        if (scdFile != null) {
-                            using (var waveStream = new AudioFileReader(pathWave)) {
-                                using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
-                                    using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
-                                        waveStream.CopyTo(lame);
+                        fileInfo = new FileInfo(path);
+                    } catch {
+
+                    }
+                    if (!fileInfo.Exists || fileInfo.Length < 7500000) {
+                        ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
+                        WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                        try {
+                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                            using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
+                                pcmStream.CopyTo(fileStreamWave);
+                                fileStreamWave.Close();
+                                fileStreamWave.Dispose();
+                            }
+                            if (scdFile != null) {
+                                using (var waveStream = new AudioFileReader(pathWave)) {
+                                    using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
+                                        using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
+                                            waveStream.CopyTo(lame);
+                                        }
                                     }
                                 }
                             }
+                            File.Delete(pathWave);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogError(e, e.Message);
                         }
-                        File.Delete(pathWave);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogError(e, e.Message);
                     }
                 }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
             }
         }
 
