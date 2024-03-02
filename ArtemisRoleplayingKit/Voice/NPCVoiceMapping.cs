@@ -43,6 +43,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Lilira", "Nulnamo");
             values.Add("Aymeric", "Adeborel");
             values.Add("Lucia", "Lcia");
+            values.Add("Taciturn Temple Knight", "Lcia");
             values.Add("Raubahn", "Rahn");
             values.Add("Pipin", "Pin");
 
