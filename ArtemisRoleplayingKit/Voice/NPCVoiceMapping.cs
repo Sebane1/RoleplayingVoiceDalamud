@@ -175,6 +175,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Gosetsu", "Gever");
             values.Add("Yotsuyu", "Ygoeb");
 
+            values.Add("Radovan", "Rvan");
+
             return values;
         }
         public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {
