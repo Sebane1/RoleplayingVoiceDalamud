@@ -143,6 +143,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Galene", "Gene");
             values.Add("Wilfsunn", "Wun");
             values.Add("Bloewyda", "Byda");
+            values.Add("Moenbryda", "Lhext");
             values.Add("Eya", "Eya");
             values.Add("Sir", "techBot");
             values.Add("Omega", "techBot");
@@ -156,7 +157,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
-            values.Add("???", "Lbrea");
+            values.Add("???", "Sys");
             values.Add("Ifrit", "Rava");
 
             values.Add("Varis zos Galvus", "Vzosgal");
@@ -169,8 +170,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Iceheart", "Ydango");
             values.Add("Count Edmont de Fortemps", "Edefort");
             values.Add("Emmanellain", "Emmdefort");
-
             values.Add("Yugiri", "Ymist");
+            values.Add("Nabriales", "Lbrea");
             values.Add("Gosetsu", "Gever");
             values.Add("Yotsuyu", "Ygoeb");
 
@@ -184,12 +185,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Traitorous Flame Soldier", "Beggarly"));
             values.Add(new KeyValuePair<string, string>("Riol", "Mciv"));
             values.Add(new KeyValuePair<string, string>("Titan", "Rava"));
+            values.Add(new KeyValuePair<string, string>("Ramuh", "Rava"));
             values.Add(new KeyValuePair<string, string>("Garuda", "Hyn"));
             values.Add(new KeyValuePair<string, string>("Baderon", "Mciv"));
             values.Add(new KeyValuePair<string, string>("Frixio", "Moya"));
             values.Add(new KeyValuePair<string, string>("Raya-O-Senna", "Kes"));
             values.Add(new KeyValuePair<string, string>("Livia sas Junius", "Ygoeb"));
             values.Add(new KeyValuePair<string, string>("Teledji Adeledji", "Lito"));
+            values.Add(new KeyValuePair<string, string>("Nabriales", "Lbrea"));
             return values;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {
@@ -209,6 +212,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Frixio", 1.1f));
             values.Add(new KeyValuePair<string, float>("Raya-O-Senna", 1.05f));
             values.Add(new KeyValuePair<string, float>("Teledji Adeledji", 1.1f));
+            values.Add(new KeyValuePair<string, float>("Titan", 0.8f));
+            values.Add(new KeyValuePair<string, float>("Ramuh", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Moenbryda", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Nabriales", 1.05f));
             return values;
         }
     }

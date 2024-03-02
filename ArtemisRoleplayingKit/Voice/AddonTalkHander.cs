@@ -27,13 +27,15 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _lastText;
         private Plugin _plugin;
         private bool _blockAudioGeneration;
-        private InterceptedSound _currentDialoguePath;
+        private List<string> _currentDialoguePaths = new List<string>();
+        private List<bool> _currentDialoguePathsCompleted = new List<bool>();
         private FFXIVHook _hook;
         private MediaGameObject _currentSpeechObject;
         private bool _startedNewDialogue;
         private bool _textIsPresent;
         private bool _alreadyAddedEvent;
         Stopwatch _passthroughTimer = new Stopwatch();
+        Stopwatch _cutsceneCooldown = new Stopwatch();
         private string _lastPathTriggered;
         List<string> _namesToRemove = new List<string>();
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
@@ -53,12 +55,15 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private void Filter_OnCutsceneAudioDetected(object sender, SoundFilter.InterceptedSound e) {
             if (_clientState.IsLoggedIn) {
-                _blockAudioGeneration = e.isBlocking;
-                _currentDialoguePath = e;
+                if (!_currentDialoguePaths.Contains(e.SoundPath)) {
+                    _blockAudioGeneration = e.isBlocking;
+                    _currentDialoguePaths.Add(e.SoundPath);
+                    _currentDialoguePathsCompleted.Add(false);
+                }
             }
         }
 
-        private async void Framework_Update(IFramework framework) {
+        private void Framework_Update(IFramework framework) {
             if (_plugin.Filter.IsCutsceneDetectionNull()) {
                 if (!_alreadyAddedEvent) {
                     _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
@@ -72,13 +77,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                     if (state.Text != _lastText) {
                         _lastText = state.Text;
                         if (!_blockAudioGeneration) {
-                            await NPCText(state.Speaker, state.Text.TrimStart('.'));
+                            NPCText(state.Speaker, state.Text.TrimStart('.'));
                             _passthroughTimer.Reset();
                         }
 #if DEBUG
                         DumpCurrentAudio();
 #endif
-                        _currentDialoguePath = null;
+                        if (_currentDialoguePaths.Count > 0) {
+                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                        }
                         _blockAudioGeneration = false;
                     }
                 } else {
@@ -87,11 +94,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _passthroughTimer.Restart();
                         }
                     }
-                    if (_currentDialoguePath != null && !_blockAudioGeneration && _passthroughTimer.ElapsedMilliseconds >= 20) {
-                        if (_lastPathTriggered != _currentDialoguePath.SoundPath) {
-                            _lastPathTriggered = _currentDialoguePath.SoundPath;
+                    if (_currentDialoguePaths.Count > 0) {
+                        if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
                             try {
-                                ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
+                                ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
                                 WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                 var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                 _plugin.MediaManager.PlayAudioStream(new DummyObject(),
@@ -103,17 +109,20 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 Dalamud.Logging.PluginLog.LogError(e, e.Message);
                             }
                         }
-                        _currentDialoguePath = null;
+                        if (_currentDialoguePaths.Count > 0) {
+                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                        }
                     }
                     if (_currentSpeechObject != null) {
                         var otherData = _clientState.LocalPlayer.OnlineStatus;
                         if (otherData.Id != 15) {
                             _namesToRemove.Clear();
-                            _passthroughTimer.Reset();
-                            _currentSpeechObject = null;
-                            _currentDialoguePath = null;
                             _lastText = "";
                             _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                            _plugin.MediaManager.CleanSounds();
+                            _currentSpeechObject = null;
+                            _currentDialoguePaths.Clear();
+                            _currentDialoguePathsCompleted.Clear();
                         }
                     }
                     _textIsPresent = false;
@@ -123,7 +132,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private void DumpCurrentAudio() {
             try {
-                if (_currentDialoguePath != null) {
+                if (_currentDialoguePaths.Count > 0) {
                     Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
                     string name = "";
                     string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
@@ -135,7 +144,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
                     }
                     if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-                        ScdFile scdFile = GetScdFile(_currentDialoguePath.SoundPath);
+                        ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
                         WaveStream stream = scdFile.Audio[0].Data.GetStream();
                         try {
                             var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
@@ -172,9 +181,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             return value;
         }
         public ScdFile GetScdFile(string soundPath) {
-            if (_plugin.DataManager.FileExists(_currentDialoguePath.SoundPath)) {
+            if (_plugin.DataManager.FileExists(soundPath)) {
                 try {
-                    var file = _plugin.DataManager.GetFile(_currentDialoguePath.SoundPath);
+                    var file = _plugin.DataManager.GetFile(soundPath);
                     MemoryStream data = new MemoryStream(file.Data);
                     return new ScdFile(new BinaryReader(data));
                 } catch {
@@ -187,7 +196,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
-        private async Task<bool> NPCText(string npcName, SeString message) {
+        private async void NPCText(string npcName, SeString message) {
             try {
                 bool gender = false;
                 byte race = 0;
@@ -211,19 +220,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                     : null);
                     _startedNewDialogue = true;
                 } else {
-                    return false;
                 }
             } catch {
-                return false;
             }
-            return true;
         }
 
         private GameObject DiscoverNpc(string npcName, ref bool gender, ref byte race, ref byte body) {
             if (npcName == "???") {
                 List<string> npcNames = new List<string>(){
                     "Yugiri",
+                    "Moenbryda",
                     "Masked Mage",
+                    "Nabriales",
+                    "Iceheart",
                     "Livia sas Junius",
                     "White-robed Ascian",
                     "Lahabrea",
@@ -231,6 +240,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Y'da",
                     "Thancred",
                     "Alphinaud",
+                    "Pipin"
                 };
                 foreach (var item in _namesToRemove) {
                     npcNames.Remove(item);
@@ -310,6 +320,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Sahagin", "Sahawgin"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("sahagin", "sahawgin"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Eorzea", "Aorzea"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Bahamut", "Bahawmuht"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("─", ","));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("...?", "?"));
             string newValue = value;
