@@ -816,7 +816,7 @@ namespace RoleplayingVoice {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }
         }
-        public void MuteVoiceChecK(int length = 6000) {
+        public void MuteVoiceCheck(int length = 6000) {
             if (!_muteTimer.IsRunning) {
                 if (Filter != null) {
                     Filter.Muted = voiceMuted = true;
@@ -1087,7 +1087,7 @@ namespace RoleplayingVoice {
                             if (!string.IsNullOrEmpty(value)) {
                                 _mediaManager.PlayAudio(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
                                 if (isVoicedEmote) {
-                                    MuteVoiceChecK(6000);
+                                    MuteVoiceCheck(6000);
                                 }
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
@@ -1537,7 +1537,7 @@ namespace RoleplayingVoice {
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
                                                     if (isVoicedEmote) {
-                                                        MuteVoiceChecK(6000);
+                                                        MuteVoiceCheck(6000);
                                                     }
                                                 } else {
                                                     _mediaManager.StopAudio(new MediaGameObject(instigator));
@@ -1570,9 +1570,9 @@ namespace RoleplayingVoice {
                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
                     _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
-                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     if (isVoicedEmote) {
-                        MuteVoiceChecK(10000);
+                        MuteVoiceCheck(10000);
                     }
                 } else {
                     if (!_inGameSoundStartedAudio) {

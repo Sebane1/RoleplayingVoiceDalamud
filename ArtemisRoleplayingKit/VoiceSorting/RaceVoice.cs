@@ -14,7 +14,7 @@ namespace FFXIVVoicePackCreator {
         private static void LoadTimeCodes() {
             timeCodeData.Clear();
             var timeCodes = RacialEmoteTime.TimeCodes();
-            for (int raceIndex = 0; raceIndex < 9; raceIndex += 2) {
+            for (int raceIndex = 0; raceIndex < 18; raceIndex += 2) {
                 timeCodeData.Add(timeCodes[raceIndex].Descriptor, timeCodes[raceIndex]);
                 timeCodeData.Add(timeCodes[raceIndex + 1].Descriptor, timeCodes[raceIndex + 1]);
             }
