@@ -240,7 +240,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Y'da",
                     "Thancred",
                     "Alphinaud",
-                    "Pipin"
+                    "Pipin",
+                    "Lyna"
                 };
                 foreach (var item in _namesToRemove) {
                     npcNames.Remove(item);
