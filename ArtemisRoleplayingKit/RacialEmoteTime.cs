@@ -188,7 +188,7 @@ namespace RoleplayingVoiceDalamud {
             timeCode.TimeCodes.Add(6.93m);
             timeCode.TimeCodes.Add(0.14m);
             timeCode.TimeCodes.Add(0.09m);
-            timeCode.TimeCodes.Add(0.41m);
+            timeCode.TimeCodes.Add(0.00m);
             timeCode.TimeCodes.Add(0.37m);
             timeCode.TimeCodes.Add(0.05m);
             timeCode.TimeCodes.Add(0.13m);
