@@ -1570,7 +1570,7 @@ namespace RoleplayingVoice {
                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
                     _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
-                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
                     if (isVoicedEmote) {
                         MuteVoiceChecK(10000);
                     }
