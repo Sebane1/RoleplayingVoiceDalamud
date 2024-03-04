@@ -1,7 +1,7 @@
 Artemis Roleplaying Kit aims to be the go to plugin for most things related to sound, and roleplaying quality of life!
 
 Features:
-- Crowdsourced NPC Dialogue that aims to cover the entire MSQ, and eventually side content.
+- Crowdsourced NPC Dialogue that aims to provide voiceover for all unvoiced text in the MSQ, and side content.
 - AI voicelines for anything you type via Elevenlabs (after providing your own API key).
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility
 - Automatic twitch playback allows you to hear your favourite DJ's while inside venues without having to think or manually open a web browser. Everything is in the game world!
