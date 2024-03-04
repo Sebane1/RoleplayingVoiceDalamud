@@ -545,7 +545,15 @@ namespace RoleplayingVoice {
         ref SeString sender, ref SeString message, ref bool isHandled) {
             if (!disposed) {
                 CheckDependancies();
-                string playerName = sender.TextValue;
+                string playerName = "";
+                try {
+                    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
+                    if (playerName.ToLower().Contains("PlayerName")) {
+                        playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
+                    }
+                } catch {
+
+                }
                 if (_roleplayingMediaManager != null) {
                     switch (type) {
                         case XivChatType.Say:
