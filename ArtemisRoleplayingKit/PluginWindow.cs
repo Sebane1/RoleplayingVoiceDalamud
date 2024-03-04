@@ -487,11 +487,12 @@ namespace RoleplayingVoice {
         public async void RefreshVoices() {
             try {
                 if (_manager != null) {
-                    var newVoiceList = await _manager.GetVoiceList();
-                    if (newVoiceList != null && newVoiceList.Length > 0) {
-                        _voiceList = newVoiceList;
-                    }
                     _manager.RefreshElevenlabsSubscriptionInfo();
+                    var newVoiceList = await _manager.GetVoiceList();
+                    if (newVoiceList != null && newVoiceList.Length > 0 && newVoiceList.Length > voiceComboBox.Contents.Length) {
+                        _voiceList = newVoiceList;
+                        voiceComboBox.Contents = newVoiceList;
+                    }
                     _manager.SetVoice(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
                     if (_voiceList != null && _voiceList.Length > 0) {
                         voiceComboBox.Contents = _voiceList;
@@ -506,7 +507,9 @@ namespace RoleplayingVoice {
                         }
                     }
                     _voicePackList = voicePacks.ToArray();
-                    voicePackComboBox.Contents = _voicePackList;
+                    if (voicePacks.Count > voicePackComboBox.Contents.Length) {
+                        voicePackComboBox.Contents = _voicePackList;
+                    }
                 }
                 if (clientState.LocalPlayer != null) {
                     if (configuration.Characters == null) {
@@ -538,17 +541,19 @@ namespace RoleplayingVoice {
                     if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                         if (voicePackComboBox != null) {
                             if (_voicePackList != null) {
-                                voicePackComboBox.Contents = _voicePackList;
-                                if (voicePackComboBox.Contents.Length > 0) {
-                                    for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
-                                        if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                            voicePackComboBox.SelectedIndex = i;
-                                            break;
+                                if (voiceComboBox != null) {
+                                    voicePackComboBox.Contents = _voicePackList;
+                                    if (voicePackComboBox.Contents.Length > 0) {
+                                        for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
+                                            if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                                voicePackComboBox.SelectedIndex = i;
+                                                break;
+                                            }
                                         }
-                                    }
-                                    if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                        if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
-                                            configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                        if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                            if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
+                                                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                            }
                                         }
                                     }
                                 }
@@ -556,13 +561,13 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-                if (PluginInterface != null) {
-                    try {
-                        PluginReference.RefreshData();
-                    } catch (Exception ex) { }
-                }
             } catch (Exception ex) {
 
+            }
+            if (PluginInterface != null) {
+                try {
+                    PluginReference.RefreshData();
+                } catch (Exception ex) { }
             }
         }
 
@@ -637,7 +642,7 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
 
-            if (isApiKeyValid && clientState.LocalPlayer != null && _aiVoiceActive) {
+            if (clientState.LocalPlayer != null && _aiVoiceActive) {
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("AI Voice");

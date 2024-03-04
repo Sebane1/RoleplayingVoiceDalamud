@@ -59,6 +59,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     _blockAudioGeneration = e.isBlocking;
                     _currentDialoguePaths.Add(e.SoundPath);
                     _currentDialoguePathsCompleted.Add(false);
+#if DEBUG
+                    DumpCurrentAudio();
+#endif
                 }
             }
         }
@@ -144,9 +147,9 @@ namespace RoleplayingVoiceDalamud.Voice {
 
                     }
                     if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-                        ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                        WaveStream stream = scdFile.Audio[0].Data.GetStream();
                         try {
+                            ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
                             var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                             using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
                                 pcmStream.CopyTo(fileStreamWave);
