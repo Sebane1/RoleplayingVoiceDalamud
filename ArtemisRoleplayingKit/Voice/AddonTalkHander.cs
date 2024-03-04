@@ -310,9 +310,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             List<KeyValuePair<string, string>> phoneticPronunciations = new List<KeyValuePair<string, string>>();
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Urianger", "Uriawnjay"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Alphinaud", "Alphinau"));
-            phoneticPronunciations.Add(new KeyValuePair<string, string>("Alisae", "Allizay"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Alisaie", "Allizay"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigo", "Awla Meego"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ala Mhigan", "Awla Meegan"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Amalj'aa", "Amalja"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("gysahl", "gisawl"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ramuh", "Ramoo"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Papalymo", "Papaleemo"));
@@ -323,6 +324,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("sahagin", "sahawgin"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Eorzea", "Aorzea"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Bahamut", "Bahawmuht"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Lyse", "Leece"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("─", ","));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("...?", "?"));
             string newValue = value;
