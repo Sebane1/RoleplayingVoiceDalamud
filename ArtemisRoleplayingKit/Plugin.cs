@@ -129,8 +129,8 @@ namespace RoleplayingVoice {
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
         private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
-        private Dictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
-        private Dictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new Dictionary<string, List<KeyValuePair<string, bool>>>();
+        private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
+        private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
 
         private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
         private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
@@ -367,6 +367,7 @@ namespace RoleplayingVoice {
             _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
             _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
             _window.Manager = _roleplayingMediaManager;
+            _window.RefreshVoices();
         }
         private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
             RefreshData();
@@ -600,7 +601,6 @@ namespace RoleplayingVoice {
                     string playerMessage = message.TextValue;
                     Task.Run(async () => {
                         string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
-                        config.Characters[_clientState.LocalPlayer.Name.TextValue],
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
                         _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
@@ -1439,15 +1439,23 @@ namespace RoleplayingVoice {
             RefreshData();
         }
         public void CleanSounds() {
-            string path = config.CacheFolder + @"\VoicePack\Others";
+            string othersPath = config.CacheFolder + @"\VoicePack\Others";
+            string incomingPath = config.CacheFolder + @"\Incoming\";
             if (_mediaManager != null) {
                 _mediaManager.CleanSounds();
             }
             ResetTwitchValues();
             temporaryWhitelist.Clear();
-            if (Directory.Exists(path)) {
+            if (Directory.Exists(othersPath)) {
                 try {
-                    Directory.Delete(path, true);
+                    Directory.Delete(othersPath, true);
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                }
+            }
+            if (Directory.Exists(incomingPath)) {
+                try {
+                    Directory.Delete(incomingPath, true);
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
@@ -1481,10 +1489,15 @@ namespace RoleplayingVoice {
             }
             if (config != null) {
                 _networkedClient = new NetworkedClient(config.ConnectionIP);
+                _networkedClient.OnConnectionFailed += _networkedClient_OnConnectionFailed;
                 if (_roleplayingMediaManager != null) {
                     _roleplayingMediaManager.NetworkedClient = _networkedClient;
                 }
             }
+        }
+
+        private void _networkedClient_OnConnectionFailed(object sender, FailureMessage e) {
+            Dalamud.Logging.PluginLog.LogError(e.Message);
         }
         #endregion
         #region Emote Processing
@@ -1703,7 +1716,7 @@ namespace RoleplayingVoice {
                     papFilesFound++;
                     if (!_papSorting.ContainsKey(value)) {
                         try {
-                            _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                            _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
                             { new KeyValuePair<string, bool>(modName, !skipScd) });
                             Dalamud.Logging.PluginLog.LogVerbose("Found: " + item.Value);
                         } catch {
@@ -1814,7 +1827,7 @@ namespace RoleplayingVoice {
                     _animationMods[modName] = value;
                     if (!_papSorting.ContainsKey(value)) {
                         try {
-                            _papSorting.Add(value, new List<KeyValuePair<string, bool>>()
+                            _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
                             { new KeyValuePair<string, bool>(modName, false) });
                         } catch {
                             Dalamud.Logging.PluginLog.LogWarning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");

@@ -488,7 +488,10 @@ namespace RoleplayingVoice {
             if (_manager != null) {
                 _voiceList = await _manager.GetVoiceList();
                 _manager.RefreshElevenlabsSubscriptionInfo();
-                voiceComboBox.Contents = _voiceList;
+                _manager.SetVoice(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                if (_voiceList != null && _voiceList.Length > 0) {
+                    voiceComboBox.Contents = _voiceList;
+                }
             }
             List<string> voicePacks = new List<string>();
             string path = cacheFolder + @"\VoicePack\";
@@ -510,7 +513,7 @@ namespace RoleplayingVoice {
                 }
                 if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                     if (voiceComboBox != null) {
-                        if (_voiceList != null) {
+                        if (_voiceList != null && _voiceList.Length > 0) {
                             voiceComboBox.Contents = _voiceList;
                             if (voiceComboBox.Contents.Length > 0) {
                                 for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
@@ -593,7 +596,7 @@ namespace RoleplayingVoice {
                 }
                 if (index != _lastIndex) {
                     if (OnSelectedIndexChanged != null) {
-                        OnSelectedIndexChanged.Invoke(this, EventArgs.Empty);
+                        OnSelectedIndexChanged?.Invoke(this, EventArgs.Empty);
                     }
                 }
                 _lastIndex = index;
