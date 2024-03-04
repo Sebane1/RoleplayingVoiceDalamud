@@ -155,6 +155,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Asahi", "Fdaniel");
             values.Add("Midgardsormr", "Msrmr");
             values.Add("Worldly Affairs Official", "Wao");
+            values.Add("Ameliance", "Aiance");
 
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");

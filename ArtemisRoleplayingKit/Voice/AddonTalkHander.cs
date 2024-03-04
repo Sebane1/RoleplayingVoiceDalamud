@@ -59,9 +59,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                     _blockAudioGeneration = e.isBlocking;
                     _currentDialoguePaths.Add(e.SoundPath);
                     _currentDialoguePathsCompleted.Add(false);
-#if DEBUG
-                    DumpCurrentAudio();
-#endif
                 }
             }
         }
@@ -84,7 +81,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _passthroughTimer.Reset();
                         }
 #if DEBUG
-                        DumpCurrentAudio();
+                        DumpCurrentAudio(state.Speaker);
 #endif
                         if (_currentDialoguePaths.Count > 0) {
                             _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
@@ -133,11 +130,11 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        private void DumpCurrentAudio() {
+        private void DumpCurrentAudio(string speaker) {
             try {
                 if (_currentDialoguePaths.Count > 0) {
                     Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
-                    string name = "";
+                    string name = speaker;
                     string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
                     string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
                     FileInfo fileInfo = null;
@@ -242,7 +239,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Y'shtola",
                     "Y'da",
                     "Thancred",
-                    "Alphinaud",
+                    "Lyna",
+                    "Ameliance",
                     "Pipin",
                     "Lyna"
                 };
