@@ -176,7 +176,10 @@ namespace RoleplayingVoiceDalamud.Voice {
         public string ConvertRomanNumberals(string text) {
             string value = text;
             for (int i = 25; i > 5; i--) {
-                value = value.Replace(Numerals.Roman.To(i), i.ToString());
+                string numeral = Numerals.Roman.To(i);
+                if (numeral.Length > 1) {
+                    value = value.Replace(numeral, i.ToString());
+                }
             }
             return value;
         }

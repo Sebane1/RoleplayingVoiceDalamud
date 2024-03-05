@@ -2058,7 +2058,7 @@ namespace RoleplayingVoice {
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
-                             "textadvance (Toggles automatic text advancement when community provided dialoge finishes)\r\n" +
+                             "textadvance (Toggles automatic text advancement when community provided dialogue finishes)\r\n" +
                              "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n",
                              "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)");
                             break;
