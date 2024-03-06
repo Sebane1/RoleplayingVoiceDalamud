@@ -203,34 +203,38 @@ namespace RoleplayingVoice {
             }
         }
         public override void Draw() {
-            fileDialogManager.Draw();
-            if (ImGui.BeginTabBar("ConfigTabs")) {
-                if (ImGui.BeginTabItem("General")) {
-                    DrawGeneral();
-                    ImGui.EndTabItem();
-                }
+            if (clientState.IsLoggedIn) {
+                fileDialogManager.Draw();
+                if (ImGui.BeginTabBar("ConfigTabs")) {
+                    if (ImGui.BeginTabItem("General")) {
+                        DrawGeneral();
+                        ImGui.EndTabItem();
+                    }
 
-                if (ImGui.BeginTabItem("Volume")) {
-                    DrawVolume();
-                    ImGui.EndTabItem();
-                }
+                    if (ImGui.BeginTabItem("Volume")) {
+                        DrawVolume();
+                        ImGui.EndTabItem();
+                    }
 
-                if (ImGui.BeginTabItem("Settings")) {
-                    DrawServer();
-                    ImGui.EndTabItem();
+                    if (ImGui.BeginTabItem("Settings")) {
+                        DrawServer();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Whitelist")) {
+                        DrawWhitelist();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("NPC Dialogue")) {
+                        DrawNPCDialogue();
+                        ImGui.EndTabItem();
+                    }
+                    ImGui.EndTabBar();
                 }
-                if (ImGui.BeginTabItem("Whitelist")) {
-                    DrawWhitelist();
-                    ImGui.EndTabItem();
-                }
-                if (ImGui.BeginTabItem("NPC Dialogue")) {
-                    DrawNPCDialogue();
-                    ImGui.EndTabItem();
-                }
-                ImGui.EndTabBar();
+                DrawErrors();
+                SaveAndClose();
+            } else {
+                ImGui.TextUnformatted("Please login to access and configure settings.");
             }
-            DrawErrors();
-            SaveAndClose();
         }
 
         private void DrawNPCDialogue() {
