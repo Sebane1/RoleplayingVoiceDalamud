@@ -384,9 +384,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, byte body) {
-            string[] maleVoices = new string[] { "Mciv", "Zin" };
+            string[] maleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, false);
             string[] maleVoicesDeeper = new string[] { "Mciv", "Zin", "Beggarly" };
-            string[] femaleVoices = new string[] { "Maiden", "Dla" };
+            string[] femaleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, true);
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
             foreach (KeyValuePair<string, string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
                 if (npcName.Contains(voice.Key)) {
@@ -414,6 +414,24 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return "";
         }
+
+        public string[] GetVoicesBasedOnTerritory(uint territory, bool gender) {
+            string[] maleVoices = new string[] { "Mciv", "Zin" };
+            string[] maleVoicesDeeper = new string[] { "Mciv", "Zin", "Beggarly" };
+            string[] femaleThavnair = new string[] { "tf1", "tf2", "tf3", "tf4" };
+            string[] femaleVoices = new string[] { "Maiden", "Dla" };
+            string[] maleThavnair = new string[] { "tm1", "tm2", "tm3", "tm4" };
+            string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
+            switch (territory) {
+                case 963:
+                case 957:
+                    return gender ? femaleThavnair : maleThavnair;
+                default:
+                    return gender ? femaleVoices : maleVoices;
+            }
+
+        }
+
         private string PickVoiceBasedOnNameAndGender(string character, bool gender) {
             if (!string.IsNullOrEmpty(character)) {
                 Random random = new Random(GetSimpleHash(character));

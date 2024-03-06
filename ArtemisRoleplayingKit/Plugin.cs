@@ -1431,6 +1431,9 @@ namespace RoleplayingVoice {
         }
 
         private unsafe void _clientState_TerritoryChanged(ushort e) {
+#if DEBUG
+            _chat.Print("Territory is " + e);
+#endif
             CleanSounds();
         }
         private unsafe bool IsResidential() {
