@@ -89,11 +89,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _blockAudioGeneration = false;
                     }
                 } else {
-                    if (!_blockAudioGeneration) {
-                        if (!_passthroughTimer.IsRunning) {
-                            _passthroughTimer.Restart();
-                        }
-                    }
                     if (_currentDialoguePaths.Count > 0) {
                         if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
                             try {
@@ -125,6 +120,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _currentDialoguePathsCompleted.Clear();
                         }
                     }
+                    _blockAudioGeneration = false;
                     _textIsPresent = false;
                 }
             }
