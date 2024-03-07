@@ -64,13 +64,13 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void Framework_Update(IFramework framework) {
-            if (_plugin.Filter.IsCutsceneDetectionNull()) {
-                if (!_alreadyAddedEvent) {
-                    _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
-                    _alreadyAddedEvent = true;
-                }
-            }
             if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_plugin.Filter.IsCutsceneDetectionNull()) {
+                    if (!_alreadyAddedEvent) {
+                        _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
+                        _alreadyAddedEvent = true;
+                    }
+                }
                 var state = GetTalkAddonState();
                 if (state != null && !string.IsNullOrEmpty(state.Text) && state.Speaker != "All") {
                     _textIsPresent = true;

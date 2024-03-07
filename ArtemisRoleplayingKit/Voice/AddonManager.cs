@@ -19,11 +19,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             this.gui = gui;
             this.name = name;
             _clientState = clientState;
-            _clientState.Login += ClientState_Login;
+            _clientState.Logout += ClientState_Logout;
+            _clientState.Login += _clientState_Login;
             UpdateAddonAddress();
         }
 
-        private void ClientState_Login() {
+        private void _clientState_Login() {
+            UpdateAddonAddress();
+        }
+
+        private void ClientState_Logout() {
             UpdateAddonAddress();
         }
 
@@ -40,7 +45,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public void Dispose() {
             this.subscription.Dispose();
-            _clientState.Login -= ClientState_Login;
+            _clientState.Login -= ClientState_Logout;
         }
     }
 }
