@@ -87,7 +87,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
                         }
                         _blockAudioGeneration = false;
-                    }
+                    } 
                 } else {
                     if (_currentDialoguePaths.Count > 0) {
                         if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {

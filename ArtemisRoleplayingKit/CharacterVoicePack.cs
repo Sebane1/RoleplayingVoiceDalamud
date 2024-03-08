@@ -119,6 +119,18 @@ namespace RoleplayingVoiceDalamud {
             }
             return string.Empty;
         }
+        public string GetMiscSpecific(string value, int index) {
+            string strippedName = StripNonCharacters(value).ToLower();
+            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
+            foreach (string name in _misc.Keys) {
+                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                    if (index < _misc[name].Count) {
+                        return _misc[name][index];
+                    }
+                }
+            }
+            return string.Empty;
+        }
         public string GetHurt() {
             if (_hurt.Count > 0) {
                 return _hurt[_random.Next(0, _hurt.Count)];

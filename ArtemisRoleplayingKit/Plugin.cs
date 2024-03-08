@@ -54,6 +54,7 @@ using System.Drawing;
 using Rectangle = System.Drawing.Rectangle;
 using RoleplayingVoiceDalamud.Voice;
 using System.Text.RegularExpressions;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -547,10 +548,20 @@ namespace RoleplayingVoice {
                 CheckDependancies();
                 string playerName = "";
                 try {
-                    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
-                    if (playerName.ToLower().Contains("PlayerName")) {
-                        playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
+                    foreach (var item in sender.Payloads) {
+                        PlayerPayload player = item as PlayerPayload;
+                        TextPayload text = item as TextPayload;
+                        if (player != null) {
+                            playerName = player.PlayerName;
+                        }
+                        if (text != null) {
+                            playerName = text.Text;
+                        }
                     }
+                    //playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
+                    //if (playerName.ToLower().Contains("PlayerName")) {
+                    //    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
+                    //}
                 } catch {
 
                 }
@@ -615,6 +626,7 @@ namespace RoleplayingVoice {
                         _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
                     });
                 }
+                CheckForChatSoundEffectLocal(message);
             } else {
                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
                 bool isShoutYell = false;
@@ -644,6 +656,7 @@ namespace RoleplayingVoice {
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                 _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts);
                             });
+                            CheckForChatSoundEffectOtherPlayer(sender, player, message);
                         }
                     }
                     if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
@@ -679,12 +692,71 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
+        private async void CheckForChatSoundEffectOtherPlayer(string sender, PlayerCharacter player, SeString message) {
+            if (message.TextValue.Contains("<") && message.TextValue.Contains(">")) {
+                string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
+                string soundTrigger = tokenArray[1];
+                string path = config.CacheFolder + @"\VoicePack\Others";
+                string hash = RoleplayingMediaManager.Shai1Hash(sender);
+                string clipPath = path + @"\" + hash;
+                string playerSender = sender;
+                int index = GetNumberFromString(soundTrigger);
+                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
+                string value = index == -1 ? characterVoicePack.GetMisc(soundTrigger) : characterVoicePack.GetMiscSpecific(soundTrigger, index);
+                try {
+                    Directory.CreateDirectory(path);
+                } catch {
+                    _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                }
+
+                bool isDownloadingZip = false;
+                if (!Path.Exists(clipPath) || string.IsNullOrEmpty(value)) {
+                    if (Path.Exists(clipPath)) {
+                        RemoveFiles(clipPath);
+                    }
+                    isDownloadingZip = true;
+                    _maxDownloadLengthTimer.Restart();
+                    await Task.Run(async () => {
+                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                        isDownloadingZip = false;
+                    });
+                }
+                if (string.IsNullOrEmpty(value)) {
+                    characterVoicePack = new CharacterVoicePack(clipPath);
+                    value = characterVoicePack.GetMisc(soundTrigger);
+                }
+                if (!string.IsNullOrEmpty(value)) {
+                    _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.ChatSound);
+                }
+            }
+        }
+
+        private void CheckForChatSoundEffectLocal(SeString message) {
+            if (message.TextValue.Contains("<") && message.TextValue.Contains(">")) {
+                string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
+                string soundTrigger = tokenArray[1];
+                int index = GetNumberFromString(soundTrigger);
+                CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                string value = index == -1 ? characterVoicePack.GetMisc(soundTrigger) : characterVoicePack.GetMiscSpecific(soundTrigger, index);
+                if (!string.IsNullOrEmpty(value)) {
+                    _mediaManager.PlayAudio(new MediaGameObject(_clientState.LocalPlayer), value, SoundType.ChatSound);
+                }
+            }
+        }
+
+        public int GetNumberFromString(string value) {
+            try {
+                return int.Parse(value.Split('.')[1]) - 1;
+            } catch {
+                return -1;
+            }
+        }
+
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                     if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 3000) {
-                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        string path = config.CacheFolder + @"\VoicePack\" + voice;
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         string value = characterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
@@ -1536,13 +1608,13 @@ namespace RoleplayingVoice {
                                         if (!Path.Exists(clipPath) || !File.Exists(clipPath + @"\" + GetEmoteName(emoteId) + ".mp3")) {
                                             if (Path.Exists(clipPath)) {
                                                 RemoveFiles(clipPath);
-                                                isDownloadingZip = true;
-                                                _maxDownloadLengthTimer.Restart();
-                                                await Task.Run(async () => {
-                                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
-                                                    isDownloadingZip = false;
-                                                });
                                             }
+                                            isDownloadingZip = true;
+                                            _maxDownloadLengthTimer.Restart();
+                                            await Task.Run(async () => {
+                                                string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                isDownloadingZip = false;
+                                            });
                                         }
                                         await Task.Run(async () => {
                                             Stopwatch copyTimer = new Stopwatch();
