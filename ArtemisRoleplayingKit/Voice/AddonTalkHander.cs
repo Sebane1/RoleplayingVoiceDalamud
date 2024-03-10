@@ -1,4 +1,5 @@
 ﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
@@ -35,8 +36,6 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _textIsPresent;
         private bool _alreadyAddedEvent;
         Stopwatch _passthroughTimer = new Stopwatch();
-        Stopwatch _cutsceneCooldown = new Stopwatch();
-        private string _lastPathTriggered;
         List<string> _namesToRemove = new List<string>();
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
 
@@ -87,7 +86,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
                         }
                         _blockAudioGeneration = false;
-                    } 
+                    }
                 } else {
                     if (_currentDialoguePaths.Count > 0) {
                         if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
@@ -241,7 +240,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Lyna",
                     "Ameliance",
                     "Pipin",
-                    "Lyna"
+                    "Lyna",
+                    "Beq Lugg"
                 };
                 foreach (var item in _namesToRemove) {
                     npcNames.Remove(item);
@@ -388,6 +388,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (npcName.Contains(voice.Key)) {
                     return voice.Value;
                 }
+            }
+            if (npcName.EndsWith("way")) {
+                return "Lrit";
             }
             switch (race) {
                 case 0:
