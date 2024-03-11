@@ -22,3 +22,6 @@ Troubleshooting Plugin Load issues:
 
 Support Discord:
 https://discord.gg/rtGXwMn7pX
+
+SEO:
+TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback, FFXIV Voices
