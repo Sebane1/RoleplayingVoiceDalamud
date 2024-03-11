@@ -413,7 +413,7 @@ namespace RoleplayingVoice {
 
         private void CheckForCustomMountingAudio() {
             if (Conditions.IsMounted) {
-                if (!_mountingOccured) {
+                if (!_mountingOccured && _lastActionMessage != null) {
                     _mountingOccured = true;
                     string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                     string path = config.CacheFolder + @"\VoicePack\" + voice;
@@ -421,6 +421,7 @@ namespace RoleplayingVoice {
                     CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                     bool isVoicedEmote = false;
                     string value = characterVoicePack.GetMisc(_lastActionMessage);
+                    _lastActionMessage = null;
                     if (!string.IsNullOrEmpty(value)) {
                         if (config.UsePlayerSync) {
                             Task.Run(async () => {
