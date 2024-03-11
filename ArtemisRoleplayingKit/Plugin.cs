@@ -3,6 +3,7 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Config;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -169,6 +170,9 @@ namespace RoleplayingVoice {
         private NPCVoiceManager _npcVoiceManager;
         private AddonTalkManager _addonTalkManager;
         private AddonTalkHandler _addonTalkHandler;
+        private bool _mountingOccured;
+        private bool _combatOccured;
+        private string _lastActionMessage;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -389,6 +393,60 @@ namespace RoleplayingVoice {
                 CheckForNewDynamicEmoteRequests();
                 CheckForDownloadCancellation();
                 CheckCataloging();
+                CheckForCustomMountingAudio();
+                CheckForCustomCombatAudio();
+            }
+        }
+
+        private void CheckForCustomCombatAudio() {
+            if (Conditions.IsInCombat) {
+                if (!_combatOccured) {
+                    _combatOccured = true;
+                }
+            } else {
+                if (_combatOccured) {
+                    _combatOccured = false;
+                }
+            }
+        }
+
+        private void CheckForCustomMountingAudio() {
+            if (Conditions.IsMounted) {
+                if (!_mountingOccured) {
+                    _mountingOccured = true;
+                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                    string path = config.CacheFolder + @"\VoicePack\" + voice;
+                    string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                    bool isVoicedEmote = false;
+                    string value = characterVoicePack.GetMisc(_lastActionMessage);
+                    if (!string.IsNullOrEmpty(value)) {
+                        if (config.UsePlayerSync) {
+                            Task.Run(async () => {
+                                bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                            });
+                        }
+                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MountLoop, 0);
+                        try {
+                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                    } else {
+                        _mediaManager.StopAudio(_playerObject);
+                    }
+                }
+            } else {
+                if (_mountingOccured) {
+                    _mountingOccured = false;
+                    _mediaManager.StopAudio(_playerObject);
+                    try {
+                        _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                    }
+                    _mediaManager.StopAudio(_playerObject);
+                }
             }
         }
 
@@ -1035,7 +1093,10 @@ namespace RoleplayingVoice {
     XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
             if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
-                value = characterVoicePack.GetMisc(message.TextValue);
+                _lastActionMessage = message.TextValue;
+                if (!message.TextValue.Contains("mount")) {
+                    value = characterVoicePack.GetMisc(message.TextValue);
+                }
                 if (string.IsNullOrEmpty(value)) {
                     if (attackCount == 0) {
                         value = characterVoicePack.GetAction(message.TextValue);
