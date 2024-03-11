@@ -172,7 +172,7 @@ namespace RoleplayingVoice {
         private AddonTalkHandler _addonTalkHandler;
         private bool _mountingOccured;
         private bool _combatOccured;
-        private string _lastActionMessage;
+        private string _lastMountingMessage;
         private bool _mountMusicWasPlayed;
 
         public string Name => "Artemis Roleplaying Kit";
@@ -412,45 +412,47 @@ namespace RoleplayingVoice {
         }
 
         private void CheckForCustomMountingAudio() {
-            if (Conditions.IsMounted) {
-                if (!_mountingOccured && _lastActionMessage != null) {
-                    _mountingOccured = true;
-                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                    string path = config.CacheFolder + @"\VoicePack\" + voice;
-                    string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
-                    bool isVoicedEmote = false;
-                    string value = characterVoicePack.GetMisc(_lastActionMessage);
-                    _lastActionMessage = null;
-                    if (!string.IsNullOrEmpty(value)) {
-                        if (config.UsePlayerSync) {
-                            Task.Run(async () => {
-                                bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
-                            });
+            if (!Conditions.IsInBetweenAreas && !Conditions.IsInBetweenAreas51 && _clientState.LocalPlayer != null) {
+                if (Conditions.IsMounted) {
+                    if (!_mountingOccured) {
+                        _mountingOccured = true;
+                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        string path = config.CacheFolder + @"\VoicePack\" + voice;
+                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                        bool isVoicedEmote = false;
+                        string value = characterVoicePack.GetMisc(_lastMountingMessage);
+                        if (!string.IsNullOrEmpty(value)) {
+                            if (config.UsePlayerSync) {
+                                Task.Run(async () => {
+                                    bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                                });
+                            }
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MountLoop, 0);
+                            try {
+                                _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            }
+                            _mountMusicWasPlayed = true;
+                        } else {
+                            _mediaManager.StopAudio(_playerObject);
                         }
-                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MountLoop, 0);
-                        try {
-                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                        } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
-                        }
-                        _mountMusicWasPlayed = true;
-                    } else {
-                        _mediaManager.StopAudio(_playerObject);
                     }
-                }
-            } else {
-                if (_mountingOccured) {
-                    _mountingOccured = false;
-                    if (_mountMusicWasPlayed) {
-                        _mediaManager.StopAudio(_playerObject);
-                        try {
-                            _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                        } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                } else {
+                    if (_mountingOccured) {
+                        _mountingOccured = false;
+                        if (_mountMusicWasPlayed) {
+                            _lastMountingMessage = null;
+                            _mediaManager.StopAudio(_playerObject);
+                            try {
+                                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            }
+                            _mediaManager.StopAudio(_playerObject);
+                            _mountMusicWasPlayed = false;
                         }
-                        _mediaManager.StopAudio(_playerObject);
-                        _mountMusicWasPlayed = false;
                     }
                 }
             }
@@ -1099,9 +1101,10 @@ namespace RoleplayingVoice {
     XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
             if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
-                _lastActionMessage = message.TextValue;
                 if (!message.TextValue.Contains("mount")) {
                     value = characterVoicePack.GetMisc(message.TextValue);
+                } else {
+                    _lastMountingMessage = message.TextValue;
                 }
                 if (string.IsNullOrEmpty(value)) {
                     if (attackCount == 0) {
@@ -1589,6 +1592,8 @@ namespace RoleplayingVoice {
             RefreshData();
         }
         public void CleanSounds() {
+            _mountingOccured = false;
+            _mountMusicWasPlayed = false;
             string othersPath = config.CacheFolder + @"\VoicePack\Others";
             string incomingPath = config.CacheFolder + @"\Incoming\";
             if (_mediaManager != null) {
