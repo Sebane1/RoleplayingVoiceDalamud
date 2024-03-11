@@ -173,6 +173,7 @@ namespace RoleplayingVoice {
         private bool _mountingOccured;
         private bool _combatOccured;
         private string _lastActionMessage;
+        private bool _mountMusicWasPlayed;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -432,6 +433,7 @@ namespace RoleplayingVoice {
                         } catch (Exception e) {
                             Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                         }
+                        _mountMusicWasPlayed = true;
                     } else {
                         _mediaManager.StopAudio(_playerObject);
                     }
@@ -439,13 +441,16 @@ namespace RoleplayingVoice {
             } else {
                 if (_mountingOccured) {
                     _mountingOccured = false;
-                    _mediaManager.StopAudio(_playerObject);
-                    try {
-                        _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                    } catch (Exception e) {
-                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                    if (_mountMusicWasPlayed) {
+                        _mediaManager.StopAudio(_playerObject);
+                        try {
+                            _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                        _mediaManager.StopAudio(_playerObject);
+                        _mountMusicWasPlayed = false;
                     }
-                    _mediaManager.StopAudio(_playerObject);
                 }
             }
         }
