@@ -54,6 +54,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Wedge", "Wman");
             values.Add("Vidofnir", "Vnir");
             values.Add("House", "Hfk");
+            values.Add("Warrior of Darkness", "ard");
+            values.Add("Ardbert", "ard");
 
             values.Add("Arenvald", "Avald");
             values.Add("Azemi", "Azmi");
