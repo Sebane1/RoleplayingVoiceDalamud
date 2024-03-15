@@ -119,7 +119,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Erenvile", "Eille");
             values.Add("Fourchenault", "Fault");
             values.Add("Barnier", "Bier");
-            values.Add("Montichaigne", "Maigne");
+            values.Add("Montichaigne", "Montne");
             values.Add("Kytte", "Kte");
             values.Add("Varshahn", "Vahn");
             values.Add("Nidhana", "Nana");
