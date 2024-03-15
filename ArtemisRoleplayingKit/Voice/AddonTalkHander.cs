@@ -339,28 +339,19 @@ namespace RoleplayingVoiceDalamud.Voice {
             bool isTinyRace = lowered.Contains("way") || body == 4;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
-            switch (race) {
-                case 0:
-                case 1:
-                case 2:
-                case 5:
-                case 8:
-                    if (!gender && body != 4) {
-                        pitchOffset = (((float)random.Next(20, 100) / 100f) * range);
-                        if (body == 4) {
-                            switch (gender) {
-                                case false:
-                                    pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
-                                    isTinyRace = false;
-                                    break;
-                                case true:
-                                    pitchOffset = (((float)random.Next(0, 100) / 100f) * range);
-                                    break;
+            if (!gender && body != 4) {
+                if (body == 4) {
+                    switch (gender) {
+                        case false:
+                            pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
+                            isTinyRace = false;
+                            break;
+                        case true:
+                            pitchOffset = (((float)random.Next(0, 100) / 100f) * range);
+                            break;
 
-                            }
-                        }
                     }
-                    break;
+                }
             }
             if (pitch == 1) {
                 return (isTinyRace ? 1.15f : 1) + pitchOffset;
@@ -429,41 +420,9 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         }
 
-        private string PickVoiceBasedOnNameAndGender(string character, bool gender) {
-            if (!string.IsNullOrEmpty(character)) {
-                Random random = new Random(GetSimpleHash(character));
-                return !gender ? PickMaleVoice(random.Next(0, 2)) : PickFemaleVoice(random.Next(0, 2));
-            } else {
-                return "Bella";
-            }
-        }
         private string PickVoice(string name, string[] choices) {
             Random random = new Random(GetSimpleHash(name));
             return choices[random.Next(0, choices.Length)];
-        }
-
-        public string PickMaleVoice(int voice) {
-            string[] voices = new string[] {
-                "Mciv",
-                "Zin"
-            };
-            return voices[voice];
-        }
-        public string PickFemaleVoice(int voice) {
-            string[] voices = new string[] {
-                "Maiden",
-                "Dla"
-            };
-            return voices[voice];
-        }
-
-        public string PickVeiraVoice(int voice) {
-            string[] voices = new string[] {
-                "Aet",
-                "Cet",
-                "Uet"
-            };
-            return voices[voice];
         }
 
         public void Dispose() {
