@@ -217,7 +217,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
             values.Add(new KeyValuePair<string, float>("Livia sas Junius", 0.9f));
             values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
-            values.Add(new KeyValuePair<string, float>("Mother Miounne", 0.8f));
             values.Add(new KeyValuePair<string, float>("Frixio", 1.1f));
             values.Add(new KeyValuePair<string, float>("Raya-O-Senna", 1.05f));
             values.Add(new KeyValuePair<string, float>("Teledji Adeledji", 1.1f));
