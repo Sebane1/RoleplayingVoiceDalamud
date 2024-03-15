@@ -381,7 +381,6 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, byte body) {
             string[] maleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, false);
-            string[] maleVoicesDeeper = new string[] { "Mciv", "Zin", "Beggarly" };
             string[] femaleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, true);
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
             foreach (KeyValuePair<string, string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
@@ -402,13 +401,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 3:
                 case 5:
                 case 6:
-                    return !gender && body != 4 ?
-                    PickVoice(npcName, maleVoices) :
-                    PickVoice(npcName, femaleVoices);
                 case 4:
                 case 7:
-                    return !gender ?
-                    PickVoice(npcName, maleVoicesDeeper) :
+                    return !gender && body != 4 ?
+                    PickVoice(npcName, maleVoices) :
                     PickVoice(npcName, femaleVoices);
                 case 8:
                     return gender ? PickVoice(npcName, femaleViera) :
@@ -418,10 +414,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public string[] GetVoicesBasedOnTerritory(uint territory, bool gender) {
-            string[] maleVoices = new string[] { "Mciv", "Zin" };
-            string[] maleVoicesDeeper = new string[] { "Mciv", "Zin", "Beggarly" };
+            string[] maleVoices = new string[] { "Mciv", "Zin", "udm1", "gm1", "Beggarly", "gnat", "ig1", "thord", "vark", "ckeep", "pide", "motanist", "lator", "sail", "lodier" };
             string[] femaleThavnair = new string[] { "tf1", "tf2", "tf3", "tf4" };
-            string[] femaleVoices = new string[] { "Maiden", "Dla" };
+            string[] femaleVoices = new string[] { "Maiden", "Dla", "irhm", "ouncil", "igate" };
             string[] maleThavnair = new string[] { "tm1", "tm2", "tm3", "tm4" };
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
             switch (territory) {
