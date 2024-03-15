@@ -392,6 +392,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (npcName.EndsWith("way")) {
                 return "Lrit";
             }
+            if (npcName.ToLower().Contains("kupo") || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")) {
+                return "Kop";
+            }
             switch (race) {
                 case 0:
                 case 1:

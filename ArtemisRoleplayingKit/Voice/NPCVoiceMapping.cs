@@ -158,6 +158,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Midgardsormr", "Msrmr");
             values.Add("Worldly Affairs Official", "Wao");
             values.Add("Ameliance", "Aiance");
+            values.Add("Moogle", "Kop");
+            values.Add("Kuplo Kopp", "Kop");
 
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
@@ -199,6 +201,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, string>("Livia sas Junius", "Ygoeb"));
             values.Add(new KeyValuePair<string, string>("Teledji Adeledji", "Lito"));
             values.Add(new KeyValuePair<string, string>("Nabriales", "Lbrea"));
+            values.Add(new KeyValuePair<string, string>("Mogloo", "Beggarly"));
             return values;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {
