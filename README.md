@@ -24,4 +24,4 @@ Support Discord:
 https://discord.gg/rtGXwMn7pX
 
 SEO:
-TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback, FFXIV Voices, XIV Vaices, Final Fontasy 14 Voice
+TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback, FFXIV Voices, XIV Voices, Final Fantasy 14 Voices
