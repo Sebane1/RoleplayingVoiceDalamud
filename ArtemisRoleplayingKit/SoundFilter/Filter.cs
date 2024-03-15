@@ -262,8 +262,8 @@ namespace SoundFilter {
             } else if (specificPath.Contains("/strm/")) {
                 return true;
             }
-            if ((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man")) || specificPath.Contains("cut/ffxiv/")) {
-                if (specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman")) && Plugin.Config.ReplaceVoicedARRCutscenes
+            if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man")) || specificPath.Contains("cut/ffxiv/")) && !Plugin.Config.NpcSpeechGenerationDisabled) {
+                if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
                     && !Plugin.Config.NpcSpeechGenerationDisabled) {
                     OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
                     return true;
