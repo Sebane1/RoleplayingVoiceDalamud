@@ -174,6 +174,7 @@ namespace RoleplayingVoice {
         private bool _combatOccured;
         private string _lastMountingMessage;
         private bool _mountMusicWasPlayed;
+        private int _recentCFPop;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -292,6 +293,7 @@ namespace RoleplayingVoice {
                 _clientState.Logout += _clientState_Logout;
                 _clientState.TerritoryChanged += _clientState_TerritoryChanged;
                 _clientState.LeavePvP += _clientState_LeavePvP;
+                _clientState.CfPop += _clientState_CfPop;
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 _catalogueWindow.Plugin = this;
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
@@ -305,6 +307,10 @@ namespace RoleplayingVoice {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
+        }
+
+        private void _clientState_CfPop(Lumina.Excel.GeneratedSheets.ContentFinderCondition obj) {
+            _recentCFPop = 1;
         }
         #endregion Plugin Initiialization
         #region Configuration
@@ -412,7 +418,7 @@ namespace RoleplayingVoice {
         }
 
         private void CheckForCustomMountingAudio() {
-            if (!Conditions.IsInBetweenAreas && !Conditions.IsInBetweenAreas51 && _clientState.LocalPlayer != null) {
+            if (!Conditions.IsInBetweenAreas && !Conditions.IsInBetweenAreas51 && _clientState.LocalPlayer != null && _recentCFPop != 2) {
                 if (Conditions.IsMounted) {
                     if (!_mountingOccured) {
                         _mountingOccured = true;
@@ -435,8 +441,6 @@ namespace RoleplayingVoice {
                                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
                             _mountMusicWasPlayed = true;
-                        } else {
-                            _mediaManager.StopAudio(_playerObject);
                         }
                     }
                 } else {
@@ -450,9 +454,16 @@ namespace RoleplayingVoice {
                             } catch (Exception e) {
                                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                             }
-                            _mediaManager.StopAudio(_playerObject);
                             _mountMusicWasPlayed = false;
                         }
+                    }
+                }
+            } else {
+                if (_mountMusicWasPlayed) {
+                    try {
+                        _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                    } catch (Exception e) {
+                        Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                     }
                 }
             }
@@ -1265,8 +1276,6 @@ namespace RoleplayingVoice {
                         });
                     }
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
-                } else {
-                    _mediaManager.StopAudio(_playerObject);
                 }
             }
         }
@@ -1577,6 +1586,9 @@ namespace RoleplayingVoice {
             _chat.Print("Territory is " + e);
 #endif
             CleanSounds();
+            if (_recentCFPop > 0) {
+                _recentCFPop++;
+            }
         }
         private unsafe bool IsResidential() {
             return HousingManager.Instance()->IsInside() || HousingManager.Instance()->OutdoorTerritory != null;
@@ -1593,7 +1605,6 @@ namespace RoleplayingVoice {
         }
         public void CleanSounds() {
             _mountingOccured = false;
-            _mountMusicWasPlayed = false;
             string othersPath = config.CacheFolder + @"\VoicePack\Others";
             string incomingPath = config.CacheFolder + @"\Incoming\";
             if (_mediaManager != null) {
