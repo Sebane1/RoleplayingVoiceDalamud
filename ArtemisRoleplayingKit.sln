@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penumbra.String", "Penumbra
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penumbra.Api", "Penumbra.Api\Penumbra.Api.csproj", "{754BD16D-1308-4B6F-8447-D818FD94CB54}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtterGui", "OtterGui\OtterGui.csproj", "{53A49646-E075-4278-8477-CB2E1B792519}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{754BD16D-1308-4B6F-8447-D818FD94CB54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53A49646-E075-4278-8477-CB2E1B792519}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53A49646-E075-4278-8477-CB2E1B792519}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53A49646-E075-4278-8477-CB2E1B792519}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53A49646-E075-4278-8477-CB2E1B792519}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
