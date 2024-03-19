@@ -19,7 +19,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '7.x.x'
+          dotnet-version: '8.x.x'
 
       - name: Download Dalamud
         run: |
@@ -37,14 +37,14 @@ jobs:
       - name: Write version into manifest
         run: |
           $ver = '${{ github.ref }}' -replace 'refs/tags/',''
-          $path = './ArtemisRoleplayingKit/bin/Release/net7.0-windows/RoleplayingVoiceDalamud.json'
+          $path = './ArtemisRoleplayingKit/bin/Release/net8.0-windows/RoleplayingVoiceDalamud.json'
           $content = get-content -path $path
           $content = $content -replace '0.0.0.0',$ver
           set-content -Path $path -Value $content
 
       - name: Packing Release
         run: |
-          pushd ArtemisRoleplayingKit/bin/Release/net7.0-windows
+          pushd ArtemisRoleplayingKit/bin/Release/net8.0-windows
           7z a ../RoleplayingVoiceDalamud.zip *
           popd
         shell: bash
