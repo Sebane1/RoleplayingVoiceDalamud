@@ -10,3 +10,6 @@
 [submodule "Penumbra.GameData"]
 	path = Penumbra.GameData
 	url = https://github.com/Ottermandias/Penumbra.GameData
+[submodule "OtterGui"]
+	path = OtterGui
+	url = https://github.com/Ottermandias/OtterGui
