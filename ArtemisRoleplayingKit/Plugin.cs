@@ -2414,7 +2414,7 @@ namespace RoleplayingVoice {
             var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();
 
             void AddEmote(string? key, Emote emote) {
-                if (key.IsNullOrEmpty())
+                if (string.IsNullOrEmpty(key))
                     return;
 
                 key = key.ToLowerInvariant();

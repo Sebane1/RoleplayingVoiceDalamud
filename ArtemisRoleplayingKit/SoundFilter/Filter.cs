@@ -254,7 +254,7 @@ namespace SoundFilter {
             var specificPath = $"{path}/{idx}";
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
             if ((specificPath.Contains("vo_battle") && muted)
-                || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider)) {
+                || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider) && !splitPath.Contains("sound/foot")) {
 
                 Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
