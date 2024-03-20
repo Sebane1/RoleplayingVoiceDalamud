@@ -671,11 +671,16 @@ namespace RoleplayingVoice {
                         TextPayload text = item as TextPayload;
                         if (player != null) {
                             playerName = player.PlayerName;
+                            break;
                         }
                         if (text != null) {
                             playerName = text.Text;
+                            break;
                         }
                     }
+#if DEBUG
+                    //_chat.Print(playerName);
+#endif
                     //playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
                     //if (playerName.ToLower().Contains("PlayerName")) {
                     //    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
