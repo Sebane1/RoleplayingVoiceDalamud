@@ -75,8 +75,9 @@ namespace RoleplayingVoice {
         }
 
         public void LoadFrames() {
-            string path = _fileWatcher.Path;
-            if (File.Exists(path)) {
+            string path = _path;
+            bool value = Directory.Exists(path);
+            if (value) {
                 var files = Directory.GetFiles(path, "*.png");
                 if (files.Length > 0) {
                     RefreshFrames(files);
