@@ -56,6 +56,7 @@ using Rectangle = System.Drawing.Rectangle;
 using RoleplayingVoiceDalamud.Voice;
 using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Interface.DragDrop;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -173,6 +174,7 @@ namespace RoleplayingVoice {
         private AddonTalkManager _addonTalkManager;
         private AddonTalkHandler _addonTalkHandler;
         private IGameGui _gameGui;
+        private IDragDropManager _dragDrop;
         private bool _mountingOccured;
         private bool _combatOccured;
         private string _lastMountingMessage;
@@ -205,6 +207,10 @@ namespace RoleplayingVoice {
         public IDataManager DataManager { get => _dataManager; set => _dataManager = value; }
 
         public IChatGui Chat => _chat;
+
+        public Queue<string> FastMessageQueue { get => _fastMessageQueue; set => _fastMessageQueue = value; }
+        public Queue<string> MessageQueue { get => _messageQueue; set => _messageQueue = value; }
+        public IDragDropManager DragDrop { get => _dragDrop; set => _dragDrop = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -220,7 +226,8 @@ namespace RoleplayingVoice {
             IFramework framework,
             IGameInteropProvider interopProvider,
             ICondition condition,
-            IGameGui gameGui) {
+            IGameGui gameGui,
+            IDragDropManager dragDrop) {
             #region Constructor
             try {
                 this.pluginInterface = pi;
@@ -278,6 +285,7 @@ namespace RoleplayingVoice {
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                 _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this);
                 _gameGui = gameGui;
+                _dragDrop = dragDrop;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -418,10 +426,15 @@ namespace RoleplayingVoice {
                 CheckCataloging();
                 CheckForCustomMountingAudio();
                 CheckForCustomCombatAudio();
+                CheckForGPose();
+            }
+        }
+
+        private void CheckForGPose() {
+            if (_clientState != null && _gameGui != null) {
                 if (_clientState.LocalPlayer != null) {
                     if (_clientState.IsGPosing && _gameGui.GameUiHidden) {
                         _gposeWindow.RespectCloseHotkey = false;
-                        _gposeWindow.Collapsed = false;
                         _gposeWindow.IsOpen = true;
                         _gposePhotoTakerWindow.IsOpen = true;
                     } else {

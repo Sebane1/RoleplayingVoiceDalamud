@@ -19,6 +19,9 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using System.Collections.Generic;
 using Dalamud.Utility;
 using Dalamud.Plugin.Services;
+using Dalamud.Hooking;
+using FFBardMusicPlayer.FFXIV;
+using System.Windows.Forms;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -27,6 +30,7 @@ namespace RoleplayingVoice {
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         private FileDialogManager fileDialogManager;
+        private FFXIVHook hook;
         private IClientState clientState;
 
         private string apiKey = "";
@@ -90,6 +94,8 @@ namespace RoleplayingVoice {
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voicePackComboBox.OnSelectedIndexChanged += VoicePackComboBox_OnSelectedIndexChanged;
             fileDialogManager = new FileDialogManager();
+            hook = new FFXIVHook();
+            hook.Hook(Process.GetCurrentProcess());
         }
 
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
@@ -228,6 +234,10 @@ namespace RoleplayingVoice {
                         DrawNPCDialogue();
                         ImGui.EndTabItem();
                     }
+                    if (ImGui.BeginTabItem("GPose")) {
+                        DrawGposeFrames();
+                        ImGui.EndTabItem();
+                    }
                     ImGui.EndTabBar();
                 }
                 DrawErrors();
@@ -237,6 +247,53 @@ namespace RoleplayingVoice {
             }
         }
 
+        private void DrawGposeFrames() {
+            try {
+                ImGui.TextWrapped("You can now add custom photo frames! You can access these while the game UI is hidden in Gpose!");
+                PluginReference.DragDrop.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
+                    ImGui.TextUnformatted($"Dragging texture for import:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                    return true;
+                });
+                if (ImGui.Button("Open Custom Photo Frames Folder", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                    string path = Path.Combine(PluginReference.Config.CacheFolder, @"PhotoFrames\");
+                    ProcessStartInfo ProcessInfo;
+                    Process Process; ;
+                    try {
+                        Directory.CreateDirectory(path);
+                    } catch {
+                    }
+                    ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + path + @"""");
+                    ProcessInfo.UseShellExecute = true;
+                    Process = Process.Start(ProcessInfo);
+                }
+                if (PluginReference.DragDrop.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
+                    if (ValidTextureExtensions.Contains(Path.GetExtension(files[0]))) {
+                        string path = Path.Combine(PluginReference.Config.CacheFolder, @"PhotoFrames\");
+                        foreach (string file in files) {
+                            File.Copy(files[0], Path.Combine(path, Path.GetFileName(files[0])));
+                        }
+                    }
+                }
+                if (clientState != null) {
+                    if (ImGui.Button(!clientState.IsGPosing ? "Enter Gpose" : "Exit Gpose", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                        if (!clientState.IsGPosing) {
+                            PluginReference.FastMessageQueue.Enqueue("/gpose");
+                            hook.SendAsyncKey(Keys.Scroll);
+                            IsOpen = false;
+                        } else {
+                            PluginReference.FastMessageQueue.Enqueue("/gpose");
+                            hook.SendAsyncKey(Keys.Scroll);
+                        }
+
+                    }
+                }
+            } catch {
+
+            }
+        }
+        private static readonly List<string> ValidTextureExtensions = new List<string>(){
+          ".png",
+        };
         private void DrawNPCDialogue() {
             if (ImGui.Button("Contribute Your Voice!", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 Process process = new Process();

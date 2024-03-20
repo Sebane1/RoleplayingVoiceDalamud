@@ -16,13 +16,8 @@ namespace RoleplayingVoice {
         private System.Numerics.Vector2? windowSize;
         private Vector2? initialSize;
         IDalamudTextureWrap textureWrap;
-        MediaManager _mediaManager;
         Plugin _plugin;
         private DalamudPluginInterface _pluginInterface;
-        Stopwatch deadStreamTimer = new Stopwatch();
-        private string fpsCount = "";
-        int countedFrames = 0;
-        private bool wasStreaming;
         List<byte[]> _frames = new List<byte[]>();
         List<string> _frameName = new List<string>();
         private int _currentFrame;
@@ -34,7 +29,7 @@ namespace RoleplayingVoice {
             base("Gpose Window", ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoMouseInputs
                 | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoScrollbar |
-                ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, true) {
+                ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, true) {
             IsOpen = true;
             windowSize = Size = new Vector2(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
             initialSize = Size;
@@ -75,9 +70,13 @@ namespace RoleplayingVoice {
             }
         }
         public override void Draw() {
-            if (_frames.Count > 0) {
-                textureWrap = _pluginInterface.UiBuilder.LoadImage(_frames[_currentFrame]);
-                ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+            try {
+                if (_frames != null && _frames.Count > 0) {
+                    textureWrap = _pluginInterface.UiBuilder.LoadImage(_frames[_currentFrame]);
+                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                }
+            } catch {
+
             }
         }
     }

@@ -53,74 +53,78 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void Filter_OnCutsceneAudioDetected(object sender, SoundFilter.InterceptedSound e) {
-            if (_clientState.IsLoggedIn) {
-                if (!_currentDialoguePaths.Contains(e.SoundPath)) {
-                    _blockAudioGeneration = e.isBlocking;
-                    _currentDialoguePaths.Add(e.SoundPath);
-                    _currentDialoguePathsCompleted.Add(false);
+            if (_clientState != null) {
+                if (_clientState.IsLoggedIn) {
+                    if (!_currentDialoguePaths.Contains(e.SoundPath)) {
+                        _blockAudioGeneration = e.isBlocking;
+                        _currentDialoguePaths.Add(e.SoundPath);
+                        _currentDialoguePathsCompleted.Add(false);
+                    }
                 }
             }
         }
 
         private void Framework_Update(IFramework framework) {
-            if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                if (_plugin.Filter.IsCutsceneDetectionNull()) {
-                    if (!_alreadyAddedEvent) {
-                        _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
-                        _alreadyAddedEvent = true;
-                    }
-                }
-                var state = GetTalkAddonState();
-                if (state != null && !string.IsNullOrEmpty(state.Text) && state.Speaker != "All") {
-                    _textIsPresent = true;
-                    if (state.Text != _lastText) {
-                        _lastText = state.Text;
-                        if (!_blockAudioGeneration) {
-                            NPCText(state.Speaker, state.Text.TrimStart('.'));
-                            _passthroughTimer.Reset();
+            if (_clientState != null) {
+                if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                    if (_plugin.Filter.IsCutsceneDetectionNull()) {
+                        if (!_alreadyAddedEvent) {
+                            _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
+                            _alreadyAddedEvent = true;
                         }
+                    }
+                    var state = GetTalkAddonState();
+                    if (state != null && !string.IsNullOrEmpty(state.Text) && state.Speaker != "All") {
+                        _textIsPresent = true;
+                        if (state.Text != _lastText) {
+                            _lastText = state.Text;
+                            if (!_blockAudioGeneration) {
+                                NPCText(state.Speaker, state.Text.TrimStart('.'));
+                                _passthroughTimer.Reset();
+                            }
 #if DEBUG
-                        DumpCurrentAudio(state.Speaker);
+                            DumpCurrentAudio(state.Speaker);
 #endif
-                        if (_currentDialoguePaths.Count > 0) {
-                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                            if (_currentDialoguePaths.Count > 0) {
+                                _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                            }
+                            _blockAudioGeneration = false;
                         }
-                        _blockAudioGeneration = false;
-                    }
-                } else {
-                    if (_currentDialoguePaths.Count > 0) {
-                        if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
-                            try {
-                                ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                                WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                                var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                                _plugin.MediaManager.PlayAudioStream(new DummyObject(),
-                                    pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
-                                        _hook.SendAsyncKey(Keys.NumPad0);
-                                    }
-                                : null);
-                            } catch (Exception e) {
-                                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                    } else {
+                        if (_currentDialoguePaths.Count > 0) {
+                            if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
+                                try {
+                                    ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                                    WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                                    var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                                    _plugin.MediaManager.PlayAudioStream(new DummyObject(),
+                                        pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
+                                            _hook.SendAsyncKey(Keys.NumPad0);
+                                        }
+                                    : null);
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                                }
+                            }
+                            if (_currentDialoguePaths.Count > 0) {
+                                _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
                             }
                         }
-                        if (_currentDialoguePaths.Count > 0) {
-                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                        if (_currentSpeechObject != null) {
+                            var otherData = _clientState.LocalPlayer.OnlineStatus;
+                            if (otherData.Id != 15) {
+                                _namesToRemove.Clear();
+                                _lastText = "";
+                                _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                                _plugin.MediaManager.CleanSounds();
+                                _currentSpeechObject = null;
+                                _currentDialoguePaths.Clear();
+                                _currentDialoguePathsCompleted.Clear();
+                            }
                         }
+                        _blockAudioGeneration = false;
+                        _textIsPresent = false;
                     }
-                    if (_currentSpeechObject != null) {
-                        var otherData = _clientState.LocalPlayer.OnlineStatus;
-                        if (otherData.Id != 15) {
-                            _namesToRemove.Clear();
-                            _lastText = "";
-                            _plugin.MediaManager.StopAudio(_currentSpeechObject);
-                            _plugin.MediaManager.CleanSounds();
-                            _currentSpeechObject = null;
-                            _currentDialoguePaths.Clear();
-                            _currentDialoguePathsCompleted.Clear();
-                        }
-                    }
-                    _blockAudioGeneration = false;
-                    _textIsPresent = false;
                 }
             }
         }
