@@ -78,6 +78,8 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
         private CatalogueWindow _catalogueWindow;
+        private GposeWindow _gposeWindow;
+        private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
         private Stopwatch _stopwatch;
@@ -170,6 +172,7 @@ namespace RoleplayingVoice {
         private NPCVoiceManager _npcVoiceManager;
         private AddonTalkManager _addonTalkManager;
         private AddonTalkHandler _addonTalkHandler;
+        private IGameGui _gameGui;
         private bool _mountingOccured;
         private bool _combatOccured;
         private string _lastMountingMessage;
@@ -231,11 +234,16 @@ namespace RoleplayingVoice {
                 _window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
                 _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
+                _gposeWindow = this.pluginInterface.Create<GposeWindow>();
+                _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
+                _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
+                pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
+                pluginInterface.UiBuilder.DisableGposeUiHide = true;
                 _window.ClientState = this._clientState;
                 _window.Configuration = this.config;
                 _window.PluginInterface = this.pluginInterface;
                 _window.PluginReference = this;
-
+                _gposeWindow.Plugin = this;
                 if (_window is not null) {
                     this.windowSystem.AddWindow(_window);
                 }
@@ -244,6 +252,12 @@ namespace RoleplayingVoice {
                 }
                 if (_catalogueWindow is not null) {
                     this.windowSystem.AddWindow(_catalogueWindow);
+                }
+                if (_gposeWindow is not null) {
+                    this.windowSystem.AddWindow(_gposeWindow);
+                }
+                if (_gposePhotoTakerWindow is not null) {
+                    this.windowSystem.AddWindow(_gposePhotoTakerWindow);
                 }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
@@ -263,6 +277,7 @@ namespace RoleplayingVoice {
                 _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                 _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this);
+                _gameGui = gameGui;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -303,6 +318,7 @@ namespace RoleplayingVoice {
                 if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
                     _chat.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
                 }
+                _gposeWindow.LoadFrames();
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -402,6 +418,17 @@ namespace RoleplayingVoice {
                 CheckCataloging();
                 CheckForCustomMountingAudio();
                 CheckForCustomCombatAudio();
+                if (_clientState.LocalPlayer != null) {
+                    if (_clientState.IsGPosing && _gameGui.GameUiHidden) {
+                        _gposeWindow.RespectCloseHotkey = false;
+                        _gposeWindow.Collapsed = false;
+                        _gposeWindow.IsOpen = true;
+                        _gposePhotoTakerWindow.IsOpen = true;
+                    } else {
+                        _gposeWindow.IsOpen = false;
+                        _gposePhotoTakerWindow.IsOpen = false;
+                    }
+                }
             }
         }
 
@@ -2574,7 +2601,11 @@ namespace RoleplayingVoice {
                 } catch (Exception e) {
                     Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 }
-                _toast.ErrorToast -= _toast_ErrorToast;
+                try {
+                    _toast.ErrorToast -= _toast_ErrorToast;
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                }
                 try {
                     _framework.Update -= framework_Update;
                 } catch (Exception e) {
