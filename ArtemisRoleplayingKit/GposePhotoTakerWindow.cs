@@ -72,6 +72,7 @@ namespace RoleplayingVoice {
                             foreach (string file in files) {
                                 File.Copy(files[0], Path.Combine(path, Path.GetFileName(files[0])));
                             }
+                            gposeWindow.LoadFrames();
                         }
                     }
                     if (ImGui.Button("Take Photo")) {

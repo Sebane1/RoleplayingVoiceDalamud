@@ -21,6 +21,9 @@ namespace RoleplayingVoice {
         List<byte[]> _frames = new List<byte[]>();
         List<string> _frameName = new List<string>();
         private int _currentFrame;
+        private string _path;
+        private FileSystemWatcher _fileWatcher;
+        private string path;
 
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<string> FrameNames { get => _frameName; set => _frameName = value; }
@@ -38,6 +41,20 @@ namespace RoleplayingVoice {
             Position = new Vector2(0, 0);
             AllowClickthrough = true;
         }
+        public void Initialize() {
+            _path = Path.Combine(_plugin.Config.CacheFolder, @"PhotoFrames\");
+            _fileWatcher = new FileSystemWatcher();
+            Directory.CreateDirectory(_path);
+            _fileWatcher.Path = _path;
+            _fileWatcher.EnableRaisingEvents = true;
+            _fileWatcher.Created += _fileWatcher_Created;
+            LoadFrames();
+        }
+
+        private void _fileWatcher_Created(object sender, FileSystemEventArgs e) {
+            LoadFrames();
+        }
+
         public void RefreshFrames(string[] paths) {
             _frames.Clear();
             MemoryStream blank = new MemoryStream();
@@ -58,9 +75,12 @@ namespace RoleplayingVoice {
         }
 
         public void LoadFrames() {
-            string path = Path.Combine(_plugin.Config.CacheFolder, @"PhotoFrames\");
-            if (!File.Exists(path)) {
-                RefreshFrames(Directory.GetFiles(path, "*.png"));
+            string path = _fileWatcher.Path;
+            if (File.Exists(path)) {
+                var files = Directory.GetFiles(path, "*.png");
+                if (files.Length > 0) {
+                    RefreshFrames(files);
+                }
             }
         }
 
@@ -71,7 +91,7 @@ namespace RoleplayingVoice {
         }
         public override void Draw() {
             try {
-                if (_frames != null && _frames.Count > 0) {
+                if (_frames != null && _frames.Count > 0 && _currentFrame < _frames.Count) {
                     textureWrap = _pluginInterface.UiBuilder.LoadImage(_frames[_currentFrame]);
                     ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
                 }

@@ -272,6 +272,7 @@ namespace RoleplayingVoice {
                         foreach (string file in files) {
                             File.Copy(files[0], Path.Combine(path, Path.GetFileName(files[0])));
                         }
+                        PluginReference.GposeWindow.LoadFrames();
                     }
                 }
                 if (clientState != null) {

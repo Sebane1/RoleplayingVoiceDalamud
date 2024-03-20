@@ -211,6 +211,7 @@ namespace RoleplayingVoice {
         public Queue<string> FastMessageQueue { get => _fastMessageQueue; set => _fastMessageQueue = value; }
         public Queue<string> MessageQueue { get => _messageQueue; set => _messageQueue = value; }
         public IDragDropManager DragDrop { get => _dragDrop; set => _dragDrop = value; }
+        internal GposeWindow GposeWindow { get => _gposeWindow; set => _gposeWindow = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -326,7 +327,7 @@ namespace RoleplayingVoice {
                 if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
                     _chat.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
                 }
-                _gposeWindow.LoadFrames();
+                _gposeWindow.Initialize();
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
