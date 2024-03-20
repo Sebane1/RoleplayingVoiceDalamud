@@ -64,7 +64,9 @@ namespace RoleplayingVoice {
 
         public void LoadFrames() {
             string path = Path.Combine(_plugin.Config.CacheFolder, @"PhotoFrames\");
-            RefreshFrames(Directory.GetFiles(path, "*.png"));
+            if (!File.Exists(path)) {
+                RefreshFrames(Directory.GetFiles(path, "*.png"));
+            }
         }
 
         public void SetFrame(int i) {
