@@ -24,6 +24,7 @@ namespace RoleplayingVoice {
         private string _path;
         private FileSystemWatcher _fileWatcher;
         private string path;
+        private bool _alreadyLoadingFrames;
 
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<string> FrameNames { get => _frameName; set => _frameName = value; }
@@ -57,6 +58,7 @@ namespace RoleplayingVoice {
 
         public void RefreshFrames(string[] paths) {
             _frames.Clear();
+            _frameName.Clear();
             MemoryStream blank = new MemoryStream();
             Bitmap none = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
             Graphics graphics = Graphics.FromImage(none);
@@ -75,13 +77,17 @@ namespace RoleplayingVoice {
         }
 
         public void LoadFrames() {
-            string path = _path;
-            bool value = Directory.Exists(path);
-            if (value) {
-                var files = Directory.GetFiles(path, "*.png");
-                if (files.Length > 0) {
-                    RefreshFrames(files);
+            if (!_alreadyLoadingFrames) {
+                _alreadyLoadingFrames = true;
+                string path = _path;
+                bool value = Directory.Exists(path);
+                if (value) {
+                    var files = Directory.GetFiles(path, "*.png");
+                    if (files.Length > 0) {
+                        RefreshFrames(files);
+                    }
                 }
+                _alreadyLoadingFrames = false;
             }
         }
 
