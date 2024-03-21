@@ -2,6 +2,7 @@
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
 using NAudio.Lame;
@@ -99,7 +100,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                     _plugin.MediaManager.PlayAudioStream(new DummyObject(),
                                         pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
-                                            _hook.SendAsyncKey(Keys.NumPad0);
+                                            if (_hook != null) {
+                                                try {
+                                                    _hook.SendAsyncKey(Keys.NumPad0);
+                                                } catch {
+
+                                                }
+                                            }
                                         }
                                     : null);
                                 } catch (Exception e) {
@@ -216,8 +223,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                     stream.Value ? CheckForDefinedPitch(nameToUse) : CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f), 0,
                    _plugin.Config.AutoTextAdvance ? delegate {
                        //_hook.FocusWindow();
-                       _hook.SendAsyncKey(Keys.NumPad0);
-                       //_hook.SendSyncKey(Keys.NumPad0);
+                       if (_hook != null) {
+                           try {
+                               _hook.SendAsyncKey(Keys.NumPad0);
+                           } catch {
+
+                           }
+                           //_hook.SendSyncKey(Keys.NumPad0);
+                       }
                    }
                     : null);
                     _startedNewDialogue = true;
