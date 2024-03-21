@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Dalamud.Hooking;
 using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.System.Resource.Handle;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud;
-using RoleplayingVoiceDalamud.Voice;
 
 namespace SoundFilter {
     /// <summary>
@@ -58,8 +55,6 @@ namespace SoundFilter {
 
         private Hook<LoadSoundFileDelegate>? LoadSoundFileHook { get; set; }
         public Plugin Plugin { get; }
-
-        private AddonTalkHandler _addonTalkhandler;
 
         #endregion
 
@@ -110,9 +105,8 @@ namespace SoundFilter {
         public bool Muted { get => muted; set => muted = value; }
         public List<string> Blacklist { get => _blacklist; set => _blacklist = value; }
 
-        public Filter(Plugin plugin, AddonTalkHandler addonTalkHander) {
+        public Filter(Plugin plugin) {
             this.Plugin = plugin;
-            _addonTalkhandler = addonTalkHander;
             this.WasStreamingEnabled = this.Streaming;
             this.Streaming = false;
 

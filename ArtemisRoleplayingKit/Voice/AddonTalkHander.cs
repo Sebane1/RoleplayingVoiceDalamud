@@ -48,7 +48,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             _clientState = clientState;
             framework.Update += Framework_Update;
             _plugin = plugin;
-            _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
             _hook = new FFXIVHook();
             _hook.Hook(Process.GetCurrentProcess());
         }

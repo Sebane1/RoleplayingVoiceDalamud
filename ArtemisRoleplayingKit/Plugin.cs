@@ -189,7 +189,7 @@ namespace RoleplayingVoice {
         internal Filter Filter {
             get {
                 if (_filter == null) {
-                    _filter = new Filter(this, _addonTalkHandler);
+                    _filter = new Filter(this);
                     _filter.Enable();
                 }
                 return _filter;
@@ -212,6 +212,7 @@ namespace RoleplayingVoice {
         public Queue<string> MessageQueue { get => _messageQueue; set => _messageQueue = value; }
         public IDragDropManager DragDrop { get => _dragDrop; set => _dragDrop = value; }
         internal GposeWindow GposeWindow { get => _gposeWindow; set => _gposeWindow = value; }
+        public AddonTalkHandler AddonTalkHandler { get => _addonTalkHandler; set => _addonTalkHandler = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -308,7 +309,7 @@ namespace RoleplayingVoice {
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();
                 CheckDependancies();
-                Filter = new Filter(this, _addonTalkHandler);
+                Filter = new Filter(this);
                 Filter.Enable();
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
                 RefreshData(false);
