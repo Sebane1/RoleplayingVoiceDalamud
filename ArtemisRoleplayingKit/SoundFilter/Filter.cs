@@ -107,6 +107,7 @@ namespace SoundFilter {
 
         public Filter(Plugin plugin) {
             this.Plugin = plugin;
+
             this.WasStreamingEnabled = this.Streaming;
             this.Streaming = false;
 

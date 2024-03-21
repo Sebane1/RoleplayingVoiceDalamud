@@ -987,6 +987,7 @@ namespace RoleplayingVoice {
             uint masterVolume = 0;
             uint soundEffectVolume = 0;
             try {
+                _mediaManager.AudioPlayerType = (AudioOutputType)config.AudioOutputType;
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
                         _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *

@@ -2,6 +2,7 @@
 using Dalamud.Plugin;
 using Newtonsoft.Json;
 using RoleplayingMediaCore.AudioRecycler;
+using RoleplayingVoiceCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,6 +31,7 @@ namespace RoleplayingVoice {
         private string streamPath = "";
         private bool _autoTextAdvance = true;
         private bool _replaceVoicedARRCutscenes = true;
+        private int _audioOutputType = 0;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -101,6 +103,7 @@ namespace RoleplayingVoice {
 
         public bool AutoTextAdvance { get => _autoTextAdvance; set => _autoTextAdvance = value; }
         public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
+        public int AudioOutputType { get => _audioOutputType; set => _audioOutputType = value; }
 
         #endregion
 

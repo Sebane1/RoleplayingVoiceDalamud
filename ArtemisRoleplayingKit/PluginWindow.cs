@@ -22,6 +22,7 @@ using Dalamud.Plugin.Services;
 using Dalamud.Hooking;
 using FFBardMusicPlayer.FFXIV;
 using System.Windows.Forms;
+using RoleplayingVoiceCore;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -29,6 +30,7 @@ namespace RoleplayingVoice {
         RoleplayingMediaManager _manager = null;
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
+        BetterComboBox _audioOutputType;
         private FileDialogManager fileDialogManager;
         private FFXIVHook hook;
         private IClientState clientState;
@@ -96,6 +98,7 @@ namespace RoleplayingVoice {
             fileDialogManager = new FileDialogManager();
             hook = new FFXIVHook();
             hook.Hook(Process.GetCurrentProcess());
+
         }
 
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
@@ -117,6 +120,7 @@ namespace RoleplayingVoice {
             set {
                 configuration = value;
                 if (configuration != null) {
+                    _audioOutputType = new BetterComboBox("##audioOutputMethod", Enum.GetNames(typeof(AudioOutputType)).ToArray(), 0, 200);
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = configuration.ApiKey != null &&
                     configuration.ApiKey.All(c => char.IsAsciiLetterOrDigit(c)) ? configuration.ApiKey : "";
@@ -137,6 +141,7 @@ namespace RoleplayingVoice {
                     _npcSpeechGenerationDisabled = configuration.NpcSpeechGenerationDisabled;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
+                    _audioOutputType.SelectedIndex = configuration.AudioOutputType;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -501,6 +506,7 @@ namespace RoleplayingVoice {
                 configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
                 configuration.AutoTextAdvance = _npcAutoTextAdvance;
                 configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
+                configuration.AudioOutputType = _audioOutputType.SelectedIndex;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -837,6 +843,9 @@ namespace RoleplayingVoice {
             ImGui.Text("NPC Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 0.7f);
+            ImGui.Text("Audio Output System (Change if you notice playback issues)");
+            _audioOutputType.Width = (int)ImGui.GetContentRegionMax().X;
+            _audioOutputType.Draw();
             if (ImGui.Button("Volume Fix", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 PluginReference.MediaManager.VolumeFix();
             }
