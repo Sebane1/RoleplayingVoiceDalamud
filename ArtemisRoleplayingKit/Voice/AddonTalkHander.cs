@@ -221,14 +221,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                     , SoundType.NPC, true, CheckIfshouldUseSmbPitch(nameToUse),
                     stream.Value ? CheckForDefinedPitch(nameToUse) : CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f), 0,
                    _plugin.Config.AutoTextAdvance ? delegate {
-                       //_hook.FocusWindow();
                        if (_hook != null) {
                            try {
                                _hook.SendAsyncKey(Keys.NumPad0);
                            } catch {
 
                            }
-                           //_hook.SendSyncKey(Keys.NumPad0);
                        }
                    }
                     : null);
@@ -271,7 +269,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 race = character.Customize[(int)CustomizeIndex.Race];
                                 body = character.Customize[(int)CustomizeIndex.ModelType];
 #if DEBUG
-                                _plugin.Chat.Print(item.Name.TextValue + " is model type " + body);
+                                _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
 #endif
                                 return character;
                             }
@@ -289,7 +287,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             race = character.Customize[(int)CustomizeIndex.Race];
                             body = character.Customize[(int)CustomizeIndex.ModelType];
 #if DEBUG
-                            _plugin.Chat.Print(item.Name.TextValue + " is model type " + body);
+                            _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
 #endif
                             return character;
                         }
@@ -400,6 +398,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk") || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")) {
                 return "Kop";
+            }
+            if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
+                gender = true;
             }
             switch (race) {
                 case 0:
