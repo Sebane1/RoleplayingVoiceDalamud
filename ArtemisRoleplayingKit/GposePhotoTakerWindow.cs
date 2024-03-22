@@ -28,7 +28,7 @@ namespace RoleplayingVoice {
             base("Gpose Photo Window", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoDecoration
                 | ImGuiWindowFlags.NoTitleBar, false) {
             //IsOpen = true;
-            Size = new Vector2(250, 110);
+            Size = new Vector2(350, 150);
             SizeCondition = ImGuiCond.None;
             _pluginInterface = pluginInterface;
             Position = new Vector2(0, 0);

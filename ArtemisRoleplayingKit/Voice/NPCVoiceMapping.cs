@@ -169,6 +169,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Varis zos Galvus", "Vzosgal");
             values.Add("Zenos", "Zyaegal");
             values.Add("Gaius", "Gvanbael");
+            values.Add("Menacing Mercenary", "Gvanbael");
             values.Add("Nero", "Ntolscae");
             values.Add("Runar", "Rar");
             values.Add("Estinien", "Ewyrm");
