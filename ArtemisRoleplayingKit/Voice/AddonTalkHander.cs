@@ -257,14 +257,40 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Lyna",
                     "Beq Lugg"
                 };
+                List<string> npcBlacklist = new List<string>(){
+                    "Journeyman Salvager",
+                    "Materia Melder",
+                    "Masked Mage",
+                    "Steward",
+                    "Hokonin",
+                    "Material Supplier",
+                    "Junkmonger",
+                    "Mender",
+                    "Allagan Node"
+                };
+                foreach (var item in objects) {
+                    if (!npcNames.Contains(item.Name.TextValue) && !string.IsNullOrEmpty(item.Name.TextValue)) {
+                        Character character = item as Character;
+                        if (character != null && character != _clientState.LocalPlayer) {
+                            if (character.Customize[(byte)CustomizeIndex.ModelType] > 0) {
+                                if (item.ObjectKind == ObjectKind.EventNpc && !item.Name.TextValue.Contains("Estate")) {
+                                    npcNames.Add(item.Name.TextValue);
+                                }
+                            }
+                        }
+                    }
+                }
                 foreach (var item in _namesToRemove) {
                     npcNames.Remove(item);
                 }
-                foreach (var item in objects) {
-                    foreach (var name in npcNames) {
-                        if (item.Name.TextValue.Contains(name)) {
+                foreach (var item in npcBlacklist) {
+                    npcNames.Remove(item);
+                }
+                foreach (var name in npcNames) {
+                    foreach (var item in objects) {
+                        if (item.Name.TextValue.Contains(name) && !string.IsNullOrEmpty(item.Name.TextValue)) {
                             Character character = item as Character;
-                            if (character != null) {
+                            if (character != null && character != _clientState.LocalPlayer) {
                                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                                 race = character.Customize[(int)CustomizeIndex.Race];
                                 body = character.Customize[(int)CustomizeIndex.ModelType];
