@@ -14,6 +14,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Hilda", "Hda");
             values.Add("Honoroit", "Hroit");
             values.Add("Ilberd", "Ird");
+            values.Add("Alpha", "Kop");
 
             values.Add("Y'shtola", "Yrhul");
             values.Add("Cultured Conjurer", "Yrhul");
@@ -29,6 +30,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Crystal Exarch", "Gia");
             values.Add("Minfilia", "Mward");
             values.Add("Ryne", "Mward");
+
             //values.Add("Louisoix", "Leve");
             values.Add("Papalymo", "Ptotol");
             values.Add("Short-tempered Thaumaturge", "Ptotol");
@@ -87,6 +89,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Tsukuyomi", "Tomi");
             values.Add("Katliss", "Kliss");
             values.Add("Theyler", "Ter");
+            values.Add("Gaia", "irhm");
             //values.Add("Jessie", "Jjaye");
 
             values.Add("Emet-Selch", "Eselch");
@@ -160,6 +163,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Ameliance", "Aiance");
             values.Add("Moogle", "Kop");
             values.Add("Kuplo Kopp", "Kop");
+            values.Add("Sula", "tf1");
 
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
