@@ -94,20 +94,23 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (_currentDialoguePaths.Count > 0) {
                             if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
                                 try {
-                                    ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                                    WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                                    var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                                    _plugin.MediaManager.PlayAudioStream(new DummyObject(),
-                                        pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
-                                            if (_hook != null) {
-                                                try {
-                                                    _hook.SendAsyncKey(Keys.NumPad0);
-                                                } catch {
+                                    var otherData = _clientState.LocalPlayer.OnlineStatus;
+                                    if (otherData.Id == 15) {
+                                        ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                                        WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                                        var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                                        _plugin.MediaManager.PlayAudioStream(new DummyObject(),
+                                            pcmStream, SoundType.NPC, false, false, 1, 0, _plugin.Config.AutoTextAdvance ? delegate {
+                                                if (_hook != null) {
+                                                    try {
+                                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                                    } catch {
 
+                                                    }
                                                 }
                                             }
-                                        }
-                                    : null);
+                                        : null);
+                                    }
                                 } catch (Exception e) {
                                     Dalamud.Logging.PluginLog.LogError(e, e.Message);
                                 }

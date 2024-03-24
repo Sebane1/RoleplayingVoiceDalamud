@@ -1332,12 +1332,9 @@ namespace RoleplayingVoice {
         private void PlayerCrafting(string playerName, SeString message,
             XivChatType type, CharacterVoicePack characterVoicePack, ref string value) {
             value = characterVoicePack.GetMisc(message.TextValue);
-            if (string.IsNullOrEmpty(value)) {
-                value = characterVoicePack.GetReadying(message.TextValue);
-            }
         }
         public bool IsDicipleOfTheHand(string value) {
-            List<string> jobs = new List<string>() { "ALC", "ARM", "BSM", "CUL", "CRP", "GSM", "LTW", "WVR" };
+            List<string> jobs = new List<string>() { "ALC", "ARM", "BSM", "CUL", "CRP", "GSM", "LTW", "WVR", "BTN", "MIN", "FSH" };
             return jobs.Contains(value.ToUpper());
         }
         #endregion
