@@ -6,6 +6,8 @@ using System.Text.RegularExpressions;
 
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
+        private List<string> _castedAttack = new List<string>();
+        private List<string> _meleeAttack = new List<string>();
         private List<string> _attack = new List<string>();
         private List<string> _hurt = new List<string>();
         private List<string> _death = new List<string>();
@@ -42,7 +44,11 @@ namespace RoleplayingVoiceDalamud {
             if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {
                 bool emoteAdded = false;
                 if (!emoteAdded) {
-                    if (file.ToLower().Contains("casting attack")) {
+                    if (file.ToLower().Contains("melee attack")) {
+                        _meleeAttack.Add(file);
+                    } else if (file.ToLower().Contains("casted attack")) {
+                        _castedAttack.Add(file);
+                    } else if (file.ToLower().Contains("casting attack")) {
                         _castingAttack.Add(file);
                     } else if (file.ToLower().Contains("attack")
                             || file.ToLower().Contains("extra")) {
@@ -109,6 +115,31 @@ namespace RoleplayingVoiceDalamud {
                 return string.Empty;
             }
         }
+
+        public string GetMeleeAction(string value) {
+            if (_meleeAttack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+                string action = _meleeAttack[_random.Next(0, _meleeAttack.Count)];
+                if (lastAction != action) {
+                    return lastAction = action;
+                }
+                return "";
+            } else {
+                return string.Empty;
+            }
+        }
+
+        public string GetCastedAction(string value) {
+            if (_castedAttack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+                string action = _castedAttack[_random.Next(0, _castedAttack.Count)];
+                if (lastAction != action) {
+                    return lastAction = action;
+                }
+                return "";
+            } else {
+                return string.Empty;
+            }
+        }
+
         public string GetMisc(string value) {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;

@@ -1162,18 +1162,27 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
         private void LocalPlayerCombat(string playerName, SeString message,
     XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
             if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
-                if (!message.TextValue.Contains("mount")) {
+                if (!LanguageSpecificMount(_clientState.ClientLanguage, message)) {
                     value = characterVoicePack.GetMisc(message.TextValue);
                 } else {
                     _lastMountingMessage = message.TextValue;
                 }
                 if (string.IsNullOrEmpty(value)) {
                     if (attackCount == 0) {
-                        value = characterVoicePack.GetAction(message.TextValue);
+                        if (LanguageSpecificHit(_clientState.ClientLanguage, message)) {
+                            value = characterVoicePack.GetMeleeAction(message.TextValue);
+                        }
+                        if (LanguageSpecificCast(_clientState.ClientLanguage, message)) {
+                            value = characterVoicePack.GetCastedAction(message.TextValue);
+                        }
+                        if (string.IsNullOrEmpty(value)) {
+                            value = characterVoicePack.GetAction(message.TextValue);
+                        }
                         attackCount++;
                     } else {
                         attackCount++;
@@ -1188,8 +1197,7 @@ namespace RoleplayingVoice {
             } else if (type == (XivChatType)2730) {
                 value = characterVoicePack.GetMissed();
             } else if (type == (XivChatType)2219) {
-                if (message.TextValue.Contains("ready") ||
-                    message.TextValue.Contains("readies")) {
+                if (LanguageSpecificReadying(_clientState.ClientLanguage, message)) {
                     value = characterVoicePack.GetMisc(message.TextValue);
                     if (string.IsNullOrEmpty(value)) {
                         value = characterVoicePack.GetReadying(message.TextValue);
@@ -1212,8 +1220,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } else if (type == (XivChatType)2731) {
-                if (message.TextValue.Contains("ready") ||
-                    message.TextValue.Contains("readies")) {
+                if (LanguageSpecificReadying(_clientState.ClientLanguage, message)) {
                     value = characterVoicePack.GetMisc(message.TextValue);
                     if (string.IsNullOrEmpty(value)) {
                         value = characterVoicePack.GetReadying(message.TextValue);
@@ -1243,23 +1250,131 @@ namespace RoleplayingVoice {
         }
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
             CharacterVoicePack characterVoicePack, ref string value) {
-            if (message.TextValue.Contains("hit") ||
-              message.TextValue.Contains("uses") ||
-              message.TextValue.Contains("casts")) {
+
+            if (LanguageSpecificHit(_clientState.ClientLanguage, message) || 
+                LanguageSpecificCast(_clientState.ClientLanguage, message)) {
                 value = characterVoicePack.GetAction(message.TextValue);
-            } else if (message.TextValue.Contains("defeated")) {
-                value = characterVoicePack.GetDeath();
-            } else if (message.TextValue.Contains("miss")) {
-                value = characterVoicePack.GetMissed();
-            } else if (message.TextValue.Contains("readies")) {
-                value = characterVoicePack.GetReadying(message.TextValue);
-            } else if (message.TextValue.Contains("casting")) {
-                value = characterVoicePack.GetCastingAttack();
-            } else if (message.TextValue.Contains("revive")) {
-                value = characterVoicePack.GetRevive();
-            } else if (message.TextValue.Contains("damage")) {
-                value = characterVoicePack.GetHurt();
             }
+            if (string.IsNullOrEmpty(value)) {
+                if (LanguageSpecificHit(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetMeleeAction(message.TextValue);
+                } else if (LanguageSpecificCast(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetCastedAction(message.TextValue);
+                } else if (LanguageSpecificDefeat(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetDeath();
+                } else if (LanguageSpecificMiss(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetMissed();
+                } else if (LanguageSpecificReadying(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetReadying(message.TextValue);
+                } else if (LanguageSpecificCasting(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetCastingAttack();
+                } else if (LanguageSpecificRevive(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetRevive();
+                } else if (LanguageSpecificHurt(_clientState.ClientLanguage, message)) {
+                    value = characterVoicePack.GetHurt();
+                }
+            }
+        }
+        private bool LanguageSpecificHurt(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("damage");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("dégâts");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("schaden");
+            }
+            return false;
+        }
+        private bool LanguageSpecificRevive(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("revive");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("réanimes") || message.TextValue.ToLower().Contains("réanimée");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("belebst") || message.TextValue.ToLower().Contains("wiederbelebt");
+            }
+            return false;
+        }
+        private bool LanguageSpecificCasting(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("casting");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("lancer");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("ihren");
+            }
+            return false;
+        }
+        private bool LanguageSpecificMiss(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("misses");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("manque");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("ihrem");
+            }
+            return false;
+        }
+        private bool LanguageSpecificDefeat(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("defeated");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("vaincue");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("besiegt");
+            }
+            return false;
+        }
+        private bool LanguageSpecificHit(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("hit") || message.TextValue.ToLower().Contains("hits");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("frapper") || message.TextValue.ToLower().Contains("frappe");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("triffst") || message.TextValue.ToLower().Contains("trifft");
+            }
+            return false;
+        }
+        private bool LanguageSpecificCast(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("hit") || message.TextValue.ToLower().Contains("hits");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("lancé") 
+                        || message.TextValue.ToLower().Contains("jette") 
+                        || message.TextValue.ToLower().Contains("jeté");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("sprichst") || message.TextValue.ToLower().Contains("spricht");
+            }
+            return false;
+        }
+        private bool LanguageSpecificMount(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("mount") || message.TextValue.ToLower().Contains("mounts");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("montes") || message.TextValue.ToLower().Contains("monte");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("besteigst") || message.TextValue.ToLower().Contains("besteigt");
+            }
+            return false;
+        }
+        private bool LanguageSpecificReadying(Dalamud.ClientLanguage language, SeString message) {
+            switch (language) {
+                case Dalamud.ClientLanguage.English:
+                    return message.TextValue.ToLower().Contains("ready") || message.TextValue.ToLower().Contains("readies");
+                case Dalamud.ClientLanguage.French:
+                    return message.TextValue.ToLower().Contains("prépares") || message.TextValue.ToLower().Contains("prépare");
+                case Dalamud.ClientLanguage.German:
+                    return message.TextValue.ToLower().Contains("bereitest") || message.TextValue.ToLower().Contains("bereitet");
+            }
+            return false;
         }
         #endregion
         #region Player Movement Trigger
