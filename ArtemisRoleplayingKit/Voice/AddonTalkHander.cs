@@ -217,7 +217,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message.TextValue)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, _clientState.LocalPlayer.OnlineStatus.Id != 15);
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value, nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, mp3Stream
