@@ -80,6 +80,7 @@ namespace RoleplayingVoice {
         private bool _npcSpeechGenerationDisabled;
         private bool _npcAutoTextAdvance;
         private bool _replaceVoicedARRCutscenes;
+        private bool _refreshing;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -102,14 +103,14 @@ namespace RoleplayingVoice {
         }
 
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
-            if (voicePackComboBox != null && _voicePackList != null) {
+            if (voicePackComboBox != null && _voicePackList != null && !_refreshing) {
                 characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
                 Save();
             }
         }
 
         private void VoiceComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
-            if (voiceComboBox != null && _voiceList != null) {
+            if (voiceComboBox != null && _voiceList != null && !_refreshing) {
                 characterVoice = _voiceList[voiceComboBox.SelectedIndex];
                 Save();
             }
@@ -553,6 +554,7 @@ namespace RoleplayingVoice {
         }
 
         public async void RefreshVoices() {
+            _refreshing = true;
             try {
                 if (clientState.LocalPlayer != null) {
                     List<string> voicePacks = new List<string>();
@@ -594,7 +596,6 @@ namespace RoleplayingVoice {
                         }
                     }
                     if (_manager != null) {
-                        _manager.RefreshElevenlabsSubscriptionInfo();
                         var newVoiceList = await _manager.GetVoiceList();
                         if (newVoiceList != null && newVoiceList.Length > 0 && newVoiceList.Length > voiceComboBox.Contents.Length) {
                             _voiceList = newVoiceList;
@@ -604,6 +605,7 @@ namespace RoleplayingVoice {
                         if (_voiceList != null && _voiceList.Length > 0) {
                             voiceComboBox.Contents = _voiceList;
                         }
+                        _manager.RefreshElevenlabsSubscriptionInfo();
                     }
                     if (configuration.Characters == null) {
                         configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
@@ -614,7 +616,8 @@ namespace RoleplayingVoice {
                                 voiceComboBox.Contents = _voiceList;
                                 if (voiceComboBox.Contents.Length > 0) {
                                     for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                        if (voiceComboBox.Contents[i].Contains(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                        string value = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
+                                        if (voiceComboBox.Contents[i].Contains(value) && !string.IsNullOrEmpty(value)) {
                                             voiceComboBox.SelectedIndex = i;
                                             break;
                                         }
@@ -637,6 +640,7 @@ namespace RoleplayingVoice {
                     PluginReference.RefreshData();
                 } catch (Exception ex) { }
             }
+            _refreshing = false;
         }
 
         internal class BetterComboBox {

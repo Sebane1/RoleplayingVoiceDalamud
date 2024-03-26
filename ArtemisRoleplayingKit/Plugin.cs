@@ -137,7 +137,7 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
 
-        private Dictionary<string, string> _animationMods = new Dictionary<string, string>();
+        private ConcurrentDictionary<string, string> _animationMods = new ConcurrentDictionary<string, string>();
         private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
@@ -380,7 +380,7 @@ namespace RoleplayingVoice {
             if (!_speechToTextManager.RpMode) {
                 _messageQueue.Enqueue(_speechToTextManager.FinalText);
             } else {
-                _messageQueue.Enqueue("\"" + _speechToTextManager.FinalText + "\"");
+                _messageQueue.Enqueue(@"/em says " + "\"" + _speechToTextManager.FinalText + "\"");
             }
         }
 
@@ -404,9 +404,15 @@ namespace RoleplayingVoice {
         public void InitialzeManager() {
             _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
             _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+            _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
             _window.Manager = _roleplayingMediaManager;
             _window.RefreshVoices();
         }
+
+        private void _roleplayingMediaManager_OnVoiceFailed(object sender, VoiceFailure e) {
+            Dalamud.Logging.PluginLog.LogError(e.Exception, e.Exception.Message);
+        }
+
         private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
             RefreshData();
         }
