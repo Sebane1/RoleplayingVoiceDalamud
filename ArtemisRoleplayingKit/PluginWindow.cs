@@ -362,6 +362,12 @@ namespace RoleplayingVoice {
             ImGui.Dummy(new Vector2(0, 10));
             ImGui.Checkbox("Sync Via Penumbra Refresh", ref _ignoreWhitelist);
             ImGui.TextWrapped("You will hear any user thats individually refreshed by another plugin (effectively relying on existing pairs from other plugins)");
+            ImGui.Dummy(new Vector2(0, 10));
+            if (ImGui.Button("Force Redownload Of New Sounds", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                PluginReference.CleanSounds();
+            }
+            ImGui.TextWrapped("If others have freshly changed their sound packs while still in your presence, you may need to refresh their sounds.");
+
         }
 
         private void SaveAndClose() {
@@ -899,6 +905,7 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Perform Emotes Based On Written Text");
             ImGui.TextWrapped("Your character will emote based on what you write in custom emotes. We recommend turning off log messages for emotes before using this feature.");
+
         }
 
         private void FileMove(ref string oldFolder, string newFolder) {

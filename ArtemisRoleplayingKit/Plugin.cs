@@ -2269,7 +2269,8 @@ namespace RoleplayingVoice {
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
                              "textadvance (Toggles automatic text advancement when community provided dialogue finishes)\r\n" +
                              "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n",
-                             "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)");
+                             "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)\r\n" +
+                             "clearsound (Stops all currently playing sounds, and clears out the sound cache for other players)");
                             break;
                         case "on":
                             config.AiVoiceActive = true;
@@ -2364,6 +2365,10 @@ namespace RoleplayingVoice {
                                 _chat.Print("ARR Voice Vanilla");
                             }
                             config.Save();
+                            break;
+                        case "clearsound":
+                            CleanSounds();
+                            _chat.Print("All Sounds Cleared!");
                             break;
                         case "catalogue":
                             if (splitArgs.Length > 1 && splitArgs[1] == "scan") {
