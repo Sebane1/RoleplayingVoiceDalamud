@@ -44,20 +44,21 @@ namespace RoleplayingVoiceDalamud {
             if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {
                 bool emoteAdded = false;
                 if (!emoteAdded) {
-                    if (file.ToLower().Contains("melee attack")) {
+                    string filteredString = StripNonCharacters(file.ToLower());
+                    if (filteredString.Contains("meleeattack")) {
                         _meleeAttack.Add(file);
-                    } else if (file.ToLower().Contains("casted attack")) {
+                    } else if (filteredString.Contains("castedattack")) {
                         _castedAttack.Add(file);
-                    } else if (file.ToLower().Contains("casting attack")) {
+                    } else if (filteredString.Contains("castingattack")) {
                         _castingAttack.Add(file);
-                    } else if (file.ToLower().Contains("attack")
-                            || file.ToLower().Contains("extra")) {
+                    } else if (filteredString.Contains("attack")
+                            || filteredString.Contains("extra")) {
                         _attack.Add(file);
-                    } else if (file.ToLower().Contains("hurt")) {
+                    } else if (filteredString.Contains("hurt")) {
                         _hurt.Add(file);
-                    } else if (file.ToLower().Contains("death")) {
+                    } else if (filteredString.Contains("death")) {
                         _death.Add(file);
-                    } else if (file.ToLower().Contains("limit")) {
+                    } else if (filteredString.Contains("limit")) {
                         _readying.Add(file);
                         AddMisc("shieldwall", file);
                         AddMisc("stronghold", file);
@@ -65,16 +66,16 @@ namespace RoleplayingVoiceDalamud {
                         AddMisc("landwaker", file);
                         AddMisc("darkforce", file);
                         AddMisc("gunmetalsoul", file);
-                    } else if (file.ToLower().Contains("casting heal")) {
+                    } else if (filteredString.Contains("castingheal")) {
                         _castingHeal.Add(file);
-                    } else if (file.ToLower().Contains("casting")) {
+                    } else if (filteredString.Contains("casting")) {
                         _castingAttack.Add(file);
                         _castingHeal.Add(file);
-                    } else if (file.ToLower().Contains("missed")) {
+                    } else if (filteredString.Contains("missed")) {
                         _missed.Add(file);
-                    } else if (file.ToLower().Contains("revive")) {
+                    } else if (filteredString.Contains("revive")) {
                         _revive.Add(file);
-                    } else if (file.ToLower().Contains("battle error")) {
+                    } else if (filteredString.Contains("battleerror")) {
                         AddMisc("invalidtarget", file);
                         AddMisc("targetisnotinrange", file);
                         AddMisc("targetisnotinlineofsight", file);
