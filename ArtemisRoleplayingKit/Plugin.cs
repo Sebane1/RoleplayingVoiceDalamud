@@ -1213,7 +1213,7 @@ namespace RoleplayingVoice {
                         castingCount++;
                     } else {
                         castingCount++;
-                        if (attackCount >= 3) {
+                        if (castingCount >= 3) {
                             castingCount = 0;
                         }
                         attackIntended = true;
