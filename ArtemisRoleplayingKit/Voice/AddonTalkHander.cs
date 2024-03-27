@@ -383,11 +383,40 @@ namespace RoleplayingVoiceDalamud.Voice {
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
             if (!gender && body != 4) {
+                switch (race) {
+                    case 0:
+                        pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
+                        break;
+                    case 1:
+                        pitchOffset = (((float)Math.Abs(random.Next(-50, 100)) / 100f) * range);
+                        break;
+                    case 2:
+                        pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
+                        break;
+                    case 3:
+                        pitchOffset = (((float)Math.Abs(random.Next(-50, 100)) / 100f) * range);
+                        break;
+                    case 4:
+                        pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
+                        break;
+                    case 5:
+                        pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
+                        break;
+                    case 6:
+                        pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
+                        break;
+                    case 7:
+                        pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
+                        break;
+                    case 8:
+                        pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
+                        break;
+                }
+            } else {
                 if (body == 4) {
                     switch (gender) {
                         case false:
                             pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
-                            isTinyRace = false;
                             break;
                         case true:
                             pitchOffset = (((float)random.Next(0, 100) / 100f) * range);
