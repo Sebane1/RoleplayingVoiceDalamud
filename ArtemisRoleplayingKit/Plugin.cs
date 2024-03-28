@@ -180,6 +180,7 @@ namespace RoleplayingVoice {
         private string _lastMountingMessage;
         private bool _mountMusicWasPlayed;
         private int _recentCFPop;
+        private int hurtCount;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -1245,7 +1246,17 @@ namespace RoleplayingVoice {
             } else if (type == (XivChatType)2106) {
                 value = characterVoicePack.GetRevive();
             } else if (type == (XivChatType)10409) {
-                value = characterVoicePack.GetHurt();
+                if (hurtCount == 0) {
+                    if (string.IsNullOrEmpty(value)) {
+                        value = characterVoicePack.GetHurt();
+                    }
+                    hurtCount++;
+                } else {
+                    hurtCount++;
+                    if (hurtCount >= 3) {
+                        hurtCount = 0;
+                    }
+                }
             }
         }
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
