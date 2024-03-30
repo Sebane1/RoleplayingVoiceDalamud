@@ -196,6 +196,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 }
                                 alreadyConfiguredBubbles = true;
+                                if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                                    _plugin.Config.NpcSpeechGenerationDisabled = Service.ClientState.ClientLanguage != Dalamud.ClientLanguage.English;
+                                }
                             }
                             _state = GetTalkAddonState();
                             if (_state == null) {
