@@ -16,6 +16,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Ilberd", "Ird");
             values.Add("Alpha", "Kop");
 
+            values.Add("King Thordan", "thord");
             values.Add("Y'shtola", "Yrhul");
             values.Add("Cultured Conjurer", "Yrhul");
             values.Add("Thancred", "Twaters");
@@ -215,6 +216,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
             values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
             values.Add(new KeyValuePair<string, bool>("Livia sas Junius", true));
+            values.Add(new KeyValuePair<string, bool>("King Thordan", true));
             //values.Add(new KeyValuePair<string, bool>("Mother Miournne", true));
             return values;
         }
@@ -230,6 +232,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Ramuh", 0.9f));
             values.Add(new KeyValuePair<string, float>("Moenbryda", 0.9f));
             values.Add(new KeyValuePair<string, float>("Nabriales", 1.05f));
+            values.Add(new KeyValuePair<string, float>("King Thordan", 0.9f));
             return values;
         }
     }
