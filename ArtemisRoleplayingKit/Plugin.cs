@@ -239,6 +239,7 @@ namespace RoleplayingVoice {
                 Service.GameInteropProvider = interopProvider;
                 Service.ChatGui = chat;
                 Service.ClientState = clientState;
+                Service.ObjectTable = objectTable;
                 this.pluginInterface = pi;
                 this._chat = chat;
                 this._clientState = clientState;

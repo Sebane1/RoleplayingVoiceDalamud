@@ -5,6 +5,7 @@ using Dalamud.Plugin.Services;
 namespace RoleplayingVoiceDalamud.Services;
 
 internal class Service {
+    public static IObjectTable ObjectTable { get; internal set; }
     [PluginService] internal static IFramework Framework { get; set; } = null!;
     [PluginService] internal static IClientState ClientState { get; set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; set; } = null!;

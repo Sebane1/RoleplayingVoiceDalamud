@@ -91,6 +91,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     switch (type) {
                         case XivChatType.NPCDialogueAnnouncements:
                             if (message.TextValue != _lastText && !Conditions.IsWatchingCutscene && !_blockAudioGeneration) {
+                                _lastText = message.TextValue;
                                 NPCText(sender.TextValue, message.TextValue.TrimStart('.'), true);
                             }
                             _blockAudioGeneration = false;
@@ -130,26 +131,28 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 extantMatch.TimeLastSeen_mSec = currentTime_mSec;
                             } else {
                                 _speechBubbleInfo.Add(npcBubbleInformaton);
-                                if (true) {
-                                    if (_blockAudioGeneration) {
+                                try {
+                                    if (!_blockAudioGeneration) {
                                         FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
                                         if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
                                             string nameID = character->DrawData.Top.Value.ToString() + character->DrawData.Head.Value.ToString() +
                                                character->DrawData.Feet.Value.ToString() + character->DrawData.Ear.Value.ToString() + speakerName.TextValue + character->GameObject.DataID;
-                                            string finalName = !string.IsNullOrEmpty(pActor->Name.TextValue) && Conditions.IsBoundByDuty ? pActor->Name.TextValue : nameID;
+                                            Character characterObject = GetCharacterFromId(character->GameObject.ObjectID);
+                                            string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) && Conditions.IsBoundByDuty ? characterObject.Name.TextValue : nameID;
                                             if (npcBubbleInformaton.MessageText.TextValue != _lastText) {
-                                                NPCText(nameID,
+                                                _lastText = npcBubbleInformaton.MessageText.TextValue;
+                                                NPCText(finalName,
                                                     npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
                                                     character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->GameObject.Position);
 #if DEBUG
-                                                _chatGui.Print(nameID);
+                                                _chatGui.Print(finalName);
+                                                _chatGui.Print(characterObject.Name);
 #endif
-                                                _lastText = npcBubbleInformaton.MessageText.TextValue;
                                             }
                                         }
                                     }
                                     _blockAudioGeneration = false;
-                                } else {
+                                } catch {
                                     NPCText(pActor->Name.TextValue, npcBubbleInformaton.MessageText.TextValue, true);
                                 }
                             }
@@ -160,6 +163,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                 Dalamud.Logging.PluginLog.Log(e, e.Message);
             }
             return _openChatBubbleHook.Original(pThis, pActor, pString, param3);
+        }
+        private Character GetCharacterFromId(uint id) {
+            foreach (GameObject gameObject in Service.ObjectTable) {
+                if (gameObject.ObjectId == id) {
+                    return gameObject as Character;
+                }
+            }
+            return null;
         }
         private void Framework_Update(IFramework framework) {
             if (!disposed)
