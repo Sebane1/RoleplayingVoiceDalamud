@@ -11,6 +11,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             var addonTalk = GetAddonTalk();
             return addonTalk == null ? null : TalkUtils.ReadTalkAddon(addonTalk);
         }
+        public unsafe AddonTalkText? ReadTextBattle() {
+            var addonTalk = GetAddonTalkBattle();
+            return addonTalk == null ? null : TalkUtils.ReadTalkAddon(addonTalk);
+        }
 
         public unsafe bool IsVisible() {
             var addonTalk = GetAddonTalk();
@@ -19,6 +23,9 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private unsafe AddonTalk* GetAddonTalk() {
             return (AddonTalk*)Address.ToPointer();
+        }
+        private unsafe AddonBattleTalk* GetAddonTalkBattle() {
+            return (AddonBattleTalk*)Address.ToPointer();
         }
     }
 }

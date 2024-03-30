@@ -57,6 +57,7 @@ using RoleplayingVoiceDalamud.Voice;
 using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.DragDrop;
+using RoleplayingVoiceDalamud.Services;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -233,6 +234,11 @@ namespace RoleplayingVoice {
             IDragDropManager dragDrop) {
             #region Constructor
             try {
+                Service.DataManager = dataManager;
+                Service.SigScanner = scanner;
+                Service.GameInteropProvider = interopProvider;
+                Service.ChatGui = chat;
+                Service.ClientState = clientState;
                 this.pluginInterface = pi;
                 this._chat = chat;
                 this._clientState = clientState;
@@ -286,7 +292,7 @@ namespace RoleplayingVoice {
                 _framework.Update += framework_Update;
                 _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this);
+                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner);
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
             } catch (Exception e) {
@@ -1262,7 +1268,7 @@ namespace RoleplayingVoice {
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
             CharacterVoicePack characterVoicePack, ref string value) {
 
-            if (LanguageSpecificHit(_clientState.ClientLanguage, message) || 
+            if (LanguageSpecificHit(_clientState.ClientLanguage, message) ||
                 LanguageSpecificCast(_clientState.ClientLanguage, message)) {
                 value = characterVoicePack.GetAction(message.TextValue);
             }
@@ -1357,8 +1363,8 @@ namespace RoleplayingVoice {
                 case Dalamud.ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("hit") || message.TextValue.ToLower().Contains("hits");
                 case Dalamud.ClientLanguage.French:
-                    return message.TextValue.ToLower().Contains("lancé") 
-                        || message.TextValue.ToLower().Contains("jette") 
+                    return message.TextValue.ToLower().Contains("lancé")
+                        || message.TextValue.ToLower().Contains("jette")
                         || message.TextValue.ToLower().Contains("jeté");
                 case Dalamud.ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("sprichst") || message.TextValue.ToLower().Contains("spricht");
@@ -2772,6 +2778,7 @@ namespace RoleplayingVoice {
                 if (_emoteReaderHook.OnEmote != null) {
                     _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
                 }
+                _addonTalkHandler?.Dispose();
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
             }

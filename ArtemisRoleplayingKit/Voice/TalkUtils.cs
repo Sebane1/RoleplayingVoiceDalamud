@@ -36,6 +36,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                 Text = ReadTextNode(talkAddon->AtkTextNode228),
             };
         }
+        public static unsafe AddonTalkText ReadTalkAddon(AddonBattleTalk* talkAddon) {
+            return new AddonTalkText {
+                Speaker = ReadTextNode(talkAddon->AtkTextNode220),
+                Text = ReadTextNode(talkAddon->AtkTextNode228),
+            };
+        }
 
         private static unsafe string ReadTextNode(AtkTextNode* textNode)
         {
