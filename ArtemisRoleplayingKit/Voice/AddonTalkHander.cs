@@ -144,10 +144,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 NPCText(finalName,
                                                     npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
                                                     character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->GameObject.Position);
-#if DEBUG
-                                                _chatGui.Print(finalName);
-                                                _chatGui.Print(characterObject.Name);
-#endif
                                             }
                                         }
                                     }
@@ -355,7 +351,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _currentSpeechObject = currentSpeechObject;
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
@@ -384,7 +380,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _currentSpeechObject = currentSpeechObject;
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
@@ -490,6 +486,10 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string StripPlayerNameFromNPCDialogue(string value) {
             string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
             return value.Replace(mainCharacterName[0], null).Replace(mainCharacterName[1], null);
+        }
+        private string StripPlayerNameFromNPCDialogueArc(string value) {
+            string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
+            return value.Replace(mainCharacterName[0] + " " + mainCharacterName[1], "Arc").Replace(mainCharacterName[0], "Arc").Replace(mainCharacterName[1], "Arc");
         }
         private bool CheckIfshouldUseSmbPitch(string npcName) {
             foreach (var value in NPCVoiceMapping.GetEchoType()) {

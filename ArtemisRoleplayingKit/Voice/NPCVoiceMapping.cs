@@ -15,7 +15,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Honoroit", "Hroit");
             values.Add("Ilberd", "Ird");
             values.Add("Alpha", "Kop");
-
             values.Add("King Thordan", "thord");
             values.Add("Y'shtola", "Yrhul");
             values.Add("Cultured Conjurer", "Yrhul");
@@ -31,15 +30,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Crystal Exarch", "Gia");
             values.Add("Minfilia", "Mward");
             values.Add("Ryne", "Mward");
-
-            //values.Add("Louisoix", "Leve");
             values.Add("Papalymo", "Ptotol");
             values.Add("Short-tempered Thaumaturge", "Ptotol");
-            //values.Add("Moenbryda", "Mwilf");
-            //values.Add("F'lhaminn", "Fqesh");
             values.Add("Krile", "Kmayerbal");
             values.Add("Matoya", "Moya");
-
             values.Add("Kan-E-Senna", "Kes");
             values.Add("Merlwyb", "Mbloe");
             values.Add("Nanamo Ul Namo", "Nulnamo");
@@ -49,7 +43,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Taciturn Temple Knight", "Lcia");
             values.Add("Raubahn", "Rahn");
             values.Add("Pipin", "Pin");
-
             values.Add("Marques", "Cnangarl");
             values.Add("Cid", "Cnangarl");
             values.Add("Biggs", "Bman");
@@ -59,7 +52,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("House", "Hfk");
             values.Add("Warrior of Darkness", "ard");
             values.Add("Ardbert", "ard");
-
             values.Add("Arenvald", "Avald");
             values.Add("Azemi", "Azmi");
             values.Add("Bunchin", "Bchin");
@@ -91,10 +83,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Katliss", "Kliss");
             values.Add("Theyler", "Ter");
             values.Add("Gaia", "irhm");
-            //values.Add("Jessie", "Jjaye");
-
             values.Add("Emet-Selch", "Eselch");
-
             values.Add("Almet", "Aet");
             values.Add("Beq Lugg", "Bug");
             values.Add("Bragi", "Bi");
@@ -118,7 +107,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Uimet", "Uet");
             values.Add("Wrenden", "Wen");
             values.Add("Ys Iala", "Yala");
-
             values.Add("Hoary Boulder", "Hlder");
             values.Add("Erenvile", "Eille");
             values.Add("Fourchenault", "Fault");
@@ -165,12 +153,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Moogle", "Kop");
             values.Add("Kuplo Kopp", "Kop");
             values.Add("Sula", "tf1");
-
             values.Add("Sevrin", "Sard");
             values.Add("Masked Mage", "Lbrea");
             values.Add("???", "Sys");
             values.Add("Ifrit", "Rava");
-
             values.Add("Varis zos Galvus", "Vzosgal");
             values.Add("Zenos", "Zyaegal");
             values.Add("Gaius", "Gvanbael");
@@ -187,9 +173,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Nabriales", "Lbrea");
             values.Add("Gosetsu", "Gever");
             values.Add("Yotsuyu", "Ygoeb");
-
             values.Add("Radovan", "Rvan");
-
             return values;
         }
         public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {
