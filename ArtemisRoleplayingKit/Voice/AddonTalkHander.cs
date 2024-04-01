@@ -243,7 +243,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                                 var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                                 _plugin.MediaManager.PlayAudioStream(new DummyObject(),
-                                                    pcmStream, SoundType.NPC, false, false, 1, 0, Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78, _plugin.Config.AutoTextAdvance ? delegate {
+                                                    pcmStream, SoundType.NPC, false, false, 1, 0, true, _plugin.Config.AutoTextAdvance ? delegate {
                                                         if (_hook != null) {
                                                             try {
                                                                 _hook.SendAsyncKey(Keys.NumPad0);
