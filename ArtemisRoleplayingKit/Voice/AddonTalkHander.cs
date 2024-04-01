@@ -95,7 +95,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         case XivChatType.NPCDialogueAnnouncements:
                             if (message.TextValue != _lastText && !Conditions.IsWatchingCutscene && !_blockAudioGeneration) {
                                 _lastText = message.TextValue;
-                                NPCText(sender.TextValue, message.TextValue.TrimStart('.'), true);
+                                NPCText(sender.TextValue, message.TextValue.TrimStart('.'), true, !Conditions.IsBoundByDuty);
 #if DEBUG
                                 _plugin.Chat.Print("Sent audio from NPC chat.");
 #endif
@@ -355,7 +355,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
-        private async void NPCText(string npcName, string message, bool ignoreAutoProgress) {
+        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false) {
             try {
                 bool gender = false;
                 byte race = 0;
@@ -371,7 +371,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) : CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC, true, useSmbPitch, pitch, 0, Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78,
+                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC, true, useSmbPitch, pitch, 0, 
+                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode,
                    (_plugin.Config.AutoTextAdvance && !ignoreAutoProgress) ? delegate {
                        if (_hook != null) {
                            try {
