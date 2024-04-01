@@ -57,6 +57,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool alreadyConfiguredBubbles;
         private ISigScanner _scanner;
         private bool disposed;
+        Stopwatch bubbleCooldown = new Stopwatch();
         // private readonly Object _speechBubbleInfoLockObj = new();
         //private readonly Object mGameChatInfoLockObj = new();
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -79,6 +80,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             _chatGui.ChatMessage += _chatGui_ChatMessage;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _scanner = sigScanner;
+            bubbleCooldown.Start();
         }
 
         private void _clientState_TerritoryChanged(ushort obj) {
@@ -86,14 +88,19 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _chatGui_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_clientState.IsLoggedIn && 
+                !_plugin.Config.NpcSpeechGenerationDisabled && bubbleCooldown.ElapsedMilliseconds > 200 && Conditions.IsBoundByDuty) {
                 if (_state == null) {
                     switch (type) {
                         case XivChatType.NPCDialogueAnnouncements:
                             if (message.TextValue != _lastText && !Conditions.IsWatchingCutscene && !_blockAudioGeneration) {
                                 _lastText = message.TextValue;
                                 NPCText(sender.TextValue, message.TextValue.TrimStart('.'), true);
+#if DEBUG
+                                _plugin.Chat.Print("Sent audio from NPC chat.");
+#endif
                             }
+                            _lastText = message.TextValue;
                             _blockAudioGeneration = false;
                             break;
                     }
@@ -108,13 +115,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _blockAudioGeneration = e.isBlocking;
                         _currentDialoguePaths.Add(e.SoundPath);
                         _currentDialoguePathsCompleted.Add(false);
+#if DEBUG
+                        _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
+#endif
                     }
                 }
             }
         }
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3) {
             try {
-                if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled
+                    && !Conditions.IsWatchingCutscene && !Conditions.IsWatchingCutscene78) {
                     if (pString != IntPtr.Zero &&
                     !Service.ClientState.IsPvPExcludingDen) {
                         //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
@@ -132,7 +143,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             } else {
                                 _speechBubbleInfo.Add(npcBubbleInformaton);
                                 try {
-                                    if (!_blockAudioGeneration) {
+                                    if (!_blockAudioGeneration && bubbleCooldown.ElapsedMilliseconds > 200) {
                                         FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
                                         if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
                                             string nameID = character->DrawData.Top.Value.ToString() + character->DrawData.Head.Value.ToString() +
@@ -140,13 +151,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             Character characterObject = GetCharacterFromId(character->GameObject.ObjectID);
                                             string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) && Conditions.IsBoundByDuty ? characterObject.Name.TextValue : nameID;
                                             if (npcBubbleInformaton.MessageText.TextValue != _lastText) {
-                                                _lastText = npcBubbleInformaton.MessageText.TextValue;
                                                 NPCText(finalName,
                                                     npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
                                                     character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->GameObject.Position);
+#if DEBUG
+                                                _plugin.Chat.Print("Sent audio from NPC bubble.");
+#endif
                                             }
                                         }
                                     }
+                                    _lastText = npcBubbleInformaton.MessageText.TextValue;
+                                    bubbleCooldown.Restart();
                                     _blockAudioGeneration = false;
                                 } catch {
                                     NPCText(pActor->Name.TextValue, npcBubbleInformaton.MessageText.TextValue, true);
@@ -621,10 +636,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return voice.Value;
                 }
             }
-            if (npcName.EndsWith("way")) {
+            if (npcName.EndsWith("way") || _clientState.TerritoryType == 959) {
                 return "Lrit";
             }
-            if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk") || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")) {
+            if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
+                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")) {
                 return "Kop";
             }
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {

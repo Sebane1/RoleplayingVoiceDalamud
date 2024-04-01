@@ -84,6 +84,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Theyler", "Ter");
             values.Add("Gaia", "irhm");
             values.Add("Emet-Selch", "Eselch");
+            values.Add("Hades", "Eselch");
             values.Add("Almet", "Aet");
             values.Add("Beq Lugg", "Bug");
             values.Add("Bragi", "Bi");
@@ -199,6 +200,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             List<KeyValuePair<string, bool>> values = new List<KeyValuePair<string, bool>>();
             values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
             values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
+            values.Add(new KeyValuePair<string, bool>("Hades", true));
             values.Add(new KeyValuePair<string, bool>("Livia sas Junius", true));
             values.Add(new KeyValuePair<string, bool>("King Thordan", true));
             //values.Add(new KeyValuePair<string, bool>("Mother Miournne", true));
@@ -214,6 +216,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Teledji Adeledji", 1.1f));
             values.Add(new KeyValuePair<string, float>("Titan", 0.8f));
             values.Add(new KeyValuePair<string, float>("Ramuh", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Hades", 0.9f));
             values.Add(new KeyValuePair<string, float>("Moenbryda", 0.9f));
             values.Add(new KeyValuePair<string, float>("Nabriales", 1.05f));
             values.Add(new KeyValuePair<string, float>("King Thordan", 0.9f));
