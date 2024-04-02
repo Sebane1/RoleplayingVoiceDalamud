@@ -457,7 +457,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 List<string> npcBlacklist = new List<string>(){
                     "Journeyman Salvager",
                     "Materia Melder",
-                    "Masked Mage",
                     "Steward",
                     "Hokonin",
                     "Material Supplier",
@@ -471,7 +470,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (character != null && character != _clientState.LocalPlayer) {
                             if (character.Customize[(byte)CustomizeIndex.ModelType] > 0) {
                                 if (item.ObjectKind == ObjectKind.EventNpc && !item.Name.TextValue.Contains("Estate")) {
-                                    npcNames.Add(item.Name.TextValue);
+                                    if (!npcNames.Contains(item.Name.TextValue)) {
+                                        npcNames.Add(item.Name.TextValue);
+                                    }
                                 }
                             }
                         }
