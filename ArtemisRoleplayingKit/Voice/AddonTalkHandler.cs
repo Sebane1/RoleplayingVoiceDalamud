@@ -58,6 +58,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private ISigScanner _scanner;
         private bool disposed;
         Stopwatch bubbleCooldown = new Stopwatch();
+        private string _chatId;
+
         // private readonly Object _speechBubbleInfoLockObj = new();
         //private readonly Object mGameChatInfoLockObj = new();
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -88,7 +90,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _chatGui_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (_clientState.IsLoggedIn && 
+            if (_clientState.IsLoggedIn &&
                 !_plugin.Config.NpcSpeechGenerationDisabled && bubbleCooldown.ElapsedMilliseconds > 200 && Conditions.IsBoundByDuty) {
                 if (_state == null) {
                     switch (type) {
@@ -221,7 +223,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _lastText = _currentText;
                                     _currentText = _state.Text;
                                     if (!_blockAudioGeneration) {
-                                        NPCText(_state.Speaker, _state.Text.TrimStart('.'), false);
+                                        NPCText(_state.Speaker, _state.Text.TrimStart('.'), false, true);
                                         _startedNewDialogue = true;
                                         _passthroughTimer.Reset();
                                     }
@@ -244,13 +246,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                                 _plugin.MediaManager.PlayAudioStream(new DummyObject(),
                                                     pcmStream, SoundType.NPC, false, false, 1, 0, true, _plugin.Config.AutoTextAdvance ? delegate {
-                                                        if (_hook != null) {
-                                                            try {
-                                                                _hook.SendAsyncKey(Keys.NumPad0);
-                                                            } catch {
+                                                        //if (_hook != null) {
+                                                        //    try {
+                                                        //        _hook.SendAsyncKey(Keys.NumPad0);
+                                                        //    } catch {
 
-                                                            }
-                                                        }
+                                                        //    }
+                                                        //}
                                                     }
                                                 : null);
                                             }
@@ -264,14 +266,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 }
                                 if (_currentSpeechObject != null && _startedNewDialogue) {
                                     var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                    if (otherData.Id != 15) {
+                                    if (Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78) {
                                         _namesToRemove.Clear();
                                         _currentText = "";
-                                        _plugin.MediaManager.StopAudio(_currentSpeechObject);
-                                        _plugin.MediaManager.CleanSounds();
                                         _currentSpeechObject = null;
                                         _currentDialoguePaths.Clear();
                                         _currentDialoguePathsCompleted.Clear();
+                                    }
+                                    if (!Conditions.IsBoundByDuty) {
+                                        _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                                        _plugin.MediaManager.CleanSounds();
                                     }
                                     _startedNewDialogue = false;
                                 }
@@ -366,17 +370,24 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _currentSpeechObject = currentSpeechObject;
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value,
+                StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
-                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) : CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC, true, useSmbPitch, pitch, 0, 
+                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                    CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
+                    _chatId = Guid.NewGuid().ToString();
+                    string chatId = _chatId;
+                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC,
+                    Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
                     Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode,
                    (_plugin.Config.AutoTextAdvance && !ignoreAutoProgress) ? delegate {
                        if (_hook != null) {
                            try {
-                               _hook.SendAsyncKey(Keys.NumPad0);
+                               if (_chatId == chatId) {
+                                   _hook.SendAsyncKey(Keys.NumPad0);
+                               }
                            } catch {
 
                            }
@@ -396,12 +407,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _currentSpeechObject = currentSpeechObject;
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                 KeyValuePair<Stream, bool> stream =
-                await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                await _plugin.NpcVoiceManager.GetCharacterAudio(value,
+                StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
+                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
-                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) : CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC, true, useSmbPitch, pitch, 0,
+                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                     CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
+                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC,
+                   Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78, null);
                 } else {
                 }
@@ -505,7 +520,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private string StripPlayerNameFromNPCDialogueArc(string value) {
             string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
-            return value.Replace(mainCharacterName[0] + " " + mainCharacterName[1], "Arc").Replace(mainCharacterName[0], "Arc").Replace(mainCharacterName[1], "Arc");
+            return value.Replace(mainCharacterName[0] + " " + mainCharacterName[1], "Arc")
+                        .Replace(mainCharacterName[0], "Arc")
+                        .Replace(mainCharacterName[1], "Arc");
         }
         private bool CheckIfshouldUseSmbPitch(string npcName) {
             foreach (var value in NPCVoiceMapping.GetEchoType()) {
