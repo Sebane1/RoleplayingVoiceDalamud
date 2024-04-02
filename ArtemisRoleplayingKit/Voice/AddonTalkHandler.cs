@@ -87,7 +87,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private void RedoLineWIndow_RedoLineClicked(object sender, EventArgs e) {
             if (!_blockAudioGeneration) {
-                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, true, false);
+                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, true, true);
                 _startedNewDialogue = true;
                 _passthroughTimer.Reset();
                 _redoLineWindow.IsOpen = false;
