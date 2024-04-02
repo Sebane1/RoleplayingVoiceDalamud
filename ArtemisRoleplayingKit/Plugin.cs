@@ -80,6 +80,7 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
         private CatalogueWindow _catalogueWindow;
+        private RedoLineWIndow _redoLineWindow;
         private GposeWindow _gposeWindow;
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
         private RoleplayingMediaManager _roleplayingMediaManager;
@@ -251,6 +252,7 @@ namespace RoleplayingVoice {
                 _window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
                 _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
+                _redoLineWindow = this.pluginInterface.Create<RedoLineWIndow>();
                 _gposeWindow = this.pluginInterface.Create<GposeWindow>();
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
@@ -276,6 +278,9 @@ namespace RoleplayingVoice {
                 if (_gposePhotoTakerWindow is not null) {
                     this.windowSystem.AddWindow(_gposePhotoTakerWindow);
                 }
+                if (_redoLineWindow is not null) {
+                    this.windowSystem.AddWindow(_redoLineWindow);
+                }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
                 this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
@@ -293,7 +298,7 @@ namespace RoleplayingVoice {
                 _framework.Update += framework_Update;
                 _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner);
+                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow);
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
             } catch (Exception e) {

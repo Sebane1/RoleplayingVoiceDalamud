@@ -32,6 +32,7 @@ namespace RoleplayingVoice {
         private bool _autoTextAdvance = true;
         private bool _replaceVoicedARRCutscenes = true;
         private int _audioOutputType = 0;
+        private bool _qualityAssuranceMode;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -104,6 +105,7 @@ namespace RoleplayingVoice {
         public bool AutoTextAdvance { get => _autoTextAdvance; set => _autoTextAdvance = value; }
         public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
         public int AudioOutputType { get => _audioOutputType; set => _audioOutputType = value; }
+        public bool QualityAssuranceMode { get => _qualityAssuranceMode; set => _qualityAssuranceMode = value; }
 
         #endregion
 

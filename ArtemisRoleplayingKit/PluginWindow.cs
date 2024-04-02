@@ -81,6 +81,7 @@ namespace RoleplayingVoice {
         private bool _npcAutoTextAdvance;
         private bool _replaceVoicedARRCutscenes;
         private bool _refreshing;
+        private bool _qualityAssuranceMode;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -143,6 +144,7 @@ namespace RoleplayingVoice {
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
+                    _qualityAssuranceMode = configuration.QualityAssuranceMode;
                     _streamPath = configuration.StreamPath;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -321,6 +323,7 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("Disable Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
             ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
+            ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
         }
 
         private void DrawWhitelist() {
@@ -514,6 +517,7 @@ namespace RoleplayingVoice {
                 configuration.AutoTextAdvance = _npcAutoTextAdvance;
                 configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
                 configuration.AudioOutputType = _audioOutputType.SelectedIndex;
+                configuration.QualityAssuranceMode = _qualityAssuranceMode;
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];

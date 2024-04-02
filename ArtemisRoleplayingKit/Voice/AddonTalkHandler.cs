@@ -59,9 +59,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool disposed;
         Stopwatch bubbleCooldown = new Stopwatch();
         private string _chatId;
-
-        // private readonly Object _speechBubbleInfoLockObj = new();
-        //private readonly Object mGameChatInfoLockObj = new();
+        private RedoLineWIndow _redoLineWindow;
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
         private readonly Queue<NPCBubbleInformation> _speechBubbleInfoQueue = new();
         private readonly List<NPCBubbleInformation> _gameChatInfo = new();
@@ -69,7 +67,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
-            IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner) {
+            IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow) {
             this.addonTalkManager = addonTalkManager;
             this.framework = framework;
             this.objects = objects;
@@ -82,7 +80,18 @@ namespace RoleplayingVoiceDalamud.Voice {
             _chatGui.ChatMessage += _chatGui_ChatMessage;
             _clientState.TerritoryChanged += _clientState_TerritoryChanged;
             _scanner = sigScanner;
+            redoLineWindow.RedoLineClicked += RedoLineWIndow_RedoLineClicked;
+            _redoLineWindow = redoLineWindow;
             bubbleCooldown.Start();
+        }
+
+        private void RedoLineWIndow_RedoLineClicked(object sender, EventArgs e) {
+            if (!_blockAudioGeneration) {
+                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, true, false);
+                _startedNewDialogue = true;
+                _passthroughTimer.Reset();
+                _redoLineWindow.IsOpen = false;
+            }
         }
 
         private void _clientState_TerritoryChanged(ushort obj) {
@@ -222,6 +231,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 if (_state.Text != _currentText) {
                                     _lastText = _currentText;
                                     _currentText = _state.Text;
+                                    _redoLineWindow.IsOpen = false;
                                     if (!_blockAudioGeneration) {
                                         NPCText(_state.Speaker, _state.Text.TrimStart('.'), false, true);
                                         _startedNewDialogue = true;
@@ -245,16 +255,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                                 var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
                                                 _plugin.MediaManager.PlayAudioStream(new DummyObject(),
-                                                    pcmStream, SoundType.NPC, false, false, 1, 0, true, _plugin.Config.AutoTextAdvance ? delegate {
-                                                        //if (_hook != null) {
-                                                        //    try {
-                                                        //        _hook.SendAsyncKey(Keys.NumPad0);
-                                                        //    } catch {
-
-                                                        //    }
-                                                        //}
-                                                    }
-                                                : null);
+                                                    pcmStream, SoundType.NPC, false, false, 1, 0, true, null);
                                             }
                                         } catch (Exception e) {
                                             Dalamud.Logging.PluginLog.LogError(e, e.Message);
@@ -266,7 +267,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 }
                                 if (_currentSpeechObject != null && _startedNewDialogue) {
                                     var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                    if (Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78) {
+                                    if (otherData.Id != 15) {
                                         _namesToRemove.Clear();
                                         _currentText = "";
                                         _currentSpeechObject = null;
@@ -279,6 +280,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                     _startedNewDialogue = false;
                                 }
+                                _redoLineWindow.IsOpen = false;
                                 _blockAudioGeneration = false;
                                 _textIsPresent = false;
                             }
@@ -359,7 +361,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
-        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false) {
+        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
             try {
                 bool gender = false;
                 byte race = 0;
@@ -371,7 +373,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value,
-                StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
+                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, "", redoLine);
                 if (stream.Key != null) {
                     var mp3Stream = new Mp3FileReader(stream.Key);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
@@ -381,19 +384,26 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string chatId = _chatId;
                     _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC,
                     Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
-                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode,
-                   (_plugin.Config.AutoTextAdvance && !ignoreAutoProgress) ? delegate {
-                       if (_hook != null) {
-                           try {
-                               if (_chatId == chatId) {
-                                   _hook.SendAsyncKey(Keys.NumPad0);
-                               }
-                           } catch {
+                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
+                        if (_hook != null) {
+                            try {
+                                if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
+                                && !_plugin.Config.QualityAssuranceMode)) {
+                                    if (_chatId == chatId) {
+                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                    }
+                                } else {
+                                    if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                        _redoLineWindow.IsOpen = true;
+                                    }else if (_plugin.Config.QualityAssuranceMode) {
+                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                    }
+                                }
+                            } catch {
 
-                           }
-                       }
-                   }
-                    : null);
+                            }
+                        }
+                    });
                 } else {
                 }
             } catch {
