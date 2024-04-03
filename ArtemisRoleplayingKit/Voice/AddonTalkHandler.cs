@@ -13,6 +13,7 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using ImGuiNET;
 using NAudio.Lame;
+using NAudio.Vorbis;
 using NAudio.Wave;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Services;
@@ -376,13 +377,18 @@ namespace RoleplayingVoiceDalamud.Voice {
                 StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
                 PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, "", redoLine);
                 if (stream.Key != null) {
-                    var mp3Stream = new Mp3FileReader(stream.Key);
+                    WaveStream wavePlayer = null;
+                    try {
+                        wavePlayer = new Mp3FileReader(stream.Key);
+                    } catch {
+                        wavePlayer = new VorbisWaveReader(stream.Key);
+                    }
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
                     CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                     _chatId = Guid.NewGuid().ToString();
                     string chatId = _chatId;
-                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC,
+                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
                     Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
                     Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
                         if (_hook != null) {
@@ -395,7 +401,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 } else {
                                     if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
                                         _redoLineWindow.IsOpen = true;
-                                    }else if (_plugin.Config.QualityAssuranceMode) {
+                                    } else if (_plugin.Config.QualityAssuranceMode) {
                                         _hook.SendAsyncKey(Keys.NumPad0);
                                     }
                                 }
