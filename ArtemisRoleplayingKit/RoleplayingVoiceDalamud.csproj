@@ -16,11 +16,13 @@
 
 	<ItemGroup>
 	  <None Remove="emote.scd" />
+	  <None Remove="nameless.json" />
 	  <None Remove="racialEmoteTime.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <EmbeddedResource Include="emote.scd" />
+	  <EmbeddedResource Include="nameless.json" />
 	  <EmbeddedResource Include="racialEmoteTime.txt">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </EmbeddedResource>

@@ -15,6 +15,7 @@ using ImGuiNET;
 using NAudio.Lame;
 using NAudio.Vorbis;
 using NAudio.Wave;
+using Newtonsoft.Json;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Services;
 using SoundFilter;
@@ -24,6 +25,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
@@ -61,6 +63,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         Stopwatch bubbleCooldown = new Stopwatch();
         private string _chatId;
         private RedoLineWIndow _redoLineWindow;
+        private Dictionary<string, string> _knownNpcs;
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
         private readonly Queue<NPCBubbleInformation> _speechBubbleInfoQueue = new();
         private readonly List<NPCBubbleInformation> _gameChatInfo = new();
@@ -84,6 +87,15 @@ namespace RoleplayingVoiceDalamud.Voice {
             redoLineWindow.RedoLineClicked += RedoLineWIndow_RedoLineClicked;
             _redoLineWindow = redoLineWindow;
             bubbleCooldown.Start();
+            var assembly = Assembly.GetExecutingAssembly();
+            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("nameless.json"));
+            var noSound = assembly.GetManifestResourceStream(resourceName);
+            using var memoryStream = new MemoryStream();
+            noSound.CopyTo(memoryStream);
+            memoryStream.Position = 0;
+            using (StreamReader reader = new StreamReader(memoryStream)) {
+                _knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
+            }
         }
 
         private void RedoLineWIndow_RedoLineClicked(object sender, EventArgs e) {
@@ -367,7 +379,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 bool gender = false;
                 byte race = 0;
                 byte body = 0;
-                GameObject npcObject = DiscoverNpc(npcName, ref gender, ref race, ref body);
+                GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
                 string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
                 MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 _currentSpeechObject = currentSpeechObject;
@@ -439,10 +451,20 @@ namespace RoleplayingVoiceDalamud.Voice {
             } catch {
             }
         }
-
-        private GameObject DiscoverNpc(string npcName, ref bool gender, ref byte race, ref byte body) {
+        private string FindNPCNameFromMessage(string message) {
+            try {
+                return _knownNpcs[message];
+            } catch {
+                return "???";
+            }
+        }
+        private GameObject DiscoverNpc(string npcName, string message, ref bool gender, ref byte race, ref byte body) {
+            if (npcName == "???") {
+                npcName = FindNPCNameFromMessage(message);
+            }
             if (npcName == "???") {
                 List<string> npcNames = new List<string>(){
+                    "Minfillia",
                     "Yugiri",
                     "Moenbryda",
                     "Masked Mage",
@@ -457,7 +479,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Lyna",
                     "Ameliance",
                     "Pipin",
-                    "Lyna",
                     "Beq Lugg"
                 };
                 List<string> npcBlacklist = new List<string>(){
