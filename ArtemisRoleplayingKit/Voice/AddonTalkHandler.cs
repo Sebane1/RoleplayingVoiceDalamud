@@ -453,7 +453,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private string FindNPCNameFromMessage(string message) {
             try {
-                return _knownNpcs[message];
+                return _knownNpcs[message].Trim();
             } catch {
                 return "???";
             }
@@ -462,7 +462,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (npcName == "???") {
                 npcName = FindNPCNameFromMessage(message);
             }
-            if (npcName == "???") {
+            if (npcName == "???" || npcName == "Narrator") {
                 List<string> npcNames = new List<string>(){
                     "Minfillia",
                     "Yugiri",
