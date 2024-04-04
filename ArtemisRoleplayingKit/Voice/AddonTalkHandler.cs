@@ -1,4 +1,10 @@
-﻿using Dalamud.Game;
+﻿using Anamnesis;
+using Anamnesis.Core.Memory;
+using Anamnesis.GameData.Excel;
+using Anamnesis.GameData.Interfaces;
+using Anamnesis.Memory;
+using Anamnesis.Services;
+using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -26,6 +32,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
@@ -64,10 +72,21 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _chatId;
         private RedoLineWIndow _redoLineWindow;
         private Dictionary<string, string> _knownNpcs;
+        private MemoryService _memoryService;
+        private SettingsService _settingService;
+        private AnimationService _animationService;
+        private ActorMemory _actorMemory;
+        private GameDataService _gameDataService;
+        private ActorService _actorService;
+        private GposeService _gposeService;
+        private AddressService _addressService;
+        private UserAnimationOverride _animationOverride;
+
+        public List<ActionTimeline> LipSyncTypes { get; private set; }
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
         private readonly Queue<NPCBubbleInformation> _speechBubbleInfoQueue = new();
         private readonly List<NPCBubbleInformation> _gameChatInfo = new();
-
+        public ConditionalWeakTable<ActorMemory, UserAnimationOverride> UserAnimationOverrides { get; private set; } = new();
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
@@ -96,8 +115,34 @@ namespace RoleplayingVoiceDalamud.Voice {
             using (StreamReader reader = new StreamReader(memoryStream)) {
                 _knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
             }
-        }
+            _memoryService = new MemoryService();
+            _settingService = new SettingsService();
+            _gameDataService = new GameDataService();
+            _animationService = new AnimationService();
+            _actorService = new ActorService();
+            _gposeService = new GposeService();
+            _addressService = new AddressService();
 
+            _memoryService.Initialize();
+            _memoryService.OpenProcess(Process.GetCurrentProcess());
+            _settingService.Initialize();
+            _gameDataService.Initialize();
+            _actorService.Initialize();
+            _gposeService.Initialize();
+            _addressService.Initialize();
+
+            LipSyncTypes = GenerateLipList().ToList();
+            _animationService.Initialize();
+            _gposeService.Start();
+            _animationService.Start();
+            _memoryService.Start();
+            _addressService.Start();
+        }
+        private IEnumerable<ActionTimeline> GenerateLipList() {
+            // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
+            IEnumerable<ActionTimeline> lips = GameDataService.ActionTimelines.Where(x => x.AnimationId == 0 || (x.Key?.StartsWith("speak/") ?? false));
+            return lips;
+        }
         private void RedoLineWIndow_RedoLineClicked(object sender, EventArgs e) {
             if (!_blockAudioGeneration) {
                 NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, true, true);
@@ -106,7 +151,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _redoLineWindow.IsOpen = false;
             }
         }
-
         private void _clientState_TerritoryChanged(ushort obj) {
             _speechBubbleInfo.Clear();
         }
@@ -306,46 +350,46 @@ namespace RoleplayingVoiceDalamud.Voice {
 
 
         private void DumpCurrentAudio(string speaker) {
-            try {
-                if (_currentDialoguePaths.Count > 0) {
-                    Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
-                    string name = speaker;
-                    string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
-                    string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
-                    FileInfo fileInfo = null;
-                    try {
-                        fileInfo = new FileInfo(path);
-                    } catch {
+            ////try {
+            ////    if (_currentDialoguePaths.Count > 0) {
+            ////        Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
+            ////        string name = speaker;
+            ////        string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
+            ////        string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
+            ////        FileInfo fileInfo = null;
+            ////        try {
+            ////            fileInfo = new FileInfo(path);
+            ////        } catch {
 
-                    }
-                    if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-                        try {
-                            ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                            using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
-                                pcmStream.CopyTo(fileStreamWave);
-                                fileStreamWave.Close();
-                                fileStreamWave.Dispose();
-                            }
-                            if (scdFile != null) {
-                                using (var waveStream = new AudioFileReader(pathWave)) {
-                                    using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
-                                        using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
-                                            waveStream.CopyTo(lame);
-                                        }
-                                    }
-                                }
-                            }
-                            File.Delete(pathWave);
-                        } catch (Exception e) {
-                            Dalamud.Logging.PluginLog.LogError(e, e.Message);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Dalamud.Logging.PluginLog.LogError(e, e.Message);
-            }
+            ////        }
+            ////        if (!fileInfo.Exists || fileInfo.Length < 7500000) {
+            ////            try {
+            ////                ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+            ////                WaveStream stream = scdFile.Audio[0].Data.GetStream();
+            ////                var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+            ////                using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
+            ////                    pcmStream.CopyTo(fileStreamWave);
+            ////                    fileStreamWave.Close();
+            ////                    fileStreamWave.Dispose();
+            ////                }
+            ////                if (scdFile != null) {
+            ////                    using (var waveStream = new AudioFileReader(pathWave)) {
+            ////                        using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
+            ////                            using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
+            ////                                waveStream.CopyTo(lame);
+            ////                            }
+            ////                        }
+            ////                    }
+            ////                }
+            ////                File.Delete(pathWave);
+            ////            } catch (Exception e) {
+            ////                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+            ////            }
+            ////        }
+            ////    }
+            ////} catch (Exception e) {
+            ////    Dalamud.Logging.PluginLog.LogError(e, e.Message);
+            ////}
         }
 
         public string ConvertRomanNumberals(string text) {
@@ -379,7 +423,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                 bool gender = false;
                 byte race = 0;
                 byte body = 0;
-                GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
+                GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);     
+                
+                _actorMemory = new ActorMemory();
+                _actorMemory.SetAddress(_actorService.GetActor(npcObject.ObjectId).Address);
+                _actorMemory.Animation.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                _chatGui.Print("Applying " + LipSyncTypes[5].Timeline.DisplayName);
+
                 string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
                 MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 _currentSpeechObject = currentSpeechObject;
@@ -405,6 +455,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
                         if (_hook != null) {
                             try {
+                                _chatGui.Print(_actorMemory.Animation!.LipsOverride + "");
+                                _actorMemory.Animation.LipsOverride = 0;
+                                _chatGui.Print(_actorMemory.Animation!.LipsOverride + "");
                                 if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
                                 && !_plugin.Config.QualityAssuranceMode)) {
                                     if (_chatId == chatId) {
@@ -453,7 +506,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private string FindNPCNameFromMessage(string message) {
             try {
-                return _knownNpcs[message].Trim();
+                return _knownNpcs[message];
             } catch {
                 return "???";
             }
@@ -462,6 +515,18 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (npcName == "???") {
                 npcName = FindNPCNameFromMessage(message);
             }
+            List<string> npcBlacklist = new List<string>(){
+                    "Journeyman Salvager",
+                    "Materia Melder",
+                    "Steward",
+                    "Hokonin",
+                    "Material Supplier",
+                    "Junkmonger",
+                    "Mender",
+                    "Allagan Node",
+                    "Servingway",
+                    "Estate"
+                };
             if (npcName == "???" || npcName == "Narrator") {
                 List<string> npcNames = new List<string>(){
                     "Minfillia",
@@ -480,16 +545,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Ameliance",
                     "Pipin",
                     "Beq Lugg"
-                };
-                List<string> npcBlacklist = new List<string>(){
-                    "Journeyman Salvager",
-                    "Materia Melder",
-                    "Steward",
-                    "Hokonin",
-                    "Material Supplier",
-                    "Junkmonger",
-                    "Mender",
-                    "Allagan Node"
                 };
                 foreach (var item in objects) {
                     if (!npcNames.Contains(item.Name.TextValue) && !string.IsNullOrEmpty(item.Name.TextValue)) {
@@ -535,11 +590,26 @@ namespace RoleplayingVoiceDalamud.Voice {
                         return GetCharacterData(item, ref gender, ref race, ref body);
                     }
                 }
+                foreach (var item in objects) {
+                    if (item != _clientState.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
+                        if (item.ObjectKind == ObjectKind.EventNpc) {
+                            _namesToRemove.Add(npcName);
+                            return GetCharacterData(item, ref gender, ref race, ref body);
+                        }
+                    }
+                }
             }
             return null;
         }
-
-        private GameObject GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref byte body) {
+        public bool ContainsItemInList(string value, List<string> list) {
+            foreach (string item in list) {
+                if (value.Contains(item)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        private Character GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref byte body) {
             Character character = gameObject as Character;
             if (character != null) {
                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
@@ -747,7 +817,19 @@ namespace RoleplayingVoiceDalamud.Voice {
             _chatGui.ChatMessage -= _chatGui_ChatMessage;
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
             disposed = true;
+
+            _memoryService.Shutdown();
+            _settingService.Shutdown();
+            _gameDataService.Shutdown();
+            _actorService.Shutdown();
+            _gposeService.Shutdown();
+            _addressService.Shutdown();
         }
         private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3);
     }
+}
+public class UserAnimationOverride {
+    public ushort BaseAnimationId { get; set; } = 0;
+    public ushort BlendAnimationId { get; set; } = 0;
+    public bool Interrupt { get; set; } = true;
 }

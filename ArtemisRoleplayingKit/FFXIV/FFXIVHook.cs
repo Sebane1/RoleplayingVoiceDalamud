@@ -478,6 +478,7 @@ namespace FFBardMusicPlayer.FFXIV {
                 }
             }
 
+            
             return CallNextHookEx(hookId, nCode, wParam, lParam);
         }
     }

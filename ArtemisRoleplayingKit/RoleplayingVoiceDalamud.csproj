@@ -15,12 +15,22 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Anamnesis\Data\Equipment.json" />
+	  <None Remove="Anamnesis\Data\Images.json" />
+	  <None Remove="Anamnesis\Data\ItemCategories.json" />
+	  <None Remove="Anamnesis\Data\NpcNames.json" />
+	  <None Remove="Anamnesis\Data\Tips.json" />
 	  <None Remove="emote.scd" />
 	  <None Remove="nameless.json" />
 	  <None Remove="racialEmoteTime.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <EmbeddedResource Include="Anamnesis\Data\Equipment.json" />
+	  <EmbeddedResource Include="Anamnesis\Data\Images.json" />
+	  <EmbeddedResource Include="Anamnesis\Data\ItemCategories.json" />
+	  <EmbeddedResource Include="Anamnesis\Data\NpcNames.json" />
+	  <EmbeddedResource Include="Anamnesis\Data\Tips.json" />
 	  <EmbeddedResource Include="emote.scd" />
 	  <EmbeddedResource Include="nameless.json" />
 	  <EmbeddedResource Include="racialEmoteTime.txt">
