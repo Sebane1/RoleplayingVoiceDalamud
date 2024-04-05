@@ -48,8 +48,8 @@ public class AnimationMemory : MemoryBase
 		}
 	}
 
-	public void PropertyIsChanged() {
-		HandlePropertyChanged(new PropertyChange());
+	public void PropertyIsChanged(BindInfo bindInfo, ushort value, ushort value2) {
+		HandlePropertyChanged(new PropertyChange(bindInfo,value,value2, PropertyChange.Origins.User));
     }
 
 	protected override void HandlePropertyChanged(PropertyChange change)

@@ -766,7 +766,10 @@ namespace RoleplayingVoice {
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
                         _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts);
+                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                        _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
+                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                        });
                     });
                 }
                 CheckForChatSoundEffectLocal(message);
@@ -797,7 +800,10 @@ namespace RoleplayingVoice {
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts);
+                                _addonTalkHandler.TriggerLipSync(player, 5);
+                                _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
+                                    _addonTalkHandler.StopLipSync(player);
+                                });
                             });
                             CheckForChatSoundEffectOtherPlayer(sender, player, message);
                         }
@@ -1903,7 +1909,13 @@ namespace RoleplayingVoice {
                                                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
-                                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed);
+                                                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
+                                                         _addonTalkHandler.StopLipSync(instigator);
+                                                     });
+                                                    Task.Run(delegate {
+                                                        Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                                                        _addonTalkHandler.TriggerLipSync(instigator, 4);
+                                                    });
                                                     if (isVoicedEmote) {
                                                         MuteVoiceCheck(6000);
                                                     }
@@ -1938,7 +1950,13 @@ namespace RoleplayingVoice {
                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
                     _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
-                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0);
+                    characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, default, delegate {
+                        _addonTalkHandler.StopLipSync(instigator);
+                    });
+                    Task.Run(delegate {
+                        Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                        _addonTalkHandler.TriggerLipSync(instigator, 4);
+                    });
                     if (isVoicedEmote) {
                         MuteVoiceCheck(10000);
                     }
@@ -2521,6 +2539,9 @@ namespace RoleplayingVoice {
                             } else {
                                 _catalogueWindow.IsOpen = true;
                             }
+                            break;
+                        case "lips":
+                            _addonTalkHandler.TriggerLipSyncTest();
                             break;
                         default:
                             if (config.AiVoiceActive) {

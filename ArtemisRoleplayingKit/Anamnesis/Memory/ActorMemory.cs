@@ -154,8 +154,8 @@ public class ActorMemory : ActorBasicMemory
 		if (this.IsRefreshing)
 			return;
 
-		if (!this.CanRefresh)
-			return;
+		//if (!this.CanRefresh)
+		//	return;
 
 		if (this.Address == IntPtr.Zero)
 			return;

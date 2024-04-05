@@ -1,9 +1,13 @@
 ﻿using Anamnesis;
+using Anamnesis.Actor;
 using Anamnesis.Core.Memory;
 using Anamnesis.GameData.Excel;
 using Anamnesis.GameData.Interfaces;
 using Anamnesis.Memory;
 using Anamnesis.Services;
+using Concentus.Common;
+using Concentus.Oggfile;
+using Concentus.Structs;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
@@ -21,6 +25,7 @@ using ImGuiNET;
 using NAudio.Lame;
 using NAudio.Vorbis;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Services;
@@ -34,10 +39,12 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
 using XivCommon.Functions;
+using static System.Net.WebRequestMethods;
 using static System.Windows.Forms.AxHost;
 using Character = Dalamud.Game.ClientState.Objects.Types.Character;
 using SoundType = RoleplayingMediaCore.SoundType;
@@ -75,12 +82,12 @@ namespace RoleplayingVoiceDalamud.Voice {
         private MemoryService _memoryService;
         private SettingsService _settingService;
         private AnimationService _animationService;
-        private ActorMemory _actorMemory;
         private GameDataService _gameDataService;
         private ActorService _actorService;
         private GposeService _gposeService;
         private AddressService _addressService;
-        private UserAnimationOverride _animationOverride;
+        private PoseService _poseService;
+        private TargetService _targetService;
 
         public List<ActionTimeline> LipSyncTypes { get; private set; }
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -122,6 +129,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _actorService = new ActorService();
             _gposeService = new GposeService();
             _addressService = new AddressService();
+            _poseService = new PoseService();
+            _targetService = new TargetService();
 
             _memoryService.Initialize();
             _memoryService.OpenProcess(Process.GetCurrentProcess());
@@ -130,6 +139,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _actorService.Initialize();
             _gposeService.Initialize();
             _addressService.Initialize();
+            _poseService.Initialize();
+            _targetService.Initialize();
 
             LipSyncTypes = GenerateLipList().ToList();
             _animationService.Initialize();
@@ -137,6 +148,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _animationService.Start();
             _memoryService.Start();
             _addressService.Start();
+            _poseService.Start();
+            _targetService.Start();
         }
         private IEnumerable<ActionTimeline> GenerateLipList() {
             // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
@@ -418,17 +431,70 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
+        public async void TriggerLipSyncTest() {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(_clientState.LocalPlayer.Address);
+                var animationMemory = actorMemory.Animation;
+                _chatGui.Print("Animation state before lip sync application is " + animationMemory.LipsOverride);
+                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[5].Timeline.AnimationId, "Lipsync");
+                _chatGui.Print("Attempted to apply " + LipSyncTypes[5].Timeline.DisplayName);
+                _chatGui.Print("Animation state after lip sync application is " + animationMemory.LipsOverride);
+            } catch {
+
+            }
+        }
+        public async void TriggerLipSync(Character character, int lipSyncType) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
+            } catch {
+
+            }
+        }
+        public async void StopLipSync(Character character) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+            } catch {
+
+            }
+        }
+        public static float[] DecodeOggOpusToPCM(Stream stream) {
+            // Read the Opus file
+            // Initialize the decoder
+            OpusDecoder decoder = new OpusDecoder(48000, 1); // Assuming a sample rate of 48000 Hz and mono audio
+            OpusOggReadStream oggStream = new OpusOggReadStream(decoder, stream);
+
+            // Buffer for storing the decoded samples
+            List<float> pcmSamples = new List<float>();
+
+            // Read and decode the entire file
+            while (oggStream.HasNextPacket) {
+                short[] packet = oggStream.DecodeNextPacket();
+                if (packet != null) {
+                    foreach (var sample in packet) {
+                        pcmSamples.Add(sample / 32768f); // Convert to float and normalize
+                    }
+                }
+            }
+
+            return pcmSamples.ToArray();
+        }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
             try {
                 bool gender = false;
                 byte race = 0;
                 byte body = 0;
-                GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);     
-                
-                _actorMemory = new ActorMemory();
-                _actorMemory.SetAddress(_actorService.GetActor(npcObject.ObjectId).Address);
-                _actorMemory.Animation.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                _chatGui.Print("Applying " + LipSyncTypes[5].Timeline.DisplayName);
+                GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
+                //lipSyncQueue.Enqueue();
 
                 string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
                 MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
@@ -441,9 +507,51 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (stream.Key != null) {
                     WaveStream wavePlayer = null;
                     try {
+                        stream.Key.Position = 0;
                         wavePlayer = new Mp3FileReader(stream.Key);
                     } catch {
-                        wavePlayer = new VorbisWaveReader(stream.Key);
+                        try {
+                            stream.Key.Position = 0;
+                            wavePlayer = new VorbisWaveReader(stream.Key);
+                        } catch {
+                            stream.Key.Position = 0;
+                            float[] data = DecodeOggOpusToPCM(stream.Key);
+                            WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
+                            MemoryStream memoryStream = new MemoryStream();
+                            WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
+                            writer.WriteSamples(data.ToArray(), 0, data.Length);
+                            writer.Flush();
+                            memoryStream.Position = 0;
+                            wavePlayer = new WaveFileReader(memoryStream);
+                        }
+                    }
+                    ActorMemory actorMemory = null;
+                    AnimationMemory animationMemory = null;
+                    if (npcObject != null) {
+                        actorMemory = new ActorMemory();
+                        actorMemory.SetAddress(npcObject.Address);
+                        animationMemory = actorMemory.Animation;
+                        animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                        ushort lipId = 0;
+                        if (wavePlayer.TotalTime.Seconds < 4) {
+                            lipId = LipSyncTypes[4].Timeline.AnimationId;
+                        } else if (wavePlayer.TotalTime.Seconds < 6) {
+                            lipId = LipSyncTypes[5].Timeline.AnimationId;
+                        } else {
+                            lipId = LipSyncTypes[6].Timeline.AnimationId;
+                        }
+                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                        Task task = Task.Run(delegate {
+                            Thread.Sleep(100);
+                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                            Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
+                            if (npcObject != null) {
+                                animationMemory.LipsOverride = 0;
+                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                            }
+                        });
                     }
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
@@ -455,11 +563,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
                         if (_hook != null) {
                             try {
-                                _chatGui.Print(_actorMemory.Animation!.LipsOverride + "");
-                                _actorMemory.Animation.LipsOverride = 0;
-                                _chatGui.Print(_actorMemory.Animation!.LipsOverride + "");
+                                //if (npcObject != null) {
+                                //    animationMemory.LipsOverride = 0;
+                                //    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                //    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                //}
                                 if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
-                                && !_plugin.Config.QualityAssuranceMode)) {
+                            && !_plugin.Config.QualityAssuranceMode)) {
                                     if (_chatId == chatId) {
                                         _hook.SendAsyncKey(Keys.NumPad0);
                                     }
@@ -824,6 +934,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _actorService.Shutdown();
             _gposeService.Shutdown();
             _addressService.Shutdown();
+            _poseService.Shutdown();
+            _targetService.Shutdown();
         }
         private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3);
     }

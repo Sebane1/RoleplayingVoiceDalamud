@@ -134,8 +134,8 @@ public class ActorService : ServiceBase<ActorService> {
     public ActorBasicMemory GetActor(uint objectId) {
         this.UpdateActorTable();
         foreach (var ptr in this.actorTable) {
-            //if (ptr == IntPtr.Zero)
-            //    continue;
+            if (ptr == IntPtr.Zero)
+                continue;
 
             try {
                 ActorBasicMemory actor = new();
