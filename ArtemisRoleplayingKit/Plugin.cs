@@ -58,6 +58,7 @@ using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.DragDrop;
 using RoleplayingVoiceDalamud.Services;
+using NAudio.Wave.SampleProviders;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -781,14 +782,23 @@ namespace RoleplayingVoice {
                         (senderStrings[0] + " " + senderStrings[1]) :
                         (senderStrings[0] + " " + senderStrings[2]);
                     string playerMessage = message.TextValue;
+                    bool lipWasSynced = true;
                     Task.Run(async () => {
                         string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
                         type == XivChatType.CustomEmote,
                         config.PlayerCharacterVolume,
                         _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
                         _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
                             _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                        }, delegate (object sender, StreamVolumeEventArgs e) {
+                            if (e.MaxSampleValues.Length > 0) {
+                                if (e.MaxSampleValues[0] > 0.2) {
+                                    _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                                    lipWasSynced = true;
+                                } else {
+                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                }
+                            }
                         });
                     });
                 }
@@ -821,8 +831,19 @@ namespace RoleplayingVoice {
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                 _addonTalkHandler.TriggerLipSync(player, 5);
+                                bool lipWasSynced = false;
                                 _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
                                     _addonTalkHandler.StopLipSync(player);
+                                },
+                                delegate (object sender, StreamVolumeEventArgs e) {
+                                    if (e.MaxSampleValues.Length > 0) {
+                                        if (e.MaxSampleValues[0] > 0.2) {
+                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                            lipWasSynced = true;
+                                        } else {
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        }
+                                    }
                                 });
                             });
                             CheckForChatSoundEffectOtherPlayer(sender, player, message);
@@ -1928,9 +1949,19 @@ namespace RoleplayingVoice {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
+                                                    bool lipWasSynced = false;
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
                                                          _addonTalkHandler.StopLipSync(instigator);
+                                                     }, delegate (object sender, StreamVolumeEventArgs e) {
+                                                         if (e.MaxSampleValues.Length > 0) {
+                                                             if (e.MaxSampleValues[0] > 0.2) {
+                                                                 _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                                                 lipWasSynced = true;
+                                                             } else {
+                                                                 _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                                             }
+                                                         }
                                                      });
                                                     Task.Run(delegate {
                                                         Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
@@ -1969,13 +2000,24 @@ namespace RoleplayingVoice {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                     _mediaManager.StopAudio(new MediaGameObject(instigator));
+                    bool lipWasSynced = false;
                     _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
                     characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, default, delegate {
                         _addonTalkHandler.StopLipSync(instigator);
+                    },
+                    delegate (object sender, StreamVolumeEventArgs e) {
+                        if (e.MaxSampleValues.Length > 0) {
+                            if (e.MaxSampleValues[0] > 0.2) {
+                                _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                lipWasSynced = true;
+                            } else {
+                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                            }
+                        }
                     });
                     Task.Run(delegate {
                         Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
-                        _addonTalkHandler.TriggerLipSync(instigator, 4);
+                        _addonTalkHandler.TriggerLipSync(instigator, 5);
                     });
                     if (isVoicedEmote) {
                         MuteVoiceCheck(10000);
