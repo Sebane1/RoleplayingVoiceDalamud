@@ -232,7 +232,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             Character characterObject = GetCharacterFromId(character->GameObject.ObjectID);
                                             string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) && Conditions.IsBoundByDuty ? characterObject.Name.TextValue : nameID;
                                             if (npcBubbleInformaton.MessageText.TextValue != _lastText) {
-                                                NPCText(finalName,
+                                                NPCText(pActor->Address, finalName,
                                                     npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
                                                     character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->GameObject.Position);
 #if DEBUG
@@ -494,8 +494,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 byte race = 0;
                 byte body = 0;
                 GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
-                //lipSyncQueue.Enqueue();
-
                 string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
                 MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 _currentSpeechObject = currentSpeechObject;
@@ -543,12 +541,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                         MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
                         Task task = Task.Run(delegate {
                             Thread.Sleep(100);
-                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                            }
                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
                             Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
                             if (npcObject != null) {
                                 animationMemory.LipsOverride = 0;
-                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                }
                                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                             }
                         });
@@ -590,9 +592,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             } catch {
             }
         }
-        private async void NPCText(string name, string message, bool gender, byte race, byte body, Vector3 position) {
+        private async void NPCText(nint address, string name, string message, bool gender, byte race, byte body, Vector3 position) {
             try {
-                GameObject npcObject = null;
                 string nameToUse = name;
                 MediaGameObject currentSpeechObject = new MediaGameObject(name, position);
                 _currentSpeechObject = currentSpeechObject;
@@ -602,11 +603,61 @@ namespace RoleplayingVoiceDalamud.Voice {
                 StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
                 PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
                 if (stream.Key != null) {
-                    var mp3Stream = new Mp3FileReader(stream.Key);
+                    WaveStream wavePlayer = null;
+                    try {
+                        stream.Key.Position = 0;
+                        wavePlayer = new Mp3FileReader(stream.Key);
+                    } catch {
+                        try {
+                            stream.Key.Position = 0;
+                            wavePlayer = new VorbisWaveReader(stream.Key);
+                        } catch {
+                            stream.Key.Position = 0;
+                            float[] data = DecodeOggOpusToPCM(stream.Key);
+                            WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
+                            MemoryStream memoryStream = new MemoryStream();
+                            WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
+                            writer.WriteSamples(data.ToArray(), 0, data.Length);
+                            writer.Flush();
+                            memoryStream.Position = 0;
+                            wavePlayer = new WaveFileReader(memoryStream);
+                        }
+                    }
+                    //try {
+                    //    ActorMemory actorMemory = null;
+                    //    AnimationMemory animationMemory = null;
+                    //    if (address != IntPtr.Zero) {
+                    //        actorMemory = new ActorMemory();
+                    //        actorMemory.SetAddress(address);
+                    //        animationMemory = actorMemory.Animation;
+                    //        animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                    //        ushort lipId = 0;
+                    //        if (wavePlayer.TotalTime.Seconds < 4) {
+                    //            lipId = LipSyncTypes[4].Timeline.AnimationId;
+                    //        } else if (wavePlayer.TotalTime.Seconds < 6) {
+                    //            lipId = LipSyncTypes[5].Timeline.AnimationId;
+                    //        } else {
+                    //            lipId = LipSyncTypes[6].Timeline.AnimationId;
+                    //        }
+                    //        Task task = Task.Run(delegate {
+                    //            try {
+                    //                Thread.Sleep(100);
+                    //                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                    //                Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
+                    //                animationMemory.LipsOverride = 0;
+                    //                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                    //            } catch {
+
+                    //            }
+                    //        });
+                    //    }
+                    //} catch {
+
+                    //}
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
                      CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, mp3Stream, SoundType.NPC,
+                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
                    Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78, null);
                 } else {
