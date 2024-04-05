@@ -525,12 +525,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     ActorMemory actorMemory = null;
                     AnimationMemory animationMemory = null;
+                    ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
+                    Task task = null;
+                    ushort lipId = 0;
                     if (npcObject != null) {
                         actorMemory = new ActorMemory();
                         actorMemory.SetAddress(npcObject.Address);
+                        initialState = actorMemory.CharacterMode;
                         animationMemory = actorMemory.Animation;
                         animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                        ushort lipId = 0;
                         if (wavePlayer.TotalTime.Seconds < 4) {
                             lipId = LipSyncTypes[4].Timeline.AnimationId;
                         } else if (wavePlayer.TotalTime.Seconds < 6) {
@@ -538,14 +541,20 @@ namespace RoleplayingVoiceDalamud.Voice {
                         } else {
                             lipId = LipSyncTypes[6].Timeline.AnimationId;
                         }
-                        Task task = Task.Run(delegate {
+                        task = Task.Run(delegate {
+                            Thread.Sleep(500);
+                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                            }
                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
                             Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
                             animationMemory.LipsOverride = 0;
                             if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                             }
                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                            Vector3 lastPositoon = npcObject.Position;
+                            Stopwatch stopwatch = Stopwatch.StartNew();
                         });
                     }
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
@@ -562,7 +571,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 if (npcObject != null) {
                                     animationMemory.LipsOverride = 0;
                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                     }
                                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                 }
@@ -578,18 +587,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _hook.SendAsyncKey(Keys.NumPad0);
                                     }
                                 }
+                                task.Dispose();
                             } catch {
 
                             }
                         }
                     }, delegate (object sender, StreamVolumeEventArgs e) {
-                        if(e.MaxSampleValues.Length > 0) {
-                            if(e.MaxSampleValues[0] > 0.2) {
-                                if (!lipWasSynced) {
+                        if (e.MaxSampleValues.Length > 0) {
+                            if (e.MaxSampleValues[0] > 0.2) {
+                                if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),typeof(int)) != lipId) {
                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                     }
-                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 630, "Lipsync");
+                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
                                     lipWasSynced = true;
                                 }
                             } else {

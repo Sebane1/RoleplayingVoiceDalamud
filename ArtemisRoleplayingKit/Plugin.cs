@@ -62,6 +62,7 @@ using RoleplayingVoiceDalamud.Services;
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         #region Fields
+        private int performanceLimiter;
         private readonly DalamudPluginInterface pluginInterface;
         private readonly IChatGui _chat;
         private readonly IClientState _clientState;
@@ -441,13 +442,32 @@ namespace RoleplayingVoice {
                     CheckVolumeLevels();
                     CheckForNewRefreshes();
                 }
-                CheckForMovingObjects();
-                CheckForNewDynamicEmoteRequests();
-                CheckForDownloadCancellation();
-                CheckCataloging();
-                CheckForCustomMountingAudio();
-                CheckForCustomCombatAudio();
-                CheckForGPose();
+                switch (performanceLimiter++) {
+                    case 0:
+                        CheckForMovingObjects();
+                        break;
+                    case 1:
+                        CheckForNewDynamicEmoteRequests();
+                        break;
+                    case 2:
+                        CheckForDownloadCancellation();
+                        break;
+                    case 3:
+                        CheckCataloging();
+                        break;
+                    case 4:
+                        CheckForCustomMountingAudio();
+                        break;
+                    case 5:
+                        CheckForCustomCombatAudio();
+                        break;
+                    case 6:
+                        CheckForGPose();
+                        break;
+                    case 7:
+                        performanceLimiter = 0;
+                        break;
+                }
             }
         }
 
