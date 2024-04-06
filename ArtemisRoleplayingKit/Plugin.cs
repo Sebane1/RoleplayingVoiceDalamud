@@ -838,10 +838,10 @@ namespace RoleplayingVoice {
                                 delegate (object sender, StreamVolumeEventArgs e) {
                                     if (e.MaxSampleValues.Length > 0) {
                                         if (e.MaxSampleValues[0] > 0.2) {
-                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                            _addonTalkHandler.TriggerLipSync(player, 4);
                                             lipWasSynced = true;
                                         } else {
-                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                            _addonTalkHandler.StopLipSync(player);
                                         }
                                     }
                                 });
@@ -1956,10 +1956,10 @@ namespace RoleplayingVoice {
                                                      }, delegate (object sender, StreamVolumeEventArgs e) {
                                                          if (e.MaxSampleValues.Length > 0) {
                                                              if (e.MaxSampleValues[0] > 0.2) {
-                                                                 _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                                                 _addonTalkHandler.TriggerLipSync(instigator, 4);
                                                                  lipWasSynced = true;
                                                              } else {
-                                                                 _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                                                 _addonTalkHandler.StopLipSync(instigator);
                                                              }
                                                          }
                                                      });
