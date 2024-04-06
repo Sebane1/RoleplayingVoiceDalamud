@@ -89,7 +89,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             //IsOpen = true;
-            Size = new Vector2(400, 600);
+            Size = new Vector2(400, 700);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;

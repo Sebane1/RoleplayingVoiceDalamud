@@ -1403,11 +1403,11 @@ namespace RoleplayingVoice {
         private bool LanguageSpecificHit(Dalamud.ClientLanguage language, SeString message) {
             switch (language) {
                 case Dalamud.ClientLanguage.English:
-                    return message.TextValue.ToLower().Contains("hit") || message.TextValue.ToLower().Contains("hits");
+                    return message.TextValue.ToLower().Contains("use") || message.TextValue.ToLower().Contains("uses");
                 case Dalamud.ClientLanguage.French:
-                    return message.TextValue.ToLower().Contains("frapper") || message.TextValue.ToLower().Contains("frappe");
+                    return message.TextValue.ToLower().Contains("utiliser") || message.TextValue.ToLower().Contains("utilise");
                 case Dalamud.ClientLanguage.German:
-                    return message.TextValue.ToLower().Contains("triffst") || message.TextValue.ToLower().Contains("trifft");
+                    return message.TextValue.ToLower().Contains("verwendest") || message.TextValue.ToLower().Contains("benutz");
             }
             return false;
         }
