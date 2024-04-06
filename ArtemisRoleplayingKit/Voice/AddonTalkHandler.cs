@@ -431,20 +431,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private static int GetSimpleHash(string s) {
             return s.Select(a => (int)a).Sum();
         }
-        public async void TriggerLipSyncTest() {
-            try {
-                var actorMemory = new ActorMemory();
-                actorMemory.SetAddress(_clientState.LocalPlayer.Address);
-                var animationMemory = actorMemory.Animation;
-                _chatGui.Print("Animation state before lip sync application is " + animationMemory.LipsOverride);
-                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[5].Timeline.AnimationId, "Lipsync");
-                _chatGui.Print("Attempted to apply " + LipSyncTypes[5].Timeline.DisplayName);
-                _chatGui.Print("Animation state after lip sync application is " + animationMemory.LipsOverride);
-            } catch {
 
-            }
-        }
         public async void TriggerLipSync(Character character, int lipSyncType) {
             try {
                 var actorMemory = new ActorMemory();
@@ -452,6 +439,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                 var animationMemory = actorMemory.Animation;
                 animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
+                Task.Run(delegate {
+                    Thread.Sleep(10000);
+                    StopLipSync(character);
+                });
             } catch {
 
             }

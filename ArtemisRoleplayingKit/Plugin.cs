@@ -830,7 +830,6 @@ namespace RoleplayingVoice {
                                 GetSound(playerSender, playerMessage, audioFocus ?
                                 config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                _addonTalkHandler.TriggerLipSync(player, 5);
                                 bool lipWasSynced = false;
                                 _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
                                     _addonTalkHandler.StopLipSync(player);
@@ -2601,9 +2600,6 @@ namespace RoleplayingVoice {
                             } else {
                                 _catalogueWindow.IsOpen = true;
                             }
-                            break;
-                        case "lips":
-                            _addonTalkHandler.TriggerLipSyncTest();
                             break;
                         default:
                             if (config.AiVoiceActive) {
