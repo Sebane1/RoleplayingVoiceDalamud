@@ -28,6 +28,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingVoice;
+using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
 using SoundFilter;
 using System;
@@ -235,7 +236,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             if (npcBubbleInformaton.MessageText.TextValue != _lastText) {
                                                 NPCText(pActor->Address, finalName,
                                                     npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                    character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->GameObject.Position);
+                                                    character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
 #if DEBUG
                                                 _plugin.Chat.Print("Sent audio from NPC bubble.");
 #endif
@@ -482,6 +483,32 @@ namespace RoleplayingVoiceDalamud.Voice {
 
             return pcmSamples.ToArray();
         }
+
+        public string FeoUlRetainerCleanup(string npcName, string message) {
+            if (npcName == "Feo Ul") {
+                string[] words = message.Split(' ');
+                string cleanedMessage = "";
+                if (message.Contains("Oh, my adorable sapling! You have need of ")) {
+                    for (int i = 0; i < words.Length; i++) {
+                        if (i == 8) {
+                            cleanedMessage += "your retainer, ";
+                        } else {
+                            cleanedMessage += words[i] + " ";
+                        }
+                    }
+                } else if (message.Contains("You have no more need of ")) {
+                    for (int i = 0; i < words.Length; i++) {
+                        if (i == 6) {
+                            cleanedMessage += "your retainer? ";
+                        } else {
+                            cleanedMessage += words[i] + " ";
+                        }
+                    }
+                }
+                return cleanedMessage.Trim();
+            }
+            return message;
+        }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
             try {
                 bool gender = false;
@@ -491,42 +518,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                 string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
                 MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                 _currentSpeechObject = currentSpeechObject;
-                string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
+                ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
+                string npcData = JsonConvert.SerializeObject(reportData);
+                string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value,
-                StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
-                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, "", redoLine);
+               FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message)), nameToUse, gender,
+                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData, redoLine);
                 if (stream.Key != null) {
-                    WaveStream wavePlayer = null;
-                    try {
-                        stream.Key.Position = 0;
-                        wavePlayer = new Mp3FileReader(stream.Key);
-                    } catch {
-                        stream.Key.Position = 0;
-                        if (stream.Key.Length > 0) {
-                            float[] data = DecodeOggOpusToPCM(stream.Key);
-                            if (data.Length > 0) {
-                                WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
-                                MemoryStream memoryStream = new MemoryStream();
-                                WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
-                                writer.WriteSamples(data.ToArray(), 0, data.Length);
-                                writer.Flush();
-                                memoryStream.Position = 0;
-                                if (memoryStream.Length > 0) {
-                                    var newPlayer = new WaveFileReader(memoryStream);
-                                    if (newPlayer.TotalTime.Seconds > 2) {
-                                        wavePlayer = newPlayer;
-                                    }
-                                } else {
-                                    Dalamud.Logging.PluginLog.LogWarning($"Memory stream stream for {npcName} is empty.");
-                                }
-                            } else {
-                                Dalamud.Logging.PluginLog.LogWarning($"PCM Decoded audio stream for {npcName} is empty.");
-                            }
-                        } else {
-                            Dalamud.Logging.PluginLog.LogWarning($"Received audio stream for {npcName} is empty.");
-                        }
-                    }
+                    WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, reportData);
                     ActorMemory actorMemory = null;
                     AnimationMemory animationMemory = null;
                     ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -624,68 +624,58 @@ namespace RoleplayingVoiceDalamud.Voice {
             } catch {
             }
         }
-        private async void NPCText(nint address, string name, string message, bool gender, byte race, byte body, Vector3 position) {
+
+        private WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
+            WaveStream wavePlayer = null;
+            try {
+                stream.Position = 0;
+                wavePlayer = new Mp3FileReader(stream);
+            } catch {
+                stream.Position = 0;
+                if (stream.Length > 0) {
+                    float[] data = DecodeOggOpusToPCM(stream);
+                    if (data.Length > 0) {
+                        WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
+                        MemoryStream memoryStream = new MemoryStream();
+                        WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
+                        writer.WriteSamples(data.ToArray(), 0, data.Length);
+                        writer.Flush();
+                        memoryStream.Position = 0;
+                        if (memoryStream.Length > 0) {
+                            var newPlayer = new WaveFileReader(memoryStream);
+                            if (newPlayer.TotalTime.Milliseconds > 100) {
+                                wavePlayer = newPlayer;
+                            } else {
+                                Dalamud.Logging.PluginLog.LogWarning($"Sound for {npcName} is too short.");
+                            }
+                        } else {
+                            Dalamud.Logging.PluginLog.LogWarning($"Memory stream stream for {npcName} is empty.");
+                        }
+                    } else {
+                        Dalamud.Logging.PluginLog.LogWarning($"PCM Decoded audio stream for {npcName} is empty.");
+                    }
+                } else {
+                    Dalamud.Logging.PluginLog.LogWarning($"Received audio stream for {npcName} is empty.");
+                    reportData.ReportToXivVoice();
+                }
+            }
+            return wavePlayer;
+        }
+
+        private async void NPCText(nint address, string name, string message, bool gender, byte race, byte body, byte tribe, byte eyes, uint objectId, Vector3 position) {
             try {
                 string nameToUse = name;
                 MediaGameObject currentSpeechObject = new MediaGameObject(name, position);
                 _currentSpeechObject = currentSpeechObject;
                 string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
+                ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes);
+                string npcData = JsonConvert.SerializeObject(reportData);
                 KeyValuePair<Stream, bool> stream =
                 await _plugin.NpcVoiceManager.GetCharacterAudio(value,
                 StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
-                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true);
+                PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData);
                 if (stream.Key != null) {
-                    WaveStream wavePlayer = null;
-                    try {
-                        stream.Key.Position = 0;
-                        wavePlayer = new Mp3FileReader(stream.Key);
-                    } catch {
-                        try {
-                            stream.Key.Position = 0;
-                            wavePlayer = new VorbisWaveReader(stream.Key);
-                        } catch {
-                            stream.Key.Position = 0;
-                            float[] data = DecodeOggOpusToPCM(stream.Key);
-                            WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
-                            MemoryStream memoryStream = new MemoryStream();
-                            WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
-                            writer.WriteSamples(data.ToArray(), 0, data.Length);
-                            writer.Flush();
-                            memoryStream.Position = 0;
-                            wavePlayer = new WaveFileReader(memoryStream);
-                        }
-                    }
-                    //try {
-                    //    ActorMemory actorMemory = null;
-                    //    AnimationMemory animationMemory = null;
-                    //    if (address != IntPtr.Zero) {
-                    //        actorMemory = new ActorMemory();
-                    //        actorMemory.SetAddress(address);
-                    //        animationMemory = actorMemory.Animation;
-                    //        animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                    //        ushort lipId = 0;
-                    //        if (wavePlayer.TotalTime.Seconds < 4) {
-                    //            lipId = LipSyncTypes[4].Timeline.AnimationId;
-                    //        } else if (wavePlayer.TotalTime.Seconds < 6) {
-                    //            lipId = LipSyncTypes[5].Timeline.AnimationId;
-                    //        } else {
-                    //            lipId = LipSyncTypes[6].Timeline.AnimationId;
-                    //        }
-                    //        Task task = Task.Run(delegate {
-                    //            try {
-                    //                Thread.Sleep(100);
-                    //                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                    //                Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
-                    //                animationMemory.LipsOverride = 0;
-                    //                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                    //            } catch {
-
-                    //            }
-                    //        });
-                    //    }
-                    //} catch {
-
-                    //}
+                    WaveStream wavePlayer = GetWavePlayer(name, stream.Key, reportData);
                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
                      CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
