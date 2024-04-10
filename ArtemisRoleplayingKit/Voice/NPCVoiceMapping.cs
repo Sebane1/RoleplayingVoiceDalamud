@@ -30,10 +30,12 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Crystal Exarch", "Gia");
             values.Add("Minfilia", "Mward");
             values.Add("Ryne", "Mward");
+            values.Add("Kokkol Dankkol", "Kool");
             values.Add("Papalymo", "Ptotol");
             values.Add("Short-tempered Thaumaturge", "Ptotol");
             values.Add("Krile", "Kmayerbal");
             values.Add("Matoya", "Moya");
+            values.Add("Hydaelyn", "Hyn");
             values.Add("Kan-E-Senna", "Kes");
             values.Add("Merlwyb", "Mbloe");
             values.Add("Nanamo Ul Namo", "Nulnamo");

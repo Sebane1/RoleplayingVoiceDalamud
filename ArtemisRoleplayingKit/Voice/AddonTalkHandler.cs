@@ -2,15 +2,12 @@
 using Anamnesis.Actor;
 using Anamnesis.Core.Memory;
 using Anamnesis.GameData.Excel;
-using Anamnesis.GameData.Interfaces;
 using Anamnesis.Memory;
 using Anamnesis.Services;
-using Concentus.Common;
 using Concentus.Oggfile;
 using Concentus.Structs;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -20,17 +17,13 @@ using Dalamud.Memory;
 using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using ImGuiNET;
 using NAudio.Lame;
-using NAudio.Vorbis;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
-using SoundFilter;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -40,13 +33,9 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
-using XivCommon.Functions;
-using static System.Net.WebRequestMethods;
-using static System.Windows.Forms.AxHost;
 using Character = Dalamud.Game.ClientState.Objects.Types.Character;
 using SoundType = RoleplayingMediaCore.SoundType;
 
@@ -375,46 +364,46 @@ namespace RoleplayingVoiceDalamud.Voice {
 
 
         private void DumpCurrentAudio(string speaker) {
-            ////try {
-            ////    if (_currentDialoguePaths.Count > 0) {
-            ////        Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
-            ////        string name = speaker;
-            ////        string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
-            ////        string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
-            ////        FileInfo fileInfo = null;
-            ////        try {
-            ////            fileInfo = new FileInfo(path);
-            ////        } catch {
+            try {
+                if (_currentDialoguePaths.Count > 0) {
+                    Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
+                    string name = speaker;
+                    string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
+                    string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
+                    FileInfo fileInfo = null;
+                    try {
+                        fileInfo = new FileInfo(path);
+                    } catch {
 
-            ////        }
-            ////        if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-            ////            try {
-            ////                ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-            ////                WaveStream stream = scdFile.Audio[0].Data.GetStream();
-            ////                var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-            ////                using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
-            ////                    pcmStream.CopyTo(fileStreamWave);
-            ////                    fileStreamWave.Close();
-            ////                    fileStreamWave.Dispose();
-            ////                }
-            ////                if (scdFile != null) {
-            ////                    using (var waveStream = new AudioFileReader(pathWave)) {
-            ////                        using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
-            ////                            using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
-            ////                                waveStream.CopyTo(lame);
-            ////                            }
-            ////                        }
-            ////                    }
-            ////                }
-            ////                File.Delete(pathWave);
-            ////            } catch (Exception e) {
-            ////                Dalamud.Logging.PluginLog.LogError(e, e.Message);
-            ////            }
-            ////        }
-            ////    }
-            ////} catch (Exception e) {
-            ////    Dalamud.Logging.PluginLog.LogError(e, e.Message);
-            ////}
+                    }
+                    if (!fileInfo.Exists || fileInfo.Length < 7500000) {
+                        try {
+                            ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                            using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
+                                pcmStream.CopyTo(fileStreamWave);
+                                fileStreamWave.Close();
+                                fileStreamWave.Dispose();
+                            }
+                            if (scdFile != null) {
+                                using (var waveStream = new AudioFileReader(pathWave)) {
+                                    using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
+                                        using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
+                                            waveStream.CopyTo(lame);
+                                        }
+                                    }
+                                }
+                            }
+                            File.Delete(pathWave);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogError(e, e.Message);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Dalamud.Logging.PluginLog.LogError(e, e.Message);
+            }
         }
 
         public string ConvertRomanNumberals(string text) {

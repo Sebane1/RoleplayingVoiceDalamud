@@ -101,4 +101,16 @@
 	  </None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="C:\Users\stel9\.nuget\packages\naudio.lame\2.1.0\build\libmp3lame.64.dll">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="C:\Users\stel9\.nuget\packages\naudio.lame\2.1.0\build\libmp3lame.32.dll">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>

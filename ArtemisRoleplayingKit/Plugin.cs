@@ -59,6 +59,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.DragDrop;
 using RoleplayingVoiceDalamud.Services;
 using NAudio.Wave.SampleProviders;
+using FFXIVClientStructs.FFXIV.Client.System.Timer;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
