@@ -3,6 +3,7 @@ using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace RoleplayingVoiceDalamud {
@@ -39,8 +40,17 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public unsafe int GetRandom(int min, int max) {
-            Random random = new Random(new TimeSpan(Framework.Instance()->ClientTime.EorzeaTime).Seconds);
+            var utcTime = Framework.GetServerTime();
+            var time = DateTimeOffset.FromUnixTimeSeconds(utcTime);
+            string timeString = time.UtcDateTime.ToString(@"hh\:mm\:ss").Remove(7);
+            int hash = GetSimpleHash(timeString);
+            Random random = new Random(hash);
+            Dalamud.Logging.PluginLog.Log("Time seed is " + timeString);
+            Dalamud.Logging.PluginLog.Log("Raw UTC time seed is " + utcTime);
             return random.Next(min, max);
+        }
+        private static int GetSimpleHash(string s) {
+            return s.Select(a => (int)a).Sum();
         }
         public void SortFile(string file) {
             if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {
