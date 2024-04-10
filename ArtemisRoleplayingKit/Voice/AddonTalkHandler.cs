@@ -200,7 +200,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private void Filter_OnCutsceneAudioDetected(object sender, SoundFilter.InterceptedSound e) {
             if (_clientState != null) {
                 if (_clientState.IsLoggedIn) {
-                    if (!_currentDialoguePaths.Contains(e.SoundPath)) {
+                    if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
                         _blockAudioGeneration = e.isBlocking;
                         _currentDialoguePaths.Add(e.SoundPath);
                         _currentDialoguePathsCompleted.Add(false);
