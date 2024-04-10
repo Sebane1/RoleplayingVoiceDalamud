@@ -185,6 +185,8 @@ namespace RoleplayingVoice {
         private bool _mountMusicWasPlayed;
         private int _recentCFPop;
         private int hurtCount;
+        private MediaGameObject _lastStreamObject;
+        private string[] _streamURLs;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -303,11 +305,16 @@ namespace RoleplayingVoice {
                 _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow);
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
+                _videoWindow.WindowResized += _videoWindow_WindowResized;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
             #endregion
+        }
+
+        private void _videoWindow_WindowResized(object sender, EventArgs e) {
+            ChangeStreamQuality();
         }
 
         private void InitializeEverything() {
@@ -775,13 +782,17 @@ namespace RoleplayingVoice {
                         Task.Run(() => EmoteReaction(message.TextValue));
                     }
                 }
+                string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
+                _clientState.LocalPlayer.Name.TextValue)).Split(" ");
+                string playerSender = senderStrings.Length == 2 ?
+                    (senderStrings[0] + " " + senderStrings[1]) :
+                    (senderStrings[0] + " " + senderStrings[2]);
+                string playerMessage = message.TextValue;
+                PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                if (config.TwitchStreamTriggersIfShouter) {
+                    TwitchChatCheck(message, type, player);
+                }
                 if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
-                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
-                    _clientState.LocalPlayer.Name.TextValue)).Split(" ");
-                    string playerSender = senderStrings.Length == 2 ?
-                        (senderStrings[0] + " " + senderStrings[1]) :
-                        (senderStrings[0] + " " + senderStrings[2]);
-                    string playerMessage = message.TextValue;
                     bool lipWasSynced = true;
                     Task.Run(async () => {
                         string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
@@ -848,40 +859,43 @@ namespace RoleplayingVoice {
                             CheckForChatSoundEffectOtherPlayer(sender, player, message);
                         }
                     }
-                    if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
-                        if (config.TuneIntoTwitchStreams && IsResidential()) {
-                            if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
-                                var strings = message.TextValue.Split(' ');
-                                foreach (string value in strings) {
-                                    if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                        var audioGameObject = new MediaGameObject(player);
-                                        if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
-                                            TuneIntoStream(value
-                                                .Trim('(').Trim(')')
-                                                .Trim('[').Trim(']')
-                                                .Trim('!').Trim('@'), audioGameObject, false);
-                                        }
-                                        break;
-                                    }
+                    TwitchChatCheck(message, type, player);
+                }
+            }
+        }
+        public void TwitchChatCheck(SeString message, XivChatType type, PlayerCharacter player) {
+            if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
+                if (config.TuneIntoTwitchStreams && IsResidential()) {
+                    if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
+                        var strings = message.TextValue.Split(' ');
+                        foreach (string value in strings) {
+                            if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                                _lastStreamObject = player.TargetObject != null ? new MediaGameObject(player.TargetObject) : new MediaGameObject(player);
+                                var audioGameObject = _lastStreamObject;
+                                if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
+                                    TuneIntoStream(value
+                                        .Trim('(').Trim(')')
+                                        .Trim('[').Trim(']')
+                                        .Trim('!').Trim('@'), audioGameObject, false);
                                 }
+                                break;
                             }
-                        } else {
-                            var strings = message.TextValue.Split(' ');
-                            foreach (string value in strings) {
-                                if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                    potentialStream = value;
-                                    lastStreamURL = value;
-                                    string cleanedURL = RemoveSpecialSymbols(value);
-                                    string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                                    _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
-                                }
-                            }
+                        }
+                    }
+                } else {
+                    var strings = message.TextValue.Split(' ');
+                    foreach (string value in strings) {
+                        if (value.Contains("twitch.tv") && lastStreamURL != value) {
+                            potentialStream = value;
+                            lastStreamURL = value;
+                            string cleanedURL = RemoveSpecialSymbols(value);
+                            string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
+                            _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
                         }
                     }
                 }
             }
         }
-
         private async void CheckForChatSoundEffectOtherPlayer(string sender, PlayerCharacter player, SeString message) {
             if (message.TextValue.Contains("<") && message.TextValue.Contains(">")) {
                 string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
@@ -1863,6 +1877,8 @@ namespace RoleplayingVoice {
             }
         }
         public void ResetTwitchValues() {
+            _lastStreamObject = null;
+            _streamURLs = null;
             if (streamWasPlaying) {
                 streamWasPlaying = false;
                 _videoWindow.IsOpen = false;
@@ -2406,7 +2422,7 @@ namespace RoleplayingVoice {
                 RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
-            Regex rgx = new Regex(@"[^a-zA-Z:/._\ -]");
+            Regex rgx = new Regex(@"[^a-zA-Z0-9:/._\ -]");
             return rgx.Replace(value, "");
         }
         #endregion
@@ -2414,9 +2430,10 @@ namespace RoleplayingVoice {
         private void TuneIntoStream(string url, IGameObject audioGameObject, bool isNotTwitch) {
             Task.Run(async () => {
                 string cleanedURL = RemoveSpecialSymbols(url);
-                string streamURL = isNotTwitch ? url : TwitchFeedManager.GetServerResponse(cleanedURL, TwitchFeedManager.TwitchFeedType._360p);
-                if (!string.IsNullOrEmpty(streamURL)) {
-                    _mediaManager.PlayStream(audioGameObject, streamURL);
+                _streamURLs = isNotTwitch ? new string[] { url } : TwitchFeedManager.GetServerResponse(cleanedURL);
+                _videoWindow.IsOpen = config.DefaultTwitchOpen == 0;
+                if (_streamURLs.Length > 0) {
+                    _mediaManager.PlayStream(audioGameObject, _streamURLs[(int)_videoWindow.FeedType]);
                     lastStreamURL = cleanedURL;
                     if (!isNotTwitch) {
                         _currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
@@ -2429,7 +2446,6 @@ namespace RoleplayingVoice {
                             "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
                             (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     }
-                    _videoWindow.IsOpen = true;
                 }
             });
             streamWasPlaying = true;
@@ -2441,6 +2457,24 @@ namespace RoleplayingVoice {
             _streamSetCooldown.Stop();
             _streamSetCooldown.Reset();
             _streamSetCooldown.Start();
+        }
+        private void ChangeStreamQuality() {
+            if (_streamURLs != null) {
+                if (streamWasPlaying && _streamURLs.Length > 0) {
+                    Task.Run(async () => {
+                        if ((int)_videoWindow.FeedType < _streamURLs.Length) {
+                            if (_lastStreamObject != null) {
+                                try {
+                                    _mediaManager.ChangeStream(_lastStreamObject,
+                                         _streamURLs[(int)_videoWindow.FeedType], _videoWindow.Size.Value.X);
+                                } catch (Exception e) {
+                                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                                }
+                            }
+                        }
+                    });
+                }
+            }
         }
         #endregion
         #region UI Management
@@ -2512,6 +2546,7 @@ namespace RoleplayingVoice {
                             break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
+                                _lastStreamObject = _playerObject;
                                 TuneIntoStream(splitArgs[1], _playerObject, false);
                             } else {
                                 if (!string.IsNullOrEmpty(_currentStreamer)) {

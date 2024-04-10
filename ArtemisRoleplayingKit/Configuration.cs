@@ -106,6 +106,8 @@ namespace RoleplayingVoice {
         public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
         public int AudioOutputType { get => _audioOutputType; set => _audioOutputType = value; }
         public bool QualityAssuranceMode { get => _qualityAssuranceMode; set => _qualityAssuranceMode = value; }
+        public int DefaultTwitchOpen { get; internal set; }
+        public bool TwitchStreamTriggersIfShouter { get; internal set; }
 
         #endregion
 

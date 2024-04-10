@@ -21,6 +21,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public byte race { get; set; }
         public byte tribe { get; set; }
         public byte eyes { get; set; }
+        public byte folder { get; set; }
         public string user { get; set; }
         public ReportData(string name, string message, GameObject gameObject) {
             Character character = gameObject as Character;

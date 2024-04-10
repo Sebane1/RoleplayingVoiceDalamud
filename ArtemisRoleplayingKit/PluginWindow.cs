@@ -30,6 +30,8 @@ namespace RoleplayingVoice {
         RoleplayingMediaManager _manager = null;
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
+        BetterComboBox _twitchDefaultPlayback = new BetterComboBox("##twitchDefaultPlayback",
+            new string[] { "Start Stream With Video", "Start Stream With Audio" }, 200);
         BetterComboBox _audioOutputType;
         private FileDialogManager fileDialogManager;
         private FFXIVHook hook;
@@ -82,6 +84,7 @@ namespace RoleplayingVoice {
         private bool _replaceVoicedARRCutscenes;
         private bool _refreshing;
         private bool _qualityAssuranceMode;
+        private bool _twitchStreamTriggersIfShouter;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -89,7 +92,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             //IsOpen = true;
-            Size = new Vector2(400, 700);
+            Size = new Vector2(600, 700);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -136,7 +139,10 @@ namespace RoleplayingVoice {
                     _npcVolume = configuration.NpcVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
+
                     _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
+                    _twitchDefaultPlayback.SelectedIndex = configuration.DefaultTwitchOpen;
+
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
@@ -146,6 +152,8 @@ namespace RoleplayingVoice {
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
                     _qualityAssuranceMode = configuration.QualityAssuranceMode;
                     _streamPath = configuration.StreamPath;
+                    _twitchStreamTriggersIfShouter = configuration.TwitchStreamTriggersIfShouter;
+
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -220,30 +228,28 @@ namespace RoleplayingVoice {
             if (clientState.IsLoggedIn) {
                 fileDialogManager.Draw();
                 if (ImGui.BeginTabBar("ConfigTabs")) {
-                    if (ImGui.BeginTabItem("General")) {
+                    if (ImGui.BeginTabItem("Player Voice")) {
                         DrawGeneral();
                         ImGui.EndTabItem();
                     }
-
-                    if (ImGui.BeginTabItem("Volume")) {
-                        DrawVolume();
-                        ImGui.EndTabItem();
-                    }
-
-                    if (ImGui.BeginTabItem("Settings")) {
-                        DrawServer();
-                        ImGui.EndTabItem();
-                    }
-                    if (ImGui.BeginTabItem("Whitelist")) {
-                        DrawWhitelist();
+                    if (ImGui.BeginTabItem("Player Sync")) {
+                        DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
                     if (ImGui.BeginTabItem("NPC Dialogue")) {
                         DrawNPCDialogue();
                         ImGui.EndTabItem();
                     }
-                    if (ImGui.BeginTabItem("GPose")) {
-                        DrawGposeFrames();
+                    if (ImGui.BeginTabItem("Twitch Integration")) {
+                        DrawTwitch();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Volume")) {
+                        DrawVolume();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Extra's")) {
+                        DrawExtras();
                         ImGui.EndTabItem();
                     }
                     ImGui.EndTabBar();
@@ -255,7 +261,29 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void DrawGposeFrames() {
+        private void DrawTwitch() {
+            ImGui.Checkbox("##useTwitchStreams", ref _tuneIntoTwitchStreams);
+            ImGui.SameLine();
+            ImGui.Text("Tune Into Twitch Streams");
+            ImGui.TextWrapped("Intended for venues where DJ's are playing. Audio will play inside the venue as soon as their Twitch URL is advertised in yell chat.");
+            ImGui.Dummy(new Vector2(0, 10));
+            _twitchDefaultPlayback.Width = (int)ImGui.GetContentRegionMax().X;
+            _twitchDefaultPlayback.Draw();
+            ImGui.TextWrapped("When a twitch stream opens up, this defines the default behaviour of whether it starts with video or with audio.");
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Checkbox("##useTwitchStreamsWhenShouter", ref _twitchStreamTriggersIfShouter);
+            ImGui.SameLine();
+            ImGui.Text("Trigger twitch streams when shouter.");
+            ImGui.TextWrapped("Twitch streams will still trigger despite being the twitch stream shouter");
+            ImGui.Dummy(new Vector2(0, 10));
+        }
+
+        private void DrawExtras() {
+            ImGui.Checkbox("##useEmoteBasedOnMessageText", ref _performEmotesBasedOnWrittenText);
+            ImGui.SameLine();
+            ImGui.Text("Perform Emotes Based On Written Text");
+            ImGui.TextWrapped("Your character will emote based on what you write in custom emotes. We recommend turning off log messages for emotes before using this feature.");
+            ImGui.Dummy(new Vector2(0, 10));
             try {
                 ImGui.TextWrapped("You can now add custom photo frames! You can access these while the game UI is hidden in Gpose!");
                 PluginReference.DragDrop.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
@@ -320,17 +348,28 @@ namespace RoleplayingVoice {
                 "\r\n\r\nThe more this feature is used, the faster it will become for everyone." +
                 "\r\n\r\nMany NPC's do not yet have their own unique voice yet. You can help with this!" +
                 "\r\n\r\nThe end goal is to have voice dialogue for nearly every corner of the game.\r\n\r\n");
-            ImGui.Checkbox("Disable Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
+            ImGui.Checkbox("Turn Off Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
             ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
             ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
         }
 
-        private void DrawWhitelist() {
+        private void DrawPlayerSync() {
+            ImGui.Text("Server IP");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.InputText("##serverIP", ref serverIP, 2000);
+
+            ImGui.Checkbox("##useServer", ref _useServer);
+            ImGui.SameLine();
+            ImGui.Text("Allow Sending/Receiving Server Data");
+            ImGui.TextWrapped("(Any players with ARK installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
+
             string[] whitelist = configuration.Whitelist.ToArray();
             if (whitelist.Length == 0) {
                 whitelist = new string[] { "None" };
             }
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Text("Player Whitelist");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
             bool playerTargetted = (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null);
@@ -509,6 +548,7 @@ namespace RoleplayingVoice {
                 configuration.CacheFolder = cacheFolder;
                 configuration.UsePlayerSync = _useServer;
                 configuration.TuneIntoTwitchStreams = _tuneIntoTwitchStreams;
+                configuration.DefaultTwitchOpen = _twitchDefaultPlayback.SelectedIndex;
                 configuration.IgnoreWhitelist = _ignoreWhitelist;
                 configuration.StreamPath = _streamPath;
                 configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
@@ -518,6 +558,8 @@ namespace RoleplayingVoice {
                 configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
                 configuration.AudioOutputType = _audioOutputType.SelectedIndex;
                 configuration.QualityAssuranceMode = _qualityAssuranceMode;
+                configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
+
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                         characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -723,14 +765,35 @@ namespace RoleplayingVoice {
                 }, null, true);
                 ImGui.EndPopup();
             }
-
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.LabelText("##GCVSLabel", "Generative Character Voice ");
+            ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
+            ImGui.SameLine();
+            ImGui.Text("Generative Voice Enabled");
             if (clientState.LocalPlayer != null && _aiVoiceActive) {
+                ImGui.Text("Elevenlabs API Key");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
+                if (string.IsNullOrEmpty(apiKey)) {
+                    if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                        Process process = new Process();
+                        try {
+                            process.StartInfo.UseShellExecute = true;
+                            process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
+                            process.Start();
+                        } catch (Exception e) {
+
+                        }
+                    }
+                }
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("AI Voice");
+                        voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
-
                         ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                    } else {
+
                     }
                 } else if (voiceComboBox.Contents.Length == 1 &&
                       (voiceComboBox.Contents[0].Contains("None", StringComparison.OrdinalIgnoreCase) ||
@@ -755,74 +818,79 @@ namespace RoleplayingVoice {
                     voiceComboBox.Draw();
                 }
             }
-            ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
-            ImGui.SameLine();
-            ImGui.Text("AI Voice Enabled");
-            ImGui.Dummy(new Vector2(0, 10));
-            ImGui.LabelText("##Label", "Emote and Battle Sounds ");
-            if (_voicePackList.Length > 0 && clientState.IsLoggedIn) {
-                voicePackComboBox.Draw();
+            if (_aiVoiceActive) {
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
                 ImGui.SameLine();
-                if (ImGui.Button("Open Sound Directory")) {
-                    if (voicePackComboBox != null && _voicePackList != null) {
-                        characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
-                    }
-                    ProcessStartInfo ProcessInfo;
-                    Process Process;
-                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                    try {
-                        Directory.CreateDirectory(directory);
-                    } catch {
-                    }
-                    ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
-                    ProcessInfo.UseShellExecute = true;
-                    Process = Process.Start(ProcessInfo);
-                }
+                ImGui.Text("Use Aggressive Caching");
             }
-            ImGui.SetNextItemWidth(270);
-            ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
-            ImGui.SameLine();
-            if (ImGui.Button("New Sound Pack")) {
-                string directory = configuration.CacheFolder + @"\VoicePack\" + _newVoicePackName;
-                Directory.CreateDirectory(directory);
-                RefreshVoices();
-                _newVoicePackName = "";
-            }
-            if (ImGui.Button("Import Sound Pack")) {
-                fileDialogManager.Reset();
-                ImGui.OpenPopup("ImportDialog");
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button("Export Sound Pack")) {
-                fileDialogManager.Reset();
-                ImGui.OpenPopup("ExportDialog");
-            }
-
-            if (ImGui.BeginPopup("ImportDialog")) {
-                fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
-                    string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
-                    if (isOk) {
-                        ZipFile.ExtractToDirectory(file, directory);
-                        RefreshVoices();
-                    }
-                });
-                ImGui.EndPopup();
-            }
-
-            if (ImGui.BeginPopup("ExportDialog")) {
-                fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
-                    string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
-                    if (isOk) {
-                        ZipFile.CreateFromDirectory(directory, file);
-                    }
-                });
-                ImGui.EndPopup();
-            }
-            ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.LabelText("##EBSLabel", "Emote and Battle Sounds ");
             ImGui.Checkbox("##characterVoicePackActive", ref _characterVoicePackActive);
             ImGui.SameLine();
             ImGui.Text("Voice Pack Enabled");
+            if (_characterVoicePackActive) {
+                if (_voicePackList.Length > 0 && clientState.IsLoggedIn) {
+                    voicePackComboBox.Draw();
+                    ImGui.SameLine();
+                    if (ImGui.Button("Open Sound Directory")) {
+                        if (voicePackComboBox != null && _voicePackList != null) {
+                            characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                        }
+                        ProcessStartInfo ProcessInfo;
+                        Process Process;
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                        try {
+                            Directory.CreateDirectory(directory);
+                        } catch {
+                        }
+                        ProcessInfo = new ProcessStartInfo("explorer.exe", @"""" + directory + @"""");
+                        ProcessInfo.UseShellExecute = true;
+                        Process = Process.Start(ProcessInfo);
+                    }
+                }
+                ImGui.SetNextItemWidth(270);
+                ImGui.InputText("##newVoicePack", ref _newVoicePackName, 20);
+                ImGui.SameLine();
+                if (ImGui.Button("New Sound Pack")) {
+                    string directory = configuration.CacheFolder + @"\VoicePack\" + _newVoicePackName;
+                    Directory.CreateDirectory(directory);
+                    RefreshVoices();
+                    _newVoicePackName = "";
+                }
+                if (ImGui.Button("Import Sound Pack")) {
+                    fileDialogManager.Reset();
+                    ImGui.OpenPopup("ImportDialog");
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button("Export Sound Pack")) {
+                    fileDialogManager.Reset();
+                    ImGui.OpenPopup("ExportDialog");
+                }
+
+                if (ImGui.BeginPopup("ImportDialog")) {
+                    fileDialogManager.OpenFileDialog("Select Sound Pack", "{.rpvsp}", (isOk, file) => {
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + Path.GetFileNameWithoutExtension(file);
+                        if (isOk) {
+                            ZipFile.ExtractToDirectory(file, directory);
+                            RefreshVoices();
+                        }
+                    });
+                    ImGui.EndPopup();
+                }
+
+                if (ImGui.BeginPopup("ExportDialog")) {
+                    fileDialogManager.SaveFileDialog("Select Sound Pack", "{.rpvsp}", "SoundPack.rpvsp", ".rpvsp", (isOk, file) => {
+                        string directory = configuration.CacheFolder + @"\VoicePack\" + characterVoicePack;
+                        if (isOk) {
+                            ZipFile.CreateFromDirectory(directory, file);
+                        }
+                    });
+                    ImGui.EndPopup();
+                }
+                ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
+            }
             ImGui.Dummy(new Vector2(0, 10));
             ImGui.TextWrapped("Artemis Roleplaying Kit relies on donations to continue development. Please consider tossing a dollar if you enjoy using the plugin.");
             if (ImGui.Button("Donate", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
@@ -860,57 +928,17 @@ namespace RoleplayingVoice {
             ImGui.Text("Audio Output System (Change if you notice playback issues)");
             _audioOutputType.Width = (int)ImGui.GetContentRegionMax().X;
             _audioOutputType.Draw();
-            if (ImGui.Button("Volume Fix", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
-                PluginReference.MediaManager.VolumeFix();
-            }
-        }
-
-        private void DrawServer() {
-            ImGui.Text("Server IP");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##serverIP", ref serverIP, 2000);
-
-            ImGui.Text("Elevenlabs API Key");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
-
-            if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
-                Process process = new Process();
-                try {
-                    process.StartInfo.UseShellExecute = true;
-                    process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
-                    process.Start();
-                } catch (Exception e) {
-
-                }
-            }
-
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
-            ImGui.SameLine();
-            ImGui.Text("Use Aggressive Caching");
-
-            ImGui.Checkbox("##useServer", ref _useServer);
-            ImGui.SameLine();
-            ImGui.Text("Allow Sending/Receiving Server Data");
-            ImGui.TextWrapped("(Any players with ARK installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
-
             ImGui.Checkbox("##moveSCDBasedModsToPerformanceSlider", ref _moveSCDBasedModsToPerformanceSlider);
             ImGui.SameLine();
-            ImGui.Text("Seperate SCD Sounds From BGM Track (Experimental)");
+            ImGui.Text("Seperate Dance Mods From BGM Track (Experimental)");
             ImGui.TextWrapped("Mods that use .scd files will be moved from the BGM channel and use the Performance slider. They'll also be synced via ARK if sync is enabled.");
 
-            ImGui.Checkbox("##useTwitchStreams", ref _tuneIntoTwitchStreams);
-            ImGui.SameLine();
-            ImGui.Text("Tune Into Twitch Streams");
-            ImGui.TextWrapped("Intended for venues where DJ's are playing. Audio will play inside the venue as soon as their Twitch URL is advertised in yell chat.");
-
-            ImGui.Checkbox("##useEmoteBasedOnMessageText", ref _performEmotesBasedOnWrittenText);
-            ImGui.SameLine();
-            ImGui.Text("Perform Emotes Based On Written Text");
-            ImGui.TextWrapped("Your character will emote based on what you write in custom emotes. We recommend turning off log messages for emotes before using this feature.");
+            if (ImGui.Button("Volume Fix (fixes rare instances of muted sound)", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                PluginReference.MediaManager.VolumeFix();
+            }
 
         }
+
 
         private void FileMove(ref string oldFolder, string newFolder) {
             bool canContinue = true;

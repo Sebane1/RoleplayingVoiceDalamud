@@ -5,6 +5,7 @@ using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 using ImGuiScene;
 using RoleplayingMediaCore;
+using RoleplayingMediaCore.Twitch;
 using System;
 using System.Diagnostics;
 using static Penumbra.Api.Ipc;
@@ -21,24 +22,36 @@ namespace RoleplayingVoice {
         private string fpsCount = "";
         int countedFrames = 0;
         private bool wasStreaming;
+        private Vector2? _lastWindowSize;
+        public event EventHandler WindowResized;
+        public TwitchFeedType FeedType = TwitchFeedType._360p;
+        private bool _wasNotOpen;
+        Stopwatch eventTriggerCooldown = new Stopwatch();
 
         public VideoWindow(DalamudPluginInterface pluginInterface) :
-            base("Video Window", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, false) {
+            base("Video Window", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar, false) {
             //IsOpen = true;
             windowSize = Size = new Vector2(640, 360);
+            this.SizeCondition = ImGuiCond.Always;
             initialSize = Size;
-            SizeCondition = ImGuiCond.None;
             _pluginInterface = pluginInterface;
             Position = new Vector2(0, 0);
+            PositionCondition = ImGuiCond.Once;
+            eventTriggerCooldown.Start();
         }
 
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override void Draw() {
+            Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
             if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
-                lock (_mediaManager.LastFrame) {
-                    textureWrap = _pluginInterface.UiBuilder.LoadImage(_mediaManager.LastFrame);
-                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(500, 281));
+                try {
+                    lock (_mediaManager.LastFrame) {
+                        textureWrap = _pluginInterface.UiBuilder.LoadImage(_mediaManager.LastFrame);
+                        ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
+                    }
+                } catch {
+
                 }
                 if (deadStreamTimer.IsRunning) {
                     deadStreamTimer.Stop();
@@ -57,6 +70,40 @@ namespace RoleplayingVoice {
                         deadStreamTimer.Reset();
                         IsOpen = false;
                         wasStreaming = false;
+                    }
+                }
+            }
+            if (eventTriggerCooldown.ElapsedMilliseconds > 5000) {
+                CheckWindowSize(true);
+                eventTriggerCooldown.Restart();
+                _lastWindowSize = Size;
+            }
+        }
+        public void CheckWindowSize(bool triggerEvent) {
+            if (_lastWindowSize != null) {
+                if (_lastWindowSize.Value.X != Size.Value.X || _wasNotOpen) {
+                    if (IsOpen) {
+                        if (Size.Value.X < 360) {
+                            FeedType = TwitchFeedType._160p;
+                        }
+                        if (Size.Value.X >= 360 || Size.Value.X < 480) {
+                            FeedType = TwitchFeedType._360p;
+                        }
+                        if (Size.Value.X >= 480 || Size.Value.X < 720) {
+                            FeedType = TwitchFeedType._480p;
+                        }
+                        if (Size.Value.X >= 720 || Size.Value.X < 1080) {
+                            FeedType = TwitchFeedType._720p;
+                        }
+                        if (Size.Value.X >= 1080) {
+                            FeedType = TwitchFeedType._1080p;
+                        }
+                    } else {
+                        FeedType = TwitchFeedType.Audio;
+                        _wasNotOpen = true;
+                    }
+                    if (triggerEvent) {
+                        WindowResized?.Invoke(this, EventArgs.Empty);
                     }
                 }
             }
