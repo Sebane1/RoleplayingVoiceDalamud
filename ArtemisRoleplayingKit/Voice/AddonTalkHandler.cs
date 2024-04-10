@@ -174,7 +174,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             string text = message.TextValue;
             string npcName = sender.TextValue;
             Task.Run(delegate () {
-                Thread.Sleep(100);
+                Thread.Sleep(300);
                 if (_clientState.IsLoggedIn &&
                     !_plugin.Config.NpcSpeechGenerationDisabled && bubbleCooldown.ElapsedMilliseconds > 200 && Conditions.IsBoundByDuty) {
                     if (_state == null) {
