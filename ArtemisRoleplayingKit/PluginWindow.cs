@@ -936,7 +936,6 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Volume Fix (fixes rare instances of muted sound)", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 PluginReference.MediaManager.VolumeFix();
             }
-
         }
 
 
