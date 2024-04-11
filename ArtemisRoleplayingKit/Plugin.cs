@@ -425,10 +425,12 @@ namespace RoleplayingVoice {
             }
         }
         public void InitialzeManager() {
-            _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
-            _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
-            _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
-            _window.Manager = _roleplayingMediaManager;
+            if (_roleplayingMediaManager == null) {
+                _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
+                _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
+                _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
+                _window.Manager = _roleplayingMediaManager;
+            }
             _window.RefreshVoices();
         }
 
