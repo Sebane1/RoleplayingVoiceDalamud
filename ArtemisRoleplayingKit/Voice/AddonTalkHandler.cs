@@ -513,7 +513,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     byte race = 0;
                     byte body = 0;
                     GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
-                    string nameToUse = npcObject != null ? npcObject.Name.TextValue : npcName;
+                    string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
                     MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                     _currentSpeechObject = currentSpeechObject;
                     ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
