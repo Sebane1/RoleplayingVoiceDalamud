@@ -19,7 +19,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Y'shtola", "Yrhul");
             values.Add("Cultured Conjurer", "Yrhul");
             values.Add("Thancred", "Twaters");
-            values.Add("Charming Pugilist", "Twaters");
+            values.Add("Charming Thaumaturge", "Twaters");
             values.Add("Tataru", "Taru");
             values.Add("Yda", "Lhext");
             values.Add("Lyse", "Lhext");
