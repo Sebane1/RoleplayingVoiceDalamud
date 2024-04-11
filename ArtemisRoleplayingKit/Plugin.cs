@@ -1970,7 +1970,7 @@ namespace RoleplayingVoice {
                                             if (Directory.Exists(path)) {
                                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
                                                 bool isVoicedEmote = false;
-                                                string value = GetEmotePath(characterVoicePack, emoteId, (int)copyTimer.Elapsed., out isVoicedEmote);
+                                                string value = GetEmotePath(characterVoicePack, emoteId, (int)copyTimer.Elapsed.TotalSeconds, out isVoicedEmote);
                                                 if (!string.IsNullOrEmpty(value)) {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
