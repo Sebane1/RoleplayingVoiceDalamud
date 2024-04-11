@@ -30,14 +30,14 @@ namespace RoleplayingVoice {
             initialSize = Size;
             SizeCondition = ImGuiCond.None;
             _pluginInterface = pluginInterface;
-            Position = new Vector2((Screen.PrimaryScreen.Bounds.Width / 2) - (windowSize.Value.X / 2), Screen.PrimaryScreen.Bounds.Height - 50);
             IsOpen = false;
         }
 
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override void Draw() {
-            if (ImGui.Button("Report Line", windowSize.Value - new Vector2(10,0))) {
+            Position = new Vector2((ImGui.GetMainViewport().Size.X / 2) - (windowSize.Value.X / 2), ImGui.GetMainViewport().Size.Y - (Size.Value.Y * 2));
+            if (ImGui.Button("Report Line", windowSize.Value - new Vector2(10, 0))) {
                 RedoLineClicked?.Invoke(this, EventArgs.Empty);
             }
         }

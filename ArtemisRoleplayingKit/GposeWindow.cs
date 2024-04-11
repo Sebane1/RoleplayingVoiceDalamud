@@ -97,10 +97,11 @@ namespace RoleplayingVoice {
             }
         }
         public override void Draw() {
+            windowSize = Size = new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.X);
             try {
                 if (_frames != null && _frames.Count > 0 && _currentFrame < _frames.Count) {
                     textureWrap = _pluginInterface.UiBuilder.LoadImage(_frames[_currentFrame]);
-                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height));
+                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
                 }
             } catch {
 
