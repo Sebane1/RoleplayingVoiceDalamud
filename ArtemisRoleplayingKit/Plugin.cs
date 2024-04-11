@@ -1262,7 +1262,7 @@ namespace RoleplayingVoice {
                         attackCount++;
                     } else {
                         attackCount++;
-                        if (attackCount >= 3) {
+                        if (attackCount >= GetMinAttackCounts()) {
                             attackCount = 0;
                         }
                         attackIntended = true;
@@ -1289,7 +1289,7 @@ namespace RoleplayingVoice {
                         castingCount++;
                     } else {
                         castingCount++;
-                        if (castingCount >= 3) {
+                        if (castingCount >= GetMinAttackCounts()) {
                             castingCount = 0;
                         }
                         attackIntended = true;
@@ -1334,6 +1334,20 @@ namespace RoleplayingVoice {
                 }
             }
         }
+
+        private int GetMinAttackCounts() {
+            switch (_clientState.LocalPlayer.ClassJob.GameData.Abbreviation.RawString.ToLower()) {
+                case "mch":
+                    return 9;
+                case "mnk":
+                    return 6;
+                case "nin":
+                    return 6;
+                default:
+                    return 3;
+            }
+        }
+
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
             CharacterVoicePack characterVoicePack, ref string value) {
 

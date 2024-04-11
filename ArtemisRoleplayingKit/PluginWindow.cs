@@ -85,6 +85,7 @@ namespace RoleplayingVoice {
         private bool _refreshing;
         private bool _qualityAssuranceMode;
         private bool _twitchStreamTriggersIfShouter;
+        private float _npcPlaybackSpeed;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -153,6 +154,7 @@ namespace RoleplayingVoice {
                     _qualityAssuranceMode = configuration.QualityAssuranceMode;
                     _streamPath = configuration.StreamPath;
                     _twitchStreamTriggersIfShouter = configuration.TwitchStreamTriggersIfShouter;
+                    _npcPlaybackSpeed = configuration.NPCSpeechSpeed;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -352,6 +354,9 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
             ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
+            ImGui.Text("NPC Playback Speed");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
         }
 
         private void DrawPlayerSync() {
@@ -559,6 +564,7 @@ namespace RoleplayingVoice {
                 configuration.AudioOutputType = _audioOutputType.SelectedIndex;
                 configuration.QualityAssuranceMode = _qualityAssuranceMode;
                 configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
+                configuration.NPCSpeechSpeed = _npcPlaybackSpeed;
 
                 if (voicePackComboBox != null && _voicePackList != null) {
                     if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {

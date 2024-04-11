@@ -1,5 +1,6 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
+using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingMediaCore.AudioRecycler;
 using RoleplayingVoiceCore;
@@ -33,6 +34,7 @@ namespace RoleplayingVoice {
         private bool _replaceVoicedARRCutscenes = true;
         private int _audioOutputType = 0;
         private bool _qualityAssuranceMode;
+        private float _npcSpeechSpeed = 1;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -108,6 +110,7 @@ namespace RoleplayingVoice {
         public bool QualityAssuranceMode { get => _qualityAssuranceMode; set => _qualityAssuranceMode = value; }
         public int DefaultTwitchOpen { get; internal set; }
         public bool TwitchStreamTriggersIfShouter { get; internal set; }
+        public float NPCSpeechSpeed { get { return _npcSpeechSpeed; } set { _npcSpeechSpeed = value; } }
 
         #endregion
 

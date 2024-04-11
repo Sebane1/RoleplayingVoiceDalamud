@@ -616,7 +616,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }
                                         }
                                     }
-                                });
+                                }, _plugin.Config.NPCSpeechSpeed);
                             }
                         } else {
                         }
@@ -883,7 +883,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, byte body, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
-            bool isTinyRace = lowered.Contains("way") || body == 4;
+            bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816) 
+                || (body == 0 && _clientState.TerritoryType == 152);
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
             if (!gender && body != 4) {
@@ -930,7 +931,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
             if (pitch == 1) {
-                return (isTinyRace ? 1.15f : 1) + pitchOffset;
+                return (isTinyRace ? 1.2f : 1) + pitchOffset;
             } else {
                 return pitch;
             }
@@ -969,7 +970,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return "Lrit";
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
-                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")) {
+                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle") 
+                || npcName.ToLower().Contains("furry creature")) {
                 return "Kop";
             }
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
