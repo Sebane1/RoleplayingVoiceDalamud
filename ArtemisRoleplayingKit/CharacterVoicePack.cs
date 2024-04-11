@@ -39,14 +39,29 @@ namespace RoleplayingVoiceDalamud {
                 }
             }
         }
+        //public unsafe int GetRandom(int min, int max) {
+        //    var utcTime = Framework.GetServerTime();
+        //    long mod = utcTime / 10;
+        //    //var time = DateTimeOffset.FromUnixTimeSeconds(utcTime % 10);
+        //    //string timeString = time.UtcDateTime.ToString(@"hh\:mm\:ss").Remove(7);
+        //    //int hash = GetSimpleHash(timeString);
+        //    Random random = new Random((int)mod);
+        //    Dalamud.Logging.PluginLog.Log("Time seed is " + mod);
+        //    Dalamud.Logging.PluginLog.Log("Raw UTC time seed is " + utcTime);
+        //    return random.Next(min, max);
+        //}
         public unsafe int GetRandom(int min, int max) {
             var utcTime = Framework.GetServerTime();
-            var time = DateTimeOffset.FromUnixTimeSeconds(utcTime);
-            string timeString = time.UtcDateTime.ToString(@"hh\:mm\:ss").Remove(7);
-            int hash = GetSimpleHash(timeString);
-            Random random = new Random(hash);
-            Dalamud.Logging.PluginLog.Log("Time seed is " + timeString);
-            Dalamud.Logging.PluginLog.Log("Raw UTC time seed is " + utcTime);
+            long mod = utcTime / 10;
+            Random random = new Random((int)mod);
+            Dalamud.Logging.PluginLog.Log("Time seed is " + mod);
+            return random.Next(min, max);
+        }
+        public unsafe int GetRandom(int min, int max, int delay) {
+            var utcTime = Framework.GetServerTime();
+            long mod = (utcTime - delay) / 10;
+            Random random = new Random((int)mod);
+            Dalamud.Logging.PluginLog.Log("Time seed is " + mod);
             return random.Next(min, max);
         }
         private static int GetSimpleHash(string s) {
@@ -159,6 +174,16 @@ namespace RoleplayingVoiceDalamud {
             foreach (string name in _misc.Keys) {
                 if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
                     return _misc[name][GetRandom(0, _misc[name].Count)];
+                }
+            }
+            return string.Empty;
+        }
+        public string GetMisc(string value, int delay) {
+            string strippedName = StripNonCharacters(value).ToLower();
+            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
+            foreach (string name in _misc.Keys) {
+                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                    return _misc[name][GetRandom(0, _misc[name].Count, delay)];
                 }
             }
             return string.Empty;

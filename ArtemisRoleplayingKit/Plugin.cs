@@ -1919,6 +1919,16 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Emote Processing
+        private async Task<bool> CheckEmoteExistsInDirectory(string path, string emoteString) {
+            if (Directory.Exists(path)) {
+                foreach (string file in Directory.EnumerateFiles(path)) {
+                    if (file.ToLower().Contains(emoteString.ToLower())) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
         private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
             if (instigator != null) {
                 try {
@@ -1940,7 +1950,7 @@ namespace RoleplayingVoice {
                             if (config.UsePlayerSync) {
                                 if (GetCombinedWhitelist().Contains(playerSender)) {
                                     if (!isDownloadingZip) {
-                                        if (!Path.Exists(clipPath) || !File.Exists(clipPath + @"\" + GetEmoteName(emoteId) + ".mp3")) {
+                                        if (!Path.Exists(clipPath) || !(await CheckEmoteExistsInDirectory(clipPath, GetEmoteName(emoteId)))) {
                                             if (Path.Exists(clipPath)) {
                                                 RemoveFiles(clipPath);
                                             }
@@ -1960,7 +1970,7 @@ namespace RoleplayingVoice {
                                             if (Directory.Exists(path)) {
                                                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
                                                 bool isVoicedEmote = false;
-                                                string value = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
+                                                string value = GetEmotePath(characterVoicePack, emoteId, (int)copyTimer.Elapsed., out isVoicedEmote);
                                                 if (!string.IsNullOrEmpty(value)) {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                                                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
@@ -2011,7 +2021,7 @@ namespace RoleplayingVoice {
                 CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                 bool isVoicedEmote = false;
                 _lastEmoteUsed = GetEmoteName(emoteId);
-                string emotePath = GetEmotePath(characterVoicePack, emoteId, out isVoicedEmote);
+                string emotePath = GetEmotePath(characterVoicePack, emoteId, 0, out isVoicedEmote);
                 if (!string.IsNullOrEmpty(emotePath)) {
                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                     TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
@@ -2059,17 +2069,17 @@ namespace RoleplayingVoice {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
             return CleanSenderName(emote.TextCommand.Value.Command.RawString).Replace(" ", "").ToLower();
         }
-        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, out bool isVoicedEmote) {
+        private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, int delay, out bool isVoicedEmote) {
             Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
             Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
             Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
             Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
 
-            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString());
-            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name);
-            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name);
-            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name);
-            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name);
+            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString(), delay);
+            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name, delay);
+            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name, delay);
+            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name, delay);
+            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name, delay);
 
             characterVoicePack.EmoteIndex = -1;
             isVoicedEmote = true;
