@@ -793,7 +793,7 @@ namespace RoleplayingVoice {
                 string playerMessage = message.TextValue;
                 PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                 if (config.TwitchStreamTriggersIfShouter) {
-                    TwitchChatCheck(message, type, player);
+                    TwitchChatCheck(message, type, player, playerSender);
                 }
                 if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                     bool lipWasSynced = true;
@@ -862,18 +862,20 @@ namespace RoleplayingVoice {
                             CheckForChatSoundEffectOtherPlayer(sender, player, message);
                         }
                     }
-                    TwitchChatCheck(message, type, player);
+                    TwitchChatCheck(message, type, player, playerSender);
                 }
             }
         }
-        public void TwitchChatCheck(SeString message, XivChatType type, PlayerCharacter player) {
+        public void TwitchChatCheck(SeString message, XivChatType type, PlayerCharacter player, string name) {
             if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                 if (config.TuneIntoTwitchStreams && IsResidential()) {
                     if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
                         var strings = message.TextValue.Split(' ');
                         foreach (string value in strings) {
                             if (value.Contains("twitch.tv") && lastStreamURL != value) {
-                                _lastStreamObject = player.TargetObject != null ? new MediaGameObject(player.TargetObject) : new MediaGameObject(player);
+                                _lastStreamObject = player != null ?
+                                    player.TargetObject != null ? new MediaGameObject(player.TargetObject) :
+                                    new MediaGameObject(player) : new MediaGameObject(name, _clientState.LocalPlayer.Position);
                                 var audioGameObject = _lastStreamObject;
                                 if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
                                     TuneIntoStream(value
