@@ -971,7 +971,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
                 || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle") 
-                || npcName.ToLower().Contains("furry creature")) {
+                || npcName.ToLower().Contains("furry creature") || _clientState.TerritoryType == 1067) {
                 return "Kop";
             }
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {

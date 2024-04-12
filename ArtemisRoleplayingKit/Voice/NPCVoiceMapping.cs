@@ -203,6 +203,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, bool>("Gaius van Baelsar", true));
             values.Add(new KeyValuePair<string, bool>("Lahabrea", true));
             values.Add(new KeyValuePair<string, bool>("Hades", true));
+            values.Add(new KeyValuePair<string, bool>("Rhitahtyn sas Arvina", true));
             values.Add(new KeyValuePair<string, bool>("Livia sas Junius", true));
             values.Add(new KeyValuePair<string, bool>("King Thordan", true));
             //values.Add(new KeyValuePair<string, bool>("Mother Miournne", true));
@@ -211,6 +212,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         public static List<KeyValuePair<string, float>> GetPitchValues() {
             List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
             values.Add(new KeyValuePair<string, float>("Gaius van Baelsar", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Rhitahtyn sas Arvina", 0.9f));
             values.Add(new KeyValuePair<string, float>("Livia sas Junius", 0.9f));
             values.Add(new KeyValuePair<string, float>("Lahabrea", 0.97f));
             values.Add(new KeyValuePair<string, float>("Frixio", 1.1f));

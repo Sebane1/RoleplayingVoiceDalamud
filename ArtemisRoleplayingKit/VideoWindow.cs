@@ -43,40 +43,43 @@ namespace RoleplayingVoice {
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override void Draw() {
-            Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
-            if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
-                try {
-                    lock (_mediaManager.LastFrame) {
-                        textureWrap = _pluginInterface.UiBuilder.LoadImage(_mediaManager.LastFrame);
-                        ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
-                    }
-                } catch {
+            if (IsOpen) {
+                Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
+                SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size };
+                if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
+                    try {
+                        lock (_mediaManager.LastFrame) {
+                            textureWrap = _pluginInterface.UiBuilder.LoadImage(_mediaManager.LastFrame);
+                            ImGui.Image(textureWrap.ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
+                        }
+                    } catch {
 
-                }
-                if (deadStreamTimer.IsRunning) {
-                    deadStreamTimer.Stop();
-                    deadStreamTimer.Reset();
-                }
-                wasStreaming = true;
-            } else {
-                if (wasStreaming) {
-                    if (!deadStreamTimer.IsRunning) {
-                        deadStreamTimer.Start();
                     }
-                    if (deadStreamTimer.ElapsedMilliseconds > 10000) {
-                        fpsCount = countedFrames + "";
-                        countedFrames = 0;
+                    if (deadStreamTimer.IsRunning) {
                         deadStreamTimer.Stop();
                         deadStreamTimer.Reset();
-                        IsOpen = false;
-                        wasStreaming = false;
+                    }
+                    wasStreaming = true;
+                } else {
+                    if (wasStreaming) {
+                        if (!deadStreamTimer.IsRunning) {
+                            deadStreamTimer.Start();
+                        }
+                        if (deadStreamTimer.ElapsedMilliseconds > 10000) {
+                            fpsCount = countedFrames + "";
+                            countedFrames = 0;
+                            deadStreamTimer.Stop();
+                            deadStreamTimer.Reset();
+                            IsOpen = false;
+                            wasStreaming = false;
+                        }
                     }
                 }
-            }
-            if (eventTriggerCooldown.ElapsedMilliseconds > 5000) {
-                CheckWindowSize(true);
-                eventTriggerCooldown.Restart();
-                _lastWindowSize = Size;
+                if (eventTriggerCooldown.ElapsedMilliseconds > 10000) {
+                    CheckWindowSize(true);
+                    eventTriggerCooldown.Restart();
+                    _lastWindowSize = Size;
+                }
             }
         }
         public void CheckWindowSize(bool triggerEvent) {
