@@ -874,8 +874,10 @@ namespace RoleplayingVoice {
                         foreach (string value in strings) {
                             if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                 _lastStreamObject = player != null ?
-                                    player.TargetObject != null ? new MediaGameObject(player.TargetObject) :
-                                    new MediaGameObject(player) : new MediaGameObject(name, _clientState.LocalPlayer.Position);
+                                    player.TargetObject != null ? 
+                                    new MediaGameObject(player.TargetObject) :
+                                    new MediaGameObject(player) : 
+                                    new MediaGameObject(name, _clientState.LocalPlayer.Position);
                                 var audioGameObject = _lastStreamObject;
                                 if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
                                     TuneIntoStream(value

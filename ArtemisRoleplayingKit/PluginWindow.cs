@@ -489,7 +489,7 @@ namespace RoleplayingVoice {
             ImGui.EndChild();
 
             if (!string.IsNullOrEmpty(apiKey) && runOnLaunch) {
-                Task.Run(() => _manager.ApiValidation(apiKey));
+                Task.Run(() => _manager.ApiValidation(apiKey.Trim()));
                 InputValidation();
                 runOnLaunch = false;
             } else if (string.IsNullOrEmpty(apiKey)) {
