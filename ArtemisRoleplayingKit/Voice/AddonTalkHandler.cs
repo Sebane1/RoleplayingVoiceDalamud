@@ -1062,6 +1062,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
                 gender = true;
             }
+            if (npcName.ToLower().Contains("siren")) {
+                gender = true;
+            }
             switch (race) {
                 case 0:
                 case 1:
