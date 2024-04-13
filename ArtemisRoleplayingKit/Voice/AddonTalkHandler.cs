@@ -25,6 +25,7 @@ using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -79,6 +80,10 @@ namespace RoleplayingVoiceDalamud.Voice {
         private PoseService _poseService;
         private TargetService _targetService;
         private List<GameObject> _threadSafeObjectTable;
+        ConcurrentDictionary<string, string> _lastBattleNPCLines = new ConcurrentDictionary<string, string>();
+        private int _blockAudioGenerationCount;
+        private string _lastSoundPath;
+        private bool _npcChatBlock;
 
         public List<ActionTimeline> LipSyncTypes { get; private set; }
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -157,26 +162,44 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private void _clientState_TerritoryChanged(ushort obj) {
             _speechBubbleInfo.Clear();
+            _lastBattleNPCLines.Clear();
+            _blockAudioGenerationCount = 0;
+            _npcChatBlock = false;
         }
 
         private void _chatGui_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
             string text = message.TextValue;
             string npcName = sender.TextValue;
             Task.Run(delegate () {
-                Thread.Sleep(300);
+                Thread.Sleep(400);
                 if (_clientState.IsLoggedIn &&
-                    !_plugin.Config.NpcSpeechGenerationDisabled && bubbleCooldown.ElapsedMilliseconds > 200 && Conditions.IsBoundByDuty) {
+                    !_plugin.Config.NpcSpeechGenerationDisabled && Conditions.IsBoundByDuty && !_npcChatBlock) {
                     if (_state == null) {
                         switch (type) {
                             case XivChatType.NPCDialogueAnnouncements:
-                                if (text != _lastText && !Conditions.IsWatchingCutscene && !_blockAudioGeneration) {
-                                    _lastText = text;
-                                    NPCText(npcName, text.TrimStart('.'), true, !Conditions.IsBoundByDuty);
 #if DEBUG
-                                    _plugin.Chat.Print("Sent audio from NPC chat.");
+                                _plugin.Chat.Print("NPC Announcement detected " + npcName + ": "
+                                    + text);
 #endif
+                                if (!_lastBattleNPCLines.ContainsKey(npcName)) {
+                                    _lastBattleNPCLines[text] = "";
                                 }
-                                _lastText = text;
+
+                                if (text != _lastBattleNPCLines[npcName] && !Conditions.IsWatchingCutscene) {
+                                    _lastBattleNPCLines[npcName] = text;
+                                    if (_blockAudioGenerationCount < 1) {
+                                        NPCText(npcName, text.TrimStart('.'), true, !Conditions.IsBoundByDuty);
+#if DEBUG
+                                        _plugin.Chat.Print("Sent audio from NPC chat.");
+#endif
+                                    } else {
+                                        _blockAudioGenerationCount--;
+#if DEBUG
+                                        _plugin.Chat.Print("Blocked announcement " + npcName + ": "
+                                            + text);
+#endif
+                                    }
+                                }
                                 _blockAudioGeneration = false;
                                 break;
                         }
@@ -190,12 +213,26 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (_clientState != null) {
                 if (_clientState.IsLoggedIn) {
                     if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
-                        _blockAudioGeneration = e.isBlocking;
-                        _currentDialoguePaths.Add(e.SoundPath);
-                        _currentDialoguePathsCompleted.Add(false);
+                        if (e.SoundPath != _lastSoundPath) {
+                            _blockAudioGeneration = e.isBlocking;
+                            _currentDialoguePaths.Add(e.SoundPath);
+                            _currentDialoguePathsCompleted.Add(false);
+                            if (e.isBlocking) {
+                                if (_blockAudioGenerationCount < 0) {
+                                    _blockAudioGenerationCount = 0;
+                                }
+                                if (_blockAudioGenerationCount < 1) {
+                                    _blockAudioGenerationCount++;
+                                    _npcChatBlock = true;
+                                }
+                                _lastSoundPath = e.SoundPath;
+                            }
 #if DEBUG
-                        _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
+                            _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
+                            _plugin.Chat.Print("Dialogue block created by " + e.SoundPath);
+                            _plugin.Chat.Print("Blocked generation count is " + _blockAudioGenerationCount);
 #endif
+                        }
                     }
                 }
             }
@@ -216,29 +253,46 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                             var npcBubbleInformaton = new NPCBubbleInformation(MemoryHelper.ReadSeStringNullTerminated(pString), currentTime_mSec, speakerName);
                             var extantMatch = _speechBubbleInfo.Find((x) => { return x.IsSameMessageAs(npcBubbleInformaton); });
+#if DEBUG
+                            _plugin.Chat.Print("Bubble detected " + npcBubbleInformaton.SpeakerName.TextValue + ": "
+                                + npcBubbleInformaton.MessageText.TextValue);
+#endif
                             if (extantMatch != null) {
                                 extantMatch.TimeLastSeen_mSec = currentTime_mSec;
                             } else {
                                 _speechBubbleInfo.Add(npcBubbleInformaton);
                                 try {
-                                    if (!_blockAudioGeneration && bubbleCooldown.ElapsedMilliseconds > 200) {
-                                        FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
-                                        if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
-                                            string nameID = character->DrawData.Top.Value.ToString() + character->DrawData.Head.Value.ToString() +
-                                               character->DrawData.Feet.Value.ToString() + character->DrawData.Ear.Value.ToString() + speakerName.TextValue + character->GameObject.DataID;
-                                            Character characterObject = GetCharacterFromId(character->GameObject.ObjectID);
-                                            string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) && Conditions.IsBoundByDuty ? characterObject.Name.TextValue : nameID;
-                                            if (npcBubbleInformaton.MessageText.TextValue != _lastText) {
-                                                NPCText(pActor->Address, finalName,
-                                                    npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                    character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
+                                    FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
+                                    if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
+                                        string nameID = character->DrawData.Top.Value.ToString() + character->DrawData.Head.Value.ToString() +
+                                           character->DrawData.Feet.Value.ToString() + character->DrawData.Ear.Value.ToString() + speakerName.TextValue + character->GameObject.DataID;
+                                        Character characterObject = GetCharacterFromId(character->GameObject.ObjectID);
+                                        string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) ? characterObject.Name.TextValue : nameID;
+                                        if (!_lastBattleNPCLines.ContainsKey(characterObject.Name.TextValue)) {
+                                            _lastBattleNPCLines[characterObject.Name.TextValue] = "";
+                                        }
+                                        if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[characterObject.Name.TextValue]) {
+                                            _lastBattleNPCLines[characterObject.Name.TextValue] = npcBubbleInformaton.MessageText.TextValue;
+                                            if (_blockAudioGenerationCount < 1) {
+                                                if (character != null) {
+                                                    NPCText(finalName, npcBubbleInformaton.MessageText.TextValue, true);
+                                                } else {
+                                                    NPCText(pActor->Address, finalName,
+                                                        npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
+                                                        character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
+                                                }
 #if DEBUG
                                                 _plugin.Chat.Print("Sent audio from NPC bubble.");
+#endif
+                                            } else {
+#if DEBUG
+                                                _blockAudioGenerationCount--;
+                                                _plugin.Chat.Print("Blocked bubble " + npcBubbleInformaton.SpeakerName.TextValue + ": "
+                                                    + npcBubbleInformaton.MessageText.TextValue);
 #endif
                                             }
                                         }
                                     }
-                                    _lastText = npcBubbleInformaton.MessageText.TextValue;
                                     bubbleCooldown.Restart();
                                     _blockAudioGeneration = false;
                                 } catch {
@@ -519,19 +573,30 @@ namespace RoleplayingVoiceDalamud.Voice {
                     ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
+                    string arcValue = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message));
+                    string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
+#if DEBUG
+                    _plugin.Chat.Print("Get audio from server. Sending " + value);
+                    Stopwatch downloadTimer = Stopwatch.StartNew();
+#endif
                     KeyValuePair<Stream, bool> stream =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(value,
-                   FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message)), nameToUse, gender,
-                    PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData, redoLine);
+                    await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine);
                     if (stream.Key != null) {
+#if DEBUG
+                        _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
+#endif
                         WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, reportData);
                         ActorMemory actorMemory = null;
                         AnimationMemory animationMemory = null;
                         ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
                         Task task = null;
                         ushort lipId = 0;
+                        bool canDoLipSync = Conditions.IsBoundByDuty;
                         if (wavePlayer != null) {
-                            if (npcObject != null) {
+#if DEBUG
+                            _plugin.Chat.Print("Waveplayer is valid");
+#endif
+                            if (npcObject != null && canDoLipSync) {
                                 actorMemory = new ActorMemory();
                                 actorMemory.SetAddress(npcObject.Address);
                                 initialState = actorMemory.CharacterMode;
@@ -556,8 +621,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                     }
                                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                    Vector3 lastPositoon = npcObject.Position;
-                                    Stopwatch stopwatch = Stopwatch.StartNew();
                                 });
                             }
                             bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
@@ -566,37 +629,40 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _chatId = Guid.NewGuid().ToString();
                             string chatId = _chatId;
                             bool lipWasSynced = false;
-                            if (!_blockAudioGeneration) {
-                                _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
-                                Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
-                                Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
-                                    if (_hook != null) {
-                                        try {
-                                            if (npcObject != null) {
-                                                animationMemory.LipsOverride = 0;
-                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                                }
-                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+#if DEBUG
+                            _plugin.Chat.Print("Attempt to play audio stream.");
+#endif
+                            _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
+                            Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
+                            Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
+                                if (_hook != null) {
+                                    try {
+                                        if (npcObject != null && canDoLipSync) {
+                                            animationMemory.LipsOverride = 0;
+                                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                             }
-                                            if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
-                                        && !_plugin.Config.QualityAssuranceMode)) {
-                                                if (_chatId == chatId) {
-                                                    _hook.SendAsyncKey(Keys.NumPad0);
-                                                }
-                                            } else {
-                                                if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
-                                                    _redoLineWindow.IsOpen = true;
-                                                } else if (_plugin.Config.QualityAssuranceMode) {
-                                                    _hook.SendAsyncKey(Keys.NumPad0);
-                                                }
-                                            }
-                                            task.Dispose();
-                                        } catch {
-
+                                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                         }
+                                        if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
+                                    && !_plugin.Config.QualityAssuranceMode)) {
+                                            if (_chatId == chatId) {
+                                                _hook.SendAsyncKey(Keys.NumPad0);
+                                            }
+                                        } else {
+                                            if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                _redoLineWindow.IsOpen = true;
+                                            } else if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                _hook.SendAsyncKey(Keys.NumPad0);
+                                            }
+                                        }
+                                        task.Dispose();
+                                    } catch {
+
                                     }
-                                }, delegate (object sender, StreamVolumeEventArgs e) {
+                                }
+                            }, delegate (object sender, StreamVolumeEventArgs e) {
+                                if (npcObject != null && canDoLipSync) {
                                     if (e.MaxSampleValues.Length > 0) {
                                         if (e.MaxSampleValues[0] > 0.2) {
                                             if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
@@ -616,12 +682,23 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }
                                         }
                                     }
-                                }, _plugin.Config.NPCSpeechSpeed);
-                            }
+                                }
+                            }, _plugin.Config.NPCSpeechSpeed);
                         } else {
+#if DEBUG
+                            _plugin.Chat.Print("Waveplayer failed " + downloadTimer.Elapsed.ToString());
+#endif
                         }
+                    } else {
+#if DEBUG
+                        _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
+#endif
                     }
-                } catch {
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+#if DEBUG
+                    _plugin.Chat.Print(e.Message);
+#endif
                 }
             }
         }
@@ -883,7 +960,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, byte body, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
-            bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816) 
+            bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
                 || (body == 0 && _clientState.TerritoryType == 152);
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
@@ -970,7 +1047,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return "Lrit";
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
-                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle") 
+                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")
                 || npcName.ToLower().Contains("furry creature") || _clientState.TerritoryType == 1067) {
                 return "Kop";
             }
