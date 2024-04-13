@@ -316,6 +316,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return null;
         }
+        public string AliasDetector(string name) {
+            switch (name) {
+                case "Obnoxious Merchant":
+                    return "Ungust";
+                default:
+                    return name;
+            }
+        }
         private void Framework_Update(IFramework framework) {
             if (!disposed)
                 try {
@@ -355,7 +363,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _currentText = _state.Text;
                                     _redoLineWindow.IsOpen = false;
                                     if (!_blockAudioGeneration) {
-                                        NPCText(_state.Speaker, _state.Text.TrimStart('.'), false, true);
+                                        NPCText(AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, true);
                                         _startedNewDialogue = true;
                                         _passthroughTimer.Reset();
                                     }
