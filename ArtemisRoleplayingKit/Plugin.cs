@@ -1074,23 +1074,26 @@ namespace RoleplayingVoice {
             uint voiceVolume = 0;
             uint masterVolume = 0;
             uint soundEffectVolume = 0;
+            uint soundMicPos = 0;
             try {
                 _mediaManager.AudioPlayerType = (AudioOutputType)config.AudioOutputType;
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
-                        _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
+                        if (_gameConfig.TryGet(SystemConfigOption.SoundMicpos, out soundMicPos))
+                            _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                            _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                            _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                        _mediaManager.NpcVolume = config.NpcVolume *
+                            _mediaManager.NpcVolume = config.NpcVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                            _mediaManager.CameraAndPlayerPositionSlider = soundMicPos;
                         if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
                             _mediaManager.SFXVolume = config.LoopingSFXVolume *
-                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                            ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
                             _mediaManager.LiveStreamVolume = config.LivestreamVolume *
-                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
+                            ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
                         }
                     }
                     if (_muteTimer.ElapsedMilliseconds > _muteLength) {

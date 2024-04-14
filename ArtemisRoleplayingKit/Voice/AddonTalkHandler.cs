@@ -948,6 +948,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("gysahl", "gisawl"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ramuh", "Ramoo"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Papalymo", "Papaleemo"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("Yda", "Eeda"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Gridania", "Gridawnia"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Ascian", "Assiyin"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("magitek", "majitech"));
