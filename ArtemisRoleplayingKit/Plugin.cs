@@ -874,9 +874,9 @@ namespace RoleplayingVoice {
                         foreach (string value in strings) {
                             if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                 _lastStreamObject = player != null ?
-                                    player.TargetObject != null ? 
+                                    player.TargetObject != null ?
                                     new MediaGameObject(player.TargetObject) :
-                                    new MediaGameObject(player) : 
+                                    new MediaGameObject(player) :
                                     new MediaGameObject(name, _clientState.LocalPlayer.Position);
                                 var audioGameObject = _lastStreamObject;
                                 if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
@@ -1017,11 +1017,13 @@ namespace RoleplayingVoice {
                     _lastEmoteTriggered = emoteId;
                 } else {
                     Task.Run(() => ReceivingEmote(instigator, emoteId));
-                    if (_timeSinceLastEmoteDone.ElapsedMilliseconds < 1000 && _timeSinceLastEmoteDone.IsRunning && _timeSinceLastEmoteDone.ElapsedMilliseconds > 20) {
+                    if (_timeSinceLastEmoteDone.ElapsedMilliseconds < 400 && _timeSinceLastEmoteDone.IsRunning && _timeSinceLastEmoteDone.ElapsedMilliseconds > 20) {
                         if (instigator != null) {
                             if (Vector3.Distance(instigator.Position, _clientState.LocalPlayer.Position) < 3) {
                                 _fastMessageQueue.Enqueue(GetEmoteCommand(_lastEmoteTriggered).ToLower());
                                 _timeSinceLastEmoteDone.Stop();
+                                _timeSinceLastEmoteDone.Reset();
+                                _lastEmoteTriggered = 0;
                             }
                         }
                     }
