@@ -1,5 +1,5 @@
 ﻿using FFXIVVoicePackCreator.VoiceSorting;
-using RoleplayingVoiceDalamud.VoiceSorting;
+using RoleplayingVoiceDalamud;
 using System;
 using System.Collections.Generic;
 namespace FFXIVVoicePackCreator

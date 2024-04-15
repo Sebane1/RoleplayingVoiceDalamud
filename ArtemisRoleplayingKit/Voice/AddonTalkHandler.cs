@@ -274,7 +274,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[characterObject.Name.TextValue]) {
                                             _lastBattleNPCLines[characterObject.Name.TextValue] = npcBubbleInformaton.MessageText.TextValue;
                                             if (_blockAudioGenerationCount < 1) {
-                                                if (character != null) {
+                                                if (characterObject != null && characterObject.Customize[(int)CustomizeIndex.ModelType] != 0) {
                                                     NPCText(finalName, npcBubbleInformaton.MessageText.TextValue, true);
                                                 } else {
                                                     NPCText(pActor->Address, finalName,
@@ -1062,6 +1062,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
                 gender = true;
+            }
+            if (body == 0 && gender == false && _clientState.TerritoryType == 817) {
+                gender = true;
+                return PickVoice(npcName, femaleViera);
             }
             if (npcName.ToLower().Contains("siren")) {
                 gender = true;
