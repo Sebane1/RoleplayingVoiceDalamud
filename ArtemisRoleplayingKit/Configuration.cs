@@ -112,6 +112,8 @@ namespace RoleplayingVoice {
         public bool TwitchStreamTriggersIfShouter { get; internal set; }
         public float NPCSpeechSpeed { get { return _npcSpeechSpeed; } set { _npcSpeechSpeed = value; } }
 
+        public bool DebugMode { get; internal set; }
+
         #endregion
 
         private readonly DalamudPluginInterface pluginInterface;

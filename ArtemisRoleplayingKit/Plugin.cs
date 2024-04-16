@@ -1089,7 +1089,7 @@ namespace RoleplayingVoice {
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
                             _mediaManager.NpcVolume = config.NpcVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.CameraAndPlayerPositionSlider = soundMicPos;
+                            _mediaManager.CameraAndPlayerPositionSlider = (float)soundMicPos / 100f;
                         if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
                             _mediaManager.SFXVolume = config.LoopingSFXVolume *
                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
