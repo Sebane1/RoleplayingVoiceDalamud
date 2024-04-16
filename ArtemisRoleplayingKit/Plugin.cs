@@ -818,6 +818,7 @@ namespace RoleplayingVoice {
                 }
                 CheckForChatSoundEffectLocal(message);
             } else {
+                
                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
                 bool isShoutYell = false;
                 if (senderStrings.Length > 2) {
@@ -836,7 +837,7 @@ namespace RoleplayingVoice {
                     } else {
                         audioFocus = true;
                     }
-                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
                     if (config.UsePlayerSync) {
                         if (GetCombinedWhitelist().Contains(playerSender)) {
                             Task.Run(async () => {
