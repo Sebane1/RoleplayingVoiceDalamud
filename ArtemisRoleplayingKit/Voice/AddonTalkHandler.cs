@@ -83,7 +83,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         ConcurrentDictionary<string, string> _lastBattleNPCLines = new ConcurrentDictionary<string, string>();
         private int _blockAudioGenerationCount;
         private string _lastSoundPath;
-        Stopwatch _npcChatTimer = new Stopwatch();
+        bool _blockNpcChat = false;
 
         public List<ActionTimeline> LipSyncTypes { get; private set; }
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -164,7 +164,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             _speechBubbleInfo.Clear();
             _lastBattleNPCLines.Clear();
             _blockAudioGenerationCount = 0;
-            _npcChatTimer.Reset();
+            _blockNpcChat = false;
         }
 
         private void _chatGui_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
@@ -175,8 +175,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (_clientState.IsLoggedIn &&
                     !_plugin.Config.NpcSpeechGenerationDisabled && Conditions.IsBoundByDuty) {
                     if (_state == null) {
-
-                        if (!_npcChatTimer.IsRunning) {
+                        if (!_blockNpcChat) {
                             switch (type) {
                                 case XivChatType.NPCDialogueAnnouncements:
                                     if (_plugin.Config.DebugMode) {
@@ -205,9 +204,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _blockAudioGeneration = false;
                                     break;
                             }
-                        } else if (_npcChatTimer.ElapsedMilliseconds > 5000) {
-                            _npcChatTimer.Stop();
-                            _npcChatTimer.Reset();
                         }
                     }
                 }
@@ -229,7 +225,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 }
                                 if (_blockAudioGenerationCount < 1) {
                                     _blockAudioGenerationCount++;
-                                    _npcChatTimer.Start();
+                                    _blockNpcChat = true;
                                 }
                                 _lastSoundPath = e.SoundPath;
                             }
@@ -335,6 +331,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 try {
                     if (_clientState != null) {
                         if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            _plugin.Filter.Streaming = !Conditions.IsBoundByDuty;
                             if (_plugin.Filter.IsCutsceneDetectionNull()) {
                                 if (!_alreadyAddedEvent) {
                                     _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
@@ -605,7 +602,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
                         Task task = null;
                         ushort lipId = 0;
-                        bool canDoLipSync = Conditions.IsBoundByDuty;
+                        bool canDoLipSync = !Conditions.IsBoundByDuty;
                         if (wavePlayer != null) {
                             if (_plugin.Config.DebugMode) {
                                 _plugin.Chat.Print("Waveplayer is valid");

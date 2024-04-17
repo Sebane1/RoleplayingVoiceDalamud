@@ -83,7 +83,7 @@ namespace SoundFilter {
             }
         }
 
-        private bool Streaming {
+        public bool Streaming {
             get {
                 var manager = this.MusicManager;
                 if (manager == IntPtr.Zero) {
@@ -109,7 +109,7 @@ namespace SoundFilter {
             this.Plugin = plugin;
 
             this.WasStreamingEnabled = this.Streaming;
-            this.Streaming = false;
+            //this.Streaming = false;
 
             var (noSoundPtr, infoPtr) = SetUpNoSound();
             this.NoSoundPtr = noSoundPtr;
@@ -117,7 +117,6 @@ namespace SoundFilter {
         }
 
         private static byte[] GetNoSoundScd() {
-            //   var noSound = Resourcer.Resource.AsStream("Resources/gaya_nosound.scd");
             var assembly = Assembly.GetExecutingAssembly();
             string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("emote.scd"));
             var noSound = assembly.GetManifestResourceStream(resourceName);
