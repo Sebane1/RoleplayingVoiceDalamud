@@ -331,7 +331,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 try {
                     if (_clientState != null) {
                         if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                            _plugin.Filter.Streaming = !Conditions.IsBoundByDuty;
+                            _plugin.Filter.Streaming = !Conditions.IsBoundByDuty && !Conditions.IsInCombat;
                             if (_plugin.Filter.IsCutsceneDetectionNull()) {
                                 if (!_alreadyAddedEvent) {
                                     _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;

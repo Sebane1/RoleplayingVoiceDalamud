@@ -188,6 +188,7 @@ namespace RoleplayingVoice {
         private int hurtCount;
         private MediaGameObject _lastStreamObject;
         private string[] _streamURLs;
+        private bool _combatMusicWasPlayed;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -307,6 +308,7 @@ namespace RoleplayingVoice {
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
+                _toast.ErrorToast += _toast_ErrorToast;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -498,13 +500,45 @@ namespace RoleplayingVoice {
         }
 
         private void CheckForCustomCombatAudio() {
-            if (Conditions.IsInCombat) {
+            if (Conditions.IsInCombat && !Conditions.IsMounted) {
                 if (!_combatOccured) {
                     _combatOccured = true;
+                    string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                    string path = config.CacheFolder + @"\VoicePack\" + voice;
+                    string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                    bool isVoicedEmote = false;
+                    string value = characterVoicePack.GetMisc("Battle Song");
+                    if (!string.IsNullOrEmpty(value)) {
+                        if (config.UsePlayerSync) {
+                            Task.Run(async () => {
+                                bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                            });
+                        }
+                        _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
+                        try {
+                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                        } catch (Exception e) {
+                            Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                        }
+                        _combatMusicWasPlayed = true;
+                    }
                 }
             } else {
                 if (_combatOccured) {
                     _combatOccured = false;
+                    if (_combatMusicWasPlayed) {
+                        Task.Run(async () => {
+                            Thread.Sleep(6000);
+                            _mediaManager.StopAudio(_playerObject);
+                            try {
+                                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                            } catch (Exception e) {
+                                Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                            }
+                            _combatMusicWasPlayed = false;
+                        });
+                    }
                 }
             }
         }
@@ -526,7 +560,7 @@ namespace RoleplayingVoice {
                                     bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                 });
                             }
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MountLoop, 0);
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
                             try {
                                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                             } catch (Exception e) {
@@ -818,7 +852,7 @@ namespace RoleplayingVoice {
                 }
                 CheckForChatSoundEffectLocal(message);
             } else {
-                
+
                 string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
                 bool isShoutYell = false;
                 if (senderStrings.Length > 2) {
@@ -971,7 +1005,18 @@ namespace RoleplayingVoice {
                         CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                         string value = characterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
+                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                            },
+                            delegate (object sender, StreamVolumeEventArgs e) {
+                                if (e.MaxSampleValues.Length > 0) {
+                                    if (e.MaxSampleValues[0] > 0.2) {
+                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                    } else {
+                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                    }
+                                }
+                            });
                         }
                     }
                     _cooldown.Restart();
@@ -1083,13 +1128,13 @@ namespace RoleplayingVoice {
                         if (_gameConfig.TryGet(SystemConfigOption.SoundMicpos, out soundMicPos))
                             _mediaManager.MainPlayerVolume = config.PlayerCharacterVolume *
                             ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.NpcVolume = config.NpcVolume *
-                            ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
-                            _mediaManager.CameraAndPlayerPositionSlider = (float)soundMicPos / 100f;
+                        _mediaManager.OtherPlayerVolume = config.OtherCharacterVolume *
+                        ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _mediaManager.UnfocusedPlayerVolume = config.UnfocusedCharacterVolume *
+                        ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _mediaManager.NpcVolume = config.NpcVolume *
+                        ((float)voiceVolume / 100f) * ((float)masterVolume / 100f);
+                        _mediaManager.CameraAndPlayerPositionSlider = (float)soundMicPos / 100f;
                         if (_gameConfig.TryGet(SystemConfigOption.SoundPerform, out soundEffectVolume)) {
                             _mediaManager.SFXVolume = config.LoopingSFXVolume *
                             ((float)soundEffectVolume / 100f) * ((float)masterVolume / 100f);
@@ -1164,7 +1209,18 @@ namespace RoleplayingVoice {
                             if (!attackIntended) {
                                 Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
                                 Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
+                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                },
+                                delegate (object sender, StreamVolumeEventArgs e) {
+                                    if (e.MaxSampleValues.Length > 0) {
+                                        if (e.MaxSampleValues[0] > 0.2) {
+                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                        } else {
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        }
+                                    }
+                                });
                                 Dalamud.Logging.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                             }
                             if (!_muteTimer.IsRunning) {
@@ -1219,6 +1275,7 @@ namespace RoleplayingVoice {
                                 } else {
                                     PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
                                 }
+                                PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                 Task.Run(async () => {
                                     GameObject character = null;
                                     if (_otherPlayerCombatTrigger > 6 || type == (XivChatType)4139) {
@@ -1231,7 +1288,18 @@ namespace RoleplayingVoice {
                                             }
                                         }
                                         _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
-                                        playerSender, character.Position), value, SoundType.OtherPlayerCombat);
+                                        playerSender, character.Position), value, SoundType.OtherPlayerCombat, 0, default, delegate {
+                                            _addonTalkHandler.StopLipSync(player);
+                                        },
+                                delegate (object sender, StreamVolumeEventArgs e) {
+                                    if (e.MaxSampleValues.Length > 0) {
+                                        if (e.MaxSampleValues[0] > 0.2) {
+                                            _addonTalkHandler.TriggerLipSync(player, 4);
+                                        } else {
+                                            _addonTalkHandler.StopLipSync(player);
+                                        }
+                                    }
+                                });
                                         _otherPlayerCombatTrigger = 0;
                                     } else {
                                         _otherPlayerCombatTrigger++;
