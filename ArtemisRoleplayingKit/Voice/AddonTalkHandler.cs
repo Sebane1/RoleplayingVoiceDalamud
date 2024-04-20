@@ -361,6 +361,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                             if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
                                 _textIsPresent = true;
+                                _blockNpcChat = false;
                                 if (_state.Text != _currentText) {
                                     _lastText = _currentText;
                                     _currentText = _state.Text;
