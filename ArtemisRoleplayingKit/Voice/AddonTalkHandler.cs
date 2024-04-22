@@ -84,6 +84,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private int _blockAudioGenerationCount;
         private string _lastSoundPath;
         bool _blockNpcChat = false;
+        private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
 
         public List<ActionTimeline> LipSyncTypes { get; private set; }
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -91,6 +92,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private readonly List<NPCBubbleInformation> _gameChatInfo = new();
         public ConditionalWeakTable<ActorMemory, UserAnimationOverride> UserAnimationOverrides { get; private set; } = new();
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
+        public List<NPCVoiceHistoryItem> NpcVoiceHistoryItems { get => _npcVoiceHistoryItems; set => _npcVoiceHistoryItems = value; }
+        List<string> previouslyAddedLines = new List<string>();
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
             IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow) {
@@ -593,6 +596,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     KeyValuePair<Stream, bool> stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine);
+                    if (!previouslyAddedLines.Contains(value + nameToUse)) {
+                        _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
+                        previouslyAddedLines.Add(value + nameToUse);
+                        if (_npcVoiceHistoryItems.Count > 12) {
+                            _npcVoiceHistoryItems.RemoveAt(0);
+                        }
+                    }
                     if (stream.Key != null) {
                         if (_plugin.Config.DebugMode) {
                             _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
@@ -715,7 +725,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        private WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
+        public WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
             WaveStream wavePlayer = null;
             try {
                 stream.Position = 0;
@@ -746,7 +756,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 } else {
                     Dalamud.Logging.PluginLog.LogWarning($"Received audio stream for {npcName} is empty.");
-                    reportData.ReportToXivVoice();
+                    if (reportData != null) {
+                        reportData.ReportToXivVoice();
+                    }
                 }
             }
             return wavePlayer;
