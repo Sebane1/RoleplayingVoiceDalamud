@@ -309,6 +309,9 @@ namespace RoleplayingVoice {
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
                 _toast.ErrorToast += _toast_ErrorToast;
+#if DEBUG
+                config.DebugMode = true;
+#endif
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");

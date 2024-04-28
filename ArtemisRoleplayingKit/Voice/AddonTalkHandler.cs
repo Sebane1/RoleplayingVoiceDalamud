@@ -580,7 +580,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 try {
                     bool gender = false;
                     byte race = 0;
-                    byte body = 0;
+                    int body = 0;
                     GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
                     string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
                     MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
@@ -645,7 +645,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                 });
                             }
-                            bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
+                            bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                             float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
                             CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                             _chatId = Guid.NewGuid().ToString();
@@ -780,7 +780,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData);
                     if (stream.Key != null) {
                         WaveStream wavePlayer = GetWavePlayer(name, stream.Key, reportData);
-                        bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse);
+                        bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                         _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
@@ -799,7 +799,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         /// <param name="message"></param>
         /// <returns></returns>
         private bool VerifyIsEnglish(string message) {
-            string[] symbolBlacklist = new string[] { "¿", "á", "é", "í", "ó", "ú", "ñ", "ü" };
+            string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü" };
             foreach (string symbol in symbolBlacklist) {
                 if (message.Contains(symbol)) {
                     return false;
@@ -815,7 +815,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return "???";
             }
         }
-        private GameObject DiscoverNpc(string npcName, string message, ref bool gender, ref byte race, ref byte body) {
+        private unsafe GameObject DiscoverNpc(string npcName, string message, ref bool gender, ref byte race, ref int body) {
             if (npcName == "???") {
                 npcName = FindNPCNameFromMessage(message);
             }
@@ -878,6 +878,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                                 race = character.Customize[(int)CustomizeIndex.Race];
                                 body = character.Customize[(int)CustomizeIndex.ModelType];
+                                if (body == 0) {
+                                    var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address);
+                                    body = gameObject->CharacterData.ModelSkeletonId;
+                                }
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
                                 }
@@ -913,12 +917,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return false;
         }
-        private Character GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref byte body) {
+        private unsafe Character GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref int body) {
             Character character = gameObject as Character;
             if (character != null) {
                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                 race = character.Customize[(int)CustomizeIndex.Race];
                 body = character.Customize[(int)CustomizeIndex.ModelType];
+                if (body == 0) {
+                    var unsafeReference = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address);
+                    body = unsafeReference->CharacterData.ModelSkeletonId;
+                }
                 if (_plugin.Config.DebugMode) {
                     _plugin.Chat.Print(character.Name.TextValue + " is model type " + body + ", and race " + race + ".");
                 }
@@ -936,11 +944,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                         .Replace(mainCharacterName[0], "Arc")
                         .Replace(mainCharacterName[1], "Arc");
         }
-        private bool CheckIfshouldUseSmbPitch(string npcName) {
+        private bool CheckIfshouldUseSmbPitch(string npcName, int bodyType) {
             foreach (var value in NPCVoiceMapping.GetEchoType()) {
                 if (npcName.Contains(value.Key)) {
                     return value.Value;
                 }
+            }
+            switch (bodyType) {
+                case 60:
+                case 63:
+                case 239:
+                    return true;
             }
             return false;
         }
@@ -982,11 +996,12 @@ namespace RoleplayingVoiceDalamud.Voice {
             return newValue;
         }
 
-        private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, byte body, float range) {
+        private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
             bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
-                || (body == 0 && _clientState.TerritoryType == 152);
+                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005);
+            bool isDragonOrVoid = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
             if (!gender && body != 4) {
@@ -1019,21 +1034,31 @@ namespace RoleplayingVoiceDalamud.Voice {
                         pitchOffset = (((float)Math.Abs(random.Next(-10, 100)) / 100f) * range);
                         break;
                 }
+                switch (body) {
+                    case 60:
+                    case 63:
+                    case 239:
+                        pitchOffset = (((float)Math.Abs(random.Next(-100, -10)) / 100f) * range);
+                        isDragonOrVoid = true;
+                        break;
+                }
             } else {
-                if (body == 4) {
-                    switch (gender) {
-                        case false:
-                            pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
-                            break;
-                        case true:
-                            pitchOffset = (((float)random.Next(0, 100) / 100f) * range);
-                            break;
+                switch (body) {
+                    case 4:
+                        switch (gender) {
+                            case false:
+                                pitchOffset = (((float)Math.Abs(random.Next(-100, 100)) / 100f) * range);
+                                break;
+                            case true:
+                                pitchOffset = (((float)random.Next(0, 100) / 100f) * range);
+                                break;
 
-                    }
+                        }
+                        break;
                 }
             }
             if (pitch == 1) {
-                return (isTinyRace ? 1.2f : 1) + pitchOffset;
+                return (isTinyRace ? 1.2f : isDragonOrVoid ? 0.9f : 1) + pitchOffset;
             } else {
                 return pitch;
             }
@@ -1059,7 +1084,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 : default;
         }
 
-        public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, byte body) {
+        public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, int body) {
             string[] maleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, false);
             string[] femaleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, true);
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
@@ -1073,7 +1098,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
                 || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")
-                || npcName.ToLower().Contains("furry creature") || _clientState.TerritoryType == 1067) {
+                || npcName.ToLower().Contains("furry creature") || body == 11006) {
                 return "Kop";
             }
             if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
