@@ -36,6 +36,7 @@ After registration, get your API key.
 ![image](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/244486d8-9eda-4295-a051-46891a101405)
 
 Open the plugin with /ark in chat and copy paste your elevenlabs key after enabling "Generative Voice". This is optional and only needed if you want your character to speak out lines you type. 
+
 ![a9c07f1e8cc8a19bc80f5b5a9c9a572e](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/0d35880a-472b-43c8-856a-b45ba19115cc)
 
 [OPTIONAL INSTRUCTIONS FOR CUSTOM VOICE PACKS]
