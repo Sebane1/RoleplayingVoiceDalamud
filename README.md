@@ -23,7 +23,7 @@ In the dalamud settings experimental tab, put the repository link here, click th
 
 ![f198ff756e32188b52121829390d481a](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/313517ff-55e9-4475-8a0f-0dd5b1e11d45)
 
-Then install Artemis Roleplaying Kit from the dalaamud plugin list.
+Then install Artemis Roleplaying Kit from the dalamud plugin list.
 ![2c5234d89be9cf69de65858801152179](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/329adbde-06b9-4315-bf43-1b32ba9d18c2)
 
 [OPTIONAL INSTRUCTIONS FOR GENERATIVE VOICE]
