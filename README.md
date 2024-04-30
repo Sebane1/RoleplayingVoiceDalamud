@@ -48,6 +48,7 @@ If you want to import a sound pack made by others, enable voice packs, import yo
 [OPTIONAL INSTRUCTIONS FOR SYNCRONIZING SOUNDS]
 
 If you wish to synchronize either your generated voice or voice pack with others enable Sending and Receiving data, and add friends to your whitelist. They will have to do the same for you.
+
 ![7d32d30e79f5db7f3de4ac7c431a5913](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/89c4c3eb-d758-4369-8855-2e0d2c475032)
 
 [Final Instructions]
