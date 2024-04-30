@@ -20,7 +20,8 @@ https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.js
 Setup Guide:
 
 In the dalamud settings experimental tab, put the repository link here, click the plus icon, and then save.
-![f198ff756e32188b52121829390d481a](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/fdc04726-cbb5-4066-b678-2d861291c614)
+
+![f198ff756e32188b52121829390d481a](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/313517ff-55e9-4475-8a0f-0dd5b1e11d45)
 
 Then install Artemis Roleplaying Kit from the dalaamud plugin list.
 ![2c5234d89be9cf69de65858801152179](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/329adbde-06b9-4315-bf43-1b32ba9d18c2)
