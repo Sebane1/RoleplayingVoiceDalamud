@@ -29,6 +29,7 @@ If you want to have your character speak when you type, you will need to have an
 Elevenlabs: https://www.elevenlabs.io/?from=partnerthompson2324
 
 After registration, get your API key.
+
 ![API Key](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/ece3f2a2-f61d-4c2d-94fa-c0fc4b189ff2)
 ![image](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/244486d8-9eda-4295-a051-46891a101405)
 
