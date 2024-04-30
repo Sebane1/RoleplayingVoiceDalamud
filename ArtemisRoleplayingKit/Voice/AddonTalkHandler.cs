@@ -668,19 +668,21 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 }
                                                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                             }
-                                            if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
-                                        && !_plugin.Config.QualityAssuranceMode)) {
-                                                if (_chatId == chatId) {
-                                                    _hook.SendAsyncKey(Keys.NumPad0);
+                                            if (_state != null) {
+                                                if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
+                                            && !_plugin.Config.QualityAssuranceMode)) {
+                                                    if (_chatId == chatId) {
+                                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                                    }
+                                                } else {
+                                                    if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                        _redoLineWindow.IsOpen = true;
+                                                    } else if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                        _hook.SendAsyncKey(Keys.NumPad0);
+                                                    }
                                                 }
-                                            } else {
-                                                if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
-                                                    _redoLineWindow.IsOpen = true;
-                                                } else if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
-                                                    _hook.SendAsyncKey(Keys.NumPad0);
-                                                }
+                                                task.Dispose();
                                             }
-                                            task.Dispose();
                                         } catch {
 
                                         }
