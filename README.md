@@ -18,6 +18,7 @@ https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.js
 ```
 
 Setup Guide:
+
 In the dalamud settomgs experimental tab, put the repository link here, clik the plus icon, and then save.
 ![f198ff756e32188b52121829390d481a](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/fdc04726-cbb5-4066-b678-2d861291c614)
 
@@ -25,6 +26,7 @@ Then install Artemis Roleplaying Kit from the dalamud plugin list.
 ![2c5234d89be9cf69de65858801152179](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/329adbde-06b9-4315-bf43-1b32ba9d18c2)
 
 [OPTIONAL INSTRUCTIONS FOR GENERATIVE VOICE]
+
 If you want to have your character speak when you type, you will need to have an Elevenlabs account.
 Elevenlabs: https://www.elevenlabs.io/?from=partnerthompson2324
 
@@ -37,10 +39,12 @@ Open the plugin with /ark in chat and copy paste your elevenlabs key after enabl
 ![a9c07f1e8cc8a19bc80f5b5a9c9a572e](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/0d35880a-472b-43c8-856a-b45ba19115cc)
 
 [OPTIONAL INSTRUCTIONS FOR CUSTOM VOICE PACKS]
+
 If you want to import a sound pack made by others, enable voice packs, import your chosen voice pack in .rpvsp format, and make a selection. 
 ![7d32d30e79f5db7f3de4ac7c431a5913](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/aada3971-6279-43de-8eb3-aae0c6ed8091)
 
 [OPTIONAL INSTRUCTIONS FOR SYNCRONIZING SOUNDS]
+
 If you wish to synchronize either your generated voice or voice pack with others enable Sending and Receiving data, and add friends to your whitelist. They will have to do the same for you.
 ![7d32d30e79f5db7f3de4ac7c431a5913](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/89c4c3eb-d758-4369-8855-2e0d2c475032)
 
