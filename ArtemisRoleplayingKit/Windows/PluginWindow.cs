@@ -133,7 +133,7 @@ namespace RoleplayingVoice {
                 if (configuration != null) {
                     _audioOutputType = new BetterComboBox("##audioOutputMethod", Enum.GetNames(typeof(AudioOutputType)).ToArray(), 0, 200);
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
-                    apiKey = configuration.ApiKey;
+                    apiKey = !string.IsNullOrEmpty(configuration.ApiKey) ? configuration.ApiKey : "";
                     _aiVoiceActive = configuration.AiVoiceActive;
                     _characterVoicePackActive = configuration.VoicePackIsActive;
                     _playerCharacterVolume = configuration.PlayerCharacterVolume;
