@@ -28,6 +28,7 @@ Then install Artemis Roleplaying Kit from the dalaamud plugin list.
 [OPTIONAL INSTRUCTIONS FOR GENERATIVE VOICE]
 
 If you want to have your character speak what you type, you will need to have an Elevenlabs account.
+
 Elevenlabs: https://www.elevenlabs.io/?from=partnerthompson2324
 
 After registration, get your API key.
