@@ -309,9 +309,6 @@ namespace RoleplayingVoice {
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
                 _toast.ErrorToast += _toast_ErrorToast;
-#if DEBUG
-                config.DebugMode = true;
-#endif
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -758,12 +755,18 @@ namespace RoleplayingVoice {
                         PlayerPayload player = item as PlayerPayload;
                         TextPayload text = item as TextPayload;
                         if (player != null) {
-                            playerName = player.PlayerName;
-                            break;
+                            string possiblePlayerName = RemoveSpecialSymbols(player.PlayerName).Trim();
+                            if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                playerName = player.PlayerName;
+                                break;
+                            }
                         }
                         if (text != null) {
-                            playerName = text.Text;
-                            break;
+                            string possiblePlayerName = RemoveSpecialSymbols(text.Text).Trim();
+                            if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                playerName = text.Text;
+                                break;
+                            }
                         }
                     }
 #if DEBUG

@@ -113,6 +113,7 @@ namespace RoleplayingVoice {
         public float NPCSpeechSpeed { get { return _npcSpeechSpeed; } set { _npcSpeechSpeed = value; } }
 
         public bool DebugMode { get; internal set; }
+        public bool DontVoiceRetainers { get; internal set; }
 
         #endregion
 

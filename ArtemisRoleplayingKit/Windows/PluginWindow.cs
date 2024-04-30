@@ -89,6 +89,8 @@ namespace RoleplayingVoice {
         private bool _qualityAssuranceMode;
         private bool _twitchStreamTriggersIfShouter;
         private float _npcPlaybackSpeed;
+        private bool _ignoreRetainerSpeech;
+        private bool _debugMode;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -96,7 +98,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             //IsOpen = true;
-            Size = new Vector2(600, 700);
+            Size = new Vector2(600, 750);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -142,10 +144,8 @@ namespace RoleplayingVoice {
                     _npcVolume = configuration.NpcVolume;
                     _aggressiveCaching = configuration.UseAggressiveSplicing;
                     _useServer = configuration.UsePlayerSync;
-
                     _tuneIntoTwitchStreams = configuration.TuneIntoTwitchStreams;
                     _twitchDefaultPlayback.SelectedIndex = configuration.DefaultTwitchOpen;
-
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
@@ -157,6 +157,8 @@ namespace RoleplayingVoice {
                     _streamPath = configuration.StreamPath;
                     _twitchStreamTriggersIfShouter = configuration.TwitchStreamTriggersIfShouter;
                     _npcPlaybackSpeed = configuration.NPCSpeechSpeed;
+                    _ignoreRetainerSpeech = configuration.DontVoiceRetainers;
+                    _debugMode = configuration.DebugMode;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -287,6 +289,9 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Perform Emotes Based On Written Text");
             ImGui.TextWrapped("Your character will emote based on what you write in custom emotes. We recommend turning off log messages for emotes before using this feature.");
+            ImGui.Checkbox("##debugMode", ref _debugMode);
+            ImGui.SameLine();
+            ImGui.Text("A bunch of debug information will be posted in chat. Only useful for developers.");
             ImGui.Dummy(new Vector2(0, 10));
             try {
                 ImGui.TextWrapped("You can now add custom photo frames! You can access these while the game UI is hidden in Gpose!");
@@ -349,6 +354,7 @@ namespace RoleplayingVoice {
             }
             ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached.");
             ImGui.Checkbox("Turn Off Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
+            ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
             ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
             ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
@@ -469,6 +475,7 @@ namespace RoleplayingVoice {
                         managerNullMessage = string.Empty;
                         managerNull = false;
                         Task.Run(() => _manager.ApiValidation(apiKey));
+                        SaveSettings();
                     }
                 }
                 if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
@@ -545,61 +552,65 @@ namespace RoleplayingVoice {
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
             if (save) {
                 if (isApiKeyValid && _aiVoiceActive && apiKeyValidated) {
-                    configuration.ConnectionIP = serverIP;
                     configuration.ApiKey = apiKey;
-                    if (clientState.LocalPlayer != null) {
-                        if (configuration.Characters == null) {
-                            configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
-                        }
-                        configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
-                    }
                 }
-                if (configuration.CharacterVoicePacks == null) {
-                    configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
-                }
-                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
-                configuration.PlayerCharacterVolume = _playerCharacterVolume;
-                configuration.OtherCharacterVolume = _otherCharacterVolume;
-                configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
-                configuration.LoopingSFXVolume = _loopingSFXVolume;
-                configuration.LivestreamVolume = _livestreamVolume;
-                configuration.NpcVolume = _npcVolume;
-                configuration.AiVoiceActive = _aiVoiceActive;
-                configuration.VoicePackIsActive = _characterVoicePackActive;
-                configuration.UseAggressiveSplicing = _aggressiveCaching;
-                configuration.CacheFolder = cacheFolder;
-                configuration.UsePlayerSync = _useServer;
-                configuration.TuneIntoTwitchStreams = _tuneIntoTwitchStreams;
-                configuration.DefaultTwitchOpen = _twitchDefaultPlayback.SelectedIndex;
-                configuration.IgnoreWhitelist = _ignoreWhitelist;
-                configuration.StreamPath = _streamPath;
-                configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
-                configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
-                configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
-                configuration.AutoTextAdvance = _npcAutoTextAdvance;
-                configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
-                configuration.AudioOutputType = _audioOutputType.SelectedIndex;
-                configuration.QualityAssuranceMode = _qualityAssuranceMode;
-                configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
-                configuration.NPCSpeechSpeed = _npcPlaybackSpeed;
-
-                if (voicePackComboBox != null && _voicePackList != null) {
-                    if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
-                        characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
-                    }
-                }
-                if (voiceComboBox != null && _voiceList != null) {
-                    if (voiceComboBox.SelectedIndex < _voiceList.Length) {
-                        characterVoice = _voiceList[voiceComboBox.SelectedIndex];
-                    }
-                }
-                configuration.Save();
-                PluginInterface.SavePluginConfig(configuration);
-                save = false;
+                SaveSettings();
                 RefreshVoices();
             }
         }
+        public void SaveSettings() {
+            configuration.ConnectionIP = serverIP;
+            if (clientState.LocalPlayer != null) {
+                if (configuration.Characters == null) {
+                    configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                }
+                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+            }
+            if (configuration.CharacterVoicePacks == null) {
+                configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
+            }
+            configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
+            configuration.PlayerCharacterVolume = _playerCharacterVolume;
+            configuration.OtherCharacterVolume = _otherCharacterVolume;
+            configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
+            configuration.LoopingSFXVolume = _loopingSFXVolume;
+            configuration.LivestreamVolume = _livestreamVolume;
+            configuration.NpcVolume = _npcVolume;
+            configuration.AiVoiceActive = _aiVoiceActive;
+            configuration.VoicePackIsActive = _characterVoicePackActive;
+            configuration.UseAggressiveSplicing = _aggressiveCaching;
+            configuration.CacheFolder = cacheFolder;
+            configuration.UsePlayerSync = _useServer;
+            configuration.TuneIntoTwitchStreams = _tuneIntoTwitchStreams;
+            configuration.DefaultTwitchOpen = _twitchDefaultPlayback.SelectedIndex;
+            configuration.IgnoreWhitelist = _ignoreWhitelist;
+            configuration.StreamPath = _streamPath;
+            configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
+            configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
+            configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
+            configuration.AutoTextAdvance = _npcAutoTextAdvance;
+            configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
+            configuration.AudioOutputType = _audioOutputType.SelectedIndex;
+            configuration.QualityAssuranceMode = _qualityAssuranceMode;
+            configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
+            configuration.NPCSpeechSpeed = _npcPlaybackSpeed;
+            configuration.DontVoiceRetainers = _ignoreRetainerSpeech;
+            configuration.DebugMode = _debugMode;
 
+            if (voicePackComboBox != null && _voicePackList != null) {
+                if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
+                    characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
+                }
+            }
+            if (voiceComboBox != null && _voiceList != null) {
+                if (voiceComboBox.SelectedIndex < _voiceList.Length) {
+                    characterVoice = _voiceList[voiceComboBox.SelectedIndex];
+                }
+            }
+            configuration.Save();
+            PluginInterface.SavePluginConfig(configuration);
+            save = false;
+        }
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
             // Height
             if (availableY - requiredY * Lines < 1) {

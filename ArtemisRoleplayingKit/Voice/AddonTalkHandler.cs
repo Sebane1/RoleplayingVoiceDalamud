@@ -581,139 +581,142 @@ namespace RoleplayingVoiceDalamud.Voice {
                     bool gender = false;
                     byte race = 0;
                     int body = 0;
-                    GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body);
-                    string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
-                    MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
-                    _currentSpeechObject = currentSpeechObject;
-                    ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
-                    string npcData = JsonConvert.SerializeObject(reportData);
-                    string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
-                    string arcValue = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message));
-                    string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
-                    Stopwatch downloadTimer = Stopwatch.StartNew();
-                    if (_plugin.Config.DebugMode) {
-                        _plugin.Chat.Print("Get audio from server. Sending " + value);
-                    }
-                    KeyValuePair<Stream, bool> stream =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine);
-                    if (!previouslyAddedLines.Contains(value + nameToUse)) {
-                        _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
-                        previouslyAddedLines.Add(value + nameToUse);
-                        if (_npcVoiceHistoryItems.Count > 12) {
-                            _npcVoiceHistoryItems.RemoveAt(0);
-                        }
-                    }
-                    if (stream.Key != null) {
+                    bool isRetainer = false;
+                    GameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body, ref isRetainer);
+                    if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
+                        string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
+                        MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
+                        _currentSpeechObject = currentSpeechObject;
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
+                        string npcData = JsonConvert.SerializeObject(reportData);
+                        string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
+                        string arcValue = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message));
+                        string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
+                        Stopwatch downloadTimer = Stopwatch.StartNew();
                         if (_plugin.Config.DebugMode) {
-                            _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
+                            _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
-                        WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, reportData);
-                        ActorMemory actorMemory = null;
-                        AnimationMemory animationMemory = null;
-                        ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
-                        Task task = null;
-                        ushort lipId = 0;
-                        bool canDoLipSync = !Conditions.IsBoundByDuty;
-                        if (wavePlayer != null) {
+                        KeyValuePair<Stream, bool> stream =
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine);
+                        if (!previouslyAddedLines.Contains(value + nameToUse)) {
+                            _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
+                            previouslyAddedLines.Add(value + nameToUse);
+                            if (_npcVoiceHistoryItems.Count > 12) {
+                                _npcVoiceHistoryItems.RemoveAt(0);
+                            }
+                        }
+                        if (stream.Key != null) {
                             if (_plugin.Config.DebugMode) {
-                                _plugin.Chat.Print("Waveplayer is valid");
+                                _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                             }
-                            if (npcObject != null && canDoLipSync) {
-                                actorMemory = new ActorMemory();
-                                actorMemory.SetAddress(npcObject.Address);
-                                initialState = actorMemory.CharacterMode;
-                                animationMemory = actorMemory.Animation;
-                                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                                if (wavePlayer.TotalTime.Seconds < 4) {
-                                    lipId = LipSyncTypes[4].Timeline.AnimationId;
-                                } else if (wavePlayer.TotalTime.Seconds < 6) {
-                                    lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                } else {
-                                    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                            WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, reportData);
+                            ActorMemory actorMemory = null;
+                            AnimationMemory animationMemory = null;
+                            ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
+                            Task task = null;
+                            ushort lipId = 0;
+                            bool canDoLipSync = !Conditions.IsBoundByDuty;
+                            if (wavePlayer != null) {
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Waveplayer is valid");
                                 }
-                                task = Task.Run(delegate {
-                                    Thread.Sleep(500);
-                                    if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
-                                    }
-                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                    Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
-                                    animationMemory.LipsOverride = 0;
-                                    if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                    }
-                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                });
-                            }
-                            bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
-                            float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
-                            CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                            _chatId = Guid.NewGuid().ToString();
-                            string chatId = _chatId;
-                            bool lipWasSynced = false;
-                            if (_plugin.Config.DebugMode) {
-                                _plugin.Chat.Print("Attempt to play audio stream.");
-                            }
-                            _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
-                            Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
-                            Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
-                                if (_hook != null) {
-                                    try {
-                                        if (npcObject != null && canDoLipSync) {
-                                            animationMemory.LipsOverride = 0;
-                                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                            }
-                                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                        }
-                                        if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
-                                    && !_plugin.Config.QualityAssuranceMode)) {
-                                            if (_chatId == chatId) {
-                                                _hook.SendAsyncKey(Keys.NumPad0);
-                                            }
-                                        } else {
-                                            if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
-                                                _redoLineWindow.IsOpen = true;
-                                            } else if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
-                                                _hook.SendAsyncKey(Keys.NumPad0);
-                                            }
-                                        }
-                                        task.Dispose();
-                                    } catch {
-
-                                    }
-                                }
-                            }, delegate (object sender, StreamVolumeEventArgs e) {
                                 if (npcObject != null && canDoLipSync) {
-                                    if (e.MaxSampleValues.Length > 0) {
-                                        if (e.MaxSampleValues[0] > 0.2) {
-                                            if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
+                                    actorMemory = new ActorMemory();
+                                    actorMemory.SetAddress(npcObject.Address);
+                                    initialState = actorMemory.CharacterMode;
+                                    animationMemory = actorMemory.Animation;
+                                    animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                                    if (wavePlayer.TotalTime.Seconds < 4) {
+                                        lipId = LipSyncTypes[4].Timeline.AnimationId;
+                                    } else if (wavePlayer.TotalTime.Seconds < 6) {
+                                        lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                    } else {
+                                        lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                    }
+                                    task = Task.Run(delegate {
+                                        Thread.Sleep(500);
+                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                        }
+                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                                        Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
+                                        animationMemory.LipsOverride = 0;
+                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
+                                        }
+                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                    });
+                                }
+                                bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
+                                float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                                CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
+                                _chatId = Guid.NewGuid().ToString();
+                                string chatId = _chatId;
+                                bool lipWasSynced = false;
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Attempt to play audio stream.");
+                                }
+                                _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
+                                Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
+                                Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
+                                    if (_hook != null) {
+                                        try {
+                                            if (npcObject != null && canDoLipSync) {
+                                                animationMemory.LipsOverride = 0;
                                                 if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
-                                                }
-                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                                lipWasSynced = true;
-                                            }
-                                        } else {
-                                            if (lipWasSynced) {
-                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                                 }
                                                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                                lipWasSynced = false;
+                                            }
+                                            if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
+                                        && !_plugin.Config.QualityAssuranceMode)) {
+                                                if (_chatId == chatId) {
+                                                    _hook.SendAsyncKey(Keys.NumPad0);
+                                                }
+                                            } else {
+                                                if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                    _redoLineWindow.IsOpen = true;
+                                                } else if (_plugin.Config.QualityAssuranceMode && !ignoreAutoProgress) {
+                                                    _hook.SendAsyncKey(Keys.NumPad0);
+                                                }
+                                            }
+                                            task.Dispose();
+                                        } catch {
+
+                                        }
+                                    }
+                                }, delegate (object sender, StreamVolumeEventArgs e) {
+                                    if (npcObject != null && canDoLipSync) {
+                                        if (e.MaxSampleValues.Length > 0) {
+                                            if (e.MaxSampleValues[0] > 0.2) {
+                                                if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
+                                                    if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                    }
+                                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                                                    lipWasSynced = true;
+                                                }
+                                            } else {
+                                                if (lipWasSynced) {
+                                                    if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                    }
+                                                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                                    lipWasSynced = false;
+                                                }
                                             }
                                         }
                                     }
+                                }, _plugin.Config.NPCSpeechSpeed);
+                            } else {
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Waveplayer failed " + downloadTimer.Elapsed.ToString());
                                 }
-                            }, _plugin.Config.NPCSpeechSpeed);
+                            }
                         } else {
                             if (_plugin.Config.DebugMode) {
-                                _plugin.Chat.Print("Waveplayer failed " + downloadTimer.Elapsed.ToString());
+                                _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
                             }
-                        }
-                    } else {
-                        if (_plugin.Config.DebugMode) {
-                            _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
                         }
                     }
                 } catch (Exception e) {
@@ -815,7 +818,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return "???";
             }
         }
-        private unsafe GameObject DiscoverNpc(string npcName, string message, ref bool gender, ref byte race, ref int body) {
+        private unsafe GameObject DiscoverNpc(string npcName, string message, ref bool gender, ref byte race, ref int body, ref bool isRetainer) {
             if (npcName == "???") {
                 npcName = FindNPCNameFromMessage(message);
             }
@@ -878,6 +881,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                                 race = character.Customize[(int)CustomizeIndex.Race];
                                 body = character.Customize[(int)CustomizeIndex.ModelType];
+                                isRetainer = character.ObjectKind == ObjectKind.Retainer;
                                 if (body == 0) {
                                     var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address);
                                     body = gameObject->CharacterData.ModelSkeletonId;
@@ -895,14 +899,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                 foreach (var item in _objectTable) {
                     if (item.Name.TextValue == npcName) {
                         _namesToRemove.Add(npcName);
-                        return GetCharacterData(item, ref gender, ref race, ref body);
+                        return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
                     }
                 }
                 foreach (var item in _objectTable) {
                     if (item != _clientState.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
                         if (item.ObjectKind == ObjectKind.EventNpc) {
                             _namesToRemove.Add(npcName);
-                            return GetCharacterData(item, ref gender, ref race, ref body);
+                            return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
                         }
                     }
                 }
@@ -917,12 +921,13 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return false;
         }
-        private unsafe Character GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref int body) {
+        private unsafe Character GetCharacterData(GameObject gameObject, ref bool gender, ref byte race, ref int body, ref bool isRetainer) {
             Character character = gameObject as Character;
             if (character != null) {
                 gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                 race = character.Customize[(int)CustomizeIndex.Race];
                 body = character.Customize[(int)CustomizeIndex.ModelType];
+                isRetainer = character.ObjectKind == ObjectKind.Retainer;
                 if (body == 0) {
                     var unsafeReference = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address);
                     body = unsafeReference->CharacterData.ModelSkeletonId;
