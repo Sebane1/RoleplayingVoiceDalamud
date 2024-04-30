@@ -43,6 +43,7 @@ Open the plugin with /ark in chat and copy paste your elevenlabs key after enabl
 [OPTIONAL INSTRUCTIONS FOR CUSTOM VOICE PACKS]
 
 If you want to import a sound pack made by others, enable voice packs, import your chosen voice pack in .rpvsp format, and make a selection. 
+
 ![7d32d30e79f5db7f3de4ac7c431a5913](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/aada3971-6279-43de-8eb3-aae0c6ed8091)
 
 [OPTIONAL INSTRUCTIONS FOR SYNCRONIZING SOUNDS]
