@@ -51,6 +51,7 @@ If you wish to synchronize either your generated voice or voice pack with others
 
 ![7d32d30e79f5db7f3de4ac7c431a5913](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/89c4c3eb-d758-4369-8855-2e0d2c475032)
 
+
 [Final Instructions]
 Dont forget to save!
 ![API Key](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/ca00eb02-85a7-4077-b873-129fa40a36bb)
