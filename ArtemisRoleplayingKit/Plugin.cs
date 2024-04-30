@@ -1666,7 +1666,20 @@ namespace RoleplayingVoice {
                             _nativeAudioStream.Position = 0;
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
-                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1);
+                            bool lipWasSynced = false;
+                            Character character = mediaObject.GameObject as Character;
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1, 0, false, delegate {
+                                _addonTalkHandler.StopLipSync(character);
+                            }, delegate (object sender, StreamVolumeEventArgs e) {
+                                if (e.MaxSampleValues.Length > 0) {
+                                    if (e.MaxSampleValues[0] > 0.2) {
+                                        _addonTalkHandler.TriggerLipSync(character, 4);
+                                        lipWasSynced = true;
+                                    } else {
+                                        _addonTalkHandler.StopLipSync(character);
+                                    }
+                                }
+                            });
                             if (!_mediaManager.LowPerformanceMode) {
                                 _ = Task.Run(async () => {
                                     try {

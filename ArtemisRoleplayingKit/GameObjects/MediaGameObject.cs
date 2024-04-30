@@ -70,6 +70,8 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
+        public GameObject GameObject { get => _gameObject; set => _gameObject = value; }
+
         public MediaGameObject(GameObject gameObject) {
             _gameObject = gameObject;
         }
