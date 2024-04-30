@@ -757,15 +757,19 @@ namespace RoleplayingVoice {
                         if (player != null) {
                             string possiblePlayerName = RemoveSpecialSymbols(player.PlayerName).Trim();
                             if (!string.IsNullOrEmpty(possiblePlayerName)) {
-                                playerName = player.PlayerName;
-                                break;
+                                if (char.IsLower(possiblePlayerName[1])) {
+                                    playerName = player.PlayerName;
+                                    break;
+                                }
                             }
                         }
                         if (text != null) {
                             string possiblePlayerName = RemoveSpecialSymbols(text.Text).Trim();
                             if (!string.IsNullOrEmpty(possiblePlayerName)) {
-                                playerName = text.Text;
-                                break;
+                                if (char.IsLower(possiblePlayerName[1])) {
+                                    playerName = text.Text;
+                                    break;
+                                }
                             }
                         }
                     }
