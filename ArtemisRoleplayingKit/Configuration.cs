@@ -35,6 +35,9 @@ namespace RoleplayingVoice {
         private int _audioOutputType = 0;
         private bool _qualityAssuranceMode;
         private float _npcSpeechSpeed = 1;
+        private int _defaultTwitchOpen;
+        private bool _twitchStreamTriggersIfShouter;
+        private bool _dontVoiceRetainers;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -108,12 +111,12 @@ namespace RoleplayingVoice {
         public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
         public int AudioOutputType { get => _audioOutputType; set => _audioOutputType = value; }
         public bool QualityAssuranceMode { get => _qualityAssuranceMode; set => _qualityAssuranceMode = value; }
-        public int DefaultTwitchOpen { get; internal set; }
-        public bool TwitchStreamTriggersIfShouter { get; internal set; }
+        public int DefaultTwitchOpen { get => _defaultTwitchOpen; set => _defaultTwitchOpen = value; }
+        public bool TwitchStreamTriggersIfShouter { get => _twitchStreamTriggersIfShouter; set => _twitchStreamTriggersIfShouter = value; }
         public float NPCSpeechSpeed { get { return _npcSpeechSpeed; } set { _npcSpeechSpeed = value; } }
 
-        public bool DebugMode { get; internal set; }
-        public bool DontVoiceRetainers { get; internal set; }
+        public bool DebugMode { get; set; }
+        public bool DontVoiceRetainers { get => _dontVoiceRetainers; set => _dontVoiceRetainers = value; }
 
         #endregion
 
