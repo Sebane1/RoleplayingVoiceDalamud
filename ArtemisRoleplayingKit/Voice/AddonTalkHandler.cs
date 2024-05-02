@@ -17,6 +17,7 @@ using Dalamud.Memory;
 using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using NAudio.Lame;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -94,6 +95,10 @@ namespace RoleplayingVoiceDalamud.Voice {
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
         public List<NPCVoiceHistoryItem> NpcVoiceHistoryItems { get => _npcVoiceHistoryItems; set => _npcVoiceHistoryItems = value; }
         List<string> previouslyAddedLines = new List<string>();
+        private bool _gotPlayerDefaultState;
+        private ushort _defaultBaseOverride;
+        private ushort _defaultCharacterModeInput;
+        private byte _defaultCharacterModeRaw;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
             IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow) {
@@ -341,6 +346,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _alreadyAddedEvent = true;
                                 }
                             }
+                            if (_gotPlayerDefaultState) {
+                                GetAnimationDefaults();
+                            }
                             if (!alreadyConfiguredBubbles) {
                                 //	Hook
                                 unsafe {
@@ -431,6 +439,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
         }
 
+        private void GetAnimationDefaults() {
+            var actorMemory = new ActorMemory();
+            actorMemory.SetAddress(_clientState.LocalPlayer.Address);
+            var animationMemory = actorMemory.Animation;
+            animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+            _defaultBaseOverride = MemoryService.Read<ushort>(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)));
+            _defaultCharacterModeInput = MemoryService.Read<ushort>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeInput)));
+            _defaultCharacterModeRaw = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
+        }
 
         private void DumpCurrentAudio(string speaker) {
             try {
@@ -527,10 +544,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     animationMemory!.BaseOverride = emoteId;
                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), emoteId, "Base Override");
                 }
-
-                if (actorMemory.CharacterMode != ActorMemory.CharacterModes.Normal) {
-                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                }
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
             } catch {
 
             }
@@ -552,12 +566,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                 actorMemory.SetAddress(character.Address);
                 var animationMemory = actorMemory.Animation;
                 animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), 0, "Base Override");
-                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeInput)), 0, "Animation Mode Input Override");
 
-                if (actorMemory.CharacterMode != ActorMemory.CharacterModes.Normal) {
-                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                }
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), _defaultBaseOverride, "Base Override");
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeInput)), _defaultCharacterModeInput, "Animation Mode Input Override");
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), _defaultCharacterModeRaw, "Animation Mode Override");
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), _defaultBaseOverride, "Base Override");
             } catch {
 
             }
@@ -1147,6 +1161,11 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             if (npcName.EndsWith("way") || _clientState.TerritoryType == 959) {
                 return "Lrit";
+            }
+            if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
+                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")
+                || npcName.ToLower().Contains("furry creature") || body == 11006) {
+                return "Kop";
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
                 || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")

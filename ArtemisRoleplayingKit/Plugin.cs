@@ -191,6 +191,8 @@ namespace RoleplayingVoice {
         private string[] _streamURLs;
         private bool _combatMusicWasPlayed;
         private bool _wasDoingFakeEmote;
+        private bool _didRealEmote;
+        private int _failCount;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -1616,6 +1618,9 @@ namespace RoleplayingVoice {
                                 }
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
+                                //if (_wasDoingFakeEmote) {
+                                //_addonTalkHandler.StopEmote(gameObject as Character);
+                                //}
                             }
                         }
                     }
@@ -2192,6 +2197,7 @@ namespace RoleplayingVoice {
                     });
                 }
             }
+            _didRealEmote = true;
         }
         private string GetEmoteName(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
@@ -2868,7 +2874,9 @@ namespace RoleplayingVoice {
                 }
             }
             if (!string.IsNullOrEmpty(emote)) {
-                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                if (_wasDoingFakeEmote) {
+                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                }
                 Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                 Task.Run(() => {
                     Thread.Sleep(1000);
@@ -2879,19 +2887,24 @@ namespace RoleplayingVoice {
                         _animationModsAlreadyTriggered.Add(foundModName);
                     }
                     _mediaManager.StopAudio(_playerObject);
-                    Thread.Sleep(1500);
+                    Thread.Sleep(2000);
                     ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
                     Dalamud.Logging.PluginLog.Debug(value + " vs " + animationId);
-                    if (value != emoteId) {
+                    if (!_didRealEmote) {
                         _wasDoingFakeEmote = true;
-                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)animationId);
                         OnEmote(_clientState.LocalPlayer, (ushort)emoteId);
+                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)animationId);
                     }
+                    _didRealEmote = false;
                 });
             } else {
                 Task.Run(() => {
-                    Thread.Sleep(3000);
-                    DoAnimation(animationName);
+                    if (_failCount++ < 10) {
+                        Thread.Sleep(3000);
+                        DoAnimation(animationName);
+                    } else {
+                        _failCount = 0;
+                    }
                 });
             }
         }
