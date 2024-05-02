@@ -132,6 +132,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Matsya", "Mya");
             values.Add("Mehvan", "Mvan");
             values.Add("Elidibus", "Ebus");
+            values.Add("Themis", "Ebus");
             values.Add("White-robed Ascian", "Ebus");
             values.Add("Hermes", "Hes");
             values.Add("Meteion", "Mion");

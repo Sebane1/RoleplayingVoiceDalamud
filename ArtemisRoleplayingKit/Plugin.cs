@@ -86,6 +86,7 @@ namespace RoleplayingVoice {
         private RedoLineWIndow _redoLineWindow;
         private GposeWindow _gposeWindow;
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
+        private AnimationCatalogue _animationCatalogue;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
         private Stopwatch _stopwatch;
@@ -189,6 +190,7 @@ namespace RoleplayingVoice {
         private MediaGameObject _lastStreamObject;
         private string[] _streamURLs;
         private bool _combatMusicWasPlayed;
+        private bool _wasDoingFakeEmote;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -261,6 +263,7 @@ namespace RoleplayingVoice {
                 _redoLineWindow = this.pluginInterface.Create<RedoLineWIndow>();
                 _gposeWindow = this.pluginInterface.Create<GposeWindow>();
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
+                _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
                 pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -287,6 +290,9 @@ namespace RoleplayingVoice {
                 if (_redoLineWindow is not null) {
                     this.windowSystem.AddWindow(_redoLineWindow);
                 }
+                if (_animationCatalogue is not null) {
+                    this.windowSystem.AddWindow(_animationCatalogue);
+                }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
                 this.pluginInterface.UiBuilder.Draw += UiBuilder_Draw;
@@ -309,6 +315,7 @@ namespace RoleplayingVoice {
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
                 _toast.ErrorToast += _toast_ErrorToast;
+                _animationCatalogue.Plugin = this;
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
                 _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -1635,6 +1642,10 @@ namespace RoleplayingVoice {
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
                 }
             }
+            if (_wasDoingFakeEmote) {
+                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                _wasDoingFakeEmote = false;
+            }
         }
         #endregion
         #region Crafting Checks
@@ -1940,6 +1951,10 @@ namespace RoleplayingVoice {
                     temporaryWhitelistQueue.Enqueue(senderName);
                 } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
                     RefreshData();
+                }
+                if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                    _wasDoingFakeEmote = false;
                 }
             }
         }
@@ -2777,17 +2792,40 @@ namespace RoleplayingVoice {
         #endregion
         #region Trigger Animation Mods
         private void CheckAnimationMods(string[] splitArgs, string args) {
-            var list = CreateEmoteList(_dataManager);
             if (splitArgs.Length > 1) {
-                string emote = "";
-                string foundModName = "";
-                var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-                string commandArguments = args.Replace(splitArgs[0] + " ", null).ToLower().Trim();
-                Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
-                for (int i = 0; i < 5 && string.IsNullOrEmpty(emote); i++) {
-                    foreach (string modName in _animationMods.Keys) {
-                        if (modName.ToLower().Contains(commandArguments)) {
+                DoAnimation(args.Replace(splitArgs[0] + " ", null).ToLower().Trim());
+            } else {
+                if (!_animationCatalogue.IsOpen) {
+                    var list = CreateEmoteList(_dataManager);
+                    var newList = new List<string>();
+                    foreach (string key in _animationMods.Keys) {
+                        string[] strings = _animationMods[key].Split("/");
+                        string option = strings[strings.Length - 1];
+                        if (list.ContainsKey(option)) {
+                            newList.Add(key);
+                        }
+                    }
+                    _animationCatalogue.AnimationNames = newList;
+                    _animationCatalogue.IsOpen = true;
+                } else {
+                    _animationCatalogue.IsOpen = false;
+                }
+            }
+        }
+
+        public void DoAnimation(string animationName) {
+            var list = CreateEmoteList(_dataManager);
+            string emote = "";
+            uint emoteId = 0;
+            string foundModName = "";
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
+            string commandArguments = animationName;
+            Dalamud.Logging.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+            for (int i = 0; i < 20 && string.IsNullOrEmpty(emote); i++) {
+                foreach (string modName in _animationMods.Keys) {
+                    if (modName.ToLower().Contains(commandArguments)) {
+                        if (collection.Item3 != "None") {
                             var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
                             _mediaManager.StopAudio(_playerObject);
                             Dalamud.Logging.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
@@ -2800,6 +2838,7 @@ namespace RoleplayingVoice {
                                             if (list.ContainsKey(_animationMods[modName])) {
                                                 foreach (var value in list[_animationMods[modName]]) {
                                                     emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                    emoteId = value.ActionTimeline[0].Value.RowId;
                                                     foundModName = modName;
                                                     Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
                                                 }
@@ -2815,36 +2854,40 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             }
-                            break;
+                        } else {
+
                         }
-                    }
-                }
-                if (!string.IsNullOrEmpty(emote)) {
-                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
-                    Task.Run(() => {
-                        Thread.Sleep(1000);
-                        _messageQueue.Enqueue(emote);
-                        if (!_animationModsAlreadyTriggered.Contains(foundModName)) {
-                            Thread.Sleep(2000);
-                            _messageQueue.Enqueue(emote);
-                            _animationModsAlreadyTriggered.Add(foundModName);
-                        }
-                        _mediaManager.StopAudio(_playerObject);
-                    });
-                }
-            } else {
-                string danceModList = "You can choose from the following animation mods \r\n";
-                _chat.Print(danceModList);
-                foreach (string key in _animationMods.Keys) {
-                    string[] strings = _animationMods[key].Split("/");
-                    string option = strings[strings.Length - 1];
-                    if (list.ContainsKey(option)) {
-                        _chat.Print(key);
+                        break;
                     }
                 }
             }
+            if (!string.IsNullOrEmpty(emote)) {
+                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                Task.Run(() => {
+                    Thread.Sleep(1000);
+                    _messageQueue.Enqueue(emote);
+                    if (!_animationModsAlreadyTriggered.Contains(foundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
+                        Thread.Sleep(100);
+                        _fastMessageQueue.Enqueue(emote);
+                        _animationModsAlreadyTriggered.Add(foundModName);
+                    }
+                    _mediaManager.StopAudio(_playerObject);
+                    Thread.Sleep(1500);
+                    ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
+                    Dalamud.Logging.PluginLog.Debug(value + " vs " + emoteId);
+                    if (value != emoteId) {
+                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)emoteId);
+                        _wasDoingFakeEmote = true;
+                    }
+                });
+            } else {
+                Task.Run(() => {
+                    Thread.Sleep(3000);
+                    DoAnimation(animationName);
+                });
+            }
         }
-
         private IReadOnlyDictionary<string, IReadOnlyList<Emote>> CreateEmoteList(IDataManager gameData) {
             var sheet = gameData.GetExcelSheet<Emote>()!;
             var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();

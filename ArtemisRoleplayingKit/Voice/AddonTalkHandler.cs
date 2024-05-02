@@ -517,6 +517,51 @@ namespace RoleplayingVoiceDalamud.Voice {
 
             }
         }
+
+        public async void TriggerEmote(Character character, ushort emoteId) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                if (animationMemory.BaseOverride != emoteId) {
+                    animationMemory!.BaseOverride = emoteId;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), emoteId, "Base Override");
+                }
+
+                if (actorMemory.CharacterMode != ActorMemory.CharacterModes.Normal) {
+                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                }
+            } catch {
+
+            }
+        }
+        public ushort GetCurrentEmoteId(Character character) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                return MemoryService.Read<ushort>(actorMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)));
+            } catch {
+
+            }
+            return 0;
+        }
+        public async void StopEmote(Character character) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), 0, "Base Override");
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeInput)), 0, "Animation Mode Input Override");
+
+                if (actorMemory.CharacterMode != ActorMemory.CharacterModes.Normal) {
+                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                }
+            } catch {
+
+            }
+        }
         public async void StopLipSync(Character character) {
             try {
                 var actorMemory = new ActorMemory();
