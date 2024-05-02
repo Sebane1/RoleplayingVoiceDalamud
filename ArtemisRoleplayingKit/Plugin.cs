@@ -2195,7 +2195,11 @@ namespace RoleplayingVoice {
         }
         private string GetEmoteName(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
-            return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
+            if (emote != null) {
+                return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
+            } else {
+                return "";
+            }
         }
         private string GetEmoteCommand(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
@@ -2817,6 +2821,7 @@ namespace RoleplayingVoice {
             var list = CreateEmoteList(_dataManager);
             string emote = "";
             uint emoteId = 0;
+            uint animationId = 0;
             string foundModName = "";
             var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
@@ -2838,7 +2843,8 @@ namespace RoleplayingVoice {
                                             if (list.ContainsKey(_animationMods[modName])) {
                                                 foreach (var value in list[_animationMods[modName]]) {
                                                     emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                    emoteId = value.ActionTimeline[0].Value.RowId;
+                                                    emoteId = value.RowId;
+                                                    animationId = value.ActionTimeline[0].Value.RowId;
                                                     foundModName = modName;
                                                     Dalamud.Logging.PluginLog.Debug(emote + " found and will be triggered.");
                                                 }
@@ -2875,11 +2881,11 @@ namespace RoleplayingVoice {
                     _mediaManager.StopAudio(_playerObject);
                     Thread.Sleep(1500);
                     ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
-                    Dalamud.Logging.PluginLog.Debug(value + " vs " + emoteId);
+                    Dalamud.Logging.PluginLog.Debug(value + " vs " + animationId);
                     if (value != emoteId) {
-                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)emoteId);
-                        OnEmote(_clientState.LocalPlayer, (ushort)emoteId);
                         _wasDoingFakeEmote = true;
+                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)animationId);
+                        OnEmote(_clientState.LocalPlayer, (ushort)emoteId);
                     }
                 });
             } else {
