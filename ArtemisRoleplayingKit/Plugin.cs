@@ -2878,6 +2878,7 @@ namespace RoleplayingVoice {
                     Dalamud.Logging.PluginLog.Debug(value + " vs " + emoteId);
                     if (value != emoteId) {
                         _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)emoteId);
+                        OnEmote(_clientState.LocalPlayer, (ushort)emoteId);
                         _wasDoingFakeEmote = true;
                     }
                 });
