@@ -548,7 +548,7 @@ namespace RoleplayingVoice {
                 isApiKeyValid = false;
             }
             apiKeyValidated = true;
-
+            RefreshVoices();
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
         }
         public void SaveSettings() {
