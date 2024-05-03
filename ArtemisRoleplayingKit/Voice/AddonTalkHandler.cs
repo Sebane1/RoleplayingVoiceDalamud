@@ -1255,10 +1255,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             _actorService.Shutdown();
             _gposeService.Shutdown();
             _addressService.Shutdown();
-            _poseService.Shutdown();
-            _targetService.Shutdown();
-            _openChatBubbleHook.Dispose();
-            addonTalkManager.Dispose();
+            _poseService?.Shutdown();
+            _targetService?.Shutdown();
+            _openChatBubbleHook?.Dispose();
+            addonTalkManager?.Dispose();
         }
         private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3);
     }

@@ -44,8 +44,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public void Dispose() {
-            this.subscription.Dispose();
-            _clientState.Login -= ClientState_Logout;
+            this.subscription?.Dispose();
+            _clientState.Login -= _clientState_Login;
+            _clientState.Logout -= ClientState_Logout;
         }
     }
 }
