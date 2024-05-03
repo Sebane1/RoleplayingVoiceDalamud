@@ -550,13 +550,6 @@ namespace RoleplayingVoice {
             apiKeyValidated = true;
 
             // If the api key was validated, is valid, and the request was sent via the Save or Close button, the settings are saved.
-            if (save) {
-                if (isApiKeyValid && _aiVoiceActive && apiKeyValidated) {
-                    configuration.ApiKey = apiKey;
-                }
-                SaveSettings();
-                RefreshVoices();
-            }
         }
         public void SaveSettings() {
             configuration.ConnectionIP = serverIP;
@@ -565,6 +558,10 @@ namespace RoleplayingVoice {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                 }
                 configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+            }
+            if (_aiVoiceActive && !string.IsNullOrEmpty(apiKey)) {
+                configuration.ApiKey = apiKey;
+                _manager.SetAPI(apiKey);
             }
             if (configuration.CharacterVoicePacks == null) {
                 configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
@@ -610,6 +607,7 @@ namespace RoleplayingVoice {
             configuration.Save();
             PluginInterface.SavePluginConfig(configuration);
             save = false;
+            RefreshVoices();
         }
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
             // Height

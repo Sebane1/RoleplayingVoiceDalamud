@@ -684,11 +684,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     initialState = actorMemory.CharacterMode;
                                     animationMemory = actorMemory.Animation;
                                     animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                                    //Stopwatch lipSyncCommitmentTimer = new Stopwatch();
+                                    //int lipSyncCommitment = 0;
                                     if (wavePlayer.TotalTime.Seconds < 2) {
                                         lipId = LipSyncTypes[4].Timeline.AnimationId;
-                                    } else if (wavePlayer.TotalTime.Seconds < 6) {
+                                    } else if (wavePlayer.TotalTime.Seconds < 7) {
+                                        //lipSyncCommitment = 6100;
                                         lipId = LipSyncTypes[5].Timeline.AnimationId;
                                     } else {
+                                        //lipSyncCommitment = 6100;
                                         lipId = LipSyncTypes[6].Timeline.AnimationId;
                                     }
                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
@@ -757,12 +761,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (e.MaxSampleValues.Length > 0) {
                                             if (e.MaxSampleValues[0] > 0.2) {
                                                 int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
-                                                if (seconds < 2000) {
-                                                    lipId = LipSyncTypes[4].Timeline.AnimationId;
-                                                } else if (wavePlayer.TotalTime.Seconds < 6000) {
-                                                    lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                                } else {
-                                                    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                                float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
+                                                if (percentage > 0.90f) {
+                                                    if (seconds < 2000) {
+                                                        lipId = LipSyncTypes[4].Timeline.AnimationId;
+                                                    } else if (wavePlayer.TotalTime.Seconds < 7000) {
+                                                        lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                                    } else {
+                                                        lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                                    }
                                                 }
                                                 if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
                                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
