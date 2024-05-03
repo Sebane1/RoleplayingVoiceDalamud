@@ -561,48 +561,50 @@ namespace RoleplayingVoice {
                 if (Conditions.IsMounted) {
                     if (!_mountingOccured) {
                         _mountingOccured = true;
-                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        string path = config.CacheFolder + @"\VoicePack\" + voice;
-                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
-                        bool isVoicedEmote = false;
-                        string value = characterVoicePack.GetMisc(_lastMountingMessage);
-                        if (!string.IsNullOrEmpty(value)) {
-                            if (config.UsePlayerSync) {
-                                Task.Run(async () => {
-                                    bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
-                                });
+                        if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                            string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                            string path = config.CacheFolder + @"\VoicePack\" + voice;
+                            string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                            bool isVoicedEmote = false;
+                            string value = characterVoicePack.GetMisc(_lastMountingMessage);
+                            if (!string.IsNullOrEmpty(value)) {
+                                if (config.UsePlayerSync) {
+                                    Task.Run(async () => {
+                                        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                                    });
+                                }
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
+                                try {
+                                    _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                                } catch (Exception e) {
+                                    _pluginLog.Warning(e, e.Message);
+                                }
+                                _mountMusicWasPlayed = true;
                             }
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
-                            try {
-                                _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                            } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                        }
+                    } else {
+                        if (_mountingOccured) {
+                            _mountingOccured = false;
+                            if (_mountMusicWasPlayed) {
+                                _lastMountingMessage = null;
+                                _mediaManager.StopAudio(_playerObject);
+                                try {
+                                    _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                                } catch (Exception e) {
+                                    _pluginLog.Warning(e, e.Message);
+                                }
+                                _mountMusicWasPlayed = false;
                             }
-                            _mountMusicWasPlayed = true;
                         }
                     }
                 } else {
-                    if (_mountingOccured) {
-                        _mountingOccured = false;
-                        if (_mountMusicWasPlayed) {
-                            _lastMountingMessage = null;
-                            _mediaManager.StopAudio(_playerObject);
-                            try {
-                                _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                            } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
-                            }
-                            _mountMusicWasPlayed = false;
+                    if (_mountMusicWasPlayed) {
+                        try {
+                            _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                        } catch (Exception e) {
+                            _pluginLog.Warning(e, e.Message);
                         }
-                    }
-                }
-            } else {
-                if (_mountMusicWasPlayed) {
-                    try {
-                        _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
                     }
                 }
             }
@@ -1921,7 +1923,7 @@ namespace RoleplayingVoice {
                             try {
                                 File.Delete(file);
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog.Warning("Staging sound is already in use, skipped for cleanup.");
                             }
                         }
                     }

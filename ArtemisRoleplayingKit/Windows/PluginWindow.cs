@@ -462,31 +462,33 @@ namespace RoleplayingVoice {
         }
 
         private void Save() {
-            if (InputValidation()) {
-                if (configuration != null) {
-                    apiKeyValidated = false;
-                    save = true;
-                    if (_manager == null) {
-                        managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
-                        managerNull = true;
-                        PluginReference.InitialzeManager();
+            Task.Run(delegate {
+                if (InputValidation()) {
+                    if (configuration != null) {
+                        apiKeyValidated = false;
+                        save = true;
+                        if (_manager == null) {
+                            managerNullMessage = "Somehow, the manager went missing. Contact a developer!";
+                            managerNull = true;
+                            PluginReference.InitialzeManager();
+                        }
+                        if (_manager != null) {
+                            managerNullMessage = string.Empty;
+                            managerNull = false;
+                            Task.Run(() => _manager.ApiValidation(apiKey));
+                            SaveSettings();
+                        }
                     }
-                    if (_manager != null) {
-                        managerNullMessage = string.Empty;
-                        managerNull = false;
-                        Task.Run(() => _manager.ApiValidation(apiKey));
-                        SaveSettings();
+                    if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
+                        isApiKeyValid = false;
+                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
                     }
-                }
-                if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
-                    isApiKeyValid = false;
-                    apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                }
 
-                SizeYChanged = false;
-                changedSize = null;
-                Size = initialSize;
-            }
+                    SizeYChanged = false;
+                    changedSize = null;
+                    Size = initialSize;
+                }
+            });
         }
 
         private void DrawErrors() {
@@ -638,40 +640,78 @@ namespace RoleplayingVoice {
         }
 
         public async void RefreshVoices() {
-            _refreshing = true;
-            try {
-                if (clientState.LocalPlayer != null) {
-                    List<string> voicePacks = new List<string>();
-                    string path = cacheFolder + @"\VoicePack\";
-                    if (Directory.Exists(path)) {
-                        foreach (string voice in Directory.EnumerateDirectories(path)) {
-                            if (!voice.EndsWith("Others")) {
-                                voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+            Task.Run(async delegate () {
+                _refreshing = true;
+                try {
+                    if (clientState.LocalPlayer != null) {
+                        List<string> voicePacks = new List<string>();
+                        string path = cacheFolder + @"\VoicePack\";
+                        if (Directory.Exists(path)) {
+                            foreach (string voice in Directory.EnumerateDirectories(path)) {
+                                if (!voice.EndsWith("Others")) {
+                                    voicePacks.Add(Path.GetFileNameWithoutExtension(voice + ".blah"));
+                                }
+                            }
+                            _voicePackList = voicePacks.ToArray();
+                            if (voicePacks.Count > voicePackComboBox.Contents.Length) {
+                                voicePackComboBox.Contents = _voicePackList;
                             }
                         }
-                        _voicePackList = voicePacks.ToArray();
-                        if (voicePacks.Count > voicePackComboBox.Contents.Length) {
-                            voicePackComboBox.Contents = _voicePackList;
+                        if (configuration.CharacterVoicePacks == null) {
+                            configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
                         }
-                    }
-                    if (configuration.CharacterVoicePacks == null) {
-                        configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
-                    }
-                    if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                        if (voicePackComboBox != null) {
-                            if (_voicePackList != null) {
-                                if (voiceComboBox != null) {
-                                    voicePackComboBox.Contents = _voicePackList;
-                                    if (voicePackComboBox.Contents.Length > 0) {
-                                        for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
-                                            if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                                voicePackComboBox.SelectedIndex = i;
+                        if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                            if (voicePackComboBox != null) {
+                                if (_voicePackList != null) {
+                                    if (voiceComboBox != null) {
+                                        voicePackComboBox.Contents = _voicePackList;
+                                        if (voicePackComboBox.Contents.Length > 0) {
+                                            for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
+                                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                                    voicePackComboBox.SelectedIndex = i;
+                                                    break;
+                                                }
+                                            }
+                                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                                if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
+                                                    configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (_manager != null) {
+                            var newVoiceList = await _manager.GetVoiceList();
+                            if (newVoiceList != null && newVoiceList.Length > 0 && newVoiceList.Length > voiceComboBox.Contents.Length) {
+                                _voiceList = newVoiceList;
+                                voiceComboBox.Contents = newVoiceList;
+                            }
+                            _manager.SetVoice(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                            if (_voiceList != null && _voiceList.Length > 0) {
+                                voiceComboBox.Contents = _voiceList;
+                            }
+                            _manager.RefreshElevenlabsSubscriptionInfo();
+                        }
+                        if (configuration.Characters == null) {
+                            configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                        }
+                        if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                            if (voiceComboBox != null) {
+                                if (_voiceList != null && _voiceList.Length > 0) {
+                                    voiceComboBox.Contents = _voiceList;
+                                    if (voiceComboBox.Contents.Length > 0) {
+                                        for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
+                                            string value = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
+                                            if (voiceComboBox.Contents[i].Contains(value) && !string.IsNullOrEmpty(value)) {
+                                                voiceComboBox.SelectedIndex = i;
                                                 break;
                                             }
                                         }
-                                        if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
-                                            if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
-                                                configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                        if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                            if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
+                                                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
                                             }
                                         }
                                     }
@@ -679,52 +719,16 @@ namespace RoleplayingVoice {
                             }
                         }
                     }
-                    if (_manager != null) {
-                        var newVoiceList = await _manager.GetVoiceList();
-                        if (newVoiceList != null && newVoiceList.Length > 0 && newVoiceList.Length > voiceComboBox.Contents.Length) {
-                            _voiceList = newVoiceList;
-                            voiceComboBox.Contents = newVoiceList;
-                        }
-                        _manager.SetVoice(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
-                        if (_voiceList != null && _voiceList.Length > 0) {
-                            voiceComboBox.Contents = _voiceList;
-                        }
-                        _manager.RefreshElevenlabsSubscriptionInfo();
-                    }
-                    if (configuration.Characters == null) {
-                        configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
-                    }
-                    if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                        if (voiceComboBox != null) {
-                            if (_voiceList != null && _voiceList.Length > 0) {
-                                voiceComboBox.Contents = _voiceList;
-                                if (voiceComboBox.Contents.Length > 0) {
-                                    for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                        string value = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
-                                        if (voiceComboBox.Contents[i].Contains(value) && !string.IsNullOrEmpty(value)) {
-                                            voiceComboBox.SelectedIndex = i;
-                                            break;
-                                        }
-                                    }
-                                    if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
-                                        if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
-                                            configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (Exception ex) {
+                } catch (Exception ex) {
 
-            }
-            if (PluginInterface != null) {
-                try {
-                    PluginReference.RefreshData();
-                } catch (Exception ex) { }
-            }
-            _refreshing = false;
+                }
+                if (PluginInterface != null) {
+                    try {
+                        PluginReference.RefreshData();
+                    } catch (Exception ex) { }
+                }
+                _refreshing = false;
+            });
         }
 
         internal class BetterComboBox {

@@ -25,17 +25,21 @@ public class GposeService : ServiceBase<GposeService>
 
 	public static bool GetIsGPose()
 	{
-		if (AddressService.GposeCheck == IntPtr.Zero)
+		try {
+			if (AddressService.GposeCheck == IntPtr.Zero)
+				return false;
+
+			// Character select screen counts as gpose.
+			if (!GameService.Instance.IsSignedIn)
+				return true;
+
+			byte check1 = MemoryService.Read<byte>(AddressService.GposeCheck);
+			byte check2 = MemoryService.Read<byte>(AddressService.GposeCheck2);
+
+			return check1 == 1 && check2 == 4;
+		} catch {
 			return false;
-
-		// Character select screen counts as gpose.
-		if (!GameService.Instance.IsSignedIn)
-			return true;
-
-		byte check1 = MemoryService.Read<byte>(AddressService.GposeCheck);
-		byte check2 = MemoryService.Read<byte>(AddressService.GposeCheck2);
-
-		return check1 == 1 && check2 == 4;
+		}
 	}
 
 	public override Task Start()
