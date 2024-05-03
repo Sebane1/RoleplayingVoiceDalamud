@@ -756,6 +756,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (npcObject != null && canDoLipSync) {
                                         if (e.MaxSampleValues.Length > 0) {
                                             if (e.MaxSampleValues[0] > 0.2) {
+                                                int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
+                                                if (seconds < 2000) {
+                                                    lipId = LipSyncTypes[4].Timeline.AnimationId;
+                                                } else if (wavePlayer.TotalTime.Seconds < 6000) {
+                                                    lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                                } else {
+                                                    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                                }
                                                 if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
                                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
                                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");

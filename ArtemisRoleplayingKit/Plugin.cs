@@ -2815,6 +2815,7 @@ namespace RoleplayingVoice {
                             newList.Add(key);
                         }
                     }
+                    newList.Sort();
                     _animationCatalogue.AnimationNames = newList;
                     _animationCatalogue.IsOpen = true;
                 } else {
