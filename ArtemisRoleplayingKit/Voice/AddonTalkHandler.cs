@@ -1202,11 +1202,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 || npcName.ToLower().Contains("furry creature") || body == 11006) {
                 return "Kop";
             }
-            if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
-                || npcName.ToLower().Contains("mog") || npcName.ToLower().Contains("moogle")
-                || npcName.ToLower().Contains("furry creature") || body == 11006) {
-                return "Kop";
-            }
             if (body == 11029) {
                 gender = true;
             }

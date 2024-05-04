@@ -1295,14 +1295,12 @@ namespace RoleplayingVoice {
                         string playerMessage = message.TextValue;
                         string[] values = message.TextValue.Split(' ');
                         if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                            string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                            string path = config.CacheFolder + @"\VoicePack\" + voice;
                             string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                             bool attackIntended = false;
                             Stopwatch performanceTimer = Stopwatch.StartNew();
                             CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                             if (config.DebugMode) {
-                                _pluginLog.Debug("[Artemis Roleplaying Kit] " + voice + " took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                _pluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
                             }
                             performanceTimer.Restart();
                             if (!message.TextValue.Contains("cancel")) {
@@ -1442,27 +1440,25 @@ namespace RoleplayingVoice {
             type == (XivChatType)2091) {
                 if (!LanguageSpecificMount(_clientState.ClientLanguage, message)) {
                     value = characterVoicePack.GetMisc(message.TextValue);
-                } else {
-                    _lastMountingMessage = message.TextValue;
-                }
-                if (string.IsNullOrEmpty(value)) {
-                    if (attackCount == 0) {
-                        if (LanguageSpecificHit(_clientState.ClientLanguage, message)) {
-                            value = characterVoicePack.GetMeleeAction(message.TextValue);
+                    if (string.IsNullOrEmpty(value)) {
+                        if (attackCount == 0) {
+                            if (LanguageSpecificHit(_clientState.ClientLanguage, message)) {
+                                value = characterVoicePack.GetMeleeAction(message.TextValue);
+                            }
+                            if (LanguageSpecificCast(_clientState.ClientLanguage, message)) {
+                                value = characterVoicePack.GetCastedAction(message.TextValue);
+                            }
+                            if (string.IsNullOrEmpty(value)) {
+                                value = characterVoicePack.GetAction(message.TextValue);
+                            }
+                            attackCount++;
+                        } else {
+                            attackCount++;
+                            if (attackCount >= GetMinAttackCounts()) {
+                                attackCount = 0;
+                            }
+                            attackIntended = true;
                         }
-                        if (LanguageSpecificCast(_clientState.ClientLanguage, message)) {
-                            value = characterVoicePack.GetCastedAction(message.TextValue);
-                        }
-                        if (string.IsNullOrEmpty(value)) {
-                            value = characterVoicePack.GetAction(message.TextValue);
-                        }
-                        attackCount++;
-                    } else {
-                        attackCount++;
-                        if (attackCount >= GetMinAttackCounts()) {
-                            attackCount = 0;
-                        }
-                        attackIntended = true;
                     }
                 }
             } else if (type == (XivChatType)2730) {
