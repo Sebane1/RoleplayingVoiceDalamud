@@ -1207,12 +1207,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 || npcName.ToLower().Contains("furry creature") || body == 11006) {
                 return "Kop";
             }
-            if (body == 0 && gender == false && _clientState.TerritoryType == 612) {
+            if (body == 11029) {
                 gender = true;
-            }
-            if (body == 0 && gender == false && _clientState.TerritoryType == 817) {
-                gender = true;
-                return PickVoice(npcName, femaleViera);
             }
             if (npcName.ToLower().Contains("siren")) {
                 gender = true;
