@@ -61,6 +61,7 @@ using RoleplayingVoiceDalamud.Services;
 using NAudio.Wave.SampleProviders;
 using FFXIVClientStructs.FFXIV.Client.System.Timer;
 using NAudio.MediaFoundation;
+using Lumina.Excel.GeneratedSheets;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -572,7 +573,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void CheckForCustomMountingAudio() {
+        private unsafe void CheckForCustomMountingAudio() {
             if (!Conditions.IsInBetweenAreas && !Conditions.IsInBetweenAreas51 && _clientState.LocalPlayer != null && _recentCFPop != 2) {
                 if (Conditions.IsMounted) {
                     if (!_mountingOccured) {
@@ -582,7 +583,10 @@ namespace RoleplayingVoice {
                             string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                             CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                             bool isVoicedEmote = false;
-                            string value = characterVoicePack.GetMisc(_lastMountingMessage);
+                            var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
+                            var mountId = characterReference->Mount.MountId;
+                            var mount = DataManager.GetExcelSheet<Mount>(Dalamud.ClientLanguage.English).GetRow(mountId);
+                            string value = characterVoicePack.GetMisc(mount.Singular.RawString);
                             if (!string.IsNullOrEmpty(value)) {
                                 //if (config.UsePlayerSync) {
                                 //    Task.Run(async () => {
