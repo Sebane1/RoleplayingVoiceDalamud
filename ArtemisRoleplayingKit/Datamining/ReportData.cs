@@ -16,7 +16,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public string speaker { get; set; }
         public string sentence { get; set; }
         public uint npcid { get; set; }
-        public byte body { get; set; }
+        public int body { get; set; }
         public bool gender { get; set; }
         public byte race { get; set; }
         public byte tribe { get; set; }
@@ -41,7 +41,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
                 user = "ArtemisRoleplayingKit";
             }
         }
-        public ReportData(string name, string message, uint objectId, byte body, bool gender, byte race, byte tribe, byte eyes) {
+        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes) {
             speaker = name;
             sentence = message;
             npcid = objectId;

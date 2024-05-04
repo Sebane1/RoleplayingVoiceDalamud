@@ -296,7 +296,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     } else {
                                                         NPCText(pActor->Address, finalName,
                                                             npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
+                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ? character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         _plugin.Chat.Print("Sent audio from NPC bubble.");
@@ -864,7 +864,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private async void NPCText(nint address, string name, string message, bool gender,
-            byte race, byte body, byte tribe, byte eyes, uint objectId, Vector3 position) {
+            byte race, int body, byte tribe, byte eyes, uint objectId, Vector3 position) {
             if (VerifyIsEnglish(message)) {
                 try {
                     string nameToUse = name;
