@@ -177,7 +177,7 @@ namespace RoleplayingVoiceDalamud {
                 string strippedName = StripNonCharacters(value).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
-                    if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                    if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {
                         return _misc[name][GetRandom(0, _misc[name].Count)];
                     }
                 }
@@ -189,7 +189,7 @@ namespace RoleplayingVoiceDalamud {
                 string strippedName = StripNonCharacters(value).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
-                    if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                    if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {
                         return _misc[name][GetRandom(0, _misc[name].Count, delay)];
                     }
                 }
@@ -200,7 +200,7 @@ namespace RoleplayingVoiceDalamud {
             string strippedName = StripNonCharacters(value).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {
                     if (index < _misc[name].Count) {
                         return _misc[name][index];
                     }

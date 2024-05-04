@@ -197,6 +197,7 @@ namespace RoleplayingVoice {
         private bool _didRealEmote;
         private int _failCount;
         Stopwatch pollingTimer = new Stopwatch();
+        private bool _playerDied;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -480,6 +481,7 @@ namespace RoleplayingVoice {
                 }
                 if (pollingTimer.ElapsedMilliseconds > 60) {
                     pollingTimer.Restart();
+                    CheckIfDied();
                     switch (performanceLimiter++) {
                         case 0:
                             CheckForMovingObjects();
@@ -514,6 +516,50 @@ namespace RoleplayingVoice {
             }
         }
 
+        private void CheckIfDied() {
+            Task.Run(delegate {
+                if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
+                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                    PlayVoiceLine(characterVoicePack.GetDeath());
+                    _playerDied = true;
+                } else if (_clientState.LocalPlayer.CurrentHp > 0 && _playerDied) {
+                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
+                    PlayVoiceLine(characterVoicePack.GetRevive());
+                    _playerDied = false;
+                }
+            });
+        }
+
+        private void PlayVoiceLine(string value) {
+            if (config.DebugMode) {
+                _pluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+            }
+            Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
+            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
+                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+            },
+            delegate (object sender, StreamVolumeEventArgs e) {
+                if (e.MaxSampleValues.Length > 0) {
+                    if (e.MaxSampleValues[0] > 0.2) {
+                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                    } else {
+                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                    }
+                }
+            });
+            if (config.DebugMode) {
+                _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+            }
+            if (!_muteTimer.IsRunning) {
+                if (Filter != null) {
+                    Filter.Muted = true;
+                }
+            }
+            if (config.DebugMode) {
+                _pluginLog.Debug("Battle Voice Muted");
+            }
+            _muteTimer.Restart();
+        }
         private void CheckForGPose() {
             if (_clientState != null && _gameGui != null) {
                 if (_clientState.LocalPlayer != null) {
@@ -1419,8 +1465,6 @@ namespace RoleplayingVoice {
                         attackIntended = true;
                     }
                 }
-            } else if (type == (XivChatType)2234) {
-                value = characterVoicePack.GetDeath();
             } else if (type == (XivChatType)2730) {
                 value = characterVoicePack.GetMissed();
             } else if (type == (XivChatType)2219) {
@@ -1469,8 +1513,6 @@ namespace RoleplayingVoice {
                         attackIntended = true;
                     }
                 }
-            } else if (type == (XivChatType)2106) {
-                value = characterVoicePack.GetRevive();
             } else if (type == (XivChatType)10409) {
                 if (hurtCount == 0) {
                     if (string.IsNullOrEmpty(value)) {
@@ -1501,7 +1543,6 @@ namespace RoleplayingVoice {
 
         private void OtherPlayerCombat(string playerName, SeString message, XivChatType type,
             CharacterVoicePack characterVoicePack, ref string value) {
-
             if (LanguageSpecificHit(_clientState.ClientLanguage, message) ||
                 LanguageSpecificCast(_clientState.ClientLanguage, message)) {
                 value = characterVoicePack.GetAction(message.TextValue);
