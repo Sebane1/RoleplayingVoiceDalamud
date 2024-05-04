@@ -136,24 +136,28 @@ namespace RoleplayingVoiceDalamud.Voice {
             _poseService = new PoseService();
             _targetService = new TargetService();
 
-            _memoryService.Initialize();
-            _memoryService.OpenProcess(Process.GetCurrentProcess());
-            _settingService.Initialize();
-            _gameDataService.Initialize();
-            _actorService.Initialize();
-            _addressService.Initialize();
-            _poseService.Initialize();
-            _targetService.Initialize();
-            _gposeService.Initialize();
+            try {
+                _memoryService.Initialize();
+                _memoryService.OpenProcess(Process.GetCurrentProcess());
+                _settingService.Initialize();
+                _gameDataService.Initialize();
+                _actorService.Initialize();
+                _addressService.Initialize();
+                _poseService.Initialize();
+                _targetService.Initialize();
+                _gposeService.Initialize();
 
-            LipSyncTypes = GenerateLipList().ToList();
-            _animationService.Initialize();
-            _animationService.Start();
-            _memoryService.Start();
-            _addressService.Start();
-            _poseService.Start();
-            _targetService.Start();
-            _gposeService.Start();
+                LipSyncTypes = GenerateLipList().ToList();
+                _animationService.Initialize();
+                _animationService.Start();
+                _memoryService.Start();
+                _addressService.Start();
+                _poseService.Start();
+                _targetService.Start();
+                _gposeService.Start();
+            } catch (Exception e) {
+                _plugin.PluginLog.Warning(e, e.Message);
+            }
         }
         private IEnumerable<ActionTimeline> GenerateLipList() {
             // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot

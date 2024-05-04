@@ -118,8 +118,12 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public static string StripNonCharacters(string str) {
-            Regex rgx = new Regex("[^a-zA-Z]");
-            str = rgx.Replace(str, "");
+            if (str != null) {
+                Regex rgx = new Regex("[^a-zA-Z]");
+                str = rgx.Replace(str, "");
+            } else {
+                return "";
+            }
             return str;
         }
 
@@ -169,21 +173,25 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public string GetMisc(string value) {
-            string strippedName = StripNonCharacters(value).ToLower();
-            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
-            foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
-                    return _misc[name][GetRandom(0, _misc[name].Count)];
+            if (value != null) {
+                string strippedName = StripNonCharacters(value).ToLower();
+                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
+                foreach (string name in _misc.Keys) {
+                    if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                        return _misc[name][GetRandom(0, _misc[name].Count)];
+                    }
                 }
             }
             return string.Empty;
         }
         public string GetMisc(string value, int delay) {
-            string strippedName = StripNonCharacters(value).ToLower();
-            string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
-            foreach (string name in _misc.Keys) {
-                if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
-                    return _misc[name][GetRandom(0, _misc[name].Count, delay)];
+            if (value != null) {
+                string strippedName = StripNonCharacters(value).ToLower();
+                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
+                foreach (string name in _misc.Keys) {
+                    if (final.Contains(name) && name.Length > 4 || final.EndsWith(name)) {
+                        return _misc[name][GetRandom(0, _misc[name].Count, delay)];
+                    }
                 }
             }
             return string.Empty;
