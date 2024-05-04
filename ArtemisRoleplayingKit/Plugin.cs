@@ -474,45 +474,49 @@ namespace RoleplayingVoice {
         #endregion
         #region Sound Management
         private void framework_Update(IFramework framework) {
-            if (!disposed) {
-                if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
-                    InitializeEverything();
-                    _hasBeenInitialized = true;
-                }
-                if (pollingTimer.ElapsedMilliseconds > 60) {
-                    pollingTimer.Restart();
-                    CheckIfDied();
-                    switch (performanceLimiter++) {
-                        case 0:
-                            CheckForMovingObjects();
-                            break;
-                        case 1:
-                            CheckForNewDynamicEmoteRequests();
-                            break;
-                        case 2:
-                            CheckForDownloadCancellation();
-                            break;
-                        case 3:
-                            CheckCataloging();
-                            break;
-                        case 4:
-                            CheckForCustomMountingAudio();
-                            break;
-                        case 5:
-                            CheckForCustomCombatAudio();
-                            break;
-                        case 6:
-                            CheckForGPose();
-                            break;
-                        case 7:
-                            if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
-                                CheckVolumeLevels();
-                                CheckForNewRefreshes();
-                            }
-                            performanceLimiter = 0;
-                            break;
+            try {
+                if (!disposed) {
+                    if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
+                        InitializeEverything();
+                        _hasBeenInitialized = true;
+                    }
+                    if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized) {
+                        pollingTimer.Restart();
+                        CheckIfDied();
+                        switch (performanceLimiter++) {
+                            case 0:
+                                CheckForMovingObjects();
+                                break;
+                            case 1:
+                                CheckForNewDynamicEmoteRequests();
+                                break;
+                            case 2:
+                                CheckForDownloadCancellation();
+                                break;
+                            case 3:
+                                CheckCataloging();
+                                break;
+                            case 4:
+                                CheckForCustomMountingAudio();
+                                break;
+                            case 5:
+                                CheckForCustomCombatAudio();
+                                break;
+                            case 6:
+                                CheckForGPose();
+                                break;
+                            case 7:
+                                if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
+                                    CheckVolumeLevels();
+                                    CheckForNewRefreshes();
+                                }
+                                performanceLimiter = 0;
+                                break;
+                        }
                     }
                 }
+            } catch (Exception e) {
+                _pluginLog.LogError(e, e.Message);
             }
         }
 
