@@ -536,16 +536,20 @@ namespace RoleplayingVoice {
             }
             Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
-                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                Task.Run(delegate {
+                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                });
             },
             delegate (object sender, StreamVolumeEventArgs e) {
-                if (e.MaxSampleValues.Length > 0) {
-                    if (e.MaxSampleValues[0] > 0.2) {
-                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
-                    } else {
-                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                Task.Run(delegate {
+                    if (e.MaxSampleValues.Length > 0) {
+                        if (e.MaxSampleValues[0] > 0.2) {
+                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                        } else {
+                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                        }
                     }
-                }
+                });
             });
             if (config.DebugMode) {
                 _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
@@ -980,17 +984,21 @@ namespace RoleplayingVoice {
                                 _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                 bool lipWasSynced = false;
                                 _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
-                                    _addonTalkHandler.StopLipSync(player);
+                                    Task.Run(delegate {
+                                        _addonTalkHandler.StopLipSync(player);
+                                    });
                                 },
                                 delegate (object sender, StreamVolumeEventArgs e) {
-                                    if (e.MaxSampleValues.Length > 0) {
-                                        if (e.MaxSampleValues[0] > 0.2) {
-                                            _addonTalkHandler.TriggerLipSync(player, 4);
-                                            lipWasSynced = true;
-                                        } else {
-                                            _addonTalkHandler.StopLipSync(player);
+                                    Task.Run(delegate {
+                                        if (e.MaxSampleValues.Length > 0) {
+                                            if (e.MaxSampleValues[0] > 0.2) {
+                                                _addonTalkHandler.TriggerLipSync(player, 4);
+                                                lipWasSynced = true;
+                                            } else {
+                                                _addonTalkHandler.StopLipSync(player);
+                                            }
                                         }
-                                    }
+                                    });
                                 });
                             });
                             CheckForChatSoundEffectOtherPlayer(sender, player, message);
@@ -1319,18 +1327,27 @@ namespace RoleplayingVoice {
                                         _pluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
                                     }
                                     Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-                                    _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
-                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                    },
-                                    delegate (object sender, StreamVolumeEventArgs e) {
-                                        if (e.MaxSampleValues.Length > 0) {
-                                            if (e.MaxSampleValues[0] > 0.2) {
-                                                _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
-                                            } else {
+                                    _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default,
+                                        !Conditions.IsBoundByDuty ?
+                                        delegate {
+                                            Task.Run(delegate {
                                                 _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                            }
+                                            });
                                         }
-                                    });
+                                    : null,
+                                  !Conditions.IsBoundByDuty ?
+                                  delegate (object sender, StreamVolumeEventArgs e) {
+                                      Task.Run(delegate {
+                                          if (e.MaxSampleValues.Length > 0) {
+                                              if (e.MaxSampleValues[0] > 0.2) {
+                                                  _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                              } else {
+                                                  _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                              }
+                                          }
+                                      });
+                                  }
+                                    : null);
                                     if (config.DebugMode) {
                                         _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                                     }
@@ -1405,7 +1422,9 @@ namespace RoleplayingVoice {
                                             }
                                             _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
                                             playerSender, character.Position), value, SoundType.OtherPlayerCombat, 0, default, delegate {
-                                                _addonTalkHandler.StopLipSync(player);
+                                                Task.Run(delegate {
+                                                    _addonTalkHandler.StopLipSync(player);
+                                                });
                                             },
                                     delegate (object sender, StreamVolumeEventArgs e) {
                                         if (e.MaxSampleValues.Length > 0) {
@@ -2206,16 +2225,20 @@ namespace RoleplayingVoice {
                                                     bool lipWasSynced = false;
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
-                                                         _addonTalkHandler.StopLipSync(instigator);
+                                                         Task.Run(delegate {
+                                                             _addonTalkHandler.StopLipSync(instigator);
+                                                         });
                                                      }, delegate (object sender, StreamVolumeEventArgs e) {
-                                                         if (e.MaxSampleValues.Length > 0) {
-                                                             if (e.MaxSampleValues[0] > 0.2) {
-                                                                 _addonTalkHandler.TriggerLipSync(instigator, 4);
-                                                                 lipWasSynced = true;
-                                                             } else {
-                                                                 _addonTalkHandler.StopLipSync(instigator);
+                                                         Task.Run(delegate {
+                                                             if (e.MaxSampleValues.Length > 0) {
+                                                                 if (e.MaxSampleValues[0] > 0.2) {
+                                                                     _addonTalkHandler.TriggerLipSync(instigator, 4);
+                                                                     lipWasSynced = true;
+                                                                 } else {
+                                                                     _addonTalkHandler.StopLipSync(instigator);
+                                                                 }
                                                              }
-                                                         }
+                                                         });
                                                      });
                                                     Task.Run(delegate {
                                                         Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
@@ -2258,17 +2281,21 @@ namespace RoleplayingVoice {
                         bool lipWasSynced = false;
                         _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
                         characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, default, delegate {
-                            _addonTalkHandler.StopLipSync(instigator);
+                            Task.Run(delegate {
+                                _addonTalkHandler.StopLipSync(instigator);
+                            });
                         },
                         delegate (object sender, StreamVolumeEventArgs e) {
-                            if (e.MaxSampleValues.Length > 0) {
-                                if (e.MaxSampleValues[0] > 0.2) {
-                                    _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
-                                    lipWasSynced = true;
-                                } else {
-                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                            Task.Run(delegate {
+                                if (e.MaxSampleValues.Length > 0) {
+                                    if (e.MaxSampleValues[0] > 0.2) {
+                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                        lipWasSynced = true;
+                                    } else {
+                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                    }
                                 }
-                            }
+                            });
                         });
                         Task.Run(delegate {
                             Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
