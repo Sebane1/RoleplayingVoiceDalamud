@@ -1062,6 +1062,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 60:
                 case 63:
                 case 239:
+                case 278:
                     return true;
             }
             return false;
@@ -1108,7 +1109,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
             bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
-                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005);
+                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278);
             bool isDragonOrVoid = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
