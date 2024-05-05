@@ -516,7 +516,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.LogError(e, e.Message);
+                _pluginLog.Error(e, e.Message);
             }
         }
 
@@ -3228,13 +3228,13 @@ namespace RoleplayingVoice {
                 } catch (Exception e) {
                     _pluginLog.Warning(e, e.Message);
                 }
-                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
                 if (_emoteReaderHook.OnEmote != null) {
                     _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
                 }
                 _addonTalkHandler?.Dispose();
+                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
             } catch (Exception e) {
                 _pluginLog.Warning(e, e.Message);
             }
