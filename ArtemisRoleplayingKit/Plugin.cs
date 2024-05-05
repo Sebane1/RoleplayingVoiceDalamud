@@ -1361,7 +1361,7 @@ namespace RoleplayingVoice {
                                         Filter.Muted = true;
                                     }
                                     Task.Run(() => {
-                                        if (config.UsePlayerSync) {
+                                        if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
                                             Task.Run(async () => {
                                                 bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                             });
@@ -2082,13 +2082,19 @@ namespace RoleplayingVoice {
             CleanSounds();
         }
 
-        private unsafe void _clientState_TerritoryChanged(ushort e) {
+        private void _clientState_TerritoryChanged(ushort e) {
             if (config.DebugMode) {
                 _chat.Print("Territory is " + e);
             }
             CleanSounds();
             if (_recentCFPop > 0) {
                 _recentCFPop++;
+            }
+            if (config.UsePlayerSync) {
+                Task.Run(async () => {
+                    string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                });
             }
         }
         private unsafe bool IsResidential() {
@@ -2302,7 +2308,9 @@ namespace RoleplayingVoice {
                             });
                         });
                         Task.Run(delegate {
-                            Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                            if (characterVoicePack.EmoteIndex > -1) {
+                                Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                            }
                             _addonTalkHandler.TriggerLipSync(instigator, 5);
                         });
                         if (isVoicedEmote) {

@@ -253,19 +253,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3) {
+        unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
             try {
                 if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled
                     && !Conditions.IsWatchingCutscene && !Conditions.IsWatchingCutscene78) {
                     if (pString != IntPtr.Zero &&
                     !Service.ClientState.IsPvPExcludingDen) {
                         //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
-                        if (pActor == null || pActor->ObjectKind != ObjectKind.Player) {
+                        if (pActor == null || (ObjectKind)pActor->GetObjectKind() != ObjectKind.Player) {
                             long currentTime_mSec = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                             SeString speakerName = SeString.Empty;
                             if (pActor != null && pActor->Name != null) {
-                                speakerName = pActor->Name;
+                                speakerName = ((GameObject*)pActor)->Name;
                             }
                             var npcBubbleInformaton = new NPCBubbleInformation(MemoryHelper.ReadSeStringNullTerminated(pString), currentTime_mSec, speakerName);
                             var extantMatch = _speechBubbleInfo.Find((x) => { return x.IsSameMessageAs(npcBubbleInformaton); });
@@ -293,10 +293,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 if (_blockAudioGenerationCount < 1) {
                                                     if (characterObject != null && characterObject.Customize[(int)CustomizeIndex.ModelType] != 0) {
                                                         NPCText(finalName, npcBubbleInformaton.MessageText.TextValue, true);
+                                                        if (_plugin.Config.DebugMode) {
+                                                            _plugin.Chat.Print("Sent audio from NPC bubble 1");
+                                                        }
                                                     } else {
-                                                        NPCText(pActor->Address, finalName,
+                                                        NPCText(finalName,
                                                             npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ? character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId, character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, character->GameObject.Position);
+                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ? character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
+                                                            character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, new MediaGameObject(pActor));
+                                                        if (_plugin.Config.DebugMode) {
+                                                            _plugin.Chat.Print("Sent audio from NPC bubble 2");
+                                                        }
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         _plugin.Chat.Print("Sent audio from NPC bubble.");
@@ -313,7 +320,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         bubbleCooldown.Restart();
                                         _blockAudioGeneration = false;
                                     } catch {
-                                        NPCText(pActor->Name.TextValue, npcBubbleInformaton.MessageText.TextValue, true);
+                                        NPCText(speakerName.TextValue, npcBubbleInformaton.MessageText.TextValue, true);
                                     }
                                 }
                                 );
@@ -863,12 +870,12 @@ namespace RoleplayingVoiceDalamud.Voice {
             return wavePlayer;
         }
 
-        private async void NPCText(nint address, string name, string message, bool gender,
-            byte race, int body, byte tribe, byte eyes, uint objectId, Vector3 position) {
+        private async void NPCText(string name, string message, bool gender,
+            byte race, int body, byte tribe, byte eyes, uint objectId, MediaGameObject mediaGameObject) {
             if (VerifyIsEnglish(message)) {
                 try {
                     string nameToUse = name;
-                    MediaGameObject currentSpeechObject = new MediaGameObject(name, position);
+                    MediaGameObject currentSpeechObject = mediaGameObject;
                     _currentSpeechObject = currentSpeechObject;
                     string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes);
@@ -1265,7 +1272,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             _openChatBubbleHook?.Dispose();
             addonTalkManager?.Dispose();
         }
-        private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, GameObject* pActor, IntPtr pString, bool param3);
+        private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3);
     }
 }
 public class UserAnimationOverride {
