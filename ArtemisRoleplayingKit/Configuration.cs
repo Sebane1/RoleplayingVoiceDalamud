@@ -38,6 +38,7 @@ namespace RoleplayingVoice {
         private int _defaultTwitchOpen;
         private bool _twitchStreamTriggersIfShouter;
         private bool _dontVoiceRetainers;
+        private bool _tuneIntoTwitchStreamPrompt = true;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -99,11 +100,7 @@ namespace RoleplayingVoice {
         public bool NpcSpeechGenerationDisabled { get => _npcSpeechGenerationDisabled; set => _npcSpeechGenerationDisabled = value; }
         public float NpcVolume {
             get => _npcVolume; set {
-                if (value == 0 || value > 0.7f) {
-                    _npcVolume = 0.7f;
-                } else {
-                    _npcVolume = value;
-                }
+                _npcVolume = value;
             }
         }
 
@@ -117,6 +114,7 @@ namespace RoleplayingVoice {
 
         public bool DebugMode { get; set; }
         public bool DontVoiceRetainers { get => _dontVoiceRetainers; set => _dontVoiceRetainers = value; }
+        public bool TuneIntoTwitchStreamPrompt { get => _tuneIntoTwitchStreamPrompt; set => _tuneIntoTwitchStreamPrompt = value; }
 
         #endregion
 

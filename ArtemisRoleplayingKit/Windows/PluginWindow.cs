@@ -80,6 +80,7 @@ namespace RoleplayingVoice {
         private float _npcVolume = 1;
         private string _streamPath;
         private bool _tuneIntoTwitchStreams;
+        private bool _tuneIntoTwitchStreamPrompt;
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
         private bool _npcSpeechGenerationDisabled;
@@ -159,6 +160,7 @@ namespace RoleplayingVoice {
                     _npcPlaybackSpeed = configuration.NPCSpeechSpeed;
                     _ignoreRetainerSpeech = configuration.DontVoiceRetainers;
                     _debugMode = configuration.DebugMode;
+                    _tuneIntoTwitchStreamPrompt = configuration.TuneIntoTwitchStreamPrompt;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -272,6 +274,11 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Tune Into Twitch Streams");
             ImGui.TextWrapped("Intended for venues where DJ's are playing. Audio will play inside the venue as soon as their Twitch URL is advertised in yell chat.");
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Checkbox("##useTwitchStreamNotification", ref _tuneIntoTwitchStreamPrompt);
+            ImGui.SameLine();
+            ImGui.Text("Public Stream Notifications");
+            ImGui.TextWrapped("When enabled, you will be offered to quickly join public livestreams shared in a zone.");
             ImGui.Dummy(new Vector2(0, 10));
             _twitchDefaultPlayback.Width = (int)ImGui.GetContentRegionMax().X;
             _twitchDefaultPlayback.Draw();
@@ -594,6 +601,7 @@ namespace RoleplayingVoice {
             configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
             configuration.NPCSpeechSpeed = _npcPlaybackSpeed;
             configuration.DontVoiceRetainers = _ignoreRetainerSpeech;
+            configuration.TuneIntoTwitchStreamPrompt = _tuneIntoTwitchStreamPrompt;
             configuration.DebugMode = _debugMode;
 
             if (voicePackComboBox != null && _voicePackList != null) {
@@ -960,7 +968,7 @@ namespace RoleplayingVoice {
             ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
             ImGui.Text("NPC Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 0.7f);
+            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 1f);
             ImGui.Text("Audio Output System (Change if you notice playback issues)");
             _audioOutputType.Width = (int)ImGui.GetContentRegionMax().X;
             _audioOutputType.Draw();
