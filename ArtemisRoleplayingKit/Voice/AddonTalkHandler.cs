@@ -71,6 +71,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         Stopwatch bubbleCooldown = new Stopwatch();
         private string _chatId;
         private RedoLineWIndow _redoLineWindow;
+        private IToastGui _toast;
         private Dictionary<string, string> _knownNpcs;
         private MemoryService _memoryService;
         private SettingsService _settingService;
@@ -102,7 +103,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private byte _defaultCharacterModeRaw;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
-            IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow) {
+            IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow, IToastGui toastGui) {
             this.addonTalkManager = addonTalkManager;
             this.framework = framework;
             this._objectTable = objects;
@@ -117,6 +118,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             _scanner = sigScanner;
             redoLineWindow.RedoLineClicked += RedoLineWIndow_RedoLineClicked;
             _redoLineWindow = redoLineWindow;
+            _toast = toastGui;
+            _toast.Toast += _toast_Toast;
+            _toast.QuestToast += _toast_QuestToast;
             bubbleCooldown.Start();
             var assembly = Assembly.GetExecutingAssembly();
             string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("nameless.json"));
@@ -161,6 +165,27 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             pollingTimer.Start();
         }
+
+        private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
+            NPCText("Narrator", message.TextValue.Replace(@"0/", "0 out of ")
+                .Replace(@"1/", "1 out of ")
+                .Replace(@"2/", "2 out of ")
+                .Replace(@"3/", "3 out of ")
+                .Replace(@"4/", "4 out of ")
+                .Replace(@"5/", "5 out of ")
+                .Replace(@"6/", "6 out of ")
+                .Replace(@"7/", "7 out of ")
+                .Replace(@"8/", "8 out of ")
+                .Replace(@"9/", "9 out of ")
+                .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", true, !_plugin.Config.ReadQuestObjectives);
+        }
+
+        private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
+            if (_plugin.Config.ReadLocationsAndToastNotifications) {
+                NPCText("Hydaelyn", message.TextValue, "Hyn", true, !_plugin.Config.ReadQuestObjectives);
+            }
+        }
+
         private IEnumerable<ActionTimeline> GenerateLipList() {
             // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
             IEnumerable<ActionTimeline> lips = GameDataService.ActionTimelines.Where(x => x.AnimationId == 0 || (x.Key?.StartsWith("speak/") ?? false));
@@ -255,7 +280,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
             try {
-                if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled
+                if (_clientState.IsLoggedIn
                     && !Conditions.IsWatchingCutscene && !Conditions.IsWatchingCutscene78) {
                     if (pString != IntPtr.Zero &&
                     !Service.ClientState.IsPvPExcludingDen) {
@@ -355,7 +380,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (pollingTimer.ElapsedMilliseconds > 100) {
                     try {
                         if (_clientState != null) {
-                            if (_clientState.IsLoggedIn && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            if (_clientState.IsLoggedIn) {
                                 _plugin.Filter.Streaming = !Conditions.IsBoundByDuty && !Conditions.IsInCombat;
                                 if (_plugin.Filter.IsCutsceneDetectionNull()) {
                                     if (!_alreadyAddedEvent) {
@@ -410,7 +435,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         }
                                     } else {
                                         if (_currentDialoguePaths.Count > 0) {
-                                            if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration) {
+                                            if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                                 try {
                                                     var otherData = _clientState.LocalPlayer.OnlineStatus;
                                                     if (otherData.Id == 15) {
@@ -654,6 +679,85 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return message;
         }
+        private async void NPCText(string npcName, string message, string voice, bool lowLatencyMode = false, bool onlySendData = false) {
+            if (VerifyIsEnglish(message)) {
+                try {
+                    bool gender = false;
+                    byte race = 0;
+                    int body = 0;
+                    bool isRetainer = false;
+                    if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
+                        string nameToUse = npcName;
+                        MediaGameObject currentSpeechObject = new MediaGameObject(_clientState.LocalPlayer);
+                        _currentSpeechObject = currentSpeechObject;
+                        string backupVoice = voice;
+                        Stopwatch downloadTimer = Stopwatch.StartNew();
+                        KeyValuePair<Stream, bool> stream =
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, true, "", false);
+                        //if (!previouslyAddedLines.Contains(value + nameToUse)) {
+                        //    _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, "", true));
+                        //    previouslyAddedLines.Add(value + nameToUse);
+                        //    if (_npcVoiceHistoryItems.Count > 12) {
+                        //        _npcVoiceHistoryItems.RemoveAt(0);
+                        //    }
+                        //}
+                        if (!_plugin.Config.NpcSpeechGenerationDisabled && !onlySendData) {
+                            if (stream.Key != null) {
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
+                                }
+                                WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, null);
+                                ActorMemory actorMemory = null;
+                                AnimationMemory animationMemory = null;
+                                ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
+                                Task task = null;
+                                ushort lipId = 0;
+                                bool canDoLipSync = !Conditions.IsBoundByDuty;
+                                if (wavePlayer != null) {
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("Waveplayer is valid");
+                                    }
+                                    bool useSmbPitch = false;
+                                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                                    CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
+                                    _chatId = Guid.NewGuid().ToString();
+                                    string chatId = _chatId;
+                                    bool lipWasSynced = false;
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("Attempt to play audio stream.");
+                                    }
+                                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
+                                    Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
+                                    Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
+                                        if (_hook != null) {
+                                            try {
+                                            } catch {
+
+                                            }
+                                        }
+                                    }, delegate (object sender, StreamVolumeEventArgs e) {
+
+                                    }, _plugin.Config.NPCSpeechSpeed);
+                                } else {
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("Waveplayer failed " + downloadTimer.Elapsed.ToString());
+                                    }
+                                }
+                            } else {
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    Dalamud.Logging.PluginLog.LogWarning(e, e.Message);
+                    if (_plugin.Config.DebugMode) {
+                        _plugin.Chat.Print(e.Message);
+                    }
+                }
+            }
+        }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
             if (VerifyIsEnglish(message)) {
                 try {
@@ -680,11 +784,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (!previouslyAddedLines.Contains(value + nameToUse)) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
                             previouslyAddedLines.Add(value + nameToUse);
-                            if (_npcVoiceHistoryItems.Count > 12) {
+                            if (_npcVoiceHistoryItems.Count > 10) {
                                 _npcVoiceHistoryItems.RemoveAt(0);
                             }
                         }
-                        if (stream.Key != null) {
+                        if (stream.Key != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                             if (_plugin.Config.DebugMode) {
                                 _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                             }
@@ -884,7 +988,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value,
                     StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
                     PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData);
-                    if (stream.Key != null) {
+                    if (stream.Key != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                         WaveStream wavePlayer = GetWavePlayer(name, stream.Key, reportData);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
@@ -1260,6 +1364,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             framework.Update -= Framework_Update;
             _chatGui.ChatMessage -= _chatGui_ChatMessage;
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+            _toast.Toast -= _toast_Toast;
             disposed = true;
 
             _memoryService.Shutdown();

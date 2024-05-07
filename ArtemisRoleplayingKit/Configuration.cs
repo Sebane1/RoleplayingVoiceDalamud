@@ -39,6 +39,8 @@ namespace RoleplayingVoice {
         private bool _twitchStreamTriggersIfShouter;
         private bool _dontVoiceRetainers;
         private bool _tuneIntoTwitchStreamPrompt = true;
+        private bool _readQuestObjectives = true;
+        private bool _readLocationsAndToastNotifications = false;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -115,6 +117,8 @@ namespace RoleplayingVoice {
         public bool DebugMode { get; set; }
         public bool DontVoiceRetainers { get => _dontVoiceRetainers; set => _dontVoiceRetainers = value; }
         public bool TuneIntoTwitchStreamPrompt { get => _tuneIntoTwitchStreamPrompt; set => _tuneIntoTwitchStreamPrompt = value; }
+        public bool ReadQuestObjectives { get => _readQuestObjectives; set => _readQuestObjectives = value; }
+        public bool ReadLocationsAndToastNotifications { get => _readLocationsAndToastNotifications; set => _readLocationsAndToastNotifications = value; }
 
         #endregion
 

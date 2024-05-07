@@ -81,6 +81,8 @@ namespace RoleplayingVoice {
         private string _streamPath;
         private bool _tuneIntoTwitchStreams;
         private bool _tuneIntoTwitchStreamPrompt;
+        private bool _readQuestObjectives;
+        private bool _readLocationAndToastNotifications;
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
         private bool _npcSpeechGenerationDisabled;
@@ -161,6 +163,8 @@ namespace RoleplayingVoice {
                     _ignoreRetainerSpeech = configuration.DontVoiceRetainers;
                     _debugMode = configuration.DebugMode;
                     _tuneIntoTwitchStreamPrompt = configuration.TuneIntoTwitchStreamPrompt;
+                    _readQuestObjectives = configuration.ReadQuestObjectives;
+                    _readLocationAndToastNotifications = configuration.ReadLocationsAndToastNotifications;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -362,6 +366,8 @@ namespace RoleplayingVoice {
             ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached.");
             ImGui.Checkbox("Turn Off Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
             ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
+            ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
+            ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
             ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
             ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
             ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
@@ -603,6 +609,8 @@ namespace RoleplayingVoice {
             configuration.DontVoiceRetainers = _ignoreRetainerSpeech;
             configuration.TuneIntoTwitchStreamPrompt = _tuneIntoTwitchStreamPrompt;
             configuration.DebugMode = _debugMode;
+            configuration.ReadQuestObjectives = _readQuestObjectives;
+            configuration.ReadLocationsAndToastNotifications = _readLocationAndToastNotifications;
 
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {

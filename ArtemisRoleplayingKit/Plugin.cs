@@ -322,11 +322,11 @@ namespace RoleplayingVoice {
                 _framework.Update += framework_Update;
                 _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow);
+                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
-                _toast.ErrorToast += _toast_ErrorToast;
+                _toast.ErrorToast += _toast_ErrorToast;       
                 _animationCatalogue.Plugin = this;
             } catch (Exception e) {
                 _pluginLog.Warning(e, e.Message);
