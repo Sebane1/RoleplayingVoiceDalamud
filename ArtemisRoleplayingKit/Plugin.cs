@@ -559,7 +559,9 @@ namespace RoleplayingVoice {
                                                                 }
                                                             });
                                                             ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
-                                                            OnEmote(item as PlayerCharacter, emoteId);
+                                                            if (emoteId > 0) {
+                                                                OnEmote(item as PlayerCharacter, emoteId);
+                                                            }
                                                         }
                                                         Thread.Sleep(1000);
                                                     }
@@ -1803,13 +1805,6 @@ namespace RoleplayingVoice {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
                             }
                         }
-                        if (gameObject.ObjectKind == ObjectKind.Player && !Conditions.IsBoundByDuty) {
-                            _addonTalkHandler.StopEmote(gameObject as Character);
-                            Task.Run(() => {
-                                Thread.Sleep(500);
-                                _addonTalkHandler.StopEmote(gameObject as Character);
-                            });
-                        }
                     }
                 }
             } catch (Exception e) {
@@ -1833,11 +1828,6 @@ namespace RoleplayingVoice {
                     }
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
                 }
-            }
-            if (_wasDoingFakeEmote) {
-                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
-                _wasDoingFakeEmote = false;
-                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
             }
         }
         #endregion
@@ -2170,7 +2160,6 @@ namespace RoleplayingVoice {
                     bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                 });
             }
-            CleanupEmoteWatchList();
         }
         private void CleanupEmoteWatchList() {
             foreach (var item in _emoteWatchList.Values) {
@@ -2214,6 +2203,7 @@ namespace RoleplayingVoice {
                     _pluginLog.Warning(e, e.Message);
                 }
             }
+            CleanupEmoteWatchList();
         }
         public void ResetTwitchValues() {
             _lastStreamObject = null;
@@ -3042,7 +3032,7 @@ namespace RoleplayingVoice {
                         }
                     }
                     newList.Sort();
-                    _animationCatalogue.AnimationNames = newList;
+                    _animationCatalogue.AddNewList(newList);
                     _animationCatalogue.IsOpen = true;
                 } else {
                     _animationCatalogue.IsOpen = false;
@@ -3130,6 +3120,18 @@ namespace RoleplayingVoice {
                         _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)animationId);
                         _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)emoteId);
                         _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)animationId);
+                        Task.Run(() => {
+                            Vector3 lastPosition = _clientState.LocalPlayer.Position;
+                            while (true) {
+                                if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
+                                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                                    _wasDoingFakeEmote = false;
+                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
+                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)0);
+                                    break;
+                                }
+                            }
+                        });
                     }
                     _didRealEmote = false;
                 });

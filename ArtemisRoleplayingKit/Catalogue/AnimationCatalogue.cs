@@ -1,73 +1,126 @@
-﻿using Dalamud.Interface.Internal;
-using Dalamud.Interface.Windowing;
+﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
-using ImGuiScene;
-using LibVLCSharp.Shared;
-using Lumina.Data;
-using Lumina.Excel.GeneratedSheets;
-using RoleplayingMediaCore;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using static Penumbra.Api.Ipc;
+using System.Linq;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {
     internal class AnimationCatalogue : Window {
-        private System.Numerics.Vector2? windowSize;
-        private Vector2? initialSize;
-        private DalamudPluginInterface _pluginInterface;
-        List<string> _animationNames = new List<string>();
+        Dictionary<string, AnimationPage> _animationPages = new Dictionary<string, AnimationPage>();
+        string _currentCategory = "All";
         private Plugin _plugin;
-        int pageNumber = 0;
         int maxItemsPerPage = 25;
+        int maxItemsPerCategoryPage = 8;
+        int _categoryPage = 0;
         public AnimationCatalogue(DalamudPluginInterface pluginInterface) : base("Animation Window") {
-            //IsOpen = true;
-            windowSize = Size = new Vector2(400, 700);
-            initialSize = Size;
             SizeCondition = ImGuiCond.Always;
-            //Position = new Vector2(1920/2 + 250, 0);
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
-            _pluginInterface = pluginInterface;
         }
 
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
-        public List<string> AnimationNames { get => _animationNames; set => _animationNames = value; }
+        public List<string> AnimationNames { get => _animationPages[_currentCategory].AnimationItems; }
 
-        public override void Draw() {
-            try {
-                int index = 0;
-                int selectionIndex = 0;
-                for (int y = 0; y < maxItemsPerPage; y++) {
-                    if (index < _animationNames.Count) {
-                        selectionIndex = pageNumber * maxItemsPerPage + index;
-                        string animation = _animationNames[selectionIndex];
-                        if (ImGui.Button(animation)) {
-                            Plugin.DoAnimation(animation.ToLower());
+        public void AddNewList(List<string> list) {
+            _animationPages.Clear();
+            foreach (var item in list) {
+                if (!string.IsNullOrEmpty(item)) {
+                    string preparedString = CategoryCleaner(item);
+                    if (!string.IsNullOrEmpty(preparedString)) {
+                        string category = "All";
+                        AddItem(category, item);
+                        if (preparedString.StartsWith("*")) {
+                            category = preparedString.Split("*")[1].Replace(" ", "");
+                            AddItem(category, item);
+                        } else {
+                            category = "Other";
+                            AddItem(category, item);
                         }
-                        index++;
-                    } else {
-                        break;
                     }
                 }
-            } catch (Exception ex) {
+            }
+        }
 
+        public void AddItem(string category, string item) {
+            if (!_animationPages.ContainsKey(category)) {
+                _animationPages[category] = new AnimationPage();
             }
-            ImGui.Dummy(new Vector2(10));
-            if (ImGui.Button("Previous Page")) {
-                if (pageNumber > 0) {
-                    pageNumber--;
+            _animationPages[category].Add(item);
+        }
+        public string CategoryCleaner(string item) {
+            return item.Replace("[", "*").Replace("]", "*").Replace("(", "*")
+                       .Replace(")", "*").Replace("[", "*").Replace("[", "*")
+                       .Replace("~", "*").Replace("`", "*");
+        }
+        public override void Draw() {
+            if (_animationPages.Count > 0) {
+                if (ImGui.Button("<")) {
+                    if (_categoryPage > 0) {
+                        _categoryPage--;
+                    }
                 }
-            }
-            ImGui.SameLine();
-            if (ImGui.Button("Next Page")) {
-                if (pageNumber < (int)((float)_animationNames.Count / (float)maxItemsPerPage)) {
-                    pageNumber++;
+                ImGui.SameLine();
+                try {
+                    int index = 0;
+                    int selectionIndex = 0;
+                    for (int y = 0; y < maxItemsPerCategoryPage; y++) {
+                        if (index < _animationPages.Keys.Count) {
+                            selectionIndex = _categoryPage * maxItemsPerCategoryPage + index;
+                            string category = _animationPages.Keys.ElementAt(selectionIndex);
+                            if (ImGui.Button(category)) {
+                                _currentCategory = category;
+                            }
+                            ImGui.SameLine();
+                            index++;
+                        } else {
+                            break;
+                        }
+                    }
+                } catch (Exception ex) {
+
                 }
+                if (ImGui.Button(">")) {
+                    if (_categoryPage < (int)((float)_animationPages.Keys.Count / (float)maxItemsPerCategoryPage)) {
+                        _categoryPage++;
+                    }
+                }
+                ImGui.Dummy(new Vector2(1, 1));
+                ImGui.Dummy(new Vector2(1, 1));
+                try {
+                    int index = 0;
+                    int selectionIndex = 0;
+                    for (int y = 0; y < maxItemsPerPage; y++) {
+                        if (index < _animationPages[_currentCategory].AnimationItems.Count) {
+                            selectionIndex = _animationPages[_currentCategory].PageNumber * maxItemsPerPage + index;
+                            string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
+                            if (ImGui.Button(animation)) {
+                                Plugin.DoAnimation(animation.ToLower());
+                            }
+                            index++;
+                        } else {
+                            break;
+                        }
+                    }
+                } catch (Exception ex) {
+
+                }
+                ImGui.Dummy(new Vector2(10));
+                if (ImGui.Button("Previous Page")) {
+                    if (_animationPages[_currentCategory].PageNumber > 0) {
+                        _animationPages[_currentCategory].PageNumber--;
+                    }
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("Next Page")) {
+                    if (_animationPages[_currentCategory].PageNumber <
+                        (int)((float)_animationPages[_currentCategory].AnimationItems.Count / (float)maxItemsPerPage)) {
+                        _animationPages[_currentCategory].PageNumber++;
+                    }
+                }
+            } else {
+                ImGui.Text("No valid animation mods detected!");
             }
         }
     }
