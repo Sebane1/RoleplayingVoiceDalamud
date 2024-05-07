@@ -181,9 +181,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
-            if (_plugin.Config.ReadLocationsAndToastNotifications) {
-                NPCText("Hydaelyn", message.TextValue, "Hyn", true, !_plugin.Config.ReadQuestObjectives);
-            }
+            NPCText("Hydaelyn", message.TextValue, "Hyn", true, !_plugin.Config.ReadLocationsAndToastNotifications);
         }
 
         private IEnumerable<ActionTimeline> GenerateLipList() {
