@@ -1015,7 +1015,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return false;
                 }
             }
-            return true;
+            return _clientState.ClientLanguage == Dalamud.ClientLanguage.English;
         }
 
         private string FindNPCNameFromMessage(string message) {
