@@ -326,7 +326,7 @@ namespace RoleplayingVoice {
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
-                _toast.ErrorToast += _toast_ErrorToast;       
+                _toast.ErrorToast += _toast_ErrorToast;
                 _animationCatalogue.Plugin = this;
             } catch (Exception e) {
                 _pluginLog.Warning(e, e.Message);
@@ -2712,8 +2712,8 @@ namespace RoleplayingVoice {
                                 var result = currentModSettings.Item1;
                                 if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
                                     if (currentModSettings.Item2 != null) {
-                                        bool enabled = currentModSettings.Item2.Value.Item1;
-                                        int priority = currentModSettings.Item2.Value.Item2;
+                                        bool enabled = currentModSettings.Item2!.Value!.Item1;
+                                        int priority = currentModSettings.Item2!.Value!.Item2;
                                         if (enabled) {
                                             if (option != null) {
                                                 ExtractSCDOptions(option, directory);
@@ -2733,7 +2733,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog.Warning("Error 404, penumbra not found.");
                             }
                         }
                     }
