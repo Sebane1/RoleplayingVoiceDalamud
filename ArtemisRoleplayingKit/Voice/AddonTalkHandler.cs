@@ -167,7 +167,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
-            if (message.TextValue.Contains("you put up for sale")) {
+            if (CheckForBannedKeywords(message)) {
                 NPCText("Narrator", message.TextValue.Replace(@"0/", "0 out of ")
                     .Replace(@"1/", "1 out of ")
                     .Replace(@"2/", "2 out of ")
@@ -180,6 +180,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     .Replace(@"9/", "9 out of ")
                     .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", true, !_plugin.Config.ReadQuestObjectives);
             }
+        }
+
+        private bool CheckForBannedKeywords(SeString message) {
+            return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling")
+                && !message.TextValue.Contains("You cancel") && !message.TextValue.Contains("You assign your retainer") && !message.TextValue.Contains("loot list");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
@@ -976,7 +981,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private async void NPCText(string name, string message, bool gender,
             byte race, int body, byte tribe, byte eyes, uint objectId, MediaGameObject mediaGameObject) {
-            if (VerifyIsEnglish(message)) {
+            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     string nameToUse = name;
                     MediaGameObject currentSpeechObject = mediaGameObject;
