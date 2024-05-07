@@ -185,7 +185,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool CheckForBannedKeywords(SeString message) {
             return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling") && !message.TextValue.Contains("Challenge log entry")
                 && !message.TextValue.Contains("You cancel") && !message.TextValue.Contains("You assign your retainer") && !message.TextValue.Contains("loot list") && !message.TextValue.Contains("venture")
-                 && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party") && !message.TextValue.Contains("left the party");
+                 && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party") && !message.TextValue.Contains("left the party") && !message.TextValue.Contains("You synthesize")
+                 && !message.TextValue.Contains("matches found");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
