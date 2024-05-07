@@ -3124,6 +3124,7 @@ namespace RoleplayingVoice {
                         Task.Run(() => {
                             Vector3 lastPosition = _clientState.LocalPlayer.Position;
                             while (true) {
+                                Thread.Sleep(500);
                                 if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
                                     _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
                                     _wasDoingFakeEmote = false;
