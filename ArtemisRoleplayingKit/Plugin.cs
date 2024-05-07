@@ -378,6 +378,7 @@ namespace RoleplayingVoice {
                 _catalogueWindow.Plugin = this;
                 if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
                     _chat.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
+                    _chat.PrintError("[Artemis Roleplaying Kit] Warning: There are two days left to generate new dialogue until March 9th. We're asking the community to try and play through any quests or content they wouldn't normally play through before the remaining character budget expires.");
                 }
                 _gposeWindow.Initialize();
             } catch (Exception e) {

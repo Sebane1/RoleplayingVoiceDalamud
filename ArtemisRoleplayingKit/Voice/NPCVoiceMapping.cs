@@ -68,6 +68,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Hien", "Hen");
             values.Add("Fordola", "Fola");
             values.Add("2b", "To be");
+            values.Add("2p", "To be");
+            values.Add("9s", "Nines");
             values.Add("Isse", "Isse");
             values.Add("Jifuya", "Juya");
             values.Add("Lakshmi", "Lhmi");
