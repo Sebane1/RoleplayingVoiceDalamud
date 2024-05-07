@@ -4,8 +4,8 @@
     "Name": "Artemis Roleplaying Kit",
     "Description": "Player synced custom voices, Twitch playback integration, and more!",
     "InternalName": "RoleplayingVoiceDalamud",
-    "AssemblyVersion": "0.3.4.7",
-    "TestingAssemblyVersion": "0.3.4.7",
+    "AssemblyVersion": "0.3.4.8",
+    "TestingAssemblyVersion": "0.3.4.8",
     "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 9,
@@ -16,9 +16,9 @@
     "LoadPriority": 69420,
     "LoadRequiredState": 2,
     "LoadSync": true,
-    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.7/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.7/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.7/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.8/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.8/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.3.4.8/RoleplayingVoiceDalamud.zip",
     "IconUrl": "https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/icon.png"
   }
 ]
