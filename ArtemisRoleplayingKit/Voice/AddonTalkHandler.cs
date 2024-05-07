@@ -167,17 +167,19 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
-            NPCText("Narrator", message.TextValue.Replace(@"0/", "0 out of ")
-                .Replace(@"1/", "1 out of ")
-                .Replace(@"2/", "2 out of ")
-                .Replace(@"3/", "3 out of ")
-                .Replace(@"4/", "4 out of ")
-                .Replace(@"5/", "5 out of ")
-                .Replace(@"6/", "6 out of ")
-                .Replace(@"7/", "7 out of ")
-                .Replace(@"8/", "8 out of ")
-                .Replace(@"9/", "9 out of ")
-                .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", true, !_plugin.Config.ReadQuestObjectives);
+            if (message.TextValue.Contains("you put up for sale")) {
+                NPCText("Narrator", message.TextValue.Replace(@"0/", "0 out of ")
+                    .Replace(@"1/", "1 out of ")
+                    .Replace(@"2/", "2 out of ")
+                    .Replace(@"3/", "3 out of ")
+                    .Replace(@"4/", "4 out of ")
+                    .Replace(@"5/", "5 out of ")
+                    .Replace(@"6/", "6 out of ")
+                    .Replace(@"7/", "7 out of ")
+                    .Replace(@"8/", "8 out of ")
+                    .Replace(@"9/", "9 out of ")
+                    .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", true, !_plugin.Config.ReadQuestObjectives);
+            }
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
