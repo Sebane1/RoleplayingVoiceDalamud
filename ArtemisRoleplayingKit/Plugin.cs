@@ -543,26 +543,31 @@ namespace RoleplayingVoice {
                                                 try {
                                                     Vector3 lastPosition = item.Position;
                                                     while (true) {
-                                                        _pluginLog.Verbose("Checking " + playerSender);
-                                                        _pluginLog.Verbose("Getting emote.");
-                                                        ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
-                                                        if (animation > 0) {
-                                                            _pluginLog.Verbose("Applying Emote.");
-                                                            _addonTalkHandler.TriggerEmote(item as Character, animation);
-                                                            lastPosition = item.Position;
-                                                            _ = Task.Run(() => {
-                                                                while (true) {
-                                                                    Thread.Sleep(500);
-                                                                    if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
-                                                                        _addonTalkHandler.StopEmote(item as Character);
-                                                                        break;
+                                                        if (!Conditions.IsBoundByDuty) {
+                                                            _pluginLog.Verbose("Checking " + playerSender);
+                                                            _pluginLog.Verbose("Getting emote.");
+                                                            ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
+                                                            if (animation > 0) {
+                                                                _pluginLog.Verbose("Applying Emote.");
+                                                                _addonTalkHandler.TriggerEmote(item as Character, animation);
+                                                                lastPosition = item.Position;
+                                                                _ = Task.Run(() => {
+                                                                    while (true) {
+                                                                        Thread.Sleep(500);
+                                                                        if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
+                                                                            _addonTalkHandler.StopEmote(item as Character);
+                                                                            break;
+                                                                        }
                                                                     }
+                                                                });
+                                                                ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
+                                                                if (emoteId > 0) {
+                                                                    OnEmote(item as PlayerCharacter, emoteId);
                                                                 }
-                                                            });
-                                                            ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
-                                                            if (emoteId > 0) {
-                                                                OnEmote(item as PlayerCharacter, emoteId);
                                                             }
+                                                        } else {
+                                                            CleanupEmoteWatchList();
+                                                            break;
                                                         }
                                                         Thread.Sleep(1000);
                                                     }
