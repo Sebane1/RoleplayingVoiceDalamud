@@ -194,7 +194,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                  && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
                   && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request")
-                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
+                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("You sense a grade") 
+                  && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("you can now summon")
                   && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool")
@@ -203,7 +204,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("Free company petition") && !message.TextValue.Contains("promoted you") && !message.TextValue.Contains("attains rank")
                   && !message.TextValue.Contains("levels increased") && !message.TextValue.Contains("has embarked on an") && !message.TextValue.Contains("voyage finalized")
                   && !message.TextValue.Contains("has joined") && !message.TextValue.Contains("you exchanged") && !message.TextValue.Contains("The compass detects a current approximately")
-                  && !message.TextValue.Contains("invites you") && !message.TextValue.Contains("purchase a Jumbo Cactpot");
+                  && !message.TextValue.Contains("invites you") && !message.TextValue.Contains("purchase a Jumbo Cactpot") && !message.TextValue.Contains("recorded in gathering");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
