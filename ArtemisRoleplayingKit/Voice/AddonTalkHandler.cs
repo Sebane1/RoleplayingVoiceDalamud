@@ -203,7 +203,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("Free company petition") && !message.TextValue.Contains("promoted you") && !message.TextValue.Contains("attains rank")
                   && !message.TextValue.Contains("levels increased") && !message.TextValue.Contains("has embarked on an") && !message.TextValue.Contains("voyage finalized")
                   && !message.TextValue.Contains("has joined") && !message.TextValue.Contains("you exchanged") && !message.TextValue.Contains("The compass detects a current approximately")
-                  && !message.TextValue.Contains("invites you");
+                  && !message.TextValue.Contains("invites you") && !message.TextValue.Contains("purchase a Jumbo Cactpot");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
