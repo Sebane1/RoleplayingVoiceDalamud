@@ -1355,7 +1355,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return voice.Value;
                 }
             }
-            if (npcName.EndsWith("way") || _clientState.TerritoryType == 959) {
+            if (npcName.EndsWith("way") || body == 11052) {
                 return "Lrit";
             }
             if (npcName.ToLower().Contains("kup") || npcName.ToLower().Contains("puk")
