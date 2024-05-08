@@ -181,6 +181,20 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Gosetsu", "Gever");
             values.Add("Yotsuyu", "Ygoeb");
             values.Add("Radovan", "Rvan");
+            values.Add("Hraesvelgr", "Hralgr");
+
+            values.Add("Byregot", "Bgot");
+            values.Add("Rhalgr", "Rhgr");
+            values.Add("Azeyma", "Azma");
+            values.Add("Nald'thal", "Nathal");
+
+            values.Add("Menphina", "Mhina");
+            values.Add("Halone", "Hone");
+            values.Add("Nymeia", "Nmea");
+            values.Add("Althyk", "Ahyk");
+            values.Add("Nophica", "Nhica");
+
+
             return values;
         }
         public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {
@@ -224,6 +238,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add(new KeyValuePair<string, float>("Teledji Adeledji", 1.1f));
             values.Add(new KeyValuePair<string, float>("Titan", 0.8f));
             values.Add(new KeyValuePair<string, float>("Ramuh", 0.9f));
+            values.Add(new KeyValuePair<string, float>("Hraesvelgr", 0.8f));
+            //values.Add(new KeyValuePair<string, float>("Azeyma", 1.05f));
             values.Add(new KeyValuePair<string, float>("Hades", 0.9f));
             values.Add(new KeyValuePair<string, float>("Moenbryda", 0.9f));
             values.Add(new KeyValuePair<string, float>("Nabriales", 1.05f));
