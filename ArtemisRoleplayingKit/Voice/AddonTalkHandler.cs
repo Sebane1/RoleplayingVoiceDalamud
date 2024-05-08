@@ -193,11 +193,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                  && !message.TextValue.Contains("matches found") && !message.TextValue.Contains("is now playing. (Play Mode")
                  && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
-                  && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request") 
+                  && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request")
                   && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("you can now summon")
                   && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
-                  && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool");
+                  && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool")
+                  && !message.TextValue.Contains("Battle commencing in") && !message.TextValue.Contains("Need") && !message.TextValue.Contains("greed")
+                  && !message.TextValue.Contains("pass");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
@@ -405,6 +407,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return "Papalymo";
                 case "Dwarf Facsimile":
                     return "Anogg";
+                case "Mysterious Machina":
+                    return "Machine Lifeform";
                 default:
                     return name;
             }
@@ -1054,7 +1058,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private string FindNPCNameFromMessage(string message) {
             try {
-                return _knownNpcs[message];
+                return _knownNpcs[message.Replace(_clientState.LocalPlayer.Name.TextValue.Split(" ")[0], "_NAME_")];
             } catch {
                 return "???";
             }
@@ -1202,6 +1206,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 239:
                 case 278:
                 case 8329:
+                case 626:
                     return true;
             }
             return false;
@@ -1249,7 +1254,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
             bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
-                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278);
+                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278) || (body == 626);
             bool isDeepVoiced = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
@@ -1288,6 +1293,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     case 63:
                     case 239:
                     case 8329:
+                    case 626:
                         pitchOffset = (((float)Math.Abs(random.Next(-100, -10)) / 100f) * range);
                         isDeepVoiced = true;
                         break;
