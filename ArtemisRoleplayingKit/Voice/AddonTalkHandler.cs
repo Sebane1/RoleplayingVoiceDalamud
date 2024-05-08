@@ -194,7 +194,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                  && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
                   && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request") 
-                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain");
+                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
+                  && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("you can now summon")
+                  && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
+                  && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
@@ -400,6 +403,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return "Yda";
                 case "Short-tempered Thaumaturge":
                     return "Papalymo";
+                case "Dwarf Facsimile":
+                    return "Anogg";
                 default:
                     return name;
             }
@@ -1196,6 +1201,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 63:
                 case 239:
                 case 278:
+                case 8329:
                     return true;
             }
             return false;
@@ -1244,7 +1250,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             Random random = new Random(GetSimpleHash(value));
             bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
                 || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278);
-            bool isDragonOrVoid = false;
+            bool isDeepVoiced = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
             if (!gender && body != 4) {
@@ -1281,8 +1287,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     case 60:
                     case 63:
                     case 239:
+                    case 8329:
                         pitchOffset = (((float)Math.Abs(random.Next(-100, -10)) / 100f) * range);
-                        isDragonOrVoid = true;
+                        isDeepVoiced = true;
                         break;
                 }
             } else {
@@ -1301,7 +1308,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
             if (pitch == 1) {
-                return (isTinyRace ? 1.2f : isDragonOrVoid ? 0.9f : 1) + pitchOffset;
+                return (isTinyRace ? 1.2f : isDeepVoiced ? 0.9f : 1) + pitchOffset;
             } else {
                 return pitch;
             }
