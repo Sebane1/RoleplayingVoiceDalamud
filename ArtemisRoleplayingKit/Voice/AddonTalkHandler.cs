@@ -388,7 +388,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             switch (name) {
                 case "Obnoxious Merchant":
                     return "Ungust";
-                case "Android In Black":
+                case "Woman in White":
+                    return "2B";
+                case "Android in Black":
                     return "2B";
                 case "Self-assured Youth":
                     return "Alphinaud";
@@ -1226,6 +1228,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             phoneticPronunciations.Add(new KeyValuePair<string, string>("sahagin", "sahawgin"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Eorzea", "Aorzea"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Bahamut", "Bahawmuht"));
+            phoneticPronunciations.Add(new KeyValuePair<string, string>("YoRHa", "Yourha"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Lyse", "Leece"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("─", ","));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("...?", "?"));
