@@ -167,8 +167,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
-            if (CheckForBannedKeywords(message)) {
-                NPCText("Narrator", message.TextValue.Replace(@"0/", "0 out of ")
+            if (CheckForBannedKeywords(message) || message.TextValue.Contains("friend request")) {
+                string newMessage = message.TextValue.Contains("friend request") ? "Friend request received." : message.TextValue;
+                NPCText("Narrator", newMessage.Replace(@"0/", "0 out of ")
                     .Replace(@"1/", "1 out of ")
                     .Replace(@"2/", "2 out of ")
                     .Replace(@"3/", "3 out of ")
@@ -183,10 +184,17 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private bool CheckForBannedKeywords(SeString message) {
-            return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling") && !message.TextValue.Contains("Challenge log entry")
-                && !message.TextValue.Contains("You cancel") && !message.TextValue.Contains("You assign your retainer") && !message.TextValue.Contains("loot list") && !message.TextValue.Contains("venture")
-                 && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party") && !message.TextValue.Contains("left the party") && !message.TextValue.Contains("You synthesize")
-                 && !message.TextValue.Contains("matches found");
+            return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling")
+                && !message.TextValue.Contains("Challenge log entry")
+                && !message.TextValue.Contains("You cancel") && !message.TextValue.Contains("You assign your retainer")
+                && !message.TextValue.Contains("loot list") && !message.TextValue.Contains("venture")
+                 && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party")
+                 && !message.TextValue.Contains("left the party") && !message.TextValue.Contains("You synthesize")
+                 && !message.TextValue.Contains("matches found") && !message.TextValue.Contains("is now playing. (Play Mode")
+                 && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
+                  && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
+                  && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request") 
+                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
@@ -380,6 +388,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             switch (name) {
                 case "Obnoxious Merchant":
                     return "Ungust";
+                case "Android In Black":
+                    return "2B";
+                case "Self-assured Youth":
+                    return "Alphinaud";
+                case "Cynical Girl":
+                    return "Alisaie";
+                case "Animated Pugilist":
+                    return "Yda";
+                case "Short-tempered Thaumaturge":
+                    return "Papalymo";
                 default:
                     return name;
             }
