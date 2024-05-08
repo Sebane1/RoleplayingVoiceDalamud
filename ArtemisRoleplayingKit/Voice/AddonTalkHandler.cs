@@ -199,7 +199,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool")
                   && !message.TextValue.Contains("Battle commencing in") && !message.TextValue.Contains("Need") && !message.TextValue.Contains("greed")
-                  && !message.TextValue.Contains("pass");
+                  && !message.TextValue.Contains("pass") && !message.TextValue.Contains("finalizes the") && !message.TextValue.Contains("Free company petition")
+                  && !message.TextValue.Contains("Free company petition") && !message.TextValue.Contains("promoted you") && !message.TextValue.Contains("attains rank")
+                  && !message.TextValue.Contains("levels increased") && !message.TextValue.Contains("has embarked on an") && !message.TextValue.Contains("voyage finalized")
+                  && !message.TextValue.Contains("has joined") && !message.TextValue.Contains("you exchanged") && !message.TextValue.Contains("The compass detects a current approximately")
+                  && !message.TextValue.Contains("invites you");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
