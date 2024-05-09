@@ -43,8 +43,8 @@ public class SerializerService : ServiceBase<SerializerService>
 
 	public static void SerializeFile(string path, object obj)
 	{
-		string json = Serialize(obj);
-		File.WriteAllText(path, json);
+		//string json = Serialize(obj);
+		//File.WriteAllText(path, json);
 	}
 
 	public static T DeserializeFile<T>(string path)

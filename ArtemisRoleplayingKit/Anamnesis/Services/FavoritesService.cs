@@ -155,8 +155,8 @@ public class FavoritesService : ServiceBase<FavoritesService>
 		if (Instance.Current == null)
 			return;
 
-		string json = SerializerService.Serialize(Instance.Current);
-		File.WriteAllText(FilePath, json);
+		//string json = SerializerService.Serialize(Instance.Current);
+		//File.WriteAllText(FilePath, json);
 	}
 
 	public override async Task Initialize()

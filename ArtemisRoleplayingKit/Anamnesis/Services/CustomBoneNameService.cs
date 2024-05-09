@@ -46,8 +46,8 @@ public class CustomBoneNameService : ServiceBase<CustomBoneNameService>
 
 	public static void Save()
 	{
-		string json = SerializerService.Serialize(customBoneNames);
-		File.WriteAllText(SavePath, json);
+		//string json = SerializerService.Serialize(customBoneNames);
+		//File.WriteAllText(SavePath, json);
 	}
 
 	public override async Task Initialize()

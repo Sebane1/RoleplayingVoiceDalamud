@@ -29,8 +29,8 @@ public class SettingsService : ServiceBase<SettingsService>
 
 	public static void Save()
 	{
-		string json = SerializerService.Serialize(Instance.Settings!);
-		File.WriteAllText(SettingsPath, json);
+		//string json = SerializerService.Serialize(Instance.Settings!);
+		//File.WriteAllText(SettingsPath, json);
 	}
 
 	public static void ApplyTheme()
