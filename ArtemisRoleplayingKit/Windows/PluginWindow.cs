@@ -363,35 +363,39 @@ namespace RoleplayingVoice {
 
                 }
             }
-            ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached.");
-            ImGui.Checkbox("Turn Off Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
-            ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
-            ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
-            ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
-            ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
-            ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
-            ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
-            ImGui.Text("NPC Playback Speed");
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
-            ImGui.Text("Previously Played Lines:");
-            int count = 0;
-            foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
-                ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * 0.2f));
-                ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
-                ImGui.SameLine();
-                if (ImGui.Button(PluginReference.Config.QualityAssuranceMode ? $"Report Line ({1 + (count++)})" : $"Replay Line ({1 + (count++)})")) {
-                    var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                         item.Gender, item.BackupVoice, false, true, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
-                    if (stream.Length > 0) {
-                        var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
-                        PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+            try {
+                ImGui.TextWrapped("Crowdsourced NPC speech is currently a work in progress, and will likely run slowly until a majority of dialogue is created and cached.");
+                ImGui.Checkbox("Turn Off Crowdsourced NPC Speech", ref _npcSpeechGenerationDisabled);
+                ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
+                ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
+                ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
+                ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
+                ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
+                ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
+                ImGui.Text("NPC Playback Speed");
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
+                ImGui.Text("Previously Played Lines:");
+                int count = 0;
+                foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
+                    ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * 0.2f));
+                    ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
+                    ImGui.SameLine();
+                    if (ImGui.Button(PluginReference.Config.QualityAssuranceMode ? $"Report Line ({1 + (count++)})" : $"Replay Line ({1 + (count++)})")) {
+                        var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                             item.Gender, item.BackupVoice, false, true, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
+                        if (stream.Length > 0) {
+                            var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                            PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                        }
+                        if (PluginReference.Config.QualityAssuranceMode) {
+                            PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                        }
+                        break;
                     }
-                    if (PluginReference.Config.QualityAssuranceMode) {
-                        PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
-                    }
-                    break;
                 }
+            } catch (Exception e) {
+                PluginReference.PluginLog.Warning(e, e.Message);
             }
         }
 

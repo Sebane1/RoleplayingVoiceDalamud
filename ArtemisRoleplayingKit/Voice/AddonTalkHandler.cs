@@ -101,6 +101,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private ushort _defaultBaseOverride;
         private ushort _defaultCharacterModeInput;
         private byte _defaultCharacterModeRaw;
+        private string _lastNPCAnnouncementName;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
             IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWIndow redoLineWindow, IToastGui toastGui) {
@@ -194,7 +195,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                  && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
                   && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request")
-                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("You sense a grade") 
+                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("You sense a grade")
                   && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("you can now summon")
                   && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
@@ -237,6 +238,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private void _chatGui_ChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled) {
             string text = message.TextValue;
             string npcName = sender.TextValue;
+            _lastNPCAnnouncementName = sender.TextValue;
             Task.Run(delegate () {
                 Thread.Sleep(400);
                 if (_clientState.IsLoggedIn &&
@@ -283,6 +285,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (_clientState.IsLoggedIn) {
                     if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
                         if (e.SoundPath != _lastSoundPath) {
+                            _lastNPCAnnouncementName = null;
                             _blockAudioGeneration = e.isBlocking;
                             _currentDialoguePaths.Add(e.SoundPath);
                             _currentDialoguePathsCompleted.Add(false);
@@ -295,6 +298,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _blockNpcChat = true;
                                 }
                                 _lastSoundPath = e.SoundPath;
+                                if (_lastNPCAnnouncementName != null) {
+                                    DumpCurrentAudio(_lastNPCAnnouncementName);
+                                }
                             }
                             if (_plugin.Config.DebugMode) {
                                 _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
@@ -415,6 +421,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return "Anogg";
                 case "Mysterious Machina":
                     return "Machine Lifeform";
+                case "Audacious Woman":
+                    return "Llymlaen";
+                case "Sagely Man":
+                    return "Thaliak";
+                case "Spirited Woman's Voice":
+                    return "Azeyma";
+                case "Sagely Man's Voice":
+                case "Hawk With Rhalgr's Voice":
+                    return "Rhalgr";
+                case "Measured Mens Voice":
+                    return "Nald'thal";
+                case "Cheery Voice":
+                    return "Nophica";
                 default:
                     return name;
             }

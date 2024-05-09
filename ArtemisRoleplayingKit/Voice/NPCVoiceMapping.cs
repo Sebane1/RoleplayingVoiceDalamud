@@ -187,12 +187,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Rhalgr", "Rhgr");
             values.Add("Azeyma", "Azma");
             values.Add("Nald'thal", "Nathal");
-
             values.Add("Menphina", "Mhina");
             values.Add("Halone", "Hone");
             values.Add("Nymeia", "Nmea");
             values.Add("Althyk", "Ahyk");
             values.Add("Nophica", "Nhica");
+            values.Add("Thaliak", "Thaak");
+            values.Add("Llymlaen", "Llaen");
+            values.Add("Oschon", "Oson");
+            values.Add("Deryk", "Oson");
+            values.Add("Eulogia", "Euia");
 
 
             return values;
