@@ -208,7 +208,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("levels increased") && !message.TextValue.Contains("has embarked on an") && !message.TextValue.Contains("voyage finalized")
                   && !message.TextValue.Contains("has joined") && !message.TextValue.Contains("you exchanged") && !message.TextValue.Contains("The compass detects a current approximately")
                   && !message.TextValue.Contains("invites you") && !message.TextValue.Contains("purchase a Jumbo Cactpot") && !message.TextValue.Contains("recorded in gathering")
-                  && !message.TextValue.Contains("trophy crystals") && !message.TextValue.Contains("Following") && !message.TextValue.Contains("KO'd") && !message.TextValue.Contains("Unable to equip all items");
+                  && !message.TextValue.Contains("trophy crystals") && !message.TextValue.Contains("Quality of") && !message.TextValue.Contains("Following") && !message.TextValue.Contains("KO'd") && !message.TextValue.Contains("Unable to equip all items");
         }
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
@@ -642,7 +642,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 var animationMemory = actorMemory.Animation;
                 animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
-                Task.Run(delegate {
+                await Task.Run(delegate {
                     Thread.Sleep(10000);
                     StopLipSync(character);
                 });
