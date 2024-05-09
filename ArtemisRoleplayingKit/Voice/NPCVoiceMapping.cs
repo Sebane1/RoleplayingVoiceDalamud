@@ -195,7 +195,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             values.Add("Thaliak", "Thaak");
             values.Add("Llymlaen", "Llaen");
             values.Add("Oschon", "Oson");
-            values.Add("Deryk", "Oson");
             values.Add("Eulogia", "Euia");
 
 

@@ -428,7 +428,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case "Spirited Woman's Voice":
                     return "Azeyma";
                 case "Sagely Man's Voice":
-                case "Hawk With Rhalgr's Voice":
+                case "Hawk with Rhalgr's Voice":
                     return "Rhalgr";
                 case "Measured Mens Voice":
                     return "Nald'thal";
