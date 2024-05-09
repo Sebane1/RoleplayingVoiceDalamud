@@ -746,7 +746,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return message;
         }
         private async void NPCText(string npcName, string message, string voice, bool lowLatencyMode = false, bool onlySendData = false) {
-            if (VerifyIsEnglish(message)) {
+            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     bool gender = false;
                     byte race = 0;
@@ -825,7 +825,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
-            if (VerifyIsEnglish(message)) {
+            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     bool gender = false;
                     byte race = 0;
