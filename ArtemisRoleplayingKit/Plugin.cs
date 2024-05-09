@@ -1856,12 +1856,14 @@ namespace RoleplayingVoice {
                     _pluginLog.Debug("Emote Trigger Detected");
                     if (!string.IsNullOrEmpty(soundPath)) {
                         try {
-                            MemoryStream diskCopy = new MemoryStream();
+                            Stream diskCopy = new MemoryStream();
                             if (!_mediaManager.LowPerformanceMode) {
                                 try {
+                                    _nativeAudioStream.Position = 0;
                                     _nativeAudioStream.CopyTo(diskCopy);
                                 } catch (Exception e) {
-                                    _pluginLog.Warning(e, e.Message);
+                                    _nativeAudioStream.Position = 0;
+                                    diskCopy = new FileStream(Path.Combine(config.CacheFolder, @"\temp\tempSound.temp"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
                                 }
                             }
                             _nativeAudioStream.Position = 0;
@@ -1881,7 +1883,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             });
-                            if (!_mediaManager.LowPerformanceMode) {
+                            if (!_mediaManager.LowPerformanceMode && diskCopy.Length > 0) {
                                 _ = Task.Run(async () => {
                                     try {
                                         using (FileStream fileStream = new FileStream(stagingPath + @"\" + emote + ".mp3", FileMode.Create, FileAccess.Write)) {
@@ -1889,8 +1891,10 @@ namespace RoleplayingVoice {
                                             MediaFoundationEncoder.EncodeToMp3(new RawSourceWaveStream(diskCopy, _nativeAudioStream.WaveFormat), fileStream);
                                         }
                                         _nativeAudioStream = null;
+                                        diskCopy?.Dispose();
                                     } catch (Exception e) {
-                                        _pluginLog.Warning(e, e.Message);
+                                        _pluginLog.Warning(".scd conversion to .mp3 failed");
+                                        diskCopy?.Dispose();
                                     }
                                 });
                             }
@@ -2527,7 +2531,8 @@ namespace RoleplayingVoice {
         public void ExtractPapFiles(Option option, string directory, bool skipScd) {
             string modName = Path.GetFileName(directory);
             int papFilesFound = 0;
-            foreach (var item in option.Files) {
+            for (int i = 0; i < option.Files.Count; i++) {
+                var item = option.Files.ElementAt(i);
                 if (item.Key.EndsWith(".pap")) {
                     string[] strings = item.Key.Split("/");
                     string value = strings[strings.Length - 1];
@@ -2553,7 +2558,8 @@ namespace RoleplayingVoice {
         public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
             string modName = Path.GetFileName(directory);
             int mdlFilesFound = 0;
-            foreach (var item in option.Files) {
+            for (int i = 0; i < option.Files.Count; i++) {
+                var item = option.Files.ElementAt(i);
                 if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
                     && !directory.Contains("Hrothgar & Viera Hats") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
                     && GetModelID(item.Key) != 279 && GetModelID(item.Key) != 9903) {
