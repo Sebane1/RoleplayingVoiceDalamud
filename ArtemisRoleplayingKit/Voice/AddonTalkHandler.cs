@@ -435,6 +435,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     return "Nald'thal";
                 case "Cheery Voice":
                     return "Nophica";
+                case "Omphalos Monument":
+                    return "Krile";
                 default:
                     return name;
             }
