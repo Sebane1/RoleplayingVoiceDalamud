@@ -62,6 +62,7 @@ using NAudio.Wave.SampleProviders;
 using FFXIVClientStructs.FFXIV.Client.System.Timer;
 using NAudio.MediaFoundation;
 using Lumina.Excel.GeneratedSheets;
+using RoleplayingVoiceDalamud.Animation;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -89,6 +90,7 @@ namespace RoleplayingVoice {
         private GposeWindow _gposeWindow;
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
         private AnimationCatalogue _animationCatalogue;
+        private AnimationEmoteSelection _animationEmoteSelection;
         private IPluginLog _pluginLog;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
@@ -147,7 +149,7 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
 
-        private ConcurrentDictionary<string, string> _animationMods = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, List<string>> _animationMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, Task> _emoteWatchList = new ConcurrentDictionary<string, Task>();
         private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
 
@@ -200,6 +202,7 @@ namespace RoleplayingVoice {
         private int _failCount;
         Stopwatch pollingTimer = new Stopwatch();
         private bool _playerDied;
+        private bool _isLoadingAnimation;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -276,6 +279,7 @@ namespace RoleplayingVoice {
                 _gposeWindow = this.pluginInterface.Create<GposeWindow>();
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
                 _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();
+                _animationEmoteSelection = this.pluginInterface.Create<AnimationEmoteSelection>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
                 pluginInterface.UiBuilder.DisableGposeUiHide = true;
@@ -284,6 +288,8 @@ namespace RoleplayingVoice {
                 _window.PluginInterface = this.pluginInterface;
                 _window.PluginReference = this;
                 _gposeWindow.Plugin = this;
+                _animationCatalogue.Plugin = this;
+                _animationEmoteSelection.Plugin = this;
                 if (_window is not null) {
                     this.windowSystem.AddWindow(_window);
                 }
@@ -304,6 +310,9 @@ namespace RoleplayingVoice {
                 }
                 if (_animationCatalogue is not null) {
                     this.windowSystem.AddWindow(_animationCatalogue);
+                }
+                if (_animationEmoteSelection is not null) {
+                    this.windowSystem.AddWindow(_animationEmoteSelection);
                 }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
@@ -327,7 +336,6 @@ namespace RoleplayingVoice {
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
                 _toast.ErrorToast += _toast_ErrorToast;
-                _animationCatalogue.Plugin = this;
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -2010,24 +2018,26 @@ namespace RoleplayingVoice {
         #region Collect Sound Data
         public async void RefreshData(bool skipModelData = true) {
             if (!disposed) {
-                _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
-                _ = Task.Run(async () => {
-                    try {
-                        penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
-                        combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
-                    } catch (Exception e) {
-                        _pluginLog.Error(e.Message);
-                    }
-                });
-                if (!config.VoicePackIsActive) {
-                    try {
-                        if (Filter != null) {
-                            Filter.Muted = false;
-                            voiceMuted = false;
-                            RefreshPlayerVoiceMuted();
+                if (!_isLoadingAnimation) {
+                    _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
+                    _ = Task.Run(async () => {
+                        try {
+                            penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
+                            combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                        } catch (Exception e) {
+                            _pluginLog.Error(e.Message);
                         }
-                    } catch (Exception e) {
-                        _pluginLog.Error(e.Message);
+                    });
+                    if (!config.VoicePackIsActive) {
+                        try {
+                            if (Filter != null) {
+                                Filter.Muted = false;
+                                voiceMuted = false;
+                                RefreshPlayerVoiceMuted();
+                            }
+                        } catch (Exception e) {
+                            _pluginLog.Error(e.Message);
+                        }
                     }
                 }
             }
@@ -2539,7 +2549,12 @@ namespace RoleplayingVoice {
                 if (item.Key.EndsWith(".pap")) {
                     string[] strings = item.Key.Split("/");
                     string value = strings[strings.Length - 1];
-                    _animationMods[modName] = value;
+                    if (!_animationMods.ContainsKey(modName)) {
+                        _animationMods[modName] = new List<string>();
+                    }
+                    if (!_animationMods[modName].Contains(value)) {
+                        _animationMods[modName].Add(value);
+                    }
                     papFilesFound++;
                     if (!_papSorting.ContainsKey(value)) {
                         try {
@@ -2653,11 +2668,16 @@ namespace RoleplayingVoice {
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
-            foreach (string file in Directory.GetFiles(directory)) {
+            foreach (string file in Directory.EnumerateFiles(directory)) {
                 if (file.EndsWith(".pap")) {
                     string[] strings = file.Split("\\");
                     string value = strings[strings.Length - 1];
-                    _animationMods[modName] = value;
+                    if (!_animationMods.ContainsKey(modName)) {
+                        _animationMods[modName] = new List<string>();
+                    }
+                    if (!_animationMods[modName].Contains(value)) {
+                        _animationMods[modName].Add(value);
+                    }
                     if (!_papSorting.ContainsKey(value)) {
                         try {
                             _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
@@ -2671,7 +2691,7 @@ namespace RoleplayingVoice {
                 }
             }
             if (levels < maxLevels) {
-                foreach (string file in Directory.GetDirectories(directory)) {
+                foreach (string file in Directory.EnumerateDirectories(directory)) {
                     RecursivelyFindPapFiles(modName, file, levels + 1, maxLevels);
                 }
             }
@@ -3039,16 +3059,29 @@ namespace RoleplayingVoice {
         #region Trigger Animation Mods
         private void CheckAnimationMods(string[] splitArgs, string args) {
             if (splitArgs.Length > 1) {
-                DoAnimation(args.Replace(splitArgs[0] + " ", null).ToLower().Trim());
+                string[] command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
+                int index = 0;
+                try {
+                    if (command.Length > 1) {
+                        index = int.Parse(command[1]);
+                    }
+                } catch {
+                    index = 0;
+                }
+                DoAnimation(command[0], index);
             } else {
                 if (!_animationCatalogue.IsOpen) {
                     var list = CreateEmoteList(_dataManager);
                     var newList = new List<string>();
                     foreach (string key in _animationMods.Keys) {
-                        string[] strings = _animationMods[key].Split("/");
-                        string option = strings[strings.Length - 1];
-                        if (list.ContainsKey(option)) {
-                            newList.Add(key);
+                        foreach (string emote in _animationMods[key]) {
+                            string[] strings = emote.Split("/");
+                            string option = strings[strings.Length - 1];
+                            if (list.ContainsKey(option)) {
+                                if (!newList.Contains(key)) {
+                                    newList.Add(key);
+                                }
+                            }
                         }
                     }
                     newList.Sort();
@@ -3060,19 +3093,17 @@ namespace RoleplayingVoice {
             }
         }
 
-        public void DoAnimation(string animationName) {
+        public void DoAnimation(string animationName, int index) {
+            _isLoadingAnimation = true;
             var list = CreateEmoteList(_dataManager);
-            string emote = "";
-            uint emoteId = 0;
-            uint animationId = 0;
-            string foundModName = "";
+            List<uint> deDuplicate = new List<uint>();
+            List<EmoteModData> emoteData = new List<EmoteModData>();
             var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             string commandArguments = animationName;
             if (config.DebugMode) {
                 _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
             }
-            for (int i = 0; i < 20 && string.IsNullOrEmpty(emote); i++) {
+            for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
                 foreach (string modName in _animationMods.Keys) {
                     if (modName.ToLower().Contains(commandArguments)) {
                         if (collection.Item3 != "None") {
@@ -3081,29 +3112,37 @@ namespace RoleplayingVoice {
                             if (config.DebugMode) {
                                 _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
                             }
-                            if (_papSorting.ContainsKey(_animationMods[modName])) {
-                                var sortedList = _papSorting[_animationMods[modName]];
-                                foreach (var mod in sortedList) {
-                                    if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
-                                        _mediaManager.CleanNonStreamingSounds();
-                                        if (string.IsNullOrEmpty(emote)) {
-                                            if (list.ContainsKey(_animationMods[modName])) {
-                                                foreach (var value in list[_animationMods[modName]]) {
-                                                    emote = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                    emoteId = value.RowId;
-                                                    animationId = value.ActionTimeline[0].Value.RowId;
-                                                    foundModName = modName;
-                                                    if (config.DebugMode) {
-                                                        _pluginLog.Debug(emote + " found and will be triggered.");
+                            var animationItems = _animationMods[modName];
+                            foreach (var foundAnimation in animationItems) {
+                                bool foundEmote = false;
+                                if (_papSorting.ContainsKey(foundAnimation)) {
+                                    var sortedList = _papSorting[foundAnimation];
+                                    foreach (var mod in sortedList) {
+                                        if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
+                                            _mediaManager.CleanNonStreamingSounds();
+                                            if (!foundEmote) {
+                                                if (list.ContainsKey(foundAnimation)) {
+                                                    foreach (var value in list[foundAnimation]) {
+                                                        string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                        if (!string.IsNullOrEmpty(name)) {
+                                                            if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
+                                                                emoteData.Add(new
+                                                                EmoteModData(
+                                                                name,
+                                                                value.RowId,
+                                                                value.ActionTimeline[0].Value.RowId,
+                                                                modName));
+                                                                deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+                                                            }
+                                                            foundEmote = true;
+                                                            break;
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                    } else {
-                                        if (!alreadyDisabled.ContainsKey(mod.Key)) {
+                                        } else {
                                             // Thread.Sleep(100);
                                             var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
-                                            alreadyDisabled[mod.Key] = true;
                                             if (config.DebugMode) {
                                                 _pluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
                                             }
@@ -3111,62 +3150,75 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             }
-                        } else {
-
+                            break;
                         }
-                        break;
                     }
                 }
             }
-            if (!string.IsNullOrEmpty(emote)) {
-                if (_wasDoingFakeEmote) {
-                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+            if (emoteData.Count > 0) {
+                if (emoteData.Count == 1) {
+                    TriggerPlayerEmote(emoteData[0]);
+                } else if (emoteData.Count > 1) {
+                    if (index == 0) {
+                        _animationEmoteSelection.PopulateList(emoteData);
+                        _animationEmoteSelection.IsOpen = true;
+                    } else {
+                        TriggerPlayerEmote(emoteData[index - 1]);
+                    }
                 }
-                Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
-                Task.Run(() => {
-                    Thread.Sleep(1000);
-                    _messageQueue.Enqueue(emote);
-                    if (!_animationModsAlreadyTriggered.Contains(foundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
-                        Thread.Sleep(100);
-                        _fastMessageQueue.Enqueue(emote);
-                        _animationModsAlreadyTriggered.Add(foundModName);
-                    }
-                    _mediaManager.StopAudio(_playerObject);
-                    Thread.Sleep(2000);
-                    ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
-                    if (!_didRealEmote) {
-                        _wasDoingFakeEmote = true;
-                        OnEmote(_clientState.LocalPlayer, (ushort)emoteId);
-                        _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)animationId);
-                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)emoteId);
-                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)animationId);
-                        Task.Run(() => {
-                            Vector3 lastPosition = _clientState.LocalPlayer.Position;
-                            while (true) {
-                                Thread.Sleep(500);
-                                if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
-                                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
-                                    _wasDoingFakeEmote = false;
-                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
-                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)0);
-                                    break;
-                                }
-                            }
-                        });
-                    }
-                    _didRealEmote = false;
-                });
             } else {
                 Task.Run(() => {
                     if (_failCount++ < 10) {
                         Thread.Sleep(3000);
-                        DoAnimation(animationName);
+                        DoAnimation(animationName, index);
                     } else {
                         _failCount = 0;
                     }
                 });
             }
+            _isLoadingAnimation = false;
         }
+
+        public void TriggerPlayerEmote(EmoteModData emoteModData) {
+            if (_wasDoingFakeEmote) {
+                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+            }
+            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+            Task.Run(() => {
+                //Thread.Sleep(1000);
+                _messageQueue.Enqueue(emoteModData.Emote);
+                if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
+                    Thread.Sleep(100);
+                    _fastMessageQueue.Enqueue(emoteModData.Emote);
+                    _animationModsAlreadyTriggered.Add(emoteModData.FoundModName);
+                }
+                _mediaManager.StopAudio(_playerObject);
+                Thread.Sleep(2000);
+                ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
+                if (!_didRealEmote) {
+                    _wasDoingFakeEmote = true;
+                    OnEmote(_clientState.LocalPlayer, (ushort)emoteModData.EmoteId);
+                    _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)emoteModData.AnimationId);
+                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
+                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
+                    Task.Run(() => {
+                        Vector3 lastPosition = _clientState.LocalPlayer.Position;
+                        while (true) {
+                            Thread.Sleep(500);
+                            if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
+                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                                _wasDoingFakeEmote = false;
+                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
+                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)0);
+                                break;
+                            }
+                        }
+                    });
+                }
+                _didRealEmote = false;
+            });
+        }
+
         private IReadOnlyDictionary<string, IReadOnlyList<Emote>> CreateEmoteList(IDataManager gameData) {
             var sheet = gameData.GetExcelSheet<Emote>()!;
             var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();

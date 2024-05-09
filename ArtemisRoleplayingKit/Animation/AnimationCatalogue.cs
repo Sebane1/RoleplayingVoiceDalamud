@@ -96,7 +96,7 @@ namespace RoleplayingVoice {
                             selectionIndex = _animationPages[_currentCategory].PageNumber * maxItemsPerPage + index;
                             string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
                             if (ImGui.Button(animation)) {
-                                Plugin.DoAnimation(animation.ToLower());
+                                Plugin.DoAnimation(animation.ToLower(), 0);
                             }
                             index++;
                         } else {
