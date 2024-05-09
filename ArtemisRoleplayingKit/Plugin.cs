@@ -329,8 +329,8 @@ namespace RoleplayingVoice {
                 _toast.ErrorToast += _toast_ErrorToast;
                 _animationCatalogue.Plugin = this;
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
-                _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
+                _pluginLog?.Warning(e, e.Message);
+                _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
             pollingTimer.Start();
             #endregion
@@ -367,7 +367,6 @@ namespace RoleplayingVoice {
                 Filter = new Filter(this);
                 Filter.Enable();
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
-                RefreshData(false);
                 _chat.ChatMessage += Chat_ChatMessage;
                 _clientState.Login += _clientState_Login;
                 _clientState.Logout += _clientState_Logout;
@@ -377,12 +376,13 @@ namespace RoleplayingVoice {
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 _catalogueWindow.Plugin = this;
                 if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
-                    _chat.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
+                    _chat?.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
                     _gposeWindow.Initialize();
                 }
+                RefreshData(false);
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
-                _chat.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
+                _pluginLog?.Warning(e, e.Message);
+                _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
         }
 
@@ -541,18 +541,20 @@ namespace RoleplayingVoice {
                                             var task = Task.Run(async delegate () {
                                                 try {
                                                     Vector3 lastPosition = item.Position;
-                                                    while (true) {
+                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                    while (!disposed && _clientState.IsLoggedIn &&
+                                                    startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
                                                         if (!Conditions.IsBoundByDuty) {
-                                                            _pluginLog.Verbose("Checking " + playerSender);
-                                                            _pluginLog.Verbose("Getting emote.");
+                                                            _pluginLog?.Verbose("Checking " + playerSender);
+                                                            _pluginLog?.Verbose("Getting emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
                                                             if (animation > 0) {
-                                                                _pluginLog.Verbose("Applying Emote.");
+                                                                _pluginLog?.Verbose("Applying Emote.");
                                                                 _addonTalkHandler.TriggerEmote(item as Character, animation);
                                                                 lastPosition = item.Position;
                                                                 _ = Task.Run(() => {
                                                                     int startingTerritoryId = _clientState.TerritoryType;
-                                                                    while (!disposed && _clientState.IsLoggedIn && startingTerritoryId == _clientState.TerritoryType) {
+                                                                    while (true) {
                                                                         Thread.Sleep(500);
                                                                         if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
                                                                             _addonTalkHandler.StopEmote(item as Character);
@@ -572,7 +574,7 @@ namespace RoleplayingVoice {
                                                         Thread.Sleep(1000);
                                                     }
                                                 } catch (Exception e) {
-                                                    _pluginLog.Warning(e, e.Message);
+                                                    _pluginLog?.Warning(e, e.Message);
                                                 }
                                             });
                                             _emoteWatchList[playerSender] = task;
@@ -581,7 +583,7 @@ namespace RoleplayingVoice {
                                 }
                             }
                         } catch (Exception e) {
-                            _pluginLog.Warning(e, e.Message);
+                            _pluginLog?.Warning(e, e.Message);
                         }
                     }
 
@@ -676,7 +678,7 @@ namespace RoleplayingVoice {
                             try {
                                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog?.Warning(e, e.Message);
                             }
                             _combatMusicWasPlayed = true;
                         }
@@ -693,7 +695,7 @@ namespace RoleplayingVoice {
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                                 } catch (Exception e) {
-                                    _pluginLog.Warning(e, e.Message);
+                                    _pluginLog?.Warning(e, e.Message);
                                 }
                                 _combatMusicWasPlayed = false;
                             });
@@ -728,7 +730,7 @@ namespace RoleplayingVoice {
                                     try {
                                         _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                                     } catch (Exception e) {
-                                        _pluginLog.Warning(e, e.Message);
+                                        _pluginLog?.Warning(e, e.Message);
                                     }
                                     _mountMusicWasPlayed = true;
                                 }
@@ -746,7 +748,7 @@ namespace RoleplayingVoice {
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                                 } catch (Exception e) {
-                                    _pluginLog.Warning(e, e.Message);
+                                    _pluginLog?.Warning(e, e.Message);
                                 }
                                 _mountMusicWasPlayed = false;
                             }
@@ -802,7 +804,7 @@ namespace RoleplayingVoice {
                                                 equipmentFound = SetEquipment(_currentClothingItem, characterCustomization);
                                                 if (equipmentFound) {
                                                     var clothingItem = _currentClothingItem;
-                                                    _chat.Print("Screenshotting item " + clothingItem.Name);
+                                                    _chat?.Print("Screenshotting item " + clothingItem.Name);
                                                     Task.Run(delegate {
                                                         try {
                                                             NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
@@ -831,7 +833,7 @@ namespace RoleplayingVoice {
                         _catalogueIndex = 0;
                         _catalogueMods = false;
                         ignoreModSettingChanged = false;
-                        _chat.Print("Done Catalog");
+                        _chat?.Print("Done Catalog");
                         _catalogueTimer.Reset();
                         RefreshData();
                         _catalogueWindow.ScanCatalogue();
@@ -869,7 +871,7 @@ namespace RoleplayingVoice {
             }
         }
         private bool AlreadyHasScreenShots(string name) {
-            //_chat.Print(name);
+            //_chat?.Print(name);
             foreach (var item in _currentScreenshotList) {
                 if (Path.GetFileNameWithoutExtension(item.ToLower()).Contains(name.ToLower())) {
                     return true;
@@ -899,7 +901,7 @@ namespace RoleplayingVoice {
             return bmpImage.Clone(cropArea, bmpImage.PixelFormat);
         }
         private void PrintCustomization(CharacterCustomization customization) {
-            _chat.Print("Head: " + customization.Equipment.Head.ItemId +
+            _chat?.Print("Head: " + customization.Equipment.Head.ItemId +
                         ", Body: " + customization.Equipment.Body.ItemId +
                         ", Hands: " + customization.Equipment.Hands.ItemId +
                         ", Legs: " + customization.Equipment.Legs.ItemId +
@@ -939,7 +941,7 @@ namespace RoleplayingVoice {
                         }
                     }
 #if DEBUG
-                    //_chat.Print(playerName);
+                    //_chat?.Print(playerName);
 #endif
                     //playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
                     //if (playerName.ToLower().Contains("PlayerName")) {
@@ -979,7 +981,7 @@ namespace RoleplayingVoice {
                             Stopwatch performanceTimer = new Stopwatch();
                             BattleText(playerName, message, type);
                             if (config.DebugMode) {
-                                _chat.Print("Battle analysis took " + performanceTimer.ToString());
+                                _chat?.Print("Battle analysis took " + performanceTimer.ToString());
                             }
                             break;
                     }
@@ -1116,7 +1118,7 @@ namespace RoleplayingVoice {
                                 lastStreamURL = value;
                                 string cleanedURL = RemoveSpecialSymbols(value);
                                 string streamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                                _chat.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
+                                _chat?.Print(streamer + " is hosting a stream in this zone! Wanna tune in? You can do \"/artemis listen\"");
                             }
                         }
                     }
@@ -1137,7 +1139,7 @@ namespace RoleplayingVoice {
                 try {
                     Directory.CreateDirectory(path);
                 } catch {
-                    _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                    _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
                 }
 
                 bool isDownloadingZip = false;
@@ -1230,11 +1232,11 @@ namespace RoleplayingVoice {
                                     QueueSCDTrigger(scdFile);
                                     CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
                                 } catch (Exception ex) {
-                                    _pluginLog.Warning(ex, ex.Message);
+                                    _pluginLog?.Warning(ex, ex.Message);
                                 }
                             });
                         } catch (Exception ex) {
-                            _pluginLog.Warning(ex, ex.Message);
+                            _pluginLog?.Warning(ex, ex.Message);
                         }
                     }
                 }
@@ -1303,7 +1305,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
             }
             );
@@ -1348,7 +1350,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog?.Warning(e, e.Message);
             }
         }
         public void MuteVoiceCheck(int length = 6000) {
@@ -1363,14 +1365,16 @@ namespace RoleplayingVoice {
             _muteLength = length;
         }
         private void RefreshPlayerVoiceMuted() {
-            try {
-                if (voiceMuted) {
-                    _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
-                } else {
-                    _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+            if (_gameConfig != null) {
+                try {
+                    if (voiceMuted) {
+                        _gameConfig.Set(SystemConfigOption.IsSndVoice, true);
+                    } else {
+                        _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
+                    }
+                } catch (Exception e) {
+                    _pluginLog?.Warning(e.Message);
                 }
-            } catch (Exception e) {
-                _pluginLog.Warning(e.Message);
             }
         }
         #endregion
@@ -1466,7 +1470,7 @@ namespace RoleplayingVoice {
                     try {
                         Directory.CreateDirectory(path);
                     } catch {
-                        _chat.PrintError("Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                        _chat?.PrintError("Failed to write to disk, please make sure the cache folder does not require administrative access!");
                     }
                     if (config.UsePlayerSync) {
                         Task.Run(delegate () {
@@ -1781,7 +1785,7 @@ namespace RoleplayingVoice {
             try {
                 Directory.CreateDirectory(path);
             } catch {
-                _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
             }
             string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
             string clipPath = path + @"\" + hash;
@@ -1814,7 +1818,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog?.Warning(e, e.Message);
             }
         }
 
@@ -1892,21 +1896,21 @@ namespace RoleplayingVoice {
                                         _nativeAudioStream = null;
                                         diskCopy?.Dispose();
                                     } catch (Exception e) {
-                                        _pluginLog.Warning(".scd conversion to .mp3 failed");
+                                        _pluginLog?.Warning(".scd conversion to .mp3 failed");
                                         diskCopy?.Dispose();
                                     }
                                 });
                             }
                             soundPath = null;
                         } catch (Exception e) {
-                            _pluginLog.Warning(e, e.Message);
+                            _pluginLog?.Warning(e, e.Message);
                         }
                     }
                 } else {
-                    _pluginLog.Warning("Not currently sending");
+                    _pluginLog?.Warning("Not currently sending");
                 }
             } else {
-                _pluginLog.Warning("There is no available audio stream to play");
+                _pluginLog?.Warning("There is no available audio stream to play");
             }
         }
         private void QueueSCDTrigger(ScdFile scdFile) {
@@ -1943,7 +1947,7 @@ namespace RoleplayingVoice {
                             try {
                                 _realChat.SendMessage(_messageQueue.Dequeue());
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog?.Warning(e, e.Message);
                             }
                             _messageTimer.Restart();
                         }
@@ -1953,11 +1957,11 @@ namespace RoleplayingVoice {
                     try {
                         _realChat.SendMessage(_fastMessageQueue.Dequeue());
                     } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
+                        _pluginLog?.Warning(e, e.Message);
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog?.Warning(e, e.Message);
             }
         }
         private async void EmoteReaction(string messageValue) {
@@ -2071,17 +2075,17 @@ namespace RoleplayingVoice {
                                 if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
                                     File.Delete(file);
                                 } else {
-                                    _chat.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
+                                    _chat?.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
                                 }
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog?.Warning(e, e.Message);
                             }
                         }
                     }
                     try {
                         Directory.CreateDirectory(stagingPath);
                     } catch {
-                        _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                        _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
                     }
                     if (Directory.Exists(stagingPath)) {
                         foreach (string file in Directory.EnumerateFiles(stagingPath)) {
@@ -2112,7 +2116,7 @@ namespace RoleplayingVoice {
                     try {
                         File.Delete(file);
                     } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
+                        _pluginLog?.Warning(e, e.Message);
                     }
                 }
             }
@@ -2136,7 +2140,7 @@ namespace RoleplayingVoice {
                         try {
                             RemoveFiles(clipPath);
                         } catch (Exception e) {
-                            _pluginLog.Warning(e, e.Message);
+                            _pluginLog?.Warning(e, e.Message);
                         }
                     }
                 } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
@@ -2158,7 +2162,7 @@ namespace RoleplayingVoice {
 
         private void _clientState_TerritoryChanged(ushort e) {
             if (config.DebugMode) {
-                _chat.Print("Territory is " + e);
+                _chat?.Print("Territory is " + e);
             }
             CleanSounds();
             if (_recentCFPop > 0) {
@@ -2172,12 +2176,12 @@ namespace RoleplayingVoice {
             }
         }
         private void CleanupEmoteWatchList() {
-            try {
-                foreach (var item in _emoteWatchList.Values) {
+            foreach (var item in _emoteWatchList.Values) {
+                try {
                     item.Dispose();
-                }
-            } catch {
+                } catch {
 
+                }
             }
             _emoteWatchList.Clear();
         }
@@ -2207,14 +2211,14 @@ namespace RoleplayingVoice {
                 try {
                     Directory.Delete(othersPath, true);
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
             }
             if (Directory.Exists(incomingPath)) {
                 try {
                     Directory.Delete(incomingPath, true);
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
             }
             CleanupEmoteWatchList();
@@ -2228,7 +2232,7 @@ namespace RoleplayingVoice {
                 try {
                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
             }
             potentialStream = "";
@@ -2284,7 +2288,7 @@ namespace RoleplayingVoice {
                         try {
                             Directory.CreateDirectory(path);
                         } catch {
-                            _chat.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
+                            _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
                         }
                         string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
                         string clipPath = path + @"\" + hash;
@@ -2351,11 +2355,11 @@ namespace RoleplayingVoice {
                                 }
                             }
                         } catch (Exception e) {
-                            _pluginLog.Warning("[Artemis Roleplaying Kit] " + e.Message);
+                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
                         }
                     }
                 } catch (Exception e) {
-                    _pluginLog.Warning("[Artemis Roleplaying Kit] " + e.Message);
+                    _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
                 }
             }
         }
@@ -2516,10 +2520,10 @@ namespace RoleplayingVoice {
                             try {
                                 _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
                                 if (config.DebugMode) {
-                                    _pluginLog.Verbose("Found: " + item.Value);
+                                    _pluginLog?.Verbose("Found: " + item.Value);
                                 }
                             } catch {
-                                _pluginLog.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                                _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                             }
                         }
                     }
@@ -2542,10 +2546,10 @@ namespace RoleplayingVoice {
                             _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
                             { new KeyValuePair<string, bool>(modName, !skipScd) });
                             if (config.DebugMode) {
-                                _pluginLog.Verbose("Found: " + item.Value);
+                                _pluginLog?.Verbose("Found: " + item.Value);
                             }
                         } catch {
-                            _pluginLog.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                         }
                     } else {
                         _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
@@ -2582,7 +2586,7 @@ namespace RoleplayingVoice {
                 }
             }
             if (newValue > 10000) {
-                _chat.Print(model);
+                _chat?.Print(model);
             }
             return newValue;
         }
@@ -2659,7 +2663,7 @@ namespace RoleplayingVoice {
                             _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
                             { new KeyValuePair<string, bool>(modName, false) });
                         } catch {
-                            _pluginLog.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
+                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
                         }
                     } else {
                         _papSorting[value].Add(new KeyValuePair<string, bool>(modName, false));
@@ -2687,7 +2691,7 @@ namespace RoleplayingVoice {
                         string[] directories = Directory.GetDirectories(modPath);
                         foreach (var directory in directories) {
                             if (config.DebugMode) {
-                                _pluginLog.Verbose("Examining: " + directory);
+                                _pluginLog?.Verbose("Examining: " + directory);
                             }
                             Option option = null;
                             List<Group> groups = new List<Group>();
@@ -2748,13 +2752,13 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             } catch (Exception e) {
-                                _pluginLog.Warning(e, e.Message);
+                                _pluginLog?.Warning(e, e.Message);
                             }
                         }
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning("Error 404, penumbra not found.");
+                _pluginLog?.Warning("Error 404, penumbra not found.");
             }
             if (config != null) {
                 if (config.CharacterVoicePacks != null) {
@@ -2822,12 +2826,12 @@ namespace RoleplayingVoice {
                     lastStreamURL = cleanedURL;
                     if (!isNotTwitch) {
                         _currentStreamer = cleanedURL.Replace(@"https://", null).Replace(@"www.", null).Replace("twitch.tv/", null);
-                        _chat.Print(@"Tuning into " + _currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
+                        _chat?.Print(@"Tuning into " + _currentStreamer + @"! Wanna chat? Use ""/artemis twitch""." +
                             "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
                             (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     } else {
                         _currentStreamer = "RTMP Streamer";
-                        _chat.Print(@"Tuning into a custom RTMP stream!" +
+                        _chat?.Print(@"Tuning into a custom RTMP stream!" +
                             "\r\nYou can also use \"/artemis video\" to toggle the video feed!" +
                             (!IsResidential() ? "\r\nIf you need to end a stream in a public space you can leave the zone or use \"/artemis endlisten\"" : ""));
                     }
@@ -2837,7 +2841,7 @@ namespace RoleplayingVoice {
             try {
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog?.Warning(e, e.Message);
             }
             _streamSetCooldown.Stop();
             _streamSetCooldown.Reset();
@@ -2853,7 +2857,7 @@ namespace RoleplayingVoice {
                                     _mediaManager.ChangeStream(_lastStreamObject,
                                          _streamURLs[(int)_videoWindow.FeedType], _videoWindow.Size.Value.X);
                                 } catch (Exception e) {
-                                    _pluginLog.Warning(e, e.Message);
+                                    _pluginLog?.Warning(e, e.Message);
                                 }
                             }
                         }
@@ -2893,7 +2897,7 @@ namespace RoleplayingVoice {
                 if (splitArgs.Length > 0) {
                     switch (splitArgs[0].ToLower()) {
                         case "help":
-                            _chat.Print("on (Enable AI Voice)\r\n" +
+                            _chat?.Print("on (Enable AI Voice)\r\n" +
                              "off (Disable AI Voice)\r\n" +
                              "video (toggle twitch stream video)\r\n" +
                              "listen (tune into a publically shared twitch stream)\r\n" +
@@ -2942,10 +2946,10 @@ namespace RoleplayingVoice {
                                             Verb = "OPEN"
                                         });
                                     } catch (Exception e) {
-                                        _pluginLog.Warning(e, e.Message);
+                                        _pluginLog?.Warning(e, e.Message);
                                     }
                                 } else {
-                                    _chat.PrintError("There is no active stream");
+                                    _chat?.PrintError("There is no active stream");
                                 }
                             }
                             break;
@@ -2967,50 +2971,50 @@ namespace RoleplayingVoice {
                             }
                             break;
                         case "record":
-                            _chat.Print("Speech To Text Started");
+                            _chat?.Print("Speech To Text Started");
                             _speechToTextManager.RpMode = false;
                             _speechToTextManager.RecordAudio();
                             break;
                         case "recordrp":
-                            _chat.Print("Speech To Text Started");
+                            _chat?.Print("Speech To Text Started");
                             _speechToTextManager.RpMode = true;
                             _speechToTextManager.RecordAudio();
                             break;
                         case "textadvance":
                             config.AutoTextAdvance = !config.AutoTextAdvance;
                             if (config.AutoTextAdvance) {
-                                _chat.Print("Auto Text Advance Enabled");
+                                _chat?.Print("Auto Text Advance Enabled");
                             } else {
-                                _chat.Print("Auto Text Advance Disabled");
+                                _chat?.Print("Auto Text Advance Disabled");
                             }
                             config.Save();
                             break;
                         case "npcvoice":
                             config.NpcSpeechGenerationDisabled = !config.NpcSpeechGenerationDisabled;
                             if (config.NpcSpeechGenerationDisabled) {
-                                _chat.Print("Npc Voice Disabled");
+                                _chat?.Print("Npc Voice Disabled");
                             } else {
-                                _chat.Print("Npc Voice Enabled");
+                                _chat?.Print("Npc Voice Enabled");
                             }
                             config.Save();
                             break;
                         case "arrvoice":
                             config.ReplaceVoicedARRCutscenes = !config.ReplaceVoicedARRCutscenes;
                             if (config.ReplaceVoicedARRCutscenes) {
-                                _chat.Print("ARR Voice Replaced");
+                                _chat?.Print("ARR Voice Replaced");
                             } else {
-                                _chat.Print("ARR Voice Vanilla");
+                                _chat?.Print("ARR Voice Vanilla");
                             }
                             config.Save();
                             break;
                         case "clearsound":
                             CleanSounds();
-                            _chat.Print("All Sounds Cleared!");
+                            _chat?.Print("All Sounds Cleared!");
                             break;
                         case "catalogue":
                             if (splitArgs.Length > 1 && splitArgs[1] == "scan") {
                                 _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
-                                _chat.Print("Creating Thumbnails For New Clothing Mods");
+                                _chat?.Print("Creating Thumbnails For New Clothing Mods");
                                 CleanSlate();
                                 _catalogueMods = true;
                                 _modelModList = new List<string>();
@@ -3287,14 +3291,14 @@ namespace RoleplayingVoice {
         #endregion
         #region Error Logging
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
-            _chat.PrintError("[Artemis Roleplaying Kit] " + e.Message);
-            _pluginLog.Warning("[Artemis Roleplaying Kit] " + e.Message);
+            _chat?.PrintError("[Artemis Roleplaying Kit] " + e.Message);
+            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
         }
         private void Window_OnMoveFailed(object sender, EventArgs e) {
-            _chat.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
+            _chat?.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
         }
         private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
-            _pluginLog.Warning(e.Exception, e.Exception.Message);
+            _pluginLog?.Warning(e.Exception, e.Exception.Message);
         }
         #endregion
         #region IDisposable Support
@@ -3318,7 +3322,7 @@ namespace RoleplayingVoice {
                         _mediaManager?.Dispose();
                     }
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _clientState.Login -= _clientState_Login;
@@ -3326,17 +3330,17 @@ namespace RoleplayingVoice {
                     _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                     _clientState.LeavePvP -= _clientState_LeavePvP;
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _toast.ErrorToast -= _toast_ErrorToast;
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _framework.Update -= framework_Update;
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    _pluginLog?.Warning(e, e.Message);
                 }
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
@@ -3347,7 +3351,7 @@ namespace RoleplayingVoice {
                 _addonTalkHandler?.Dispose();
                 Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog?.Warning(e, e.Message);
             }
         }
 
