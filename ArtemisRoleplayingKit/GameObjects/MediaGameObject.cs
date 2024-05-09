@@ -75,8 +75,10 @@ namespace RoleplayingVoiceDalamud {
         public GameObject GameObject { get => _gameObject; set => _gameObject = value; }
 
         public MediaGameObject(GameObject gameObject) {
-            _gameObject = gameObject;
-            _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address;
+            if (gameObject != null) {
+                _gameObject = gameObject;
+                _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address;
+            }
         }
         unsafe public MediaGameObject(FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* gameObject) {
             _gameObjectPointer = gameObject;

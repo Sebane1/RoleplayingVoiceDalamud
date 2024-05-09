@@ -552,7 +552,8 @@ namespace RoleplayingVoice {
                                                                 _addonTalkHandler.TriggerEmote(item as Character, animation);
                                                                 lastPosition = item.Position;
                                                                 _ = Task.Run(() => {
-                                                                    while (true) {
+                                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                                    while (!disposed && _clientState.IsLoggedIn && startingTerritoryId == _clientState.TerritoryType) {
                                                                         Thread.Sleep(500);
                                                                         if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
                                                                             _addonTalkHandler.StopEmote(item as Character);
@@ -2168,8 +2169,12 @@ namespace RoleplayingVoice {
             }
         }
         private void CleanupEmoteWatchList() {
-            foreach (var item in _emoteWatchList.Values) {
-                item.Dispose();
+            try {
+                foreach (var item in _emoteWatchList.Values) {
+                    item.Dispose();
+                }
+            } catch {
+
             }
             _emoteWatchList.Clear();
         }
@@ -2738,13 +2743,13 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             } catch (Exception e) {
-                                _pluginLog.Warning("Error 404, penumbra not found.");
+                                _pluginLog.Warning(e, e.Message);
                             }
                         }
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                _pluginLog.Warning("Error 404, penumbra not found.");
             }
             if (config != null) {
                 if (config.CharacterVoicePacks != null) {
