@@ -501,7 +501,7 @@ namespace RoleplayingVoice {
                                 }
                                 break;
                             case 1:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                     CheckForNewDynamicEmoteRequests();
                                 }
                                 break;
@@ -509,7 +509,7 @@ namespace RoleplayingVoice {
                                 CheckForDownloadCancellation();
                                 break;
                             case 3:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                     CheckCataloging();
                                 }
                                 break;
@@ -524,12 +524,12 @@ namespace RoleplayingVoice {
                                 }
                                 break;
                             case 6:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                     CheckForGPose();
                                 }
                                 break;
                             case 7:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                     CheckForCustomEmoteTriggers();
                                 }
                                 break;
@@ -567,7 +567,7 @@ namespace RoleplayingVoice {
                                                     int startingTerritoryId = _clientState.TerritoryType;
                                                     while (!disposed && _clientState.IsLoggedIn &&
                                                     startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
-                                                        if (!Conditions.IsBoundByDuty) {
+                                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                                             _pluginLog?.Verbose("Checking " + playerSender);
                                                             _pluginLog?.Verbose("Getting emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
@@ -1427,7 +1427,7 @@ namespace RoleplayingVoice {
                             string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                             bool attackIntended = false;
                             Stopwatch performanceTimer = Stopwatch.StartNew();
-                            if (!Conditions.IsBoundByDuty || _mainCharacterVoicePack == null) {
+                            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat || _mainCharacterVoicePack == null) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList);
                                 if (config.DebugMode) {
                                     _pluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
@@ -1532,7 +1532,7 @@ namespace RoleplayingVoice {
                                     }
                                     if (Path.Exists(clipPath) && !isDownloadingZip) {
                                         CharacterVoicePack characterVoicePack = null;
-                                        if (!Conditions.IsBoundByDuty || !_characterVoicePacks.ContainsKey(clipPath)) {
+                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat || !_characterVoicePacks.ContainsKey(clipPath)) {
                                             characterVoicePack = _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath);
                                         } else {
                                             characterVoicePack = _characterVoicePacks[clipPath];
