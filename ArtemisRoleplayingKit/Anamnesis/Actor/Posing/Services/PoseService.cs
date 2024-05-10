@@ -149,7 +149,7 @@ public class PoseService : ServiceBase<PoseService>
 
 		GposeService.GposeStateChanged += this.OnGposeStateChanged;
 
-		_ = Task.Run(ExtractStandardPoses);
+		//_ = Task.Run(ExtractStandardPoses);
 	}
 
 	public override async Task Shutdown()

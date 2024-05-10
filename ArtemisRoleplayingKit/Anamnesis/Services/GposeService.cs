@@ -12,63 +12,42 @@ using Anamnesis.Memory;
 public delegate void GposeEvent(bool newState);
 
 
-public class GposeService : ServiceBase<GposeService>
-{
-	private bool initialized = false;
+public class GposeService : ServiceBase<GposeService> {
+    private bool initialized = false;
 
-	public static event GposeEvent? GposeStateChanged;
+    public static event GposeEvent? GposeStateChanged;
 
-	public bool IsGpose { get; private set; }
+    public bool IsGpose { get; private set; }
 
-	//[DependsOn(nameof(IsGpose))]
-	public bool IsOverworld => !this.IsGpose;
+    //[DependsOn(nameof(IsGpose))]
+    public bool IsOverworld => !this.IsGpose;
 
-	public static bool GetIsGPose()
-	{
-		try {
-			if (AddressService.GposeCheck == IntPtr.Zero)
-				return false;
+    public static bool GetIsGPose() {
+        return false;
+    }
 
-			// Character select screen counts as gpose.
-			if (!GameService.Instance.IsSignedIn)
-				return true;
+    public override Task Start() {
+       // Task.Run(this.CheckThread);
+        return base.Start();
+    }
 
-			byte check1 = MemoryService.Read<byte>(AddressService.GposeCheck);
-			byte check2 = MemoryService.Read<byte>(AddressService.GposeCheck2);
+    private async Task CheckThread() {
+        while (this.IsAlive) {
+            bool newGpose = GetIsGPose();
 
-			return check1 == 1 && check2 == 4;
-		} catch {
-			return false;
-		}
-	}
+            if (!this.initialized) {
+                this.initialized = true;
+                this.IsGpose = newGpose;
+                continue;
+            }
 
-	public override Task Start()
-	{
-		Task.Run(this.CheckThread);
-		return base.Start();
-	}
+            if (newGpose != this.IsGpose) {
+                this.IsGpose = newGpose;
+                GposeStateChanged?.Invoke(newGpose);
+            }
 
-	private async Task CheckThread()
-	{
-		while (this.IsAlive)
-		{
-			bool newGpose = GetIsGPose();
-
-			if (!this.initialized)
-			{
-				this.initialized = true;
-				this.IsGpose = newGpose;
-				continue;
-			}
-
-			if (newGpose != this.IsGpose)
-			{
-				this.IsGpose = newGpose;
-				GposeStateChanged?.Invoke(newGpose);
-			}
-
-			// ~30 fps
-			await Task.Delay(32);
-		}
-	}
+            // ~30 fps
+            await Task.Delay(32);
+        }
+    }
 }

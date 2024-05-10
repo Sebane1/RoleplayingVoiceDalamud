@@ -41,7 +41,7 @@ public class AnimationService : ServiceBase<AnimationService>
 
 		this.OnGposeStateChanged(GposeService.Instance.IsGpose);
 
-		_ = Task.Run(this.CheckThread);
+		//_ = Task.Run(this.CheckThread);
 
 		return base.Start();
 	}

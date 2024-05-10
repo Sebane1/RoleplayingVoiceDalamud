@@ -349,7 +349,7 @@ public class MemoryService : ServiceBase<MemoryService>
 	{
 		while (this.IsAlive && Process != null)
 		{
-			await Task.Delay(100);
+			await Task.Delay(10000);
 
 			DoesProcessHaveFocus = GetDoesProcessHaveFocus();
 			IsProcessAlive = GetIsProcessAlive();

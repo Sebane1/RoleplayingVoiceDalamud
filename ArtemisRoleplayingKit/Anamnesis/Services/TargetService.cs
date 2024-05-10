@@ -255,7 +255,7 @@ public class TargetService : ServiceBase<TargetService>
 			}
 		}
 
-		_ = Task.Run(this.TickPinnedActors);
+		//_ = Task.Run(this.TickPinnedActors);
 	}
 
 	public override Task Shutdown()
