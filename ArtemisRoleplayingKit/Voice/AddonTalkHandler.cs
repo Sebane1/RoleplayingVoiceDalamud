@@ -1080,8 +1080,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         /// <returns></returns>
         private bool VerifyIsEnglish(string message) {
             string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
-            "puente", "Heuso", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", "cerca", "descubierto",
-            "DESTINO", " y ", "puede", " es ", " muchas ", "pero ", "asesino", "agua", " rota", "Por ", " tu ", " nombre ", "porque", " mi ", "querido", " amigo", " caer ",
+            " puente ", "Heuso ", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", " cerca", "descubierto",
+            "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", "agua", " rota", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
             "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto "};
             foreach (string symbol in symbolBlacklist) {
                 if (message.Contains(symbol)) {
