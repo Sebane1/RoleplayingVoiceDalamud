@@ -1165,7 +1165,12 @@ namespace RoleplayingVoice {
                 string clipPath = path + @"\" + hash;
                 string playerSender = sender;
                 int index = GetNumberFromString(soundTrigger);
-                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath);
+                CharacterVoicePack characterVoicePack = null;
+                if (!_characterVoicePacks.ContainsKey(clipPath)) {
+                    characterVoicePack = _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath);
+                } else {
+                    characterVoicePack = _characterVoicePacks[clipPath];
+                }
                 string value = index == -1 ? characterVoicePack.GetMisc(soundTrigger) : characterVoicePack.GetMiscSpecific(soundTrigger, index);
                 try {
                     Directory.CreateDirectory(path);
@@ -1526,14 +1531,17 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                     if (Path.Exists(clipPath) && !isDownloadingZip) {
+                                        CharacterVoicePack characterVoicePack = null;
                                         if (!Conditions.IsBoundByDuty || !_characterVoicePacks.ContainsKey(clipPath)) {
-                                            _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath);
+                                            characterVoicePack = _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath);
+                                        } else {
+                                            characterVoicePack = _characterVoicePacks[clipPath];
                                         }
                                         string value = "";
                                         if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
-                                            OtherPlayerCombat(playerName, message, type, _characterVoicePacks[clipPath], ref value);
+                                            OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
                                         } else {
-                                            PlayerCrafting(playerName, message, type, _characterVoicePacks[clipPath], ref value);
+                                            PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
                                         }
                                         PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                         Task.Run(async () => {

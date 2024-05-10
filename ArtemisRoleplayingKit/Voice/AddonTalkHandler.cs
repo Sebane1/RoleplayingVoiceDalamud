@@ -692,14 +692,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         public async void StopLipSync(Character character) {
-            try {
-                var actorMemory = new ActorMemory();
-                actorMemory.SetAddress(character.Address);
-                var animationMemory = actorMemory.Animation;
-                animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-            } catch {
+            if (character != null) {
+                try {
+                    var actorMemory = new ActorMemory();
+                    actorMemory.SetAddress(character.Address);
+                    var animationMemory = actorMemory.Animation;
+                    animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                } catch {
 
+                }
             }
         }
         public static float[] DecodeOggOpusToPCM(Stream stream) {
