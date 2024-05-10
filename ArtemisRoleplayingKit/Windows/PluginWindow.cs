@@ -94,6 +94,7 @@ namespace RoleplayingVoice {
         private float _npcPlaybackSpeed;
         private bool _ignoreRetainerSpeech;
         private bool _debugMode;
+        private FileSystemWatcher _fileSystemWatcher;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -179,8 +180,40 @@ namespace RoleplayingVoice {
                         }
                     }
                     RefreshVoices();
+                    try {
+                        Directory.CreateDirectory(cacheFolder + @"\VoicePack\");
+                        if (_fileSystemWatcher != null) {
+                            _fileSystemWatcher?.Dispose();
+                        }
+                        _fileSystemWatcher = new FileSystemWatcher();
+                        _fileSystemWatcher.Created += _fileSystemWatcher_Created;
+                        _fileSystemWatcher.Deleted += _fileSystemWatcher_Deleted;
+                        _fileSystemWatcher.Changed += _fileSystemWatcher_Changed;
+                        _fileSystemWatcher.Renamed += _fileSystemWatcher_Renamed;
+                        _fileSystemWatcher.Path = cacheFolder + @"\VoicePack\";
+                        _fileSystemWatcher.EnableRaisingEvents = true;
+                        _fileSystemWatcher.BeginInit();
+                    } catch (Exception e) {
+                        PluginReference.PluginLog.Warning(e, e.Message);
+                    }
                 }
             }
+        }
+
+        private void _fileSystemWatcher_Renamed(object sender, RenamedEventArgs e) {
+            RefreshVoices();
+        }
+
+        private void _fileSystemWatcher_Changed(object sender, FileSystemEventArgs e) {
+            RefreshVoices();
+        }
+
+        private void _fileSystemWatcher_Deleted(object sender, FileSystemEventArgs e) {
+            RefreshVoices();
+        }
+
+        private void _fileSystemWatcher_Created(object sender, FileSystemEventArgs e) {
+            RefreshVoices();
         }
 
         public DalamudPluginInterface PluginInterface { get; internal set; }
