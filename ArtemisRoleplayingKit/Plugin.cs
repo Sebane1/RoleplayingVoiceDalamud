@@ -206,7 +206,8 @@ namespace RoleplayingVoice {
         private bool _isLoadingAnimation;
         private CharacterVoicePack _mainCharacterVoicePack;
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
-        private ushort _lastEmoteAnimationUsed;
+        private Emote _lastEmoteAnimationUsed;
+        private bool _isAlreadyRunningEmote;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -1288,7 +1289,9 @@ namespace RoleplayingVoice {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
-                    _lastEmoteAnimationUsed = (ushort)GetEmoteAnimationId(emoteId);
+                    if (!_isAlreadyRunningEmote) {
+                        _lastEmoteAnimationUsed = GetEmoteData(emoteId);
+                    }
                     _timeSinceLastEmoteDone.Restart();
                     _lastEmoteTriggered = emoteId;
                 } else {
@@ -2018,7 +2021,10 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
             }
-            if (_lastEmoteAnimationUsed > 0) {
+            if (_lastEmoteAnimationUsed != null) {
+                Emote value = _lastEmoteAnimationUsed;
+                _lastEmoteAnimationUsed = null;
+                _isAlreadyRunningEmote = true;
                 Task.Run(() => {
                     Thread.Sleep(2000);
                     if (config.DebugMode) {
@@ -2031,20 +2037,29 @@ namespace RoleplayingVoice {
                                 if (config.DebugMode) {
                                     _chat.Print(character.Name.TextValue + " found!");
                                 }
-                                if (character.ObjectKind == ObjectKind.Retainer ||
-                                    character.ObjectKind == ObjectKind.BattleNpc ||
-                                    character.ObjectKind == ObjectKind.EventNpc ||
-                                    character.ObjectKind == ObjectKind.Companion ||
-                                    character.ObjectKind == ObjectKind.Housing) {
-                                    try {
-                                        _addonTalkHandler.TriggerEmoteTimed(character, _lastEmoteAnimationUsed);
-                                        if (config.DebugMode) {
-                                            _chat.Print("Triggering emote! " + _lastEmoteAnimationUsed);
-                                        }
-                                        Thread.Sleep(1000);
-                                    } catch {
-                                        if (config.DebugMode) {
-                                            _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                if (character.CurrentHp > 0) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        try {
+                                            if (config.DebugMode) {
+                                                _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                            }
+                                            if (value.Unknown8) {
+                                                _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                            } else {
+                                                _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                            }
+                                            if (config.DebugMode) {
+                                                _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                            }
+                                            Thread.Sleep(1000);
+                                        } catch {
+                                            if (config.DebugMode) {
+                                                _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                            }
                                         }
                                     }
                                 }
@@ -2055,7 +2070,7 @@ namespace RoleplayingVoice {
                             }
                         }
                     }
-                    _lastEmoteAnimationUsed = 0;
+                    _isAlreadyRunningEmote = false;
                 });
             }
         }
@@ -2547,12 +2562,12 @@ namespace RoleplayingVoice {
                 return "";
             }
         }
-        private uint GetEmoteAnimationId(ushort emoteId) {
+        private Emote GetEmoteData(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
             if (emote != null) {
-                return emote.ActionTimeline[0].Value.RowId;
+                return emote;
             } else {
-                return 0;
+                return null;
             }
         }
         private string GetEmoteCommand(ushort emoteId) {
