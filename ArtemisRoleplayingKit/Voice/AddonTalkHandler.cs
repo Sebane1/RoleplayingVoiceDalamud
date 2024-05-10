@@ -187,18 +187,18 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private bool CheckForBannedKeywords(SeString message) {
-            return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling")
-                && !message.TextValue.Contains("Challenge log entry")
+            return !message.TextValue.Contains("you put up for sale") && !message.TextValue.Contains("You are now selling") && !message.TextValue.Contains("picked up by")
+                && !message.TextValue.Contains("Challenge log entry") && !message.TextValue.Contains("returned to party")
                 && !message.TextValue.Contains("You cancel") && !message.TextValue.Contains("You assign your retainer")
-                && !message.TextValue.Contains("loot list") && !message.TextValue.Contains("venture")
+                && !message.TextValue.Contains("loot list") && !message.TextValue.Contains("venture") && !message.TextValue.Contains("added to you favorites")
                  && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party")
                  && !message.TextValue.Contains("left the party") && !message.TextValue.Contains("You synthesize")
                  && !message.TextValue.Contains("matches found") && !message.TextValue.Contains("is now playing. (Play Mode")
                  && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
-                  && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request")
-                  && !message.TextValue.Contains("You sense a level") && !message.TextValue.Contains("You sense a grade")
-                  && !message.TextValue.Contains("equipped") && !message.TextValue.Contains("You obtain")
+                  && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request") && !message.TextValue.Contains(" de ")
+                  && !message.TextValue.Contains("You sense a") && !message.TextValue.Contains("Las") && !message.TextValue.Contains("You sense a grade")
+                  && !message.TextValue.Contains("equip") && !message.TextValue.Contains("El ") && !message.TextValue.Contains("partido") && !message.TextValue.Contains("You obtain")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("you can now summon")
                   && !message.TextValue.Contains("allagan tomestones") && !message.TextValue.Contains("recorded in gathering log")
                   && !message.TextValue.Contains("expelled from the duty") && !message.TextValue.Contains("Ready check complete") && !message.TextValue.Contains("aetherpool")
@@ -1079,7 +1079,10 @@ namespace RoleplayingVoiceDalamud.Voice {
         /// <param name="message"></param>
         /// <returns></returns>
         private bool VerifyIsEnglish(string message) {
-            string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü" };
+            string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
+            "puente", "Heuso", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", "cerca", "descubierto",
+            "DESTINO", " y ", "puede", " es ", " muchas ", "pero ", "asesino", "agua", " rota", "Por ", " tu ", " nombre ", "porque", " mi ", "querido", " amigo", " caer ",
+            "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto "};
             foreach (string symbol in symbolBlacklist) {
                 if (message.Contains(symbol)) {
                     return false;
