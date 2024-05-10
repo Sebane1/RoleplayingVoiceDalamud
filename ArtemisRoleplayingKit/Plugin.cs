@@ -63,6 +63,7 @@ using FFXIVClientStructs.FFXIV.Client.System.Timer;
 using NAudio.MediaFoundation;
 using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoiceDalamud.Animation;
+using ImGuiNET;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -2017,15 +2018,66 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
             }
-            if (_clientState.LocalPlayer.TargetObject != null && _lastEmoteAnimationUsed > 0) {
-                Character character = _clientState.LocalPlayer.TargetObject as Character;
-                if (character != null) {
-                    //if (character.Customize[(int)CustomizeIndex.Race] == 1) {
-                    _addonTalkHandler.TriggerEmoteTimed(character, _lastEmoteAnimationUsed);
+            if (_lastEmoteAnimationUsed > 0) {
+                Task.Run(() => {
+                    Thread.Sleep(2000);
+                    if (config.DebugMode) {
+                        _chat.Print("Attempt to find nearest objects.");
+                    }
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            Character character = gameObject as Character;
+                            if (character != null) {
+                                if (config.DebugMode) {
+                                    _chat.Print(character.Name.TextValue + " found!");
+                                }
+                                if (character.ObjectKind == ObjectKind.Retainer ||
+                                    character.ObjectKind == ObjectKind.BattleNpc ||
+                                    character.ObjectKind == ObjectKind.EventNpc ||
+                                    character.ObjectKind == ObjectKind.Companion ||
+                                    character.ObjectKind == ObjectKind.Housing) {
+                                    try {
+                                        _addonTalkHandler.TriggerEmoteTimed(character, _lastEmoteAnimationUsed);
+                                        if (config.DebugMode) {
+                                            _chat.Print("Triggering emote! " + _lastEmoteAnimationUsed);
+                                        }
+                                        Thread.Sleep(1000);
+                                    } catch {
+                                        if (config.DebugMode) {
+                                            _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                        }
+                                    }
+                                }
+                            }
+                        } catch {
+                            if (config.DebugMode) {
+                                _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                            }
+                        }
+                    }
                     _lastEmoteAnimationUsed = 0;
-                    //}
+                });
+            }
+        }
+
+        private GameObject GetObjectByTargetId(ulong objectId) {
+            foreach (var item in _objectTable) {
+                if (item.ObjectId == objectId) {
+                    return item;
                 }
             }
+            return null;
+
+        }
+        private GameObject[] GetNearestObjects() {
+            List<GameObject> gameObjects = new List<GameObject>();
+            foreach (var item in _objectTable) {
+                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 4f
+                    && item.ObjectId != _clientState.LocalPlayer.ObjectId) {
+                    gameObjects.Add(item);
+                }
+            }
+            return gameObjects.ToArray();
         }
         private async void EmoteReaction(string messageValue) {
             var emotes = _dataManager.GetExcelSheet<Emote>();

@@ -213,7 +213,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_clientState.IsLoggedIn) {
-                if (CheckForBannedKeywords(message)) {
+                if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
                     NPCText("Hydaelyn", message.TextValue, "Hyn", true, !_plugin.Config.ReadLocationsAndToastNotifications);
                 }
             }
