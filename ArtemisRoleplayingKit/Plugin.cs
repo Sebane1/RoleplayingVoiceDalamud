@@ -1053,7 +1053,7 @@ namespace RoleplayingVoice {
                             }, delegate (object sender, StreamVolumeEventArgs e) {
                                 if (e.MaxSampleValues.Length > 0) {
                                     if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
                                         lipWasSynced = true;
                                     } else {
                                         _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
@@ -2223,8 +2223,10 @@ namespace RoleplayingVoice {
             }
             if (config.UsePlayerSync) {
                 Task.Run(async () => {
-                    string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                    bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                    if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
+                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                    }
                 });
             }
         }

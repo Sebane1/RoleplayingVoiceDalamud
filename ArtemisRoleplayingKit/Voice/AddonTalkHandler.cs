@@ -697,7 +697,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var actorMemory = new ActorMemory();
                     actorMemory.SetAddress(character.Address);
                     var animationMemory = actorMemory.Animation;
-                    animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                    animationMemory.LipsOverride = 0;
                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                 } catch {
 
