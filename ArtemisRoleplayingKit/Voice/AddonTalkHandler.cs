@@ -665,6 +665,24 @@ namespace RoleplayingVoiceDalamud.Voice {
 
             }
         }
+        public async void TriggerEmoteTimed(Character character, ushort emoteId, int time = 2000) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                var animationMemory = actorMemory.Animation;
+                if (animationMemory.BaseOverride != emoteId) {
+                    animationMemory!.BaseOverride = emoteId;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), emoteId, "Base Override");
+                }
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                Task.Run(() => {
+                    Task.Delay(time);
+                    StopEmote(character);
+                });
+            } catch {
+
+            }
+        }
         public ushort GetCurrentEmoteId(Character character) {
             try {
                 var actorMemory = new ActorMemory();
@@ -1244,6 +1262,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 278:
                 case 8329:
                 case 626:
+                case 11051:
+                case 706:
                     return true;
             }
             return false;
@@ -1290,8 +1310,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
-            bool isTinyRace = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
-                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278) || (body == 626);
+            bool isHigherVoiced = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
+                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278) || (body == 626) || (body == 11051);
             bool isDeepVoiced = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
@@ -1331,6 +1351,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     case 239:
                     case 8329:
                     case 626:
+                    case 706:
                         pitchOffset = (((float)Math.Abs(random.Next(-100, -10)) / 100f) * range);
                         isDeepVoiced = true;
                         break;
@@ -1351,7 +1372,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
             if (pitch == 1) {
-                return (isTinyRace ? 1.2f : isDeepVoiced ? 0.9f : 1) + pitchOffset;
+                return (isHigherVoiced ? 1.2f : isDeepVoiced ? 0.9f : 1) + pitchOffset;
             } else {
                 return pitch;
             }
