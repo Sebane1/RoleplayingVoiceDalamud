@@ -205,6 +205,8 @@ namespace RoleplayingVoice {
         private bool _isLoadingAnimation;
         private CharacterVoicePack _mainCharacterVoicePack;
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
+        private ushort _lastEmoteAnimationUsed;
+
         public string Name => "Artemis Roleplaying Kit";
 
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
@@ -1053,7 +1055,7 @@ namespace RoleplayingVoice {
                             }, delegate (object sender, StreamVolumeEventArgs e) {
                                 if (e.MaxSampleValues.Length > 0) {
                                     if (e.MaxSampleValues[0] > 0.2) {
-                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
                                         lipWasSynced = true;
                                     } else {
                                         _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
@@ -1285,6 +1287,7 @@ namespace RoleplayingVoice {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
+                    _lastEmoteAnimationUsed = (ushort)GetEmoteAnimationId(emoteId);
                     _timeSinceLastEmoteDone.Restart();
                     _lastEmoteTriggered = emoteId;
                 } else {
@@ -2014,6 +2017,15 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
             }
+            if (_clientState.LocalPlayer.TargetObject != null && _lastEmoteAnimationUsed > 0) {
+                Character character = _clientState.LocalPlayer.TargetObject as Character;
+                if (character != null) {
+                    //if (character.Customize[(int)CustomizeIndex.Race] == 1) {
+                    _addonTalkHandler.TriggerEmoteTimed(character, _lastEmoteAnimationUsed);
+                    _lastEmoteAnimationUsed = 0;
+                    //}
+                }
+            }
         }
         private async void EmoteReaction(string messageValue) {
             var emotes = _dataManager.GetExcelSheet<Emote>();
@@ -2481,6 +2493,14 @@ namespace RoleplayingVoice {
                 return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
             } else {
                 return "";
+            }
+        }
+        private uint GetEmoteAnimationId(ushort emoteId) {
+            Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
+            if (emote != null) {
+                return emote.ActionTimeline[0].Value.RowId;
+            } else {
+                return 0;
             }
         }
         private string GetEmoteCommand(ushort emoteId) {
