@@ -2037,28 +2037,35 @@ namespace RoleplayingVoice {
                                 if (config.DebugMode) {
                                     _chat.Print(character.Name.TextValue + " found!");
                                 }
-                                if (character.CurrentHp > 0) {
+                                if (character.CurrentHp > 0 && !character.IsDead) {
                                     if (character.ObjectKind == ObjectKind.Retainer ||
                                         character.ObjectKind == ObjectKind.BattleNpc ||
                                         character.ObjectKind == ObjectKind.EventNpc ||
                                         character.ObjectKind == ObjectKind.Companion ||
                                         character.ObjectKind == ObjectKind.Housing) {
-                                        try {
-                                            if (config.DebugMode) {
-                                                _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                            }
-                                            if (value.Unknown8) {
-                                                _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                            } else {
-                                                _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
-                                            }
-                                            if (config.DebugMode) {
-                                                _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                            }
-                                            Thread.Sleep(1000);
-                                        } catch {
-                                            if (config.DebugMode) {
-                                                _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                        bool hasQuest = false;
+                                        unsafe {
+                                            var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                            hasQuest = item->Balloon.State == BalloonState.Active;
+                                        }
+                                        if (!hasQuest) {
+                                            try {
+                                                if (config.DebugMode) {
+                                                    _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                }
+                                                if (value.Unknown8) {
+                                                    _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                                } else {
+                                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                                }
+                                                if (config.DebugMode) {
+                                                    _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                }
+                                                Thread.Sleep(1000);
+                                            } catch {
+                                                if (config.DebugMode) {
+                                                    _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                                }
                                             }
                                         }
                                     }
