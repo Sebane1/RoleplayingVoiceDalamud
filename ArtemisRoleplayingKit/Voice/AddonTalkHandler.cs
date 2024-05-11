@@ -680,12 +680,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 byte originalMode = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                if (!_currentlyEmotingCharacters.ContainsKey(character.Name.TextValue)) {
-                    _currentlyEmotingCharacters[character.Name.TextValue] = Task.Run(() => {
+                if (!_currentlyEmotingCharacters.ContainsKey(character.ObjectId.ToString())) {
+                    _currentlyEmotingCharacters[character.ObjectId.ToString()] = Task.Run(() => {
                         Character reference = character;
                         Thread.Sleep(time);
                         StopEmote(character, originalMode);
-                        _currentlyEmotingCharacters.Remove(reference.Name.TextValue, out var item);
+                        _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
                     });
                 }
             } catch {
@@ -703,15 +703,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 byte originalMode = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                if (!_currentlyEmotingCharacters.ContainsKey(character.Name.TextValue)) {
-                    _currentlyEmotingCharacters[character.Name.TextValue] = Task.Run(() => {
+                if (!_currentlyEmotingCharacters.ContainsKey(character.ObjectId.ToString())) {
+                    _currentlyEmotingCharacters[character.ObjectId.ToString()] = Task.Run(() => {
                         Character reference = character;
                         Vector3 startingPosition = player.Position;
                         Thread.Sleep(2000);
                         while (true) {
                             if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
                                 StopEmote(reference, originalMode);
-                                _currentlyEmotingCharacters.Remove(reference.Name.TextValue, out var item);
+                                _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
                                 break;
                             }
                             Thread.Sleep(5000);
@@ -1365,7 +1365,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
             bool isHigherVoiced = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
-                || (body == 0 && _clientState.TerritoryType == 152) || (body == 110005) || (body == 278) || (body == 626) || (body == 11051);
+                || (body == 0 && _clientState.TerritoryType == 152) || (body == 11005) || (body == 278) || (body == 626) || (body == 11051);
             bool isDeepVoiced = false;
             float pitch = CheckForDefinedPitch(value);
             float pitchOffset = (((float)random.Next(-100, 100) / 100f) * range);
