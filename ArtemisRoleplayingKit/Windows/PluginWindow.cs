@@ -289,6 +289,10 @@ namespace RoleplayingVoice {
                         DrawTwitch();
                         ImGui.EndTabItem();
                     }
+                    if (ImGui.BeginTabItem("Animation")) {
+                        DrawAnimationWindow();
+                        ImGui.EndTabItem();
+                    }
                     if (ImGui.BeginTabItem("Volume")) {
                         DrawVolume();
                         ImGui.EndTabItem();
@@ -304,6 +308,11 @@ namespace RoleplayingVoice {
             } else {
                 ImGui.TextUnformatted("Please login to access and configure settings.");
             }
+        }
+
+        private void DrawAnimationWindow() {
+            PluginReference.CheckAnimationMods(new string[1], "", false);
+            PluginReference.AnimationCatalogue.Draw();
         }
 
         private void DrawTwitch() {

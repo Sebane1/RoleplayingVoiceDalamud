@@ -242,6 +242,7 @@ namespace RoleplayingVoice {
         internal GposeWindow GposeWindow { get => _gposeWindow; set => _gposeWindow = value; }
         public AddonTalkHandler AddonTalkHandler { get => _addonTalkHandler; set => _addonTalkHandler = value; }
         public IPluginLog PluginLog { get => _pluginLog; set => _pluginLog = value; }
+        internal AnimationCatalogue AnimationCatalogue { get => _animationCatalogue; set => _animationCatalogue = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -2024,7 +2025,7 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (Conditions.IsWatchingCutscene) {
+                if (!Conditions.IsWatchingCutscene) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         Thread.Sleep(2000);
@@ -3198,7 +3199,7 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Trigger Animation Mods
-        private void CheckAnimationMods(string[] splitArgs, string args) {
+        public void CheckAnimationMods(string[] splitArgs, string args, bool willOpen = true) {
             if (splitArgs.Length > 1) {
                 string[] command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
                 int index = 0;
@@ -3227,7 +3228,9 @@ namespace RoleplayingVoice {
                     }
                     newList.Sort();
                     _animationCatalogue.AddNewList(newList);
-                    _animationCatalogue.IsOpen = true;
+                    if (willOpen) {
+                        _animationCatalogue.IsOpen = true;
+                    }
                 } else {
                     _animationCatalogue.IsOpen = false;
                 }
