@@ -2027,7 +2027,7 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (!Conditions.IsWatchingCutscene) {
+                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         Thread.Sleep(2000);
@@ -2058,14 +2058,7 @@ namespace RoleplayingVoice {
                                                         if (config.DebugMode) {
                                                             _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
                                                         }
-                                                        if (value.Unknown8 || string.IsNullOrEmpty(character.Name.TextValue.Replace(" ", null).Trim())) {
-                                                            _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                                        } else {
-                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
-                                                        }
-                                                        if (config.DebugMode) {
-                                                            _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                                        }
+                                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
                                                         Thread.Sleep(1000);
                                                     }
                                                 } catch {
