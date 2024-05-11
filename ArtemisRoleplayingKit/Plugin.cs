@@ -2054,7 +2054,7 @@ namespace RoleplayingVoice {
                                                     if (config.DebugMode) {
                                                         _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
                                                     }
-                                                    if (value.Unknown8) {
+                                                    if (value.Unknown8 || string.IsNullOrEmpty(character.Name.TextValue.Replace(" ", null).Trim())) {
                                                         _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
                                                     } else {
                                                         _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
