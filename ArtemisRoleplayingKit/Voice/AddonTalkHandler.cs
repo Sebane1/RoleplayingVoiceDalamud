@@ -198,7 +198,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                  && !message.TextValue.Contains("retainer") && !message.TextValue.Contains("joins the party")
                  && !message.TextValue.Contains("left the party") && !message.TextValue.Contains("You synthesize")
                  && !message.TextValue.Contains("matches found") && !message.TextValue.Contains("is now playing. (Play Mode")
-                 && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
+                 && !message.TextValue.Contains("places a hand into") && !message.TextValue.Contains("PATS") && !message.TextValue.Contains("HUGS") && !message.TextValue.Contains("You join") && !message.TextValue.Contains("ready check")
                   && !message.TextValue.Contains("gains experience points.") && !message.TextValue.Contains("has sold") && !message.TextValue.Contains("gone offline.")
                   && !message.TextValue.Contains("friend list.") && !message.TextValue.Contains("sent you a friend request") && !message.TextValue.Contains(" de ")
                   && !message.TextValue.Contains("You sense a") && !message.TextValue.Contains("Las") && !message.TextValue.Contains("You sense a grade")
@@ -1156,7 +1156,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
             " puente ", "Heuso ", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", " cerca", "descubierto",
             "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", "agua", " rota", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
-            "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto "};
+            "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto ","Si "," hecho "," usted ", "nosotros", "también", " haremos "};
             foreach (string symbol in symbolBlacklist) {
                 if (message.Contains(symbol)) {
                     return false;
