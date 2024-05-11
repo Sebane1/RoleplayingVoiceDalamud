@@ -680,14 +680,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 byte originalMode = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                if (!_currentlyEmotingCharacters.ContainsKey(character.ObjectId.ToString())) {
-                    _currentlyEmotingCharacters[character.ObjectId.ToString()] = Task.Run(() => {
-                        Character reference = character;
-                        Thread.Sleep(time);
-                        StopEmote(character, originalMode);
-                        _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
-                    });
-                }
+                Task.Run(() => {
+                    Character reference = character;
+                    Thread.Sleep(time);
+                    StopEmote(character, originalMode);
+                    _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
+                });
             } catch {
 
             }

@@ -2094,7 +2094,7 @@ namespace RoleplayingVoice {
         private GameObject[] GetNearestObjects() {
             List<GameObject> gameObjects = new List<GameObject>();
             foreach (var item in _objectTable) {
-                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 4f
+                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 2f
                     && item.ObjectId != _clientState.LocalPlayer.ObjectId) {
                     gameObjects.Add(item);
                 }
