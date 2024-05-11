@@ -2024,8 +2024,8 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                _isAlreadyRunningEmote = true;
                 if (Conditions.IsWatchingCutscene) {
+                    _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         Thread.Sleep(2000);
                         if (config.DebugMode) {
