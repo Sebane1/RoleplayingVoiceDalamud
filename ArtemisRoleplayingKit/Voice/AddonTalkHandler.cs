@@ -683,8 +683,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 Task.Run(() => {
                     Character reference = character;
                     Thread.Sleep(time);
-                    StopEmote(character, originalMode);
-                    _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
+                    StopEmote(reference);
                 });
             } catch {
 
@@ -708,7 +707,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         Thread.Sleep(2000);
                         while (true) {
                             if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
-                                StopEmote(reference, originalMode);
+                                StopEmote(reference);
                                 _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
                                 break;
                             }
