@@ -208,6 +208,8 @@ namespace RoleplayingVoice {
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
         private Emote _lastEmoteAnimationUsed;
         private bool _isAlreadyRunningEmote;
+        List<string> _preOccupiedWithEmoteCommand = new List<string>();
+
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -2039,7 +2041,7 @@ namespace RoleplayingVoice {
                                     if (config.DebugMode) {
                                         _chat.Print(character.Name.TextValue + " found!");
                                     }
-                                    if (character.CurrentHp > 0 && !character.IsDead) {
+                                    if (!character.IsDead) {
                                         if (character.ObjectKind == ObjectKind.Retainer ||
                                             character.ObjectKind == ObjectKind.BattleNpc ||
                                             character.ObjectKind == ObjectKind.EventNpc ||
@@ -2052,23 +2054,26 @@ namespace RoleplayingVoice {
                                             }
                                             if (!hasQuest) {
                                                 try {
-                                                    if (config.DebugMode) {
-                                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                        if (config.DebugMode) {
+                                                            _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                        if (value.Unknown8 || string.IsNullOrEmpty(character.Name.TextValue.Replace(" ", null).Trim())) {
+                                                            _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                                        } else {
+                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                        if (config.DebugMode) {
+                                                            _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                        Thread.Sleep(1000);
                                                     }
-                                                    if (value.Unknown8 || string.IsNullOrEmpty(character.Name.TextValue.Replace(" ", null).Trim())) {
-                                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                                    } else {
-                                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
-                                                    }
-                                                    if (config.DebugMode) {
-                                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                                    }
-                                                    Thread.Sleep(1000);
                                                 } catch {
                                                     if (config.DebugMode) {
-                                                        _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                                        _chat.Print("Could not trigger emote on " + gameObject.Name.TextValue + ".");
                                                     }
                                                 }
+
                                             }
                                         }
                                     }
@@ -2328,6 +2333,7 @@ namespace RoleplayingVoice {
                 }
             }
             _emoteWatchList.Clear();
+            _preOccupiedWithEmoteCommand.Clear();
         }
         private unsafe bool IsResidential() {
             return HousingManager.Instance()->IsInside() || HousingManager.Instance()->OutdoorTerritory != null;
@@ -3065,6 +3071,8 @@ namespace RoleplayingVoice {
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
+                             "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
+                             "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
@@ -3094,6 +3102,9 @@ namespace RoleplayingVoice {
                             break;
                         case "anim":
                             CheckAnimationMods(splitArgs, args);
+                            break;
+                        case "emotecontrol":
+                            CheckNPCEmoteControl(splitArgs, args);
                             break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
@@ -3195,6 +3206,115 @@ namespace RoleplayingVoice {
                             break;
                     }
                 }
+            }
+        }
+
+        private void CheckNPCEmoteControl(string[] splitArgs, string args) {
+            switch (splitArgs[1].ToLower()) {
+                case "do":
+                    foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
+                        if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
+                            emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(splitArgs[2].ToLower()) ||
+                            emoteItem.TextCommand.Value.Command.RawString.Contains(splitArgs[2].ToLower()) ||
+                            emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(splitArgs[2].ToLower()))) {
+                            foreach (var gameObject in GetNearestObjects()) {
+                                try {
+                                    Character character = gameObject as Character;
+                                    if (character != null) {
+                                        if (!character.IsDead) {
+                                            if (character.ObjectKind == ObjectKind.Retainer ||
+                                                character.ObjectKind == ObjectKind.BattleNpc ||
+                                                character.ObjectKind == ObjectKind.EventNpc ||
+                                                character.ObjectKind == ObjectKind.Companion ||
+                                                character.ObjectKind == ObjectKind.Housing) {
+                                                if (character.Name.TextValue.ToLower().Contains(splitArgs[3].ToLower())) {
+                                                    bool hasQuest = false;
+                                                    unsafe {
+                                                        var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                                        item->Balloon.PlayTimer = 1;
+                                                        item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String($"As you wish {_clientState.LocalPlayer.Name.TextValue}!");
+                                                        item->Balloon.Type = BalloonType.Timer;
+                                                        item->Balloon.State = BalloonState.Active;
+                                                    }
+                                                    _toast.ShowNormal(character.Name.TextValue + " falls prey to your command!");
+                                                    _addonTalkHandler.TriggerEmote(character, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                        _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch { }
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                case "stop":
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            Character character = gameObject as Character;
+                            if (character != null) {
+                                if (!character.IsDead) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
+                                            bool hasQuest = false;
+                                            unsafe {
+                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                                item->Balloon.PlayTimer = 1;
+                                                item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String($"As you wish {_clientState.LocalPlayer.Name.TextValue}!");
+                                                item->Balloon.Type = BalloonType.Timer;
+                                                item->Balloon.State = BalloonState.Active;
+                                            }
+                                            _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
+                                            _addonTalkHandler.StopEmote(character);
+                                            if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch { }
+                    }
+                    break;
+                case "playerpos":
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            Character character = gameObject as Character;
+                            if (character != null) {
+                                if (!character.IsDead) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
+                                            bool hasQuest = false;
+                                            unsafe {
+                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                                item->Balloon.PlayTimer = 1;
+                                                item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String("I will stand here master!");
+                                                item->Balloon.Type = BalloonType.Timer;
+                                                item->Balloon.State = BalloonState.Active;
+                                                item->GameObject.Position = _clientState.LocalPlayer.Position;
+                                            }
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch { }
+                    }
+                    break;
             }
         }
         #endregion

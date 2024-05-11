@@ -115,7 +115,10 @@ namespace RoleplayingVoice {
             hook.Hook(Process.GetCurrentProcess());
 
         }
-
+        public override void OnOpen() {
+            base.OnOpen();
+            PluginReference.CheckAnimationMods(new string[1], "", false);
+        }
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
             if (voicePackComboBox != null && _voicePackList != null && !_refreshing) {
                 characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -311,7 +314,6 @@ namespace RoleplayingVoice {
         }
 
         private void DrawAnimationWindow() {
-            PluginReference.CheckAnimationMods(new string[1], "", false);
             PluginReference.AnimationCatalogue.Draw();
         }
 
