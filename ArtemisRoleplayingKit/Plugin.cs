@@ -2025,60 +2025,62 @@ namespace RoleplayingVoice {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
                 _isAlreadyRunningEmote = true;
-                Task.Run(() => {
-                    Thread.Sleep(2000);
-                    if (config.DebugMode) {
-                        _chat.Print("Attempt to find nearest objects.");
-                    }
-                    foreach (var gameObject in GetNearestObjects()) {
-                        try {
-                            Character character = gameObject as Character;
-                            if (character != null) {
-                                if (config.DebugMode) {
-                                    _chat.Print(character.Name.TextValue + " found!");
-                                }
-                                if (character.CurrentHp > 0 && !character.IsDead) {
-                                    if (character.ObjectKind == ObjectKind.Retainer ||
-                                        character.ObjectKind == ObjectKind.BattleNpc ||
-                                        character.ObjectKind == ObjectKind.EventNpc ||
-                                        character.ObjectKind == ObjectKind.Companion ||
-                                        character.ObjectKind == ObjectKind.Housing) {
-                                        bool hasQuest = false;
-                                        unsafe {
-                                            var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
-                                            hasQuest = item->Balloon.State == BalloonState.Active;
-                                        }
-                                        if (!hasQuest) {
-                                            try {
-                                                if (config.DebugMode) {
-                                                    _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                                }
-                                                if (value.Unknown8) {
-                                                    _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                                } else {
-                                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
-                                                }
-                                                if (config.DebugMode) {
-                                                    _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                                }
-                                                Thread.Sleep(1000);
-                                            } catch {
-                                                if (config.DebugMode) {
-                                                    _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                if (Conditions.IsWatchingCutscene) {
+                    Task.Run(() => {
+                        Thread.Sleep(2000);
+                        if (config.DebugMode) {
+                            _chat.Print("Attempt to find nearest objects.");
+                        }
+                        foreach (var gameObject in GetNearestObjects()) {
+                            try {
+                                Character character = gameObject as Character;
+                                if (character != null) {
+                                    if (config.DebugMode) {
+                                        _chat.Print(character.Name.TextValue + " found!");
+                                    }
+                                    if (character.CurrentHp > 0 && !character.IsDead) {
+                                        if (character.ObjectKind == ObjectKind.Retainer ||
+                                            character.ObjectKind == ObjectKind.BattleNpc ||
+                                            character.ObjectKind == ObjectKind.EventNpc ||
+                                            character.ObjectKind == ObjectKind.Companion ||
+                                            character.ObjectKind == ObjectKind.Housing) {
+                                            bool hasQuest = false;
+                                            unsafe {
+                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                                hasQuest = item->Balloon.State == BalloonState.Active;
+                                            }
+                                            if (!hasQuest) {
+                                                try {
+                                                    if (config.DebugMode) {
+                                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                    }
+                                                    if (value.Unknown8) {
+                                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                                    } else {
+                                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                                    }
+                                                    if (config.DebugMode) {
+                                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                                    }
+                                                    Thread.Sleep(1000);
+                                                } catch {
+                                                    if (config.DebugMode) {
+                                                        _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        } catch {
-                            if (config.DebugMode) {
-                                _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                            } catch {
+                                if (config.DebugMode) {
+                                    _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                }
                             }
                         }
-                    }
-                    _isAlreadyRunningEmote = false;
-                });
+                        _isAlreadyRunningEmote = false;
+                    });
+                }
             }
         }
 
