@@ -834,8 +834,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _currentSpeechObject = currentSpeechObject;
                         string backupVoice = voice;
                         Stopwatch downloadTimer = Stopwatch.StartNew();
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0);
+                        string npcData = JsonConvert.SerializeObject(reportData);
                         KeyValuePair<Stream, bool> stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, true, "", false);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, true, npcData, false);
                         //if (!previouslyAddedLines.Contains(value + nameToUse)) {
                         //    _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, "", true));
                         //    previouslyAddedLines.Add(value + nameToUse);
