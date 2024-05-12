@@ -95,6 +95,8 @@ namespace RoleplayingVoice {
         private bool _ignoreRetainerSpeech;
         private bool _debugMode;
         private FileSystemWatcher _fileSystemWatcher;
+        private bool _lowPerformanceMode;
+        private float _spatialAudioAccuracy;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -169,6 +171,8 @@ namespace RoleplayingVoice {
                     _tuneIntoTwitchStreamPrompt = configuration.TuneIntoTwitchStreamPrompt;
                     _readQuestObjectives = configuration.ReadQuestObjectives;
                     _readLocationAndToastNotifications = configuration.ReadLocationsAndToastNotifications;
+                    _lowPerformanceMode = configuration.LowPerformanceMode;
+                    _spatialAudioAccuracy = configuration.SpatialAudioAccuracy;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -659,6 +663,8 @@ namespace RoleplayingVoice {
             configuration.DebugMode = _debugMode;
             configuration.ReadQuestObjectives = _readQuestObjectives;
             configuration.ReadLocationsAndToastNotifications = _readLocationAndToastNotifications;
+            configuration.LowPerformanceMode = _lowPerformanceMode;
+            configuration.SpatialAudioAccuracy = (int)_spatialAudioAccuracy;
 
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
@@ -1032,6 +1038,16 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             ImGui.Text("Seperate Dance Mods From BGM Track (Experimental)");
             ImGui.TextWrapped("Mods that use .scd files will be moved from the BGM channel and use the Performance slider. They'll also be synced via ARK if sync is enabled.");
+
+            ImGui.Checkbox("##lowPerformanceMode", ref _lowPerformanceMode);
+            ImGui.SameLine();
+            ImGui.Text("Disable spatial audio for combat sounds.");
+            ImGui.TextWrapped("Potentially increases performance at the expense of spatial audio for combat sounds.");
+            ImGui.Dummy(new Vector2(10));
+            ImGui.Text("Spatial Audio Accuracy");
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+            ImGui.SliderFloat("##spatialAudioAccuracy", ref _spatialAudioAccuracy, 100, 700);
+            ImGui.TextWrapped("Reduce the accuracy of spatial audio in exchange for possibly better performance. Higher number means less spatial accuracy, so raise this slider until the moment performance improves.");
 
             if (ImGui.Button("Volume Fix (fixes rare instances of muted sound)", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 PluginReference.MediaManager.VolumeFix();

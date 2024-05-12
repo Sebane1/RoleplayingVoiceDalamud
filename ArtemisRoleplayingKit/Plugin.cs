@@ -1364,6 +1364,8 @@ namespace RoleplayingVoice {
             uint soundMicPos = 0;
             try {
                 _mediaManager.AudioPlayerType = (AudioOutputType)config.AudioOutputType;
+                _mediaManager.SpatialAudioAccuracy = config.SpatialAudioAccuracy;
+                _mediaManager.LowPerformanceMode = config.LowPerformanceMode;
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
                         if (_gameConfig.TryGet(SystemConfigOption.SoundMicpos, out soundMicPos))
@@ -2027,7 +2029,7 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null) {
+                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null && IsResidential()) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         Thread.Sleep(2000);

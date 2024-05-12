@@ -41,6 +41,8 @@ namespace RoleplayingVoice {
         private bool _tuneIntoTwitchStreamPrompt = true;
         private bool _readQuestObjectives = true;
         private bool _readLocationsAndToastNotifications = false;
+        private bool _lowPerformanceMode;
+        private int _spatialAudioAccuracy = 100;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -119,6 +121,8 @@ namespace RoleplayingVoice {
         public bool TuneIntoTwitchStreamPrompt { get => _tuneIntoTwitchStreamPrompt; set => _tuneIntoTwitchStreamPrompt = value; }
         public bool ReadQuestObjectives { get => _readQuestObjectives; set => _readQuestObjectives = value; }
         public bool ReadLocationsAndToastNotifications { get => _readLocationsAndToastNotifications; set => _readLocationsAndToastNotifications = value; }
+        public bool LowPerformanceMode { get => _lowPerformanceMode; set => _lowPerformanceMode = value; }
+        public int SpatialAudioAccuracy { get => _spatialAudioAccuracy; set => _spatialAudioAccuracy = value; }
 
         #endregion
 
