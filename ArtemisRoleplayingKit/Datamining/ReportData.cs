@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace RoleplayingVoiceDalamud.Datamining {
     public class ReportData {
+        private ushort territoryId;
         public string speaker { get; set; }
         public string sentence { get; set; }
         public uint npcid { get; set; }
@@ -23,9 +24,12 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public byte eyes { get; set; }
         public byte folder { get; set; }
         public string user { get; set; }
-        public ReportData(string name, string message, GameObject gameObject) {
+        public ushort TerritoryId { get => territoryId; set => territoryId = value; }
+
+        public ReportData(string name, string message, GameObject gameObject, ushort territoryId) {
             Character character = gameObject as Character;
             if (character != null) {
+                this.territoryId = territoryId;
                 speaker = name;
                 sentence = message;
                 npcid = character.ObjectId;
@@ -41,7 +45,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
                 user = "ArtemisRoleplayingKit";
             }
         }
-        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes) {
+        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes, ushort territoryId) {
             speaker = name;
             sentence = message;
             npcid = objectId;
@@ -50,6 +54,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
             this.race = race;
             this.tribe = tribe;
             this.eyes = eyes;
+            this.territoryId = territoryId;
             user = "ArtemisRoleplayingKit";
         }
         public async void ReportToXivVoice() {

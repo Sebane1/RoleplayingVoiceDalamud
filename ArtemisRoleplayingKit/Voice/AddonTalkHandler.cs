@@ -833,7 +833,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _currentSpeechObject = currentSpeechObject;
                         string backupVoice = voice;
                         Stopwatch downloadTimer = Stopwatch.StartNew();
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0);
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         KeyValuePair<Stream, bool> stream =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, true, npcData, false);
@@ -913,7 +913,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
                         MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : _clientState.LocalPlayer);
                         _currentSpeechObject = currentSpeechObject;
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject);
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
                         string arcValue = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message));
@@ -1125,7 +1125,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     MediaGameObject currentSpeechObject = mediaGameObject;
                     _currentSpeechObject = currentSpeechObject;
                     string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
-                    ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes);
+                    ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     KeyValuePair<Stream, bool> stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value,
