@@ -64,6 +64,11 @@ using NAudio.MediaFoundation;
 using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoiceDalamud.Animation;
 using ImGuiNET;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using Map = FFXIVClientStructs.FFXIV.Client.Game.UI.Map;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
+using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -2029,19 +2034,20 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null && IsResidential()) {
+                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         Thread.Sleep(2000);
                         if (config.DebugMode) {
                             _chat.Print("Attempt to find nearest objects.");
                         }
+                        List<Character> characters = new List<Character>();
                         foreach (var gameObject in GetNearestObjects()) {
                             try {
                                 Character character = gameObject as Character;
                                 if (character != null) {
                                     if (config.DebugMode) {
-                                        _chat.Print(character.Name.TextValue + " found!");
+                                        _pluginLog.Debug(character.Name.TextValue + " found!");
                                     }
                                     if (!character.IsDead) {
                                         if (character.ObjectKind == ObjectKind.Retainer ||
@@ -2049,26 +2055,14 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.EventNpc ||
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
-                                            bool hasQuest = false;
-                                            unsafe {
-                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
-                                                hasQuest = item->Balloon.State == BalloonState.Active;
-                                            }
-                                            if (!hasQuest) {
-                                                try {
-                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                        if (config.DebugMode) {
-                                                            _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                                        }
-                                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                                        Thread.Sleep(1000);
-                                                    }
-                                                } catch {
-                                                    if (config.DebugMode) {
-                                                        _chat.Print("Could not trigger emote on " + gameObject.Name.TextValue + ".");
-                                                    }
+                                            if (!IsPartOfQuestOrImportant(character)) {
+                                                characters.Add(character);
+                                            } else {
+                                                if (config.DebugMode) {
+                                                    _chat.Print("Cannot affect NPC's with map markers.");
                                                 }
-
+                                                characters.Clear();
+                                                break;
                                             }
                                         }
                                     }
@@ -2076,6 +2070,21 @@ namespace RoleplayingVoice {
                             } catch {
                                 if (config.DebugMode) {
                                     _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                }
+                            }
+                        }
+                        foreach (Character character in characters) {
+                            try {
+                                if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                    if (config.DebugMode) {
+                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                    }
+                                    _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                    Thread.Sleep(1000);
+                                }
+                            } catch {
+                                if (config.DebugMode) {
+                                    _chat.Print("Could not trigger emote on " + character.Name.TextValue + ".");
                                 }
                             }
                         }
@@ -2094,6 +2103,11 @@ namespace RoleplayingVoice {
             return null;
 
         }
+
+        public unsafe bool IsPartOfQuestOrImportant(GameObject gameObject) {
+            return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address)->NamePlateIconId is not 0;
+        }
+
         private GameObject[] GetNearestObjects() {
             List<GameObject> gameObjects = new List<GameObject>();
             foreach (var item in _objectTable) {
@@ -3223,18 +3237,14 @@ namespace RoleplayingVoice {
                                                 character.ObjectKind == ObjectKind.Companion ||
                                                 character.ObjectKind == ObjectKind.Housing) {
                                                 if (character.Name.TextValue.ToLower().Contains(splitArgs[3].ToLower())) {
-                                                    bool hasQuest = false;
-                                                    unsafe {
-                                                        var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
-                                                        item->Balloon.PlayTimer = 1;
-                                                        item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String($"As you wish {_clientState.LocalPlayer.Name.TextValue}!");
-                                                        item->Balloon.Type = BalloonType.Timer;
-                                                        item->Balloon.State = BalloonState.Active;
-                                                    }
-                                                    _toast.ShowNormal(character.Name.TextValue + " falls prey to your command!");
-                                                    _addonTalkHandler.TriggerEmote(character, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
-                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                        _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                    if (!IsPartOfQuestOrImportant(character)) {
+                                                        _toast.ShowNormal(character.Name.TextValue + " follows your command!");
+                                                        _addonTalkHandler.TriggerEmote(character, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                            _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                        }
+                                                    } else {
+                                                        _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
                                                     }
                                                     break;
                                                 }
@@ -3259,18 +3269,12 @@ namespace RoleplayingVoice {
                                         character.ObjectKind == ObjectKind.Companion ||
                                         character.ObjectKind == ObjectKind.Housing) {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
-                                            bool hasQuest = false;
-                                            unsafe {
-                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
-                                                item->Balloon.PlayTimer = 1;
-                                                item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String($"As you wish {_clientState.LocalPlayer.Name.TextValue}!");
-                                                item->Balloon.Type = BalloonType.Timer;
-                                                item->Balloon.State = BalloonState.Active;
-                                            }
-                                            _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
-                                            _addonTalkHandler.StopEmote(character);
-                                            if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
+                                            if (!IsPartOfQuestOrImportant(character)) {
+                                                _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
+                                                _addonTalkHandler.StopEmote(character);
+                                                if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                    _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
+                                                }
                                             }
                                             break;
                                         }
