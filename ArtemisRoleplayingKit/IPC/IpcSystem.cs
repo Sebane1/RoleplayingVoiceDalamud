@@ -29,16 +29,19 @@ namespace RoleplayingVoiceDalamud.IPC {
         public int APIVersion => 9;
 
         public bool IsInitialized { get => _isReady; }
-        public IpcSystem(DalamudPluginInterface pluginInterArtemisce, AddonTalkHandler addonTalkHandler, Plugin plugin) {
+        public IpcSystem(DalamudPluginInterface pluginInterface, 
+            AddonTalkHandler addonTalkHandler, Plugin plugin) {
             _plugin = plugin;
-            _getCacheFolder = pluginInterArtemisce.GetIpcProvider<string>("Artemis.GetCacheFolder");
-            _doAnimation = pluginInterArtemisce.GetIpcProvider<nint, ushort, bool>("Artemis.DoAnimation");
-            _stopAnimation = pluginInterArtemisce.GetIpcProvider<nint, bool>("Artemis.StopAnimation");
-            _playSound = pluginInterArtemisce.GetIpcProvider<nint, string, int, bool>("Artemis.PlaySound");
-            _stopSound = pluginInterArtemisce.GetIpcProvider<nint, bool>("Artemis.StopSound");
-            _onAnimationTriggered = pluginInterArtemisce.GetIpcProvider<EventHandler<KeyValuePair<nint, ushort>>, bool>("Artemis.OnAnimationTriggered");
-            _onAnimationStopped = pluginInterArtemisce.GetIpcProvider<EventHandler<nint>, bool>("Artemis.OnAnimationStopped");
-            _onVoicePackChanged = pluginInterArtemisce.GetIpcProvider<EventHandler, bool>("Artemis.OnVoicePackChanged");
+            _getCacheFolder = pluginInterface.GetIpcProvider<string>("Artemis.GetCacheFolder");
+            _doAnimation = pluginInterface.GetIpcProvider<nint, ushort, bool>("Artemis.DoAnimation");
+            _stopAnimation = pluginInterface.GetIpcProvider<nint, bool>("Artemis.StopAnimation");
+            _playSound = pluginInterface.GetIpcProvider<nint, string, int, bool>("Artemis.PlaySound");
+            _stopSound = pluginInterface.GetIpcProvider<nint, bool>("Artemis.StopSound");
+            _onAnimationTriggered = pluginInterface
+                .GetIpcProvider<EventHandler<KeyValuePair<nint, ushort>>, bool>("Artemis.OnAnimationTriggered");
+            _onAnimationStopped = pluginInterface
+                .GetIpcProvider<EventHandler<nint>, bool>("Artemis.OnAnimationStopped");
+            _onVoicePackChanged = pluginInterface.GetIpcProvider<EventHandler, bool>("Artemis.OnVoicePackChanged");
 
             _getCacheFolder.RegisterFunc(GetCacheFolder);
             _doAnimation.RegisterFunc(DoAnimation);
@@ -94,18 +97,26 @@ namespace RoleplayingVoiceDalamud.IPC {
         }
 
         public bool PlaySound(nint objectAddress, string soundPath, int soundType) {
-            unsafe {
-                _plugin.MediaManager.PlayAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
-                soundPath, (SoundType)soundType);
+            try {
+                unsafe {
+                    _plugin.MediaManager.PlayAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
+                    soundPath, (SoundType)soundType);
+                }
+                return true;
+            } catch {
+                return false;
             }
-            return true;
         }
 
         public bool StopSound(nint objectAddress) {
-            unsafe {
-                _plugin.MediaManager.StopAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress));
+            try {
+                unsafe {
+                    _plugin.MediaManager.StopAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress));
+                }
+                return true;
+            } catch {
+                return false;
             }
-            return true;
         }
 
         public void Dispose() {
