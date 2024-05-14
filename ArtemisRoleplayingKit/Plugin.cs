@@ -69,6 +69,7 @@ using Map = FFXIVClientStructs.FFXIV.Client.Game.UI.Map;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
+using RoleplayingVoiceDalamud.IPC;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -192,6 +193,7 @@ namespace RoleplayingVoice {
         private NPCVoiceManager _npcVoiceManager;
         private AddonTalkManager _addonTalkManager;
         private AddonTalkHandler _addonTalkHandler;
+        private IpcSystem _ipcSystem;
         private IGameGui _gameGui;
         private IDragDropManager _dragDrop;
         private bool _mountingOccured;
@@ -250,6 +252,7 @@ namespace RoleplayingVoice {
         public AddonTalkHandler AddonTalkHandler { get => _addonTalkHandler; set => _addonTalkHandler = value; }
         public IPluginLog PluginLog { get => _pluginLog; set => _pluginLog = value; }
         internal AnimationCatalogue AnimationCatalogue { get => _animationCatalogue; set => _animationCatalogue = value; }
+        public IpcSystem IpcSystem { get => _ipcSystem; set => _ipcSystem = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -345,6 +348,7 @@ namespace RoleplayingVoice {
                 _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
                 _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                 _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
                 _gameGui = gameGui;
                 _dragDrop = dragDrop;
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
@@ -585,14 +589,14 @@ namespace RoleplayingVoice {
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
                                                             if (animation > 0) {
                                                                 _pluginLog?.Verbose("Applying Emote.");
-                                                                _addonTalkHandler.TriggerEmote(item as Character, animation);
+                                                                _addonTalkHandler.TriggerEmote(item.Address, animation);
                                                                 lastPosition = item.Position;
                                                                 _ = Task.Run(() => {
                                                                     int startingTerritoryId = _clientState.TerritoryType;
                                                                     while (true) {
                                                                         Thread.Sleep(500);
                                                                         if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
-                                                                            _addonTalkHandler.StopEmote(item as Character);
+                                                                            _addonTalkHandler.StopEmote(item.Address);
                                                                             break;
                                                                         }
                                                                     }
@@ -2306,7 +2310,7 @@ namespace RoleplayingVoice {
                     RefreshData();
                 }
                 if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
                     _wasDoingFakeEmote = false;
                 }
             }
@@ -3239,7 +3243,7 @@ namespace RoleplayingVoice {
                                                 if (character.Name.TextValue.ToLower().Contains(splitArgs[3].ToLower())) {
                                                     if (!IsPartOfQuestOrImportant(character)) {
                                                         _toast.ShowNormal(character.Name.TextValue + " follows your command!");
-                                                        _addonTalkHandler.TriggerEmote(character, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                                         if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                                             _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
                                                         }
@@ -3271,7 +3275,7 @@ namespace RoleplayingVoice {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
                                             if (!IsPartOfQuestOrImportant(character)) {
                                                 _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
-                                                _addonTalkHandler.StopEmote(character);
+                                                _addonTalkHandler.StopEmote(character.Address);
                                                 if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                                     _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
                                                 }
@@ -3444,7 +3448,7 @@ namespace RoleplayingVoice {
 
         public void TriggerPlayerEmote(EmoteModData emoteModData) {
             if (_wasDoingFakeEmote) {
-                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
             }
             Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
             Task.Run(() => {
@@ -3461,7 +3465,7 @@ namespace RoleplayingVoice {
                 if (!_didRealEmote) {
                     _wasDoingFakeEmote = true;
                     OnEmote(_clientState.LocalPlayer, (ushort)emoteModData.EmoteId);
-                    _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer, (ushort)emoteModData.AnimationId);
+                    _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer.Address, (ushort)emoteModData.AnimationId);
                     _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
                     _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
                     Task.Run(() => {
@@ -3469,7 +3473,7 @@ namespace RoleplayingVoice {
                         while (true) {
                             Thread.Sleep(500);
                             if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
-                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer);
+                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
                                 _wasDoingFakeEmote = false;
                                 _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
                                 _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)0);

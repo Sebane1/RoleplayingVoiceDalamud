@@ -655,35 +655,36 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        public async void TriggerEmote(Character character, ushort emoteId) {
+        public async void TriggerEmote(nint character, ushort animationId) {
             try {
                 var actorMemory = new ActorMemory();
-                actorMemory.SetAddress(character.Address);
+                actorMemory.SetAddress(character);
                 var animationMemory = actorMemory.Animation;
-                if (animationMemory.BaseOverride != emoteId) {
-                    animationMemory!.BaseOverride = emoteId;
-                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), emoteId, "Base Override");
+                if (animationMemory.BaseOverride != animationId) {
+                    animationMemory!.BaseOverride = animationId;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), animationId, "Base Override");
                 }
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
+                _plugin.IpcSystem.InvokeOnTriggerAnimation(character, animationId);
             } catch {
 
             }
         }
-        public async void TriggerEmoteTimed(Character character, ushort emoteId, int time = 2000) {
+        public async void TriggerEmoteTimed(Character character, ushort animationId, int time = 2000) {
             try {
                 var actorMemory = new ActorMemory();
                 actorMemory.SetAddress(character.Address);
                 var animationMemory = actorMemory.Animation;
-                if (animationMemory.BaseOverride != emoteId) {
-                    animationMemory!.BaseOverride = emoteId;
-                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), emoteId, "Base Override");
+                if (animationMemory.BaseOverride != animationId) {
+                    animationMemory!.BaseOverride = animationId;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), animationId, "Base Override");
                 }
                 byte originalMode = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
                 Task.Run(() => {
                     Character reference = character;
                     Thread.Sleep(time);
-                    StopEmote(reference);
+                    StopEmote(reference.Address);
                 });
             } catch {
 
@@ -707,7 +708,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         Thread.Sleep(2000);
                         while (true) {
                             if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
-                                StopEmote(reference);
+                                StopEmote(reference.Address);
                                 _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
                                 break;
                             }
@@ -730,10 +731,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return 0;
         }
-        public async void StopEmote(Character character) {
+        public async void StopEmote(nint character) {
             try {
                 var actorMemory = new ActorMemory();
-                actorMemory.SetAddress(character.Address);
+                actorMemory.SetAddress(character);
                 var animationMemory = actorMemory.Animation;
 
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), _defaultBaseOverride, "Base Override");
@@ -741,6 +742,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), _defaultCharacterModeRaw, "Animation Mode Override");
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), _defaultBaseOverride, "Base Override");
+                _plugin.IpcSystem.InvokeOnStoppedAnimation(character);
             } catch {
 
             }
@@ -756,6 +758,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), _defaultCharacterModeRaw, "Animation Mode Override");
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), originalMode, "Animation Mode Override");
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), _defaultBaseOverride, "Base Override");
+                _plugin.IpcSystem.InvokeOnStoppedAnimation(character.Address);
             } catch {
 
             }
