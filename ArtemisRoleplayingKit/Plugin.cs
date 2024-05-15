@@ -907,7 +907,7 @@ namespace RoleplayingVoice {
                 SetEquipment(item, characterCustomization);
             }
         }
-        public int GetRace(PlayerCharacter playerCharacter) {
+        public int GetRace(Character playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
@@ -920,6 +920,22 @@ namespace RoleplayingVoice {
                 return playerCharacter.Customize[(int)CustomizeIndex.Race];
             }
         }
+
+        public bool IsHumanoid(Character playerCharacter) {
+            try {
+                CharacterCustomization characterCustomization = null;
+                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                var bytes = System.Convert.FromBase64String(customizationValue);
+                var version = bytes[0];
+                version = bytes.DecompressToString(out var decompressed);
+                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                return characterCustomization.Customize.ModelId < 5;
+            } catch {
+                var modelType = playerCharacter.Customize[(int)CustomizeIndex.ModelType];
+                return modelType is not 0 && modelType < 5;
+            }
+        }
+
         private bool AlreadyHasScreenShots(string name) {
             //_chat?.Print(name);
             foreach (var item in _currentScreenshotList) {
@@ -2060,7 +2076,12 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (!IsPartOfQuestOrImportant(character)) {
-                                                characters.Add(character);
+                                                var value = _glamourerGetAllCustomization.InvokeFunc(character);
+                                                if (character.ObjectKind != ObjectKind.Companion || IsHumanoid(character)) {
+                                                    characters.Add(character);
+                                                } else if (config.DebugMode) {
+                                                    _chat.Print("Cannot apply animations to non humanoid minions.");
+                                                }
                                             } else {
                                                 if (config.DebugMode) {
                                                     _chat.Print("Cannot affect NPC's with map markers.");

@@ -258,7 +258,7 @@ namespace RoleplayingVoiceDalamud.Glamourer {
     }
 
     public class MainHand {
-        public int ItemId { get; set; }
+        public ulong ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get { return true; } set { var thing = value; } }
