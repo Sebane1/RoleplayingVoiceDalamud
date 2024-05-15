@@ -2174,6 +2174,7 @@ namespace RoleplayingVoice {
                         try {
                             penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
                             combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
+                            IpcSystem.InvokeOnVoicePackChanged();
                         } catch (Exception e) {
                             _pluginLog.Error(e.Message);
                         }

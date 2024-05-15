@@ -29,7 +29,7 @@ namespace RoleplayingVoiceDalamud.IPC {
         public int APIVersion => 9;
 
         public bool IsInitialized { get => _isReady; }
-        public IpcSystem(DalamudPluginInterface pluginInterface, 
+        public IpcSystem(DalamudPluginInterface pluginInterface,
             AddonTalkHandler addonTalkHandler, Plugin plugin) {
             _plugin = plugin;
             _getCacheFolder = pluginInterface.GetIpcProvider<string>("Artemis.GetCacheFolder");
@@ -66,6 +66,12 @@ namespace RoleplayingVoiceDalamud.IPC {
         public void InvokeOnStoppedAnimation(nint objectAddress) {
             if (OnTriggerAnimation != null) {
                 OnStoppedAnimation?.Invoke(this, objectAddress);
+            }
+        }
+
+        public void InvokeOnVoicePackChanged() {
+            if (OnTriggerAnimation != null) {
+                OnChangeVoicePack?.Invoke(this, EventArgs.Empty);
             }
         }
 
