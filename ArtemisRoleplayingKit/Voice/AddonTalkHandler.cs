@@ -215,6 +215,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("trophy crystals") && !message.TextValue.Contains("Quality of") && !message.TextValue.Contains("Following") && !message.TextValue.Contains("KO'd") && !message.TextValue.Contains("Unable to equip all items");
         }
 
+        private List<ushort> BannedTeritories = new List<ushort>() {
+            674,719,778,746,810,824,677,720,779,758,811,825,845,846,847,922,858,848,885,923, 992,995,997,1092,1071,1095,1140,1168
+        };
+
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_clientState.IsLoggedIn) {
                 if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
@@ -263,7 +267,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _lastBattleNPCLines[npcName] = "";
                                     }
 
-                                    if (text != _lastBattleNPCLines[npcName] && !Conditions.IsWatchingCutscene) {
+                                    if (text != _lastBattleNPCLines[npcName] && !Conditions.IsWatchingCutscene && !BannedTeritories.Contains(_clientState.TerritoryType)) {
                                         _lastBattleNPCLines[npcName] = text;
                                         if (_blockAudioGenerationCount < 1) {
                                             NPCText(npcName, text.TrimStart('.'), true, !Conditions.IsBoundByDuty);

@@ -152,7 +152,8 @@ namespace RoleplayingVoice {
         private Queue<string> _messageQueue = new Queue<string>();
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
-        private Dictionary<string, string> _scdReplacements = new Dictionary<string, string>();
+        private ConcurrentDictionary<string, string> _scdReplacements = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, bool> _alreadyScannedMods = new ConcurrentDictionary<string, bool>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
 
@@ -216,7 +217,7 @@ namespace RoleplayingVoice {
         private Emote _lastEmoteAnimationUsed;
         private bool _isAlreadyRunningEmote;
         List<string> _preOccupiedWithEmoteCommand = new List<string>();
-
+        private string _currentModPackRefreshGuid;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -2704,72 +2705,77 @@ namespace RoleplayingVoice {
         #endregion Emote Processing
         #region Penumbra Parsing
         public void ExtractSCDOptions(Option option, string directory) {
-            if (option != null) {
-                ;
-                foreach (var item in option.Files) {
-                    if (item.Key.EndsWith(".scd")) {
-                        _filter.Blacklist.Add(item.Key);
-                        if (!_scdReplacements.ContainsKey(item.Key)) {
+            Task.Run(() => {
+                if (option != null) {
+                    foreach (var item in option.Files) {
+                        if (item.Key.EndsWith(".scd")) {
+                            _filter.Blacklist.Add(item.Key);
+                            if (!_scdReplacements.ContainsKey(item.Key)) {
+                                try {
+                                    _scdReplacements.TryAdd(item.Key, directory + @"\" + item.Value);
+                                    if (config.DebugMode) {
+                                        _pluginLog?.Verbose("Found: " + item.Value);
+                                    }
+                                } catch {
+                                    _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        public void ExtractPapFiles(Option option, string directory, bool skipScd) {
+            Task.Run(() => {
+                string modName = Path.GetFileName(directory);
+                int papFilesFound = 0;
+                for (int i = 0; i < option.Files.Count; i++) {
+                    var item = option.Files.ElementAt(i);
+                    if (item.Key.EndsWith(".pap")) {
+                        string[] strings = item.Key.Split("/");
+                        string value = strings[strings.Length - 1];
+                        if (!_animationMods.ContainsKey(modName)) {
+                            _animationMods[modName] = new List<string>();
+                        }
+                        if (!_animationMods[modName].Contains(value)) {
+                            _animationMods[modName].Add(value);
+                        }
+                        papFilesFound++;
+                        if (!_papSorting.ContainsKey(value)) {
                             try {
-                                _scdReplacements.Add(item.Key, directory + @"\" + item.Value);
+                                _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
+                                { new KeyValuePair<string, bool>(modName, !skipScd) });
                                 if (config.DebugMode) {
                                     _pluginLog?.Verbose("Found: " + item.Value);
                                 }
                             } catch {
                                 _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                             }
+                        } else {
+                            _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
                         }
                     }
                 }
-            }
-        }
-
-        public void ExtractPapFiles(Option option, string directory, bool skipScd) {
-            string modName = Path.GetFileName(directory);
-            int papFilesFound = 0;
-            for (int i = 0; i < option.Files.Count; i++) {
-                var item = option.Files.ElementAt(i);
-                if (item.Key.EndsWith(".pap")) {
-                    string[] strings = item.Key.Split("/");
-                    string value = strings[strings.Length - 1];
-                    if (!_animationMods.ContainsKey(modName)) {
-                        _animationMods[modName] = new List<string>();
-                    }
-                    if (!_animationMods[modName].Contains(value)) {
-                        _animationMods[modName].Add(value);
-                    }
-                    papFilesFound++;
-                    if (!_papSorting.ContainsKey(value)) {
-                        try {
-                            _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
-                            { new KeyValuePair<string, bool>(modName, !skipScd) });
-                            if (config.DebugMode) {
-                                _pluginLog?.Verbose("Found: " + item.Value);
-                            }
-                        } catch {
-                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
-                        }
-                    } else {
-                        _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
-                    }
-                }
-            }
+            });
         }
 
         public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
-            string modName = Path.GetFileName(directory);
-            int mdlFilesFound = 0;
-            for (int i = 0; i < option.Files.Count; i++) {
-                var item = option.Files.ElementAt(i);
-                if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
-                    && !directory.Contains("Hrothgar & Viera Hats") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
-                    && GetModelID(item.Key) != 279 && GetModelID(item.Key) != 9903) {
-                    mdlFilesFound++;
+            Task.Run(() => {
+                string modName = Path.GetFileName(directory);
+                int mdlFilesFound = 0;
+                for (int i = 0; i < option.Files.Count; i++) {
+                    var item = option.Files.ElementAt(i);
+                    if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
+                        && !directory.Contains("Hrothgar & Viera Hats") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
+                        && GetModelID(item.Key) != 279 && GetModelID(item.Key) != 9903) {
+                        mdlFilesFound++;
+                    }
                 }
-            }
-            if (mdlFilesFound > 0) {
-                _modelMods[modName] = null;
-            }
+                if (mdlFilesFound > 0) {
+                    _modelMods[modName] = null;
+                }
+            });
         }
 
         public ulong GetModelID(string model) {
@@ -2883,79 +2889,87 @@ namespace RoleplayingVoice {
         public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks(bool skipModelData) {
             Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
-            _papSorting?.Clear();
-            _mdlSorting?.Clear();
+            //_papSorting?.Clear();
+            //_mdlSorting?.Clear();
             List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
+            string refreshGuid = Guid.NewGuid().ToString();
+            _currentModPackRefreshGuid = refreshGuid;
             try {
                 if (_penumbraReady) {
                     string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
                     if (Directory.Exists(modPath)) {
                         var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
-                        string[] directories = Directory.GetDirectories(modPath);
-                        foreach (var directory in directories) {
-                            if (config.DebugMode) {
-                                _pluginLog?.Verbose("Examining: " + directory);
-                            }
-                            Option option = null;
-                            List<Group> groups = new List<Group>();
-                            string modName = Path.GetFileName(directory);
-                            if (Directory.Exists(directory)) {
-                                foreach (string file in Directory.EnumerateFiles(directory)) {
-                                    if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
-                                        if (file.EndsWith("default_mod.json")) {
-                                            option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
-                                        } else {
-                                            groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
-                                        }
-                                    }
+                        foreach (var directory in Directory.EnumerateDirectories(modPath)) {
+                            if (refreshGuid == _currentModPackRefreshGuid) {
+                                if (config.DebugMode) {
+                                    _pluginLog?.Verbose("Examining: " + directory);
                                 }
-                            }
-                            if (option != null) {
-                                ExtractPapFiles(option, directory, true);
-                                if (!skipModelData) {
-                                    ExtractMdlFiles(option, directory, true);
-                                }
-                            }
-                            foreach (Group group in groups) {
-                                if (group != null) {
-                                    foreach (Option groupOption in group.Options) {
-                                        ExtractPapFiles(groupOption, directory, true);
-                                        if (!skipModelData) {
-                                            ExtractMdlFiles(groupOption, directory, true);
-                                        }
-                                    }
-                                }
-                            }
-                            try {
-                                string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
-                                var currentModSettings =
-                                Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
-                                Invoke(collection.Item3, relativeDirectory, null, true);
-                                var result = currentModSettings.Item1;
-                                if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
-                                    if (currentModSettings.Item2 != null) {
-                                        bool enabled = currentModSettings.Item2!.Value!.Item1;
-                                        int priority = currentModSettings.Item2!.Value!.Item2;
-                                        if (enabled) {
-                                            if (option != null) {
-                                                ExtractSCDOptions(option, directory);
+                                Option option = null;
+                                List<Group> groups = new List<Group>();
+                                string modName = Path.GetFileName(directory);
+                                if (Directory.Exists(directory)) {
+                                    foreach (string file in Directory.EnumerateFiles(directory)) {
+                                        if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
+                                            if (file.EndsWith("default_mod.json")) {
+                                                option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
+                                            } else {
+                                                groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
                                             }
-                                            foreach (Group group in groups) {
-                                                if (group != null) {
-                                                    foreach (Option groupOption in group.Options) {
-                                                        ExtractSCDOptions(groupOption, directory);
-                                                    }
+                                        }
+                                    }
+                                }
+                                if (!_alreadyScannedMods.ContainsKey(modName)) {
+                                    _alreadyScannedMods[modName] = true;
+                                    if (option != null) {
+                                        ExtractPapFiles(option, directory, true);
+                                        if (!skipModelData) {
+                                            ExtractMdlFiles(option, directory, true);
+                                        }
+                                    }
+                                    foreach (Group group in groups) {
+                                        if (group != null) {
+                                            foreach (Option groupOption in group.Options) {
+                                                ExtractPapFiles(groupOption, directory, true);
+                                                if (!skipModelData) {
+                                                    ExtractMdlFiles(groupOption, directory, true);
                                                 }
                                             }
-                                            string soundPackData = directory + @"\rpvsp";
-                                            string soundPackData2 = directory + @"\arksp";
-                                            GetSoundPackData(soundPackData, priority, list);
-                                            GetSoundPackData(soundPackData2, priority, list);
                                         }
                                     }
                                 }
-                            } catch (Exception e) {
-                                _pluginLog?.Warning(e, e.Message);
+                                try {
+                                    string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
+                                    var currentModSettings =
+                                    Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
+                                    Invoke(collection.Item3, relativeDirectory, null, true);
+                                    var result = currentModSettings.Item1;
+                                    if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
+                                        if (currentModSettings.Item2 != null) {
+                                            bool enabled = currentModSettings.Item2!.Value!.Item1;
+                                            int priority = currentModSettings.Item2!.Value!.Item2;
+                                            if (enabled) {
+                                                if (option != null) {
+                                                    ExtractSCDOptions(option, directory);
+                                                }
+                                                foreach (Group group in groups) {
+                                                    if (group != null) {
+                                                        foreach (Option groupOption in group.Options) {
+                                                            ExtractSCDOptions(groupOption, directory);
+                                                        }
+                                                    }
+                                                }
+                                                string soundPackData = directory + @"\rpvsp";
+                                                string soundPackData2 = directory + @"\arksp";
+                                                GetSoundPackData(soundPackData, priority, list);
+                                                GetSoundPackData(soundPackData2, priority, list);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    _pluginLog?.Warning(e, e.Message);
+                                }
+                            } else {
+                                break;
                             }
                         }
                     }
@@ -3649,6 +3663,7 @@ namespace RoleplayingVoice {
                 disposed = true;
                 config.Save();
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;
+                IpcSystem.Dispose();
                 _chat.ChatMessage -= Chat_ChatMessage;
                 this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
                 this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
