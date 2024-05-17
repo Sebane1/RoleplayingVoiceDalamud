@@ -45,7 +45,7 @@ namespace RoleplayingVoice {
         public override void Draw() {
             if (IsOpen) {
                 Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
-                SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size };
+                SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size, MinimumSize = new Vector2(360, 480) };
                 if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
                     try {
                         lock (_mediaManager.LastFrame) {

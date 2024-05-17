@@ -33,6 +33,7 @@ namespace SoundFilter {
         private const int MusicManagerStreamingOffset = 0x32;
         public event EventHandler<InterceptedSound> OnSoundIntercepted;
         public event EventHandler<InterceptedSound> OnCutsceneAudioDetected;
+        public event EventHandler<InterceptedSound> OnFilterWasRan;
         #region Delegates
 
         private delegate void* PlaySpecificSoundDelegate(long a1, int idx);
@@ -262,8 +263,10 @@ namespace SoundFilter {
                     return true;
                 } else {
                     OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
+                    return false;
                 }
             }
+            OnFilterWasRan?.Invoke(this, new InterceptedSound { SoundPath = splitPath });
             return false;
         }
         public bool IsCutsceneDetectionNull() {
