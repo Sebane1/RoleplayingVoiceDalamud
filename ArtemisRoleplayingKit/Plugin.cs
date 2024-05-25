@@ -3367,6 +3367,7 @@ namespace RoleplayingVoice {
                              "companionanim [partial emote name] (triggers an animation mod that contains the desired text in its name on the currently summoned minion)\r\n" +
                              "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
                              "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
+                             "summon [Custom NPC Name] (Summons the specified custom NPC or dismisses them)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
