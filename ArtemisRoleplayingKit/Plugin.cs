@@ -70,6 +70,12 @@ using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 using RoleplayingVoiceDalamud.IPC;
+using Race = RoleplayingVoiceDalamud.Glamourer.Race;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using Character = Dalamud.Game.ClientState.Objects.Types.Character;
+using RoleplayingVoiceDalamud.NPC;
+using static Lumina.Data.Parsing.Layer.LayerCommon;
+using System.Buffers.Text;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -98,6 +104,7 @@ namespace RoleplayingVoice {
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
         private AnimationCatalogue _animationCatalogue;
         private AnimationEmoteSelection _animationEmoteSelection;
+        private NPCPersonalityWindow _npcPersonalityWindow;
         private IPluginLog _pluginLog;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
@@ -149,6 +156,7 @@ namespace RoleplayingVoice {
         private string lastStreamURL;
         private string _currentStreamer;
 
+        private Queue<KeyValuePair<string, string>> _aiMessageQueue = new Queue<KeyValuePair<string, string>>();
         private Queue<string> _messageQueue = new Queue<string>();
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
@@ -156,7 +164,8 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, bool> _alreadyScannedMods = new ConcurrentDictionary<string, bool>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
-
+        private ConcurrentDictionary<string, KeyValuePair<CustomNpcCharacter, NPCConversationManager>> _npcConversationManagers = new ConcurrentDictionary<string, KeyValuePair<CustomNpcCharacter, NPCConversationManager>>();
+        private ConcurrentDictionary<string, Guid> _lastCharacterDesign = new ConcurrentDictionary<string, Guid>();
         private ConcurrentDictionary<string, List<string>> _animationMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, Task> _emoteWatchList = new ConcurrentDictionary<string, Task>();
         private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
@@ -179,6 +188,9 @@ namespace RoleplayingVoice {
         private List<string> _modelModList;
         private int _catalogueIndex;
         private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
+        private ICallGateSubscriber<ValueTuple<Guid, string>[]> _glamourerGetDesignList;
+        private ICallGateSubscriber<ValueTuple<string, Guid>[]> _glamourerGetDesignListLegacy;
+        private ICallGateSubscriber<Guid, int, uint, ulong, int> _glamourerApplyDesign;
         private ICallGateSubscriber<string, string, object> _glamourerApplyAll;
         uint LockCode = 0x6D617265;
         private bool ignoreModSettingChanged;
@@ -218,6 +230,9 @@ namespace RoleplayingVoice {
         private bool _isAlreadyRunningEmote;
         List<string> _preOccupiedWithEmoteCommand = new List<string>();
         private string _currentModPackRefreshGuid;
+        private ICallGateSubscriber<ValueTuple<Guid, string>[]> _glamourerGetDesignListLegacyAlternate;
+        private ICallGateSubscriber<Guid, Character?, int> _glamourerApplyByGuid;
+        private int _playerCount;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -254,6 +269,12 @@ namespace RoleplayingVoice {
         public IPluginLog PluginLog { get => _pluginLog; set => _pluginLog = value; }
         internal AnimationCatalogue AnimationCatalogue { get => _animationCatalogue; set => _animationCatalogue = value; }
         public IpcSystem IpcSystem { get => _ipcSystem; set => _ipcSystem = value; }
+        internal NPCPersonalityWindow NpcPersonalityWindow { get => _npcPersonalityWindow; set => _npcPersonalityWindow = value; }
+        public IObjectTable ObjectTable { get => _objectTable; set => _objectTable = value; }
+
+        public IClientState ClientState => _clientState;
+
+        public IDataManager DataManager1 { get => _dataManager; set => _dataManager = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -297,13 +318,15 @@ namespace RoleplayingVoice {
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
                 _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();
                 _animationEmoteSelection = this.pluginInterface.Create<AnimationEmoteSelection>();
+                _npcPersonalityWindow = this.pluginInterface.Create<NPCPersonalityWindow>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
+                _npcPersonalityWindow.Plugin = this;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
                 pluginInterface.UiBuilder.DisableGposeUiHide = true;
                 _window.ClientState = this._clientState;
-                _window.Configuration = this.config;
-                _window.PluginInterface = this.pluginInterface;
                 _window.PluginReference = this;
+                _window.PluginInterface = this.pluginInterface;
+                _window.Configuration = this.config;
                 _gposeWindow.Plugin = this;
                 _animationCatalogue.Plugin = this;
                 _animationEmoteSelection.Plugin = this;
@@ -330,6 +353,9 @@ namespace RoleplayingVoice {
                 }
                 if (_animationEmoteSelection is not null) {
                     this.windowSystem.AddWindow(_animationEmoteSelection);
+                }
+                if (_npcPersonalityWindow is not null) {
+                    this.windowSystem.AddWindow(_npcPersonalityWindow);
                 }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
@@ -371,12 +397,52 @@ namespace RoleplayingVoice {
                 try {
                     Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                     Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-                    _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
-                    _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
+                    try {
+                        _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
+                        _pluginLog.Debug("Glamourer.GetAllCustomizationFromCharacter configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerGetDesignList = pluginInterface.GetIpcSubscriber<ValueTuple<Guid, string>[]>("Glamourer.GetDesignList.V2");
+                        _pluginLog.Debug("Glamourer.GetDesignList.V2 configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerGetDesignListLegacy = pluginInterface.GetIpcSubscriber<ValueTuple<string, Guid>[]>("Glamourer.GetDesignList");
+                        _pluginLog.Debug("Glamourer.GetDesignList configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerGetDesignListLegacyAlternate = pluginInterface.GetIpcSubscriber<ValueTuple<Guid, string>[]>("Glamourer.GetDesignList");
+                        _pluginLog.Debug("Alternate Glamourer.GetDesignList configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
+                        _pluginLog.Debug("Glamourer.ApplyDesign configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerApplyByGuid = pluginInterface.GetIpcSubscriber<Guid, Character?, int>("Glamourer.ApplyByGuidToCharacter");
+                        _pluginLog.Debug("Glamourer.ApplyByGuid configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
+                    try {
+                        _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
+                        _pluginLog.Debug("Glamourer.ApplyAll configured.");
+                    } catch (Exception e) {
+                        _pluginLog.Warning(e, e.Message);
+                    }
                     _pluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
-                } catch {
-
+                } catch (Exception e) {
+                    _pluginLog.Warning(e, e.Message);
                 }
                 AttemptConnection();
                 if (config.ApiKey != null) {
@@ -551,6 +617,11 @@ namespace RoleplayingVoice {
                                 }
                                 break;
                             case 8:
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                    CheckForCustomNPCMinion();
+                                }
+                                break;
+                            case 9:
                                 if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
                                     CheckVolumeLevels();
                                     CheckForNewRefreshes();
@@ -562,6 +633,30 @@ namespace RoleplayingVoice {
                 }
             } catch (Exception e) {
                 _pluginLog.Error(e, e.Message);
+            }
+        }
+
+        private void CheckForCustomNPCMinion() {
+            foreach (var gameObject in GetNearestObjects()) {
+                var item = gameObject as Character;
+                if (item != null) {
+                    foreach (var customNPC in config.CustomNpcCharacters) {
+                        if (item.Name.TextValue.Contains(customNPC.MinionToReplace)) {
+                            try {
+                                if (!_lastCharacterDesign.ContainsKey(item.Name.TextValue)) {
+                                    _lastCharacterDesign[item.Name.TextValue] = Guid.NewGuid();
+                                }
+                                if (_lastCharacterDesign[item.Name.TextValue].ToString() != customNPC.NpcGlamourerAppearanceString) {
+                                    Guid design = Guid.Parse(customNPC.NpcGlamourerAppearanceString);
+                                    ApplyByGuid(design, item);
+                                    _lastCharacterDesign[item.Name.TextValue] = design;
+                                }
+                            } catch {
+                                customNPC.NpcGlamourerAppearanceString = "";
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -921,7 +1016,54 @@ namespace RoleplayingVoice {
                 return playerCharacter.Customize[(int)CustomizeIndex.Race];
             }
         }
-
+        public CharacterCustomization GetCustomization(Character playerCharacter) {
+            try {
+                CharacterCustomization characterCustomization = null;
+                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                var bytes = System.Convert.FromBase64String(customizationValue);
+                var version = bytes[0];
+                version = bytes.DecompressToString(out var decompressed);
+                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                return characterCustomization;
+            } catch {
+                return new CharacterCustomization() {
+                    Customize = new Customize() {
+                        EyeColorLeft = new FacialValue() { Value = playerCharacter.Customize[(int)CustomizeIndex.EyeColor] },
+                        EyeColorRight = new FacialValue() { Value = playerCharacter.Customize[(int)CustomizeIndex.EyeColor2] },
+                        BustSize = new BustSize() { Value = playerCharacter.Customize[(int)CustomizeIndex.BustSize] },
+                        LipColor = new LipColor() { Value = playerCharacter.Customize[(int)CustomizeIndex.LipColor] },
+                        Gender = new Gender() { Value = playerCharacter.Customize[(int)CustomizeIndex.Gender] },
+                        Height = new Height() { Value = playerCharacter.Customize[(int)CustomizeIndex.Height] },
+                        Clan = new Clan() { Value = playerCharacter.Customize[(int)CustomizeIndex.Tribe] },
+                        Race = new Race() { Value = playerCharacter.Customize[(int)CustomizeIndex.Race] },
+                        BodyType = new BodyType() { Value = playerCharacter.Customize[(int)CustomizeIndex.ModelType] }
+                    }
+                };
+            }
+        }
+        public Dictionary<Guid, string> GetGlamourerDesigns() {
+            try {
+                var glamourerDesignList = _glamourerGetDesignList.InvokeFunc();
+                Dictionary<Guid, string> newList = new Dictionary<Guid, string>();
+                foreach (var item in glamourerDesignList) {
+                    newList.Add(item.Item1, item.Item2);
+                }
+                return newList;
+            } catch (Exception e) {
+                _pluginLog.Warning(e, e.Message);
+                try {
+                    var glamourerDesignList = _glamourerGetDesignListLegacy.InvokeFunc();
+                    Dictionary<Guid, string> newList = new Dictionary<Guid, string>();
+                    foreach (var item in glamourerDesignList) {
+                        newList.Add(item.Item2, item.Item1);
+                    }
+                    return newList;
+                } catch (Exception e2) {
+                    _pluginLog.Warning(e2, e2.Message);
+                    return new Dictionary<Guid, string>();
+                }
+            }
+        }
         public bool IsHumanoid(Character playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
@@ -1055,102 +1197,162 @@ namespace RoleplayingVoice {
         }
 
         private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
-            if (_clientState.LocalPlayer != null) {
-                if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (config.PerformEmotesBasedOnWrittenText) {
-                        if (type == XivChatType.CustomEmote ||
-                            message.TextValue.Split("\"").Length > 1 ||
-                            message.TextValue.Contains("*")) {
-                            Task.Run(() => EmoteReaction(message.TextValue));
-                        }
-                    }
-                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
-                    _clientState.LocalPlayer.Name.TextValue)).Split(" ");
-                    string playerSender = senderStrings.Length == 2 ?
-                        (senderStrings[0] + " " + senderStrings[1]) :
-                        (senderStrings[0] + " " + senderStrings[2]);
-                    string playerMessage = message.TextValue;
-                    PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
-                    if (config.TwitchStreamTriggersIfShouter && !Conditions.IsBoundByDuty) {
-                        TwitchChatCheck(message, type, player, playerSender);
-                    }
-                    if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
-                        bool lipWasSynced = true;
-                        Task.Run(async () => {
-                            string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
-                            type == XivChatType.CustomEmote,
-                            config.PlayerCharacterVolume,
-                            _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
-                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                            }, delegate (object sender, StreamVolumeEventArgs e) {
-                                if (e.MaxSampleValues.Length > 0) {
-                                    if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
-                                        lipWasSynced = true;
-                                    } else {
-                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                    }
-                                }
-                            });
-                        });
-                    }
-                    CheckForChatSoundEffectLocal(message);
-                } else {
-                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
-                    bool isShoutYell = false;
-                    if (senderStrings.Length > 2) {
-                        string playerSender = senderStrings[0] + " " + senderStrings[2];
-                        string playerMessage = message.TextValue;
-                        bool audioFocus = false;
-                        if (_clientState.LocalPlayer.TargetObject != null) {
-                            if (_clientState.LocalPlayer.TargetObject.ObjectKind ==
-                                ObjectKind.Player) {
-                                audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender
-                                    || type == XivChatType.Party
-                                    || type == XivChatType.CrossParty || isShoutYell;
-                                isShoutYell = type == XivChatType.Shout
-                                    || type == XivChatType.Yell;
+            try {
+                if (_clientState.LocalPlayer != null) {
+                    if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
+                        if (config.PerformEmotesBasedOnWrittenText) {
+                            if (type == XivChatType.CustomEmote ||
+                                message.TextValue.Split("\"").Length > 1 ||
+                                message.TextValue.Contains("*")) {
+                                Task.Run(() => EmoteReaction(message.TextValue));
                             }
-                        } else {
-                            audioFocus = true;
                         }
-                        PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
-                        if (config.UsePlayerSync) {
-                            if (GetCombinedWhitelist().Contains(playerSender)) {
+                        if (!Conditions.IsBoundByDuty) {
+                            if (type == XivChatType.Say || type == XivChatType.CustomEmote) {
                                 Task.Run(async () => {
-                                    string value = await _roleplayingMediaManager.
-                                    GetSound(playerSender, playerMessage, audioFocus ?
-                                    config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                                    _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                    bool lipWasSynced = false;
-                                    _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
-                                        Task.Run(delegate {
-                                            _addonTalkHandler.StopLipSync(player);
-                                        });
-                                    },
-                                    delegate (object sender, StreamVolumeEventArgs e) {
-                                        Task.Run(delegate {
-                                            if (e.MaxSampleValues.Length > 0) {
-                                                if (e.MaxSampleValues[0] > 0.2) {
-                                                    _addonTalkHandler.TriggerLipSync(player, 4);
-                                                    lipWasSynced = true;
-                                                } else {
-                                                    _addonTalkHandler.StopLipSync(player);
+                                    try {
+                                        if (_playerCount is 1) {
+                                            foreach (var gameObject in GetNearestObjects()) {
+                                                Character character = gameObject as Character;
+                                                if (character != null) {
+                                                    if (character.ObjectKind == ObjectKind.Companion) {
+                                                        if (!_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
+                                                            CustomNpcCharacter npcData = null;
+                                                            foreach (var customNPC in config.CustomNpcCharacters) {
+                                                                if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
+                                                                    npcData = customNPC;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (npcData != null) {
+                                                                _npcConversationManagers[character.Name.TextValue] = new KeyValuePair<CustomNpcCharacter, NPCConversationManager>(npcData,
+                                                                new NPCConversationManager(npcData.NpcName, config.CacheFolder + @"\NPCMemories", this, character));
+                                                            }
+                                                        }
+                                                        if (_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
+                                                            string formattedText = message.TextValue;
+                                                            if (type == XivChatType.Say && formattedText.Split('"').Length < 2) {
+                                                                formattedText = @"""" + message + @"""";
+                                                            }
+
+                                                            var npcConversationManager = _npcConversationManagers[character.Name.TextValue];
+                                                            string aiResponse = await npcConversationManager.Value
+                                                            .SendMessage(_clientState.LocalPlayer, character, npcConversationManager.Key.NpcName, npcConversationManager.Key.NPCGreeting,
+                                                            formattedText, GetWrittenGameState(
+                                                                _clientState.LocalPlayer.Name.TextValue.Split(" ")[0], character.Name.TextValue.Split(" ")[0]),
+                                                            npcConversationManager.Key.NpcPersonality);
+
+                                                            _aiMessageQueue.Enqueue(new KeyValuePair<string, string>(npcConversationManager.Key.NpcName, aiResponse));
+                                                        }
+                                                    }
                                                 }
                                             }
-                                        });
-                                    });
+                                        }
+                                    } catch (Exception e) {
+                                        _pluginLog.Warning(e, e.Message);
+                                    }
                                 });
-                                CheckForChatSoundEffectOtherPlayer(sender, player, message);
                             }
                         }
-                        TwitchChatCheck(message, type, player, playerSender);
+                        string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
+                        _clientState.LocalPlayer.Name.TextValue)).Split(" ");
+                        string playerSender = senderStrings.Length == 2 ?
+                            (senderStrings[0] + " " + senderStrings[1]) :
+                            (senderStrings[0] + " " + senderStrings[2]);
+                        string playerMessage = message.TextValue;
+                        Character player = (Character)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                        if (config.TwitchStreamTriggersIfShouter && !Conditions.IsBoundByDuty) {
+                            TwitchChatCheck(message, type, player, playerSender);
+                        }
+                        if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
+                            bool lipWasSynced = true;
+                            Task.Run(async () => {
+                                string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
+                                type == XivChatType.CustomEmote,
+                                config.PlayerCharacterVolume,
+                                _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
+                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                }, delegate (object sender, StreamVolumeEventArgs e) {
+                                    if (e.MaxSampleValues.Length > 0) {
+                                        if (e.MaxSampleValues[0] > 0.2) {
+                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                                            lipWasSynced = true;
+                                        } else {
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        }
+                                    }
+                                });
+                            });
+                        }
+                        CheckForChatSoundEffectLocal(message);
+                    } else {
+                        string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
+                        bool isShoutYell = false;
+                        if (senderStrings.Length > 2) {
+                            string playerSender = senderStrings[0] + " " + senderStrings[2];
+                            string playerMessage = message.TextValue;
+                            bool audioFocus = false;
+                            if (_clientState.LocalPlayer.TargetObject != null) {
+                                if (_clientState.LocalPlayer.TargetObject.ObjectKind ==
+                                    ObjectKind.Player) {
+                                    audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender
+                                        || type == XivChatType.Party
+                                        || type == XivChatType.CrossParty || isShoutYell;
+                                    isShoutYell = type == XivChatType.Shout
+                                        || type == XivChatType.Yell;
+                                }
+                            } else {
+                                audioFocus = true;
+                            }
+                            Character player = (Character)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
+                            if (config.UsePlayerSync) {
+                                if (GetCombinedWhitelist().Contains(playerSender)) {
+                                    Task.Run(async () => {
+                                        string value = await _roleplayingMediaManager.
+                                        GetSound(playerSender, playerMessage, audioFocus ?
+                                        config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                                        _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
+                                        bool lipWasSynced = false;
+                                        _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
+                                            Task.Run(delegate {
+                                                _addonTalkHandler.StopLipSync(player);
+                                            });
+                                        },
+                                        delegate (object sender, StreamVolumeEventArgs e) {
+                                            Task.Run(delegate {
+                                                if (e.MaxSampleValues.Length > 0) {
+                                                    if (e.MaxSampleValues[0] > 0.2) {
+                                                        _addonTalkHandler.TriggerLipSync(player, 4);
+                                                        lipWasSynced = true;
+                                                    } else {
+                                                        _addonTalkHandler.StopLipSync(player);
+                                                    }
+                                                }
+                                            });
+                                        });
+                                    });
+                                    CheckForChatSoundEffectOtherPlayer(sender, player, message);
+                                }
+                            }
+                            TwitchChatCheck(message, type, player, playerSender);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                _pluginLog.Warning(e, e.Message);
             }
         }
-        public void TwitchChatCheck(SeString message, XivChatType type, PlayerCharacter player, string name) {
+
+        private unsafe string GetWrittenGameState(string playerName, string npcName) {
+            string locationValue = HousingManager.Instance()->IsInside() ? "inside a house" : "outside";
+            string value = $"{playerName} and npc are currently {locationValue}. The current zone is "
+                + DataManager.GetExcelSheet<TerritoryType>().GetRow(_clientState.TerritoryType).PlaceName.Value.Name.RawString +
+                ". The date and time is " + DateTime.Now.ToString("MM/dd/yyyy h:mm tt") + ".";
+            return value;
+        }
+
+        public void TwitchChatCheck(SeString message, XivChatType type, Character player, string name) {
             if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                 if (config.TuneIntoTwitchStreams && IsResidential()) {
                     if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
@@ -1189,7 +1391,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private async void CheckForChatSoundEffectOtherPlayer(string sender, PlayerCharacter player, SeString message) {
+        private async void CheckForChatSoundEffectOtherPlayer(string sender, Character player, SeString message) {
             if (message.TextValue.Contains("<") && message.TextValue.Contains(">")) {
                 string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
                 string soundTrigger = tokenArray[1];
@@ -1514,7 +1716,8 @@ namespace RoleplayingVoice {
                                   }
                                     : null);
                                     if (config.DebugMode) {
-                                        _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                        _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
+                                        " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                                     }
                                 }
                                 if (!_muteTimer.IsRunning) {
@@ -2049,6 +2252,16 @@ namespace RoleplayingVoice {
                         _pluginLog?.Warning(e, e.Message);
                     }
                 }
+                if (_aiMessageQueue.Count > 0 && !disposed) {
+                    var message = _aiMessageQueue.Dequeue();
+                    _chat.Print(new XivChatEntry() {
+                        Message = new SeString(new List<Payload>() {
+                        new TextPayload(" " + message.Value) }),
+                        SenderId = 0,
+                        Name = message.Key,
+                        Type = XivChatType.CustomEmote
+                    });
+                }
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
             }
@@ -2058,7 +2271,9 @@ namespace RoleplayingVoice {
                 if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
-                        Thread.Sleep(2000);
+                        if (value.EmoteMode.Value.ConditionMode is not 3) {
+                            Thread.Sleep(2000);
+                        }
                         if (config.DebugMode) {
                             _chat.Print("Attempt to find nearest objects.");
                         }
@@ -2104,9 +2319,15 @@ namespace RoleplayingVoice {
                                 if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                     if (config.DebugMode) {
                                         _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                        _chat.Print("Emote Unknowns: " + $"{value.EmoteMode.Value.ConditionMode} {value.Unknown8},{value.Unknown9},{value.Unknown10},{value.Unknown13},{value.Unknown14}," +
+                                            $"{value.Unknown17},{value.Unknown24},");
                                     }
-                                    _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
-                                    Thread.Sleep(1000);
+                                    if (value.EmoteMode.Value.ConditionMode == 3 || value.EmoteMode.Value.ConditionMode == 11) {
+                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                    } else {
+                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                    }
+                                    Thread.Sleep(500);
                                 }
                             } catch {
                                 if (config.DebugMode) {
@@ -2135,11 +2356,15 @@ namespace RoleplayingVoice {
         }
 
         private GameObject[] GetNearestObjects() {
+            _playerCount = 0;
             List<GameObject> gameObjects = new List<GameObject>();
             foreach (var item in _objectTable) {
-                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 2f
+                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 3f
                     && item.ObjectId != _clientState.LocalPlayer.ObjectId) {
                     gameObjects.Add(item);
+                }
+                if (item.ObjectKind == ObjectKind.Player) {
+                    _playerCount++;
                 }
             }
             return gameObjects.ToArray();
@@ -2843,6 +3068,25 @@ namespace RoleplayingVoice {
             }
             return false;
         }
+        public void SetCustomizationString(string stringValue, string characterName) {
+            _glamourerApplyAll.InvokeAction(stringValue, characterName);
+        }
+        public void SetDesign(Guid design, int objectId) {
+            try {
+                _glamourerApplyDesign.InvokeFunc(design, objectId, 0, 0);
+            } catch {
+                try {
+                    _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
+                    _glamourerApplyDesign.InvokeFunc(design, objectId, 0, 0);
+                } catch (Exception e) {
+                    _pluginLog.Warning(e, e.Message);
+                    _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
+                }
+            }
+        }
+        public void ApplyByGuid(Guid design, Character? character) {
+            _glamourerApplyByGuid.InvokeAction(design, character);
+        }
         public void CleanEquipment(CharacterCustomization characterCustomization) {
             characterCustomization.Equipment.Head.ItemId = 0;
             characterCustomization.Equipment.Ears.ItemId = 0;
@@ -3120,6 +3364,7 @@ namespace RoleplayingVoice {
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
+                             "companionanim [partial emote name] (triggers an animation mod that contains the desired text in its name on the currently summoned minion)\r\n" +
                              "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
                              "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
@@ -3150,10 +3395,39 @@ namespace RoleplayingVoice {
                             AttemptConnection();
                             break;
                         case "anim":
-                            CheckAnimationMods(splitArgs, args);
+                            CheckAnimationMods(splitArgs, args, _clientState.LocalPlayer);
+                            break;
+                        case "companionanim":
+                            Character foundCharacter = null;
+                            foreach (var item in GetNearestObjects()) {
+                                Character character = item as Character;
+                                if (character != null && character.ObjectKind == ObjectKind.Companion && character.OwnerId == _clientState.LocalPlayer.OwnerId) {
+                                    foundCharacter = character;
+                                    break;
+                                }
+                            }
+                            if (foundCharacter != null) {
+                                CheckAnimationMods(splitArgs, args, foundCharacter);
+                            } else {
+                                _chat.PrintError("Could not find owned companion to apply animation");
+                            }
                             break;
                         case "emotecontrol":
                             CheckNPCEmoteControl(splitArgs, args);
+                            break;
+                        case "summon":
+                            bool foundNPC = false;
+                            string npc = args.Replace(splitArgs[0], null).Trim();
+                            foreach (var item in config.CustomNpcCharacters) {
+                                if (item.NpcName.ToLower().Contains(npc.ToLower())) {
+                                    MessageQueue.Enqueue("/minion " + @"""" + item.MinionToReplace + @"""");
+                                    foundNPC = true;
+                                    break;
+                                }
+                            }
+                            if (!foundNPC) {
+                                _chat.PrintError("Could not find custom NPC with the name " + @"""" + npc + @"""");
+                            }
                             break;
                         case "twitch":
                             if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
@@ -3261,41 +3535,7 @@ namespace RoleplayingVoice {
         private void CheckNPCEmoteControl(string[] splitArgs, string args) {
             switch (splitArgs[1].ToLower()) {
                 case "do":
-                    foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                        if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
-                            emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(splitArgs[2].ToLower()) ||
-                            emoteItem.TextCommand.Value.Command.RawString.Contains(splitArgs[2].ToLower()) ||
-                            emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(splitArgs[2].ToLower()))) {
-                            foreach (var gameObject in GetNearestObjects()) {
-                                try {
-                                    Character character = gameObject as Character;
-                                    if (character != null) {
-                                        if (!character.IsDead) {
-                                            if (character.ObjectKind == ObjectKind.Retainer ||
-                                                character.ObjectKind == ObjectKind.BattleNpc ||
-                                                character.ObjectKind == ObjectKind.EventNpc ||
-                                                character.ObjectKind == ObjectKind.Companion ||
-                                                character.ObjectKind == ObjectKind.Housing) {
-                                                if (character.Name.TextValue.ToLower().Contains(splitArgs[3].ToLower())) {
-                                                    if (!IsPartOfQuestOrImportant(character)) {
-                                                        _toast.ShowNormal(character.Name.TextValue + " follows your command!");
-                                                        _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
-                                                        if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                            _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
-                                                        }
-                                                    } else {
-                                                        _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
-                                                    }
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch { }
-                            }
-                            break;
-                        }
-                    }
+                    DoEmote(splitArgs[2].ToLower(), splitArgs[3].ToLower());
                     break;
                 case "stop":
                     foreach (var gameObject in GetNearestObjects()) {
@@ -3356,11 +3596,80 @@ namespace RoleplayingVoice {
                     break;
             }
         }
+
+        public void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
+            foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
+                if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
+                    emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
+                    emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
+                    emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            Character character = gameObject as Character;
+                            if (character != null) {
+                                if (!character.IsDead) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        if (character.Name.TextValue.ToLower().Contains(targetNPC)) {
+                                            if (!IsPartOfQuestOrImportant(character)) {
+                                                _toast.ShowNormal(character.Name.TextValue + " follows your command!");
+                                                if (becomesPreOccupied) {
+                                                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                        _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                    }
+                                                } else {
+                                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
+                                                        (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                }
+                                            } else {
+                                                _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch { }
+                    }
+                    break;
+                }
+            }
+        }
+        public void DoEmote(string command, Character targetNPC, bool becomesPreOccupied = true) {
+            try {
+                foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
+                    if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
+                        emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
+                        emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
+                        emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
+                        if (!IsPartOfQuestOrImportant(targetNPC)) {
+                            if (becomesPreOccupied) {
+                                _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                if (!_preOccupiedWithEmoteCommand.Contains(targetNPC.Name.TextValue)) {
+                                    _preOccupiedWithEmoteCommand.Add(targetNPC.Name.TextValue);
+                                }
+                            } else {
+                                _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
+                                    (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                            }
+                        }
+                        break;
+                    }
+                }
+            } catch {
+
+            }
+        }
         #endregion
         #region Trigger Animation Mods
-        public void CheckAnimationMods(string[] splitArgs, string args, bool willOpen = true) {
+        public void CheckAnimationMods(string[] splitArgs, string args, Character character, bool willOpen = true) {
             if (splitArgs.Length > 1) {
-                string[] command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
+                string[] command = null;
+                command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
                 int index = 0;
                 try {
                     if (command.Length > 1) {
@@ -3369,7 +3678,7 @@ namespace RoleplayingVoice {
                 } catch {
                     index = 0;
                 }
-                DoAnimation(command[0], index);
+                DoAnimation(command[0], index, character);
             } else {
                 if (!_animationCatalogue.IsOpen) {
                     var list = CreateEmoteList(_dataManager);
@@ -3396,12 +3705,12 @@ namespace RoleplayingVoice {
             }
         }
 
-        public void DoAnimation(string animationName, int index) {
+        public void DoAnimation(string animationName, int index, Character targetObject) {
             _isLoadingAnimation = true;
             var list = CreateEmoteList(_dataManager);
             List<uint> deDuplicate = new List<uint>();
             List<EmoteModData> emoteData = new List<EmoteModData>();
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke((int)targetObject.ObjectIndex);
             string commandArguments = animationName;
             if (config.DebugMode) {
                 _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
@@ -3454,26 +3763,28 @@ namespace RoleplayingVoice {
                                 }
                             }
                             break;
+                        } else {
+                            _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
                         }
                     }
                 }
             }
             if (emoteData.Count > 0) {
                 if (emoteData.Count == 1) {
-                    TriggerPlayerEmote(emoteData[0]);
+                    TriggerCharacterEmote(emoteData[0], targetObject);
                 } else if (emoteData.Count > 1) {
                     if (index == 0) {
-                        _animationEmoteSelection.PopulateList(emoteData);
+                        _animationEmoteSelection.PopulateList(emoteData, targetObject);
                         _animationEmoteSelection.IsOpen = true;
                     } else {
-                        TriggerPlayerEmote(emoteData[index - 1]);
+                        TriggerCharacterEmote(emoteData[index - 1], targetObject);
                     }
                 }
             } else {
                 Task.Run(() => {
                     if (_failCount++ < 10) {
                         Thread.Sleep(3000);
-                        DoAnimation(animationName, index);
+                        DoAnimation(animationName, index, targetObject);
                     } else {
                         _failCount = 0;
                     }
@@ -3482,37 +3793,43 @@ namespace RoleplayingVoice {
             _isLoadingAnimation = false;
         }
 
-        public void TriggerPlayerEmote(EmoteModData emoteModData) {
-            if (_wasDoingFakeEmote) {
-                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+        public void TriggerCharacterEmote(EmoteModData emoteModData, Character character) {
+            if (character.Address == _clientState.LocalPlayer.Address) {
+                if (_wasDoingFakeEmote) {
+                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                }
             }
-            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
                 //Thread.Sleep(1000);
-                _messageQueue.Enqueue(emoteModData.Emote);
-                if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
-                    Thread.Sleep(100);
-                    _fastMessageQueue.Enqueue(emoteModData.Emote);
-                    _animationModsAlreadyTriggered.Add(emoteModData.FoundModName);
+                if (character.Address == _clientState.LocalPlayer.Address) {
+                    _messageQueue.Enqueue(emoteModData.Emote);
+                    if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
+                        Thread.Sleep(100);
+                        _fastMessageQueue.Enqueue(emoteModData.Emote);
+                        _animationModsAlreadyTriggered.Add(emoteModData.FoundModName);
+                    }
+                    _mediaManager.StopAudio(_playerObject);
+                    Thread.Sleep(2000);
+                } else {
+                    _mediaManager.StopAudio(_playerObject);
                 }
-                _mediaManager.StopAudio(_playerObject);
-                Thread.Sleep(2000);
-                ushort value = _addonTalkHandler.GetCurrentEmoteId(_clientState.LocalPlayer);
+                ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
                 if (!_didRealEmote) {
                     _wasDoingFakeEmote = true;
                     OnEmote(_clientState.LocalPlayer, (ushort)emoteModData.EmoteId);
-                    _addonTalkHandler.TriggerEmote(_clientState.LocalPlayer.Address, (ushort)emoteModData.AnimationId);
-                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
-                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
+                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
+                    _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
+                    _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
                     Task.Run(() => {
-                        Vector3 lastPosition = _clientState.LocalPlayer.Position;
+                        Vector3 lastPosition = character.Position;
                         while (true) {
                             Thread.Sleep(500);
-                            if (Vector3.Distance(lastPosition, _clientState.LocalPlayer.Position) > 0.001f) {
-                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                            if (Vector3.Distance(lastPosition, character.Position) > 0.001f) {
+                                _addonTalkHandler.StopEmote(character.Address);
                                 _wasDoingFakeEmote = false;
-                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emote", (ushort)0);
-                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "emoteId", (ushort)0);
+                                _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)0);
+                                _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)0);
                                 break;
                             }
                         }

@@ -1,4 +1,5 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
 using RoleplayingVoiceDalamud.Animation;
@@ -17,6 +18,7 @@ namespace RoleplayingVoice {
         int maxItemsPerCategoryPage = 8;
         int _categoryPage = 0;
         private List<EmoteModData> _emoteData;
+        private Character _character;
 
         public AnimationEmoteSelection(DalamudPluginInterface pluginInterface) : base("Animation Emote Selections Window") {
             SizeCondition = ImGuiCond.Always;
@@ -26,8 +28,9 @@ namespace RoleplayingVoice {
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<EmoteModData> EmoteData { get => _emoteData; }
 
-        public void PopulateList(List<EmoteModData> list) {
+        public void PopulateList(List<EmoteModData> list, Character character) {
             _emoteData = list;
+            _character = character;
         }
 
         public void AddItem(string category, string item) {
@@ -46,7 +49,7 @@ namespace RoleplayingVoice {
                 int count = 0;
                 foreach (EmoteModData item in _emoteData) {
                     if (ImGui.Button(item.Emote + " " + item.AnimationId + $" ({1 + count++})")) {
-                        _plugin.TriggerPlayerEmote(item);
+                        _plugin.TriggerCharacterEmote(item, _character);
                         IsOpen = false;
                     }
                 }

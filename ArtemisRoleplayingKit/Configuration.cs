@@ -44,6 +44,8 @@ namespace RoleplayingVoice {
         private bool _lowPerformanceMode;
         private int _spatialAudioAccuracy = 100;
 
+        List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>(); 
+
         int IPluginConfiguration.Version { get; set; }
 
         #region Saved configuration values
@@ -123,6 +125,7 @@ namespace RoleplayingVoice {
         public bool ReadLocationsAndToastNotifications { get => _readLocationsAndToastNotifications; set => _readLocationsAndToastNotifications = value; }
         public bool LowPerformanceMode { get => _lowPerformanceMode; set => _lowPerformanceMode = value; }
         public int SpatialAudioAccuracy { get => _spatialAudioAccuracy; set => _spatialAudioAccuracy = value; }
+        public List<CustomNpcCharacter> CustomNpcCharacters { get => _customNpcCharacters; set => _customNpcCharacters = value; }
 
         #endregion
 

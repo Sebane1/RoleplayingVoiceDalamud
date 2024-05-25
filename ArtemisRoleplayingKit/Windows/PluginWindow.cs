@@ -104,7 +104,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             //IsOpen = true;
-            Size = new Vector2(600, 750);
+            Size = new Vector2(700, 750);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -119,7 +119,8 @@ namespace RoleplayingVoice {
         }
         public override void OnOpen() {
             base.OnOpen();
-            PluginReference.CheckAnimationMods(new string[1], "", false);
+            PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ClientState.LocalPlayer, false);
+            PluginReference.NpcPersonalityWindow.OnOpen();
         }
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
             if (voicePackComboBox != null && _voicePackList != null && !_refreshing) {
@@ -173,6 +174,7 @@ namespace RoleplayingVoice {
                     _readLocationAndToastNotifications = configuration.ReadLocationsAndToastNotifications;
                     _lowPerformanceMode = configuration.LowPerformanceMode;
                     _spatialAudioAccuracy = configuration.SpatialAudioAccuracy;
+                    PluginReference.NpcPersonalityWindow.LoadNPCCharacters(configuration.CustomNpcCharacters);
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -292,7 +294,11 @@ namespace RoleplayingVoice {
                         DrawNPCDialogue();
                         ImGui.EndTabItem();
                     }
-                    if (ImGui.BeginTabItem("Twitch Integration")) {
+                    if (ImGui.BeginTabItem("Custom NPC")) {
+                        PluginReference.NpcPersonalityWindow.Draw();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Twitch")) {
                         DrawTwitch();
                         ImGui.EndTabItem();
                     }
@@ -665,6 +671,7 @@ namespace RoleplayingVoice {
             configuration.ReadLocationsAndToastNotifications = _readLocationAndToastNotifications;
             configuration.LowPerformanceMode = _lowPerformanceMode;
             configuration.SpatialAudioAccuracy = (int)_spatialAudioAccuracy;
+            configuration.CustomNpcCharacters = PluginReference.NpcPersonalityWindow.CustomNpcCharacters;
 
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {

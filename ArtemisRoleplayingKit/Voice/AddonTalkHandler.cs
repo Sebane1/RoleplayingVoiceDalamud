@@ -106,7 +106,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private ushort _defaultCharacterModeInput;
         private byte _defaultCharacterModeRaw;
         private string _lastNPCAnnouncementName;
-        ConcurrentDictionary<string, Task> _currentlyEmotingCharacters = new ConcurrentDictionary<string, Task>();
+        ConcurrentDictionary<string, string> _currentlyEmotingCharacters = new ConcurrentDictionary<string, string>();
         Queue<KeyValuePair<string, string>> _npcDungeonDialogueQueue = new Queue<KeyValuePair<string, string>>();
         List<string> _knownNPCBossAnnouncers = new List<string>();
         List<string> _knownNPCAnnouncers = new List<string>();
@@ -227,7 +227,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_clientState.IsLoggedIn) {
                 if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
-                    NPCText("Hydaelyn", message.TextValue, "Hyn", true, !_plugin.Config.ReadLocationsAndToastNotifications);
+                    NPCText("Narrator", message.TextValue, "Hyn", true, !_plugin.Config.ReadLocationsAndToastNotifications);
                 }
             }
         }
@@ -389,8 +389,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     } else {
                                                         NPCText(finalName,
                                                             npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ? character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
-                                                            character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape, character->GameObject.ObjectID, new MediaGameObject(pActor));
+                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
+                                                            character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
+                                                            character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
+                                                            character->GameObject.ObjectID, new MediaGameObject(pActor));
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         _plugin.Chat.Print("Sent audio from NPC bubble.");
@@ -549,7 +551,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 } else {
                                     if (_currentDialoguePaths.Count > 0) {
-                                        if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] && !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                                        if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] &&
+                                        !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                             try {
                                                 var otherData = _clientState.LocalPlayer.OnlineStatus;
                                                 if (otherData.Id == 15) {
@@ -598,29 +601,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 pollingTimer.Restart();
             }
         }
-
-        //private void Filter_OnFilterWasRan(object sender, SoundFilter.InterceptedSound e) {
-        //    if (_npcDungeonDialogueQueue.Count > 0 && Conditions.IsBoundByDuty) {
-        //        Task.Run(() => {
-        //            while (_npcDungeonDialogueQueue.Count > 0) {
-        //                var item = _npcDungeonDialogueQueue.Dequeue();
-        //                if (_blockAudioGenerationCount < 1 && !_blockAudioGeneration) {
-        //                    NPCText(item.Key, item.Value.TrimStart('.'), true, !Conditions.IsBoundByDuty);
-        //                    if (_plugin.Config.DebugMode) {
-        //                        _plugin.Chat.Print("Sent audio from NPC chat.");
-        //                    }
-        //                } else {
-        //                    if (_plugin.Config.DebugMode) {
-        //                        _plugin.Chat.Print("Blocked announcement " + item.Key + ": "
-        //                            + item.Value);
-        //                    }
-        //                }
-        //            }
-        //            _blockAudioGenerationCount--;
-        //            _blockAudioGeneration = false;
-        //        });
-        //    }
-        //}
 
         private void GetAnimationDefaults() {
             var actorMemory = new ActorMemory();
@@ -708,7 +688,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                 actorMemory.SetAddress(character.Address);
                 var animationMemory = actorMemory.Animation;
                 animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
-                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)),
+                    LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
                 await Task.Run(delegate {
                     Thread.Sleep(10000);
                     StopLipSync(character);
@@ -764,21 +745,22 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 byte originalMode = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                if (!_currentlyEmotingCharacters.ContainsKey(character.ObjectId.ToString())) {
-                    _currentlyEmotingCharacters[character.ObjectId.ToString()] = Task.Run(() => {
-                        Character reference = character;
-                        Vector3 startingPosition = player.Position;
-                        Thread.Sleep(2000);
-                        while (true) {
-                            if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
-                                StopEmote(reference.Address);
-                                _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
-                                break;
-                            }
-                            Thread.Sleep(5000);
+                Task.Run(() => {
+                    string taskId = Guid.NewGuid().ToString();
+                    _currentlyEmotingCharacters[character.ObjectId.ToString()] = taskId;
+                    Character reference = character;
+                    Vector3 startingPosition = player.Position;
+                    Thread.Sleep(2000);
+                    while (_currentlyEmotingCharacters[character.ObjectId.ToString()] == taskId) {
+                        if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
+                            StopEmote(reference.Address);
+                            _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
+                            break;
+                        } else {
+                            Thread.Sleep(1000 * _currentlyEmotingCharacters.Count);
                         }
-                    });
-                }
+                    }
+                });
             } catch {
 
             }
@@ -1018,15 +1000,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     initialState = actorMemory.CharacterMode;
                                     animationMemory = actorMemory.Animation;
                                     animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                                    //Stopwatch lipSyncCommitmentTimer = new Stopwatch();
-                                    //int lipSyncCommitment = 0;
                                     if (wavePlayer.TotalTime.Seconds < 2) {
                                         lipId = LipSyncTypes[4].Timeline.AnimationId;
                                     } else if (wavePlayer.TotalTime.Seconds < 7) {
-                                        //lipSyncCommitment = 6100;
                                         lipId = LipSyncTypes[5].Timeline.AnimationId;
                                     } else {
-                                        //lipSyncCommitment = 6100;
                                         lipId = LipSyncTypes[6].Timeline.AnimationId;
                                     }
                                     if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
@@ -1108,7 +1086,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                     if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
                                                         if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
+                                                                ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                                         }
                                                         MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
                                                         lipWasSynced = true;
@@ -1116,7 +1095,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 } else {
                                                     if (lipWasSynced) {
                                                         if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
+                                                                ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                                         }
                                                         MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                                         lipWasSynced = false;
@@ -1222,7 +1202,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool VerifyIsEnglish(string message) {
             string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
             " puente ", "Heuso ", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", " cerca", "descubierto",
-            "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", "agua", " rota", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
+            "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
             "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto ","Si "," hecho "," usted ", "nosotros", "también", " haremos "};
             foreach (string symbol in symbolBlacklist) {
                 if (message.Contains(symbol)) {

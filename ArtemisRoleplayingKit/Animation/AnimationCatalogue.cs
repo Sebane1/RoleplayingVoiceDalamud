@@ -1,5 +1,8 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using ImGuiNET;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
@@ -12,9 +15,13 @@ namespace RoleplayingVoice {
         Dictionary<string, AnimationPage> _animationPages = new Dictionary<string, AnimationPage>();
         string _currentCategory = "All";
         private Plugin _plugin;
-        int maxItemsPerPage = 25;
-        int maxItemsPerCategoryPage = 8;
+        int maxItemsPerPage = 20;
+        int maxItemsPerCategoryPage = 6;
         int _categoryPage = 0;
+        private int _currentSelection;
+        private List<Character> _objects;
+        private List<string> _objectNames;
+
         public AnimationCatalogue(DalamudPluginInterface pluginInterface) : base("Animation Window") {
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -55,6 +62,55 @@ namespace RoleplayingVoice {
                        .Replace("~", "*").Replace("`", "*");
         }
         public override void Draw() {
+            ImGui.BeginTable("##Animation Tabler", 2);
+            ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("Custom Animation Mods", ImGuiTableColumnFlags.WidthStretch, 300);
+            ImGui.TableHeadersRow();
+            ImGui.TableNextRow();
+            ImGui.TableSetColumnIndex(0);
+            DrawObjectList();
+            ImGui.TableSetColumnIndex(1);
+            DrawAnimationMenu();
+            ImGui.EndTable();
+        }
+
+        private void DrawObjectList() {
+            ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+            _objects = new List<Character>();
+            _objectNames = new List<string>();
+            _objects.Add(Plugin.ClientState.LocalPlayer as Character);
+            _objectNames.Add(Plugin.ClientState.LocalPlayer.Name.TextValue);
+            bool oneMinionOnly = false;
+            foreach (var item in Plugin.ObjectTable) {
+                Character character = item as Character;
+                if (character != null) {
+                    if (character.ObjectKind == ObjectKind.Companion
+                        && character.OwnerId == Plugin.ClientState.LocalPlayer.OwnerId) {
+                        if (!oneMinionOnly) {
+                            string name = "";
+                            foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {
+                                if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
+                                    name = customNPC.NpcName;
+                                }
+                            }
+                            if (!string.IsNullOrEmpty(name)) {
+                                _objectNames.Add(name);
+                                _objects.Add(character);
+                            }
+                            oneMinionOnly = true;
+                        }
+                    } else if (character.ObjectKind == ObjectKind.EventNpc) {
+                        if (!string.IsNullOrEmpty(character.Name.TextValue)) {
+                            _objectNames.Add(character.Name.TextValue);
+                            _objects.Add(character);
+                        }
+                    }
+                }
+            }
+            ImGui.ListBox("##NPCEditing", ref _currentSelection, _objectNames.ToArray(), _objectNames.Count, 30);
+        }
+
+        private void DrawAnimationMenu() {
             if (_animationPages.Count > 0) {
                 if (ImGui.Button("<")) {
                     if (_categoryPage > 0) {
@@ -96,7 +152,7 @@ namespace RoleplayingVoice {
                             selectionIndex = _animationPages[_currentCategory].PageNumber * maxItemsPerPage + index;
                             string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
                             if (ImGui.Button(animation)) {
-                                Plugin.DoAnimation(animation.ToLower(), 0);
+                                Plugin.DoAnimation(animation.ToLower(), 0, _objects[_currentSelection]);
                             }
                             index++;
                         } else {
