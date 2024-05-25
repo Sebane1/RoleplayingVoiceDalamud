@@ -563,10 +563,6 @@ namespace RoleplayingVoice {
         }
 
         private void DrawErrors() {
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
-            ImGui.BeginChild("ErrorRegion", new Vector2(
-            ImGui.GetContentRegionAvail().X,
-            ImGui.GetContentRegionAvail().Y - 40f), false);
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
@@ -583,7 +579,6 @@ namespace RoleplayingVoice {
                 }
                 ErrorMessage(fileMoveMessage);
             }
-            ImGui.EndChild();
 
             if (!string.IsNullOrEmpty(apiKey) && runOnLaunch) {
                 Task.Run(() => _manager.ApiValidation(apiKey.Trim()));
@@ -698,6 +693,10 @@ namespace RoleplayingVoice {
         }
 
         private void ErrorMessage(string message) {
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 10f);
+            ImGui.BeginChild("ErrorRegion", new Vector2(
+            ImGui.GetContentRegionAvail().X,
+            ImGui.GetContentRegionAvail().Y - 40f), false);
             var requiredY = ImGui.CalcTextSize(message).Y + 1f;
             var availableY = ImGui.GetContentRegionAvail().Y;
             var initialH = ImGui.GetCursorPos().Y;
@@ -714,6 +713,7 @@ namespace RoleplayingVoice {
                 changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
                 Size = changedSize;
             }
+            ImGui.EndChild();
         }
 
         public async void RefreshVoices() {
