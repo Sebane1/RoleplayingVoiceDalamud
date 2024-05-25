@@ -84,8 +84,7 @@ namespace RoleplayingVoice {
             foreach (var item in Plugin.ObjectTable) {
                 Character character = item as Character;
                 if (character != null) {
-                    if (character.ObjectKind == ObjectKind.Companion
-                        && character.OwnerId == Plugin.ClientState.LocalPlayer.OwnerId) {
+                    if (character.ObjectKind == ObjectKind.Companion) {
                         if (!oneMinionOnly) {
                             string name = "";
                             foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {

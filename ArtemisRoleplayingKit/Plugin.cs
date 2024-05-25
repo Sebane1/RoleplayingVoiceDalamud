@@ -1520,7 +1520,7 @@ namespace RoleplayingVoice {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
-                    if (!_isAlreadyRunningEmote && _clientState.LocalPlayer.Address == instigator.Address) {
+                    if (!_isLoadingAnimation && !_isAlreadyRunningEmote && _clientState.LocalPlayer.Name.TextValue == instigator.Name.TextValue) {
                         _lastEmoteAnimationUsed = GetEmoteData(emoteId);
                     }
                     _timeSinceLastEmoteDone.Restart();
@@ -2776,10 +2776,10 @@ namespace RoleplayingVoice {
         }
         private void SendingEmote(Character instigator, ushort emoteId) {
             Task.Run(delegate {
-                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    _voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                if (config.CharacterVoicePacks.ContainsKey(instigator.Name.TextValue)) {
+                    _voice = config.CharacterVoicePacks[instigator.Name.TextValue];
                     _voicePackPath = config.CacheFolder + @"\VoicePack\" + _voice;
-                    _voicePackStaging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    _voicePackStaging = config.CacheFolder + @"\Staging\" + instigator.Name.TextValue;
                     CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList);
                     bool isVoicedEmote = false;
                     _lastEmoteUsed = GetEmoteName(emoteId);
@@ -2799,10 +2799,10 @@ namespace RoleplayingVoice {
                             Task.Run(delegate {
                                 if (e.MaxSampleValues.Length > 0) {
                                     if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                        _addonTalkHandler.TriggerLipSync(instigator, 4);
                                         lipWasSynced = true;
                                     } else {
-                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        _addonTalkHandler.StopLipSync(instigator);
                                     }
                                 }
                             });
@@ -3399,19 +3399,26 @@ namespace RoleplayingVoice {
                             CheckAnimationMods(splitArgs, args, _clientState.LocalPlayer);
                             break;
                         case "companionanim":
-                            Character foundCharacter = null;
-                            foreach (var item in GetNearestObjects()) {
-                                Character character = item as Character;
-                                if (character != null && character.ObjectKind == ObjectKind.Companion && character.OwnerId == _clientState.LocalPlayer.OwnerId) {
-                                    foundCharacter = character;
-                                    break;
+                            Task.Run(() => {
+                                Character foundCharacter = null;
+                                for (int i = 0; i < 4; i++) {
+                                    foreach (var item in GetNearestObjects()) {
+                                        Character character = item as Character;
+                                        if (character != null && character.ObjectKind == ObjectKind.Companion) {
+                                            foundCharacter = character;
+                                            break;
+                                        }
+                                    }
+                                    if (foundCharacter != null) {
+                                        CheckAnimationMods(splitArgs, args, foundCharacter);
+                                        break;
+                                    }
+                                    Thread.Sleep(1000);
                                 }
-                            }
-                            if (foundCharacter != null) {
-                                CheckAnimationMods(splitArgs, args, foundCharacter);
-                            } else {
-                                _chat.PrintError("Could not find owned companion to apply animation");
-                            }
+                                if (foundCharacter == null) {
+                                    _chat.PrintError("Could not find owned companion to apply animation");
+                                }
+                            });
                             break;
                         case "emotecontrol":
                             CheckNPCEmoteControl(splitArgs, args);
@@ -3600,65 +3607,69 @@ namespace RoleplayingVoice {
 
         public void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
             foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
-                    emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
-                    emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
-                    emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
-                    foreach (var gameObject in GetNearestObjects()) {
-                        try {
-                            Character character = gameObject as Character;
-                            if (character != null) {
-                                if (!character.IsDead) {
-                                    if (character.ObjectKind == ObjectKind.Retainer ||
-                                        character.ObjectKind == ObjectKind.BattleNpc ||
-                                        character.ObjectKind == ObjectKind.EventNpc ||
-                                        character.ObjectKind == ObjectKind.Companion ||
-                                        character.ObjectKind == ObjectKind.Housing) {
-                                        if (character.Name.TextValue.ToLower().Contains(targetNPC)) {
-                                            if (!IsPartOfQuestOrImportant(character)) {
-                                                _toast.ShowNormal(character.Name.TextValue + " follows your command!");
-                                                if (becomesPreOccupied) {
-                                                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
-                                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                        _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
+                    if ((
+                        emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
+                        emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
+                        emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
+                        foreach (var gameObject in GetNearestObjects()) {
+                            try {
+                                Character character = gameObject as Character;
+                                if (character != null) {
+                                    if (!character.IsDead) {
+                                        if (character.ObjectKind == ObjectKind.Retainer ||
+                                            character.ObjectKind == ObjectKind.BattleNpc ||
+                                            character.ObjectKind == ObjectKind.EventNpc ||
+                                            character.ObjectKind == ObjectKind.Companion ||
+                                            character.ObjectKind == ObjectKind.Housing) {
+                                            if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
+                                                if (!IsPartOfQuestOrImportant(character)) {
+                                                    _toast.ShowNormal(character.Name.TextValue + " follows your command!");
+                                                    if (becomesPreOccupied) {
+                                                        _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                            _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                        }
+                                                    } else {
+                                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
+                                                            (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                                     }
                                                 } else {
-                                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
-                                                        (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                    _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
                                                 }
-                                            } else {
-                                                _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
+                                                break;
                                             }
-                                            break;
                                         }
                                     }
                                 }
-                            }
-                        } catch { }
+                            } catch { }
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
         public void DoEmote(string command, Character targetNPC, bool becomesPreOccupied = true) {
             try {
                 foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                    if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null && (
+                    if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
+                        if ((
                         emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
                         emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
                         emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
-                        if (!IsPartOfQuestOrImportant(targetNPC)) {
-                            if (becomesPreOccupied) {
-                                _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
-                                if (!_preOccupiedWithEmoteCommand.Contains(targetNPC.Name.TextValue)) {
-                                    _preOccupiedWithEmoteCommand.Add(targetNPC.Name.TextValue);
+                            if (!IsPartOfQuestOrImportant(targetNPC)) {
+                                if (becomesPreOccupied) {
+                                    _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                    if (!_preOccupiedWithEmoteCommand.Contains(targetNPC.Name.TextValue)) {
+                                        _preOccupiedWithEmoteCommand.Add(targetNPC.Name.TextValue);
+                                    }
+                                } else {
+                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
+                                        (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                 }
-                            } else {
-                                _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
-                                    (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                             }
+                            break;
                         }
-                        break;
                     }
                 }
             } catch {
@@ -3814,12 +3825,20 @@ namespace RoleplayingVoice {
                     Thread.Sleep(2000);
                 } else {
                     _mediaManager.StopAudio(_playerObject);
+                    Thread.Sleep(1000);
                 }
                 ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
                 if (!_didRealEmote) {
-                    _wasDoingFakeEmote = true;
+                    if (character.Address == _clientState.LocalPlayer.Address) {
+                        _wasDoingFakeEmote = true;
+                    }
                     OnEmote(character, (ushort)emoteModData.EmoteId);
                     _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
+                    if (character.ObjectKind == ObjectKind.Companion) {
+                        if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                            _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                        }
+                    }
                     _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
                     _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
                     Task.Run(() => {
@@ -3831,6 +3850,11 @@ namespace RoleplayingVoice {
                                 _wasDoingFakeEmote = false;
                                 _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)0);
                                 _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)0);
+                                if (character.ObjectKind == ObjectKind.Companion) {
+                                    if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                        _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
+                                    }
+                                }
                                 break;
                             }
                         }
