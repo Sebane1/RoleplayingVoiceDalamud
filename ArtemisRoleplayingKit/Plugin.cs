@@ -1513,14 +1513,14 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void OnEmote(PlayerCharacter instigator, ushort emoteId) {
+        public void OnEmote(Character instigator, ushort emoteId) {
             if (!disposed) {
                 _lastPlayerToEmote = new MediaGameObject(instigator);
-                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue) {
+                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue || instigator.OwnerId == _clientState.LocalPlayer.ObjectId) {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
-                    if (!_isAlreadyRunningEmote) {
+                    if (!_isAlreadyRunningEmote && _clientState.LocalPlayer.Address == instigator.Address) {
                         _lastEmoteAnimationUsed = GetEmoteData(emoteId);
                     }
                     _timeSinceLastEmoteDone.Restart();
@@ -2686,7 +2686,7 @@ namespace RoleplayingVoice {
             }
             return false;
         }
-        private async void ReceivingEmote(PlayerCharacter instigator, ushort emoteId) {
+        private async void ReceivingEmote(Character instigator, ushort emoteId) {
             if (instigator != null) {
                 try {
                     string[] senderStrings = SplitCamelCase(
@@ -2774,7 +2774,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private void SendingEmote(PlayerCharacter instigator, ushort emoteId) {
+        private void SendingEmote(Character instigator, ushort emoteId) {
             Task.Run(delegate {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                     _voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
@@ -3818,7 +3818,7 @@ namespace RoleplayingVoice {
                 ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
                 if (!_didRealEmote) {
                     _wasDoingFakeEmote = true;
-                    OnEmote(_clientState.LocalPlayer, (ushort)emoteModData.EmoteId);
+                    OnEmote(character, (ushort)emoteModData.EmoteId);
                     _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
                     _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
                     _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
