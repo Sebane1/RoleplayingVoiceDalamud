@@ -43,7 +43,7 @@ namespace RoleplayingVoiceDalamud {
                         SortFile(file);
                     }
                 }
-            }
+            });
         }
         public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
             _dataManager = dataManager;

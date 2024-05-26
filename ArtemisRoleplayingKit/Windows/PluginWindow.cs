@@ -946,6 +946,10 @@ namespace RoleplayingVoice {
                 if (_voicePackList.Length > 0 && clientState.IsLoggedIn) {
                     voicePackComboBox.Draw();
                     ImGui.SameLine();
+                    if (ImGui.Button("Refresh Changes")) {
+                        PluginReference.RefreshData();
+                    }
+                    ImGui.SameLine();
                     if (ImGui.Button("Open Sound Directory")) {
                         if (voicePackComboBox != null && _voicePackList != null) {
                             characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
