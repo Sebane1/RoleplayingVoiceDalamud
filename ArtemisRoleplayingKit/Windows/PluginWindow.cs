@@ -298,12 +298,12 @@ namespace RoleplayingVoice {
                         PluginReference.NpcPersonalityWindow.Draw();
                         ImGui.EndTabItem();
                     }
-                    if (ImGui.BeginTabItem("Twitch")) {
-                        DrawTwitch();
-                        ImGui.EndTabItem();
-                    }
                     if (ImGui.BeginTabItem("Animation")) {
                         DrawAnimationWindow();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Twitch")) {
+                        DrawTwitch();
                         ImGui.EndTabItem();
                     }
                     if (ImGui.BeginTabItem("Volume")) {

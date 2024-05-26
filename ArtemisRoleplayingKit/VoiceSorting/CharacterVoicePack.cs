@@ -1,11 +1,16 @@
 ﻿
+using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-
+using Lumina.Excel.GeneratedSheets;
+using Action = Lumina.Excel.GeneratedSheets.Action;
+using Lumina.Excel;
+using Dalamud.Utility;
+using Dalamud;
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
         private List<string> _castedAttack = new List<string>();
@@ -22,22 +27,78 @@ namespace RoleplayingVoiceDalamud {
         private int emoteIndex;
         private string lastMissed;
         private string lastAction;
+        private IDataManager _dataManager;
+        private ClientLanguage _clientLanguage;
+        private ExcelSheet<Action> _actionsEnglish;
+        private ExcelSheet<Action> _actionsFrench;
+        private ExcelSheet<Action> _actionsGerman;
+        private ExcelSheet<Action> _actionsJapanese;
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
-        public CharacterVoicePack(string directory) {
+        public CharacterVoicePack(string directory, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
+            _dataManager = dataManager;
+            _clientLanguage = clientLanguage;
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
                 foreach (string file in Directory.EnumerateFiles(directory)) {
                     SortFile(file);
                 }
             }
         }
-        public CharacterVoicePack(List<string> files) {
+        public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
+            _dataManager = dataManager;
+            _clientLanguage = clientLanguage;
             if (files != null) {
                 foreach (string file in files) {
                     SortFile(file);
                 }
             }
+        }
+
+        public string GetNameInClientLanguage(Dalamud.ClientLanguage clientLanguage, string name) {
+            uint index = GetLanguageAgnosticActionIndex(name); ;
+            if (clientLanguage == Dalamud.ClientLanguage.English) {
+                Action actionEnglish = _dataManager.GetExcelSheet<Action>(Dalamud.ClientLanguage.English).GetRow(index);
+                return actionEnglish.Name.RawString;
+            } else if (clientLanguage == Dalamud.ClientLanguage.Japanese) {
+                Action actionJapanese = _dataManager.GetExcelSheet<Action>(Dalamud.ClientLanguage.Japanese).GetRow(index);
+                return actionJapanese.Name.RawString;
+            } else if (clientLanguage == Dalamud.ClientLanguage.German) {
+                Action actionGerman = _dataManager.GetExcelSheet<Action>(Dalamud.ClientLanguage.German).GetRow(index);
+                return actionGerman.Name.RawString;
+            } else if (clientLanguage == Dalamud.ClientLanguage.French) {
+                Action actionFrench = _dataManager.GetExcelSheet<Action>(Dalamud.ClientLanguage.French).GetRow(index);
+                return actionFrench.Name.RawString;
+            }
+            return "Invalid";
+        }
+        public uint GetLanguageAgnosticActionIndex(string name) {
+            uint englishIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.English, name);
+            if (englishIndex is not 0) {
+                return englishIndex;
+            }
+            uint japeneseIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.Japanese, name);
+            if (japeneseIndex is not 0) {
+                return japeneseIndex;
+            }
+            uint germanIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.German, name);
+            if (germanIndex is not 0) {
+                return germanIndex;
+            }
+            uint frenchIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.French, name);
+            if (frenchIndex is not 0) {
+                return frenchIndex;
+            }
+            return 0;
+        }
+        public uint GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage clientLanguage, string name) {
+            string sanitizedNamed = name.ToLower().Replace(" ", null).Trim();
+            foreach (var item in _dataManager.GetExcelSheet<Action>(clientLanguage)) {
+                if (item.Name.RawString.ToLower().Replace(" ", null).Trim().Contains(sanitizedNamed)) {
+                    return item.RowId;
+                }
+            }
+            return 0;
         }
         //public unsafe int GetRandom(int min, int max) {
         //    var utcTime = Framework.GetServerTime();
@@ -87,12 +148,12 @@ namespace RoleplayingVoiceDalamud {
                         _death.Add(file);
                     } else if (filteredString.Contains("limit")) {
                         _readying.Add(file);
-                        AddMisc("shieldwall", file);
-                        AddMisc("stronghold", file);
-                        AddMisc("lastbastion", file);
-                        AddMisc("landwaker", file);
-                        AddMisc("darkforce", file);
-                        AddMisc("gunmetalsoul", file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "shieldwall").Replace(" ", null).ToLower(), file); ;
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "stronghold").Replace(" ", null).ToLower(), file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "lastbastion").Replace(" ", null).ToLower(), file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "landwaker").Replace(" ", null).ToLower(), file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "darkforce").Replace(" ", null).ToLower(), file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, "gunmetalsoul").Replace(" ", null).ToLower(), file);
                     } else if (filteredString.Contains("castingheal")) {
                         _castingHeal.Add(file);
                     } else if (filteredString.Contains("casting")) {

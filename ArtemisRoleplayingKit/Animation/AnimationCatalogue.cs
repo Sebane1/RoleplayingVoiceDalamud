@@ -21,6 +21,7 @@ namespace RoleplayingVoice {
         private int _currentSelection;
         private List<Character> _objects;
         private List<string> _objectNames;
+        private bool incognito;
 
         public AnimationCatalogue(DalamudPluginInterface pluginInterface) : base("Animation Window") {
             SizeCondition = ImGuiCond.Always;
@@ -75,13 +76,16 @@ namespace RoleplayingVoice {
         }
 
         private void DrawObjectList() {
+            if (ImGui.Button("Toggle Incognito", new Vector2(ImGui.GetColumnWidth(), 30))) {
+                incognito = !incognito;
+            }
             ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
             _objects = new List<Character>();
             _objectNames = new List<string>();
             _objects.Add(Plugin.ClientState.LocalPlayer as Character);
-            _objectNames.Add(Plugin.ClientState.LocalPlayer.Name.TextValue);
+            _objectNames.Add(incognito ? "Player Character" : Plugin.ClientState.LocalPlayer.Name.TextValue);
             bool oneMinionOnly = false;
-            foreach (var item in Plugin.ObjectTable) {
+            foreach (var item in Plugin.GetNearestObjects()) {
                 Character character = item as Character;
                 if (character != null) {
                     if (character.ObjectKind == ObjectKind.Companion) {
@@ -106,7 +110,7 @@ namespace RoleplayingVoice {
                     }
                 }
             }
-            ImGui.ListBox("##NPCEditing", ref _currentSelection, _objectNames.ToArray(), _objectNames.Count, 30);
+            ImGui.ListBox("##NPCEditing", ref _currentSelection, _objectNames.ToArray(), _objectNames.Count, 29);
         }
 
         private void DrawAnimationMenu() {
