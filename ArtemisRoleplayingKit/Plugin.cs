@@ -732,13 +732,16 @@ namespace RoleplayingVoice {
         private void CheckIfDied() {
             if (config.VoicePackIsActive) {
                 Task.Run(delegate {
-                    if (_mainCharacterVoicePack == null) {
-                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                    }
                     if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
+                        if (_mainCharacterVoicePack == null) {
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                        }
                         PlayVoiceLine(_mainCharacterVoicePack.GetDeath());
                         _playerDied = true;
                     } else if (_clientState.LocalPlayer.CurrentHp > 0 && _playerDied) {
+                        if (_mainCharacterVoicePack == null) {
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                        }
                         PlayVoiceLine(_mainCharacterVoicePack.GetRevive());
                         _playerDied = false;
                     }
@@ -808,9 +811,11 @@ namespace RoleplayingVoice {
                             string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
                             string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                            if (_mainCharacterVoicePack == null) {
+                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                            }
                             bool isVoicedEmote = false;
-                            string value = characterVoicePack.GetMisc("Battle Song");
+                            string value = _mainCharacterVoicePack.GetMisc("Battle Song");
                             if (!string.IsNullOrEmpty(value)) {
                                 //if (config.UsePlayerSync) {
                                 //    Task.Run(async () => {
@@ -859,12 +864,14 @@ namespace RoleplayingVoice {
                                     string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                                     string path = config.CacheFolder + @"\VoicePack\" + voice;
                                     string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                                    if (_mainCharacterVoicePack == null) {
+                                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                                    }
                                     bool isVoicedEmote = false;
                                     var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
                                     var mountId = characterReference->Mount.MountId;
                                     var mount = DataManager.GetExcelSheet<Mount>(Dalamud.ClientLanguage.English).GetRow(mountId);
-                                    string value = characterVoicePack.GetMisc(mount.Singular.RawString);
+                                    string value = _mainCharacterVoicePack.GetMisc(mount.Singular.RawString);
                                     if (!string.IsNullOrEmpty(value)) {
                                         //if (config.UsePlayerSync) {
                                         //    Task.Run(async () => {
@@ -1440,8 +1447,10 @@ namespace RoleplayingVoice {
                 string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
                 string soundTrigger = tokenArray[1];
                 int index = GetNumberFromString(soundTrigger);
-                CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                string value = index == -1 ? characterVoicePack.GetMisc(soundTrigger) : characterVoicePack.GetMiscSpecific(soundTrigger, index);
+                if (_mainCharacterVoicePack == null) {
+                    _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                }
+                string value = index == -1 ? _mainCharacterVoicePack.GetMisc(soundTrigger) : _mainCharacterVoicePack.GetMiscSpecific(soundTrigger, index);
                 if (!string.IsNullOrEmpty(value)) {
                     _mediaManager.PlayAudio(new MediaGameObject(_clientState.LocalPlayer), value, SoundType.ChatSound);
                 }
@@ -1460,8 +1469,10 @@ namespace RoleplayingVoice {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                     if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 3000) {
-                        CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                        string value = characterVoicePack.GetMisc(message.TextValue);
+                        if (_mainCharacterVoicePack == null) {
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                        }
+                        string value = _mainCharacterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
                             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
                                 _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
@@ -1667,7 +1678,7 @@ namespace RoleplayingVoice {
                             string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                             bool attackIntended = false;
                             Stopwatch performanceTimer = Stopwatch.StartNew();
-                            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat || _mainCharacterVoicePack == null) {
+                            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                                 if (config.DebugMode) {
                                     _pluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
@@ -1676,7 +1687,8 @@ namespace RoleplayingVoice {
                             performanceTimer.Restart();
                             if (!message.TextValue.Contains("cancel")) {
                                 if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
-                                    LocalPlayerCombat(playerName, playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
+                                    LocalPlayerCombat(playerName, _clientState.ClientLanguage == Dalamud.ClientLanguage.Japanese ?
+                                        playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
                                 } else {
                                     PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
                                 }
@@ -2125,9 +2137,11 @@ namespace RoleplayingVoice {
                 string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
                 string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                if (_mainCharacterVoicePack == null) {
+                    _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                }
                 bool isVoicedEmote = false;
-                string value = characterVoicePack.GetMisc("moving");
+                string value = _mainCharacterVoicePack.GetMisc("moving");
                 if (!string.IsNullOrEmpty(value)) {
                     if (config.UsePlayerSync) {
                         Task.Run(async () => {
@@ -2429,7 +2443,7 @@ namespace RoleplayingVoice {
                         try {
                             penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
                             combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
-                            IpcSystem.InvokeOnVoicePackChanged();
+                            IpcSystem?.InvokeOnVoicePackChanged();
                         } catch (Exception e) {
                             _pluginLog.Error(e.Message);
                         }
@@ -2444,6 +2458,8 @@ namespace RoleplayingVoice {
                         } catch (Exception e) {
                             _pluginLog.Error(e.Message);
                         }
+                    } else {
+                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                     }
                 }
             }
@@ -2482,19 +2498,6 @@ namespace RoleplayingVoice {
                                 File.Delete(file);
                             } catch (Exception e) {
                                 //Dalamud.Logging.PluginLog.Warning(e, e.Message);
-                            }
-                        }
-                    }
-                    if (Directory.Exists(config.CacheFolder)) {
-                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder)) {
-                            try {
-                                if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                                    File.Delete(file);
-                                } else {
-                                    _chat?.PrintError("[Artemis Roleplaying Kit]" + file + " should not be in the cache folder, please remove it.");
-                                }
-                            } catch (Exception e) {
-                                _pluginLog?.Warning(e, e.Message);
                             }
                         }
                     }
@@ -2788,17 +2791,19 @@ namespace RoleplayingVoice {
                     _voice = config.CharacterVoicePacks[instigator.Name.TextValue];
                     _voicePackPath = config.CacheFolder + @"\VoicePack\" + _voice;
                     _voicePackStaging = config.CacheFolder + @"\Staging\" + instigator.Name.TextValue;
-                    CharacterVoicePack characterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                    if (_mainCharacterVoicePack == null) {
+                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                    }
                     bool isVoicedEmote = false;
                     _lastEmoteUsed = GetEmoteName(emoteId);
-                    string emotePath = GetEmotePath(characterVoicePack, emoteId, 0, out isVoicedEmote);
+                    string emotePath = GetEmotePath(_mainCharacterVoicePack, emoteId, 0, out isVoicedEmote);
                     if (!string.IsNullOrEmpty(emotePath)) {
                         string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                         TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
                         _mediaManager.StopAudio(new MediaGameObject(instigator));
                         bool lipWasSynced = false;
                         _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
-                        characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, default, delegate {
+                        _mainCharacterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[_mainCharacterVoicePack.EmoteIndex]) : 0, default, delegate {
                             Task.Run(delegate {
                                 _addonTalkHandler.StopLipSync(instigator);
                             });
@@ -2816,8 +2821,8 @@ namespace RoleplayingVoice {
                             });
                         });
                         Task.Run(delegate {
-                            if (characterVoicePack.EmoteIndex > -1) {
-                                Thread.Sleep((int)((decimal)1000m * data.TimeCodes[characterVoicePack.EmoteIndex]));
+                            if (_mainCharacterVoicePack.EmoteIndex > -1) {
+                                Thread.Sleep((int)((decimal)1000m * data.TimeCodes[_mainCharacterVoicePack.EmoteIndex]));
                             }
                             _addonTalkHandler.TriggerLipSync(instigator, 5);
                         });
