@@ -1,16 +1,14 @@
-﻿
-using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.System.Framework;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Lumina.Excel.GeneratedSheets;
 using Action = Lumina.Excel.GeneratedSheets.Action;
-using Lumina.Excel;
-using Dalamud.Utility;
 using Dalamud;
+using Dalamud.Plugin.Services;
+using System.Threading.Tasks;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using Task = System.Threading.Tasks.Task;
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
         private List<string> _castedAttack = new List<string>();
@@ -29,30 +27,30 @@ namespace RoleplayingVoiceDalamud {
         private string lastAction;
         private IDataManager _dataManager;
         private ClientLanguage _clientLanguage;
-        private ExcelSheet<Action> _actionsEnglish;
-        private ExcelSheet<Action> _actionsFrench;
-        private ExcelSheet<Action> _actionsGerman;
-        private ExcelSheet<Action> _actionsJapanese;
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
         public CharacterVoicePack(string directory, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
-            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
-                foreach (string file in Directory.EnumerateFiles(directory)) {
-                    SortFile(file);
+            Task.Run(() => {
+                if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                    foreach (string file in Directory.EnumerateFiles(directory)) {
+                        SortFile(file);
+                    }
                 }
-            }
+            });
         }
         public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
-            if (files != null) {
-                foreach (string file in files) {
-                    SortFile(file);
+            Task.Run(() => {
+                if (files != null) {
+                    foreach (string file in files) {
+                        SortFile(file);
+                    }
                 }
-            }
+            });
         }
 
         public string GetNameInClientLanguage(Dalamud.ClientLanguage clientLanguage, string name) {
@@ -132,7 +130,7 @@ namespace RoleplayingVoiceDalamud {
             if (file.ToLower().EndsWith(".mp3") || file.ToLower().EndsWith(".ogg")) {
                 bool emoteAdded = false;
                 if (!emoteAdded) {
-                    string filteredString = StripNonCharacters(file.ToLower());
+                    string filteredString = StripNonCharacters(file.ToLower(), _clientLanguage);
                     if (filteredString.Contains("meleeattack")) {
                         _meleeAttack.Add(file);
                     } else if (filteredString.Contains("castedattack")) {
@@ -171,19 +169,21 @@ namespace RoleplayingVoiceDalamud {
                         AddMisc("notyetready", file);
                     } else {
                         string name = Path.GetFileNameWithoutExtension(file);
-                        string strippedName = StripNonCharacters(name).ToLower();
+                        string strippedName = StripNonCharacters(name, _clientLanguage).ToLower();
                         string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : name;
-                        AddMisc(final, file);
+                        AddMisc(GetNameInClientLanguage(_clientLanguage, final), file);
                     }
                 }
             }
         }
-        public static string StripNonCharacters(string str) {
-            if (str != null) {
-                Regex rgx = new Regex("[^a-zA-Z]");
-                str = rgx.Replace(str, "");
-            } else {
-                return "";
+        public static string StripNonCharacters(string str, Dalamud.ClientLanguage clientLanguage) {
+            if (clientLanguage != ClientLanguage.Japanese) {
+                if (str != null) {
+                    Regex rgx = new Regex("[^a-zA-Z]");
+                    str = rgx.Replace(str, "");
+                } else {
+                    return "";
+                }
             }
             return str;
         }
@@ -235,7 +235,7 @@ namespace RoleplayingVoiceDalamud {
 
         public string GetMisc(string value) {
             if (value != null) {
-                string strippedName = StripNonCharacters(value).ToLower();
+                string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
                     if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {
@@ -247,7 +247,7 @@ namespace RoleplayingVoiceDalamud {
         }
         public string GetMisc(string value, int delay) {
             if (value != null) {
-                string strippedName = StripNonCharacters(value).ToLower();
+                string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
                     if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {
@@ -258,7 +258,7 @@ namespace RoleplayingVoiceDalamud {
             return string.Empty;
         }
         public string GetMiscSpecific(string value, int index) {
-            string strippedName = StripNonCharacters(value).ToLower();
+            string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
             string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
             foreach (string name in _misc.Keys) {
                 if (final.Contains(name) && name.Length > 5 || final.EndsWith(name)) {

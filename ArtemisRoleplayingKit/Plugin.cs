@@ -2453,7 +2453,7 @@ namespace RoleplayingVoice {
             Dictionary<string, bool> keyValuePairs = new Dictionary<string, bool>();
             foreach (var sound in sounds) {
                 foreach (string value in sound.Key) {
-                    string strippedValue = CharacterVoicePack.StripNonCharacters(Path.GetFileNameWithoutExtension(value));
+                    string strippedValue = CharacterVoicePack.StripNonCharacters(Path.GetFileNameWithoutExtension(value), _clientState.ClientLanguage);
                     bool allowedToAdd;
                     if (keyValuePairs.ContainsKey(strippedValue)) {
                         allowedToAdd = !keyValuePairs[strippedValue];
