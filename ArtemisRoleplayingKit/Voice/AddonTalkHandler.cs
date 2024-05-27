@@ -323,13 +323,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 });
                             }
                             _blockAudioGeneration = e.isBlocking;
-                            if (_lastNPCAnnouncementName != null) {
-                                DumpCurrentAudio(_lastNPCAnnouncementName);
-                            }
                             _lastNPCAnnouncementName = null;
                             _currentDialoguePaths.Add(e.SoundPath);
                             _currentDialoguePathsCompleted.Add(false);
                             if (_plugin.Config.DebugMode) {
+                                if (_lastNPCAnnouncementName != null) {
+                                    DumpCurrentAudio(_lastNPCAnnouncementName);
+                                }
                                 _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
                                 _plugin.Chat.Print("Dialogue block created by " + e.SoundPath);
                                 _plugin.Chat.Print("Blocked generation count is " + _blockAudioGenerationCount);

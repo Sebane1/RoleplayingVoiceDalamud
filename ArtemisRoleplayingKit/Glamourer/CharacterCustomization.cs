@@ -32,40 +32,40 @@ namespace RoleplayingVoiceDalamud.Glamourer {
 
     public class Customize {
         public Customize() {
-            //Race = new Race();
-            //Gender = new Gender();
-            //BodyType = new BodyType();
-            //Height = new Height();
-            //Clan = new Clan();
-            //Face = new FacialValue();
-            //Hairstyle = new Hairstyle();
-            //Highlights = new Highlights();
-            //SkinColor = new SkinColor();
-            //EyeColorRight = new FacialValue();
-            //HairColor = new HairColor();
-            //HighlightsColor = new HighlightsColor();
-            //FacialFeature1 = new FacialValue();
-            //FacialFeature2 = new FacialValue();
-            //FacialFeature3 = new FacialValue();
-            //FacialFeature4 = new FacialValue();
-            //FacialFeature5 = new FacialValue();
-            //FacialFeature6 = new FacialValue();
-            //FacialFeature7 = new FacialValue();
-            //LegacyTattoo = new LegacyTattoo();
-            //TattooColor = new TattooColor();
-            //Eyebrows = new FacialValue();
-            //Nose = new Nose();
-            //Jaw = new Jaw();
-            //Mouth = new Mouth();
-            //Lipstick = new Lipstick();
-            //LipColor = new LipColor();
-            //MuscleMass = new MuscleMass();
-            //TailShape = new TailShape();
-            //BustSize = new BustSize();
-            //FacePaint = new FacialValue();
-            //FacePaintReversed = new FacialValue();
-            //FacePaintColor = new FacialValue();
-            //Wetness = new Wetness();
+            Race = new Race();
+            Gender = new Gender();
+            BodyType = new BodyType();
+            Height = new Height();
+            Clan = new Clan();
+            Face = new FacialValue();
+            Hairstyle = new Hairstyle();
+            Highlights = new Highlights();
+            SkinColor = new SkinColor();
+            EyeColorRight = new FacialValue();
+            HairColor = new HairColor();
+            HighlightsColor = new HighlightsColor();
+            FacialFeature1 = new FacialValue();
+            FacialFeature2 = new FacialValue();
+            FacialFeature3 = new FacialValue();
+            FacialFeature4 = new FacialValue();
+            FacialFeature5 = new FacialValue();
+            FacialFeature6 = new FacialValue();
+            FacialFeature7 = new FacialValue();
+            LegacyTattoo = new LegacyTattoo();
+            TattooColor = new TattooColor();
+            Eyebrows = new FacialValue();
+            Nose = new Nose();
+            Jaw = new Jaw();
+            Mouth = new Mouth();
+            Lipstick = new Lipstick();
+            LipColor = new LipColor();
+            MuscleMass = new MuscleMass();
+            TailShape = new TailShape();
+            BustSize = new BustSize();
+            FacePaint = new FacialValue();
+            FacePaintReversed = new FacialValue();
+            FacePaintColor = new FacialValue();
+            Wetness = new Wetness();
         }
 
         public int ModelId { get; set; }
@@ -119,21 +119,21 @@ namespace RoleplayingVoiceDalamud.Glamourer {
 
     public class Equipment {
         public Equipment() {
-            //MainHand = new MainHand();
-            //OffHand = new OffHand();
-            //Head = new Head();
-            //Body = new Body();
-            //Hands = new Hands();
-            //Legs = new Legs();
-            //Feet = new Feet();
-            //Ears = new Ears();
-            //Neck = new Neck();
-            //Wrists = new Wrists();
-            //RFinger = new RFinger();
-            //LFinger = new LFinger();
-            //Hat = new Hat();
-            //Visor = new Visor();
-            //Weapon = new Weapon();
+            MainHand = new MainHand();
+            OffHand = new OffHand();
+            Head = new Head();
+            Body = new Body();
+            Hands = new Hands();
+            Legs = new Legs();
+            Feet = new Feet();
+            Ears = new Ears();
+            Neck = new Neck();
+            Wrists = new Wrists();
+            RFinger = new RFinger();
+            LFinger = new LFinger();
+            Hat = new Hat();
+            Visor = new Visor();
+            Weapon = new Weapon();
         }
 
         public MainHand MainHand { get; set; }
@@ -315,8 +315,8 @@ namespace RoleplayingVoiceDalamud.Glamourer {
 
     public class CharacterCustomization {
         public CharacterCustomization() {
-            //Equipment = new Equipment();
-            //Customize = new Customize();
+            Equipment = new Equipment();
+            Customize = new Customize();
         }
 
         public int FileVersion { get; set; }

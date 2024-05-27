@@ -11,7 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using static Penumbra.Api.Ipc;
+using Penumbra.Api;
 using static RoleplayingVoice.PluginWindow;
 using Vector2 = System.Numerics.Vector2;
 
@@ -136,7 +136,7 @@ namespace RoleplayingVoice {
                 ImGui.TextWrapped(_customNpcCharacters[_currentSelection].NpcPersonality);
 
                 if (ImGui.Button("Summon/Dismiss")) {
-                    _plugin.MessageQueue.Enqueue("/minion " + @"""" +_customNpcCharacters[_currentSelection].MinionToReplace + @"""");
+                    _plugin.MessageQueue.Enqueue("/minion " + @"""" + _customNpcCharacters[_currentSelection].MinionToReplace + @"""");
                 }
             }
         }
