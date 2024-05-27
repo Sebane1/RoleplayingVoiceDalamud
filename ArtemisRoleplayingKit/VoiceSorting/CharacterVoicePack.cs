@@ -174,7 +174,9 @@ namespace RoleplayingVoiceDalamud {
                             AddMisc(final, file);
                         } else {
                             AddMisc(final, file);
-                            AddMisc(StripNonCharacters(GetNameInClientLanguage(_clientLanguage, final), _clientLanguage).ToLower(), file);
+                            if (final.Length > 3) {
+                                AddMisc(StripNonCharacters(GetNameInClientLanguage(_clientLanguage, final), _clientLanguage).ToLower(), file);
+                            }
                         }
                     }
                 }

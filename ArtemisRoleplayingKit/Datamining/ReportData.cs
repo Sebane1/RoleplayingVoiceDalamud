@@ -58,13 +58,15 @@ namespace RoleplayingVoiceDalamud.Datamining {
             user = "ArtemisRoleplayingKit";
         }
         public async void ReportToXivVoice() {
-            using (HttpClient httpClient = new HttpClient()) {
-                httpClient.BaseAddress = new Uri("https://arcsidian.com/report_to_seb.php");
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var post = await httpClient.PostAsync(httpClient.BaseAddress, new StringContent(JsonConvert.SerializeObject(this)));
-                if (post.StatusCode != HttpStatusCode.OK) {
+            try {
+                using (HttpClient httpClient = new HttpClient()) {
+                    httpClient.BaseAddress = new Uri("https://arcsidian.com/report_to_seb.php");
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    var post = await httpClient.PostAsync(httpClient.BaseAddress, new StringContent(JsonConvert.SerializeObject(this)));
+                    if (post.StatusCode != HttpStatusCode.OK) {
+                    }
                 }
-            }
+            } catch { }
         }
     }
 }

@@ -77,6 +77,7 @@ using RoleplayingVoiceDalamud.NPC;
 using static Lumina.Data.Parsing.Layer.LayerCommon;
 using System.Buffers.Text;
 using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
+using System.Diagnostics.Eventing.Reader;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -170,6 +171,7 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, List<string>> _animationMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, Task> _emoteWatchList = new ConcurrentDictionary<string, Task>();
         private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
+        private Dictionary<string, List<string>> _modelDependancyMods = new Dictionary<string, List<string>>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
@@ -236,10 +238,12 @@ namespace RoleplayingVoice {
         private bool _catalogueStage0IsRunning;
         private bool _catalogueStage1IsRunning;
         Queue<string> _catalogueModsToEnable = new Queue<string>();
-        Queue<KeyValuePair<EquipObject, CharacterCustomization>> _glamourerScreenshotQueue = new Queue<KeyValuePair<EquipObject, CharacterCustomization>>();
+        Queue<KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>> _glamourerScreenshotQueue = new Queue<KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>>();
         private bool _equipmentFound;
         private EquipObject _currentClothingItem;
         private List<object> _currentClothingChangedItems;
+        private string _catalogueCollectionName;
+        private (bool, bool, string) _originalCollection;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -926,46 +930,65 @@ namespace RoleplayingVoice {
                             _catalogueScreenShotTaken = false;
                             _currentClothingCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
                             _catalogueOffsetTimer.Restart();
+                            while (_glamourerScreenshotQueue.Count is not 0) {
+                                Thread.Sleep(500);
+                            }
                             while (_catalogueIndex < _modelModList.Count) {
                                 _currentModelMod = _modelModList[_catalogueIndex];
                                 if (!AlreadyHasScreenShots(_currentModelMod) && !_currentModelMod.ToLower().Contains("megapack")
-                                && !_currentModelMod.ToLower().Contains("mega pack")) {
+                                && !_currentModelMod.ToLower().Contains("mega pack") && !_currentModelMod.ToLower().Contains("hrothgar & viera")) {
                                     _catalogueModsToEnable.Enqueue(_currentModelMod);
                                     break;
                                 } else {
                                     _catalogueIndex++;
                                 }
                             }
-                            if (_currentChangedItemIndex < _currentClothingChangedItems.Count) {
-                                _equipmentFound = false;
-                                while (!_equipmentFound && _currentChangedItemIndex <
-                                _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
-                                    try {
-                                        string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
-                                        new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
-                                        if (equipItemJson.Length > 200) {
-                                            _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
-                                            CharacterCustomization characterCustomization = null;
-                                            string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
-                                            var bytes = System.Convert.FromBase64String(customizationValue);
-                                            var version = bytes[0];
-                                            version = bytes.DecompressToString(out var decompressed);
-                                            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                                            CleanEquipment(characterCustomization);
-                                            _glamourerScreenshotQueue.Enqueue(new KeyValuePair<EquipObject, CharacterCustomization>(_currentClothingItem, characterCustomization));
-                                            Thread.Sleep(3000);
+                            if (_catalogueModsToEnable.Count > 0) {
+                                var item = _catalogueModsToEnable.Dequeue();
+                                if (item != null) {
+                                    CleanSlate();
+                                    Thread.Sleep(300);
+                                    SetClothingMod(item);
+                                    Thread.Sleep(100);
+                                    _currentClothingChangedItems = new List<object>();
+                                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
+                                    SetDependancies(item);
+                                    Thread.Sleep(100);
+                                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, RedrawType.Redraw);
+                                }
+                            }
+                            Thread.Sleep(4000);
+                            _equipmentFound = false;
+                            while (!disposed && _currentChangedItemIndex <
+                            _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod) && _currentClothingChangedItems.Count < 31) {
+                                try {
+                                    string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
+                                    new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
+                                    if (equipItemJson.Length > 200) {
+                                        _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                                        CharacterCustomization characterCustomization = null;
+                                        string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
+                                        var bytes = System.Convert.FromBase64String(customizationValue);
+                                        var version = bytes[0];
+                                        version = bytes.DecompressToString(out var decompressed);
+                                        characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                                        CleanEquipment(characterCustomization);
+                                        _glamourerScreenshotQueue.Enqueue(new KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>(_currentClothingItem, new KeyValuePair<EquipObject, CharacterCustomization>(_currentClothingItem, characterCustomization)));
+                                        _catalogueScreenShotTaken = false;
+                                        while (!_catalogueScreenShotTaken) {
+                                            Thread.Sleep(100);
                                         }
-                                    } catch (Exception e) {
-                                        _pluginLog.Debug(e, e.Message);
                                     }
-                                    _currentChangedItemIndex++;
-                                    if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
-                                        _catalogueIndex++;
-                                        _catalogueStage = 0;
-                                        _currentChangedItemIndex = 0;
-                                        _currentClothingItem = null;
-                                        break;
-                                    }
+                                } catch (Exception e) {
+                                    _pluginLog.Debug(e, e.Message);
+                                }
+                                _currentChangedItemIndex++;
+                                if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
+                                    _catalogueIndex++;
+                                    _catalogueStage = 0;
+                                    _currentChangedItemIndex = 0;
+                                    _currentClothingItem = null;
+                                    break;
                                 }
                             }
                             _catalogueTimer.Restart();
@@ -977,48 +1000,44 @@ namespace RoleplayingVoice {
                             _chat?.Print("Done Catalog");
                             _catalogueTimer.Reset();
                             RefreshData();
+                            CleanSlate();
                             _catalogueWindow.ScanCatalogue();
+                            Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, _originalCollection.Item3,true,true);
                         }
                     }
                 }
             });
         }
         private void CheckCataloging() {
-            if (_catalogueModsToEnable.Count > 0) {
-                var item = _catalogueModsToEnable.Dequeue();
-                if (item != null) {
-                    CleanSlate();
-                    SetClothingMod(item);
-                    _currentClothingChangedItems = new List<object>();
-                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
-                    SetDependancies(item);
-                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, RedrawType.Redraw);
-                }
-            }
             if (_glamourerScreenshotQueue.Count > 0) {
                 var item = _glamourerScreenshotQueue.Dequeue();
-                if (item.Key != null && item.Value != null) {
-                    _equipmentFound = SetEquipment(item.Key, item.Value);
+                if (item.Key != null && item.Value.Value != null) {
+                    _equipmentFound = SetEquipment(item.Key, item.Value.Value);
                     if (_equipmentFound) {
-                        var clothingItem = _currentClothingItem;
-                        _chat?.Print("Screenshotting item " + clothingItem.Name);
-                        Task.Run(delegate {
-                            try {
-                                NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
-                            } catch { }
-                            TakeScreenshot(clothingItem);
+                        _chat.Print("Screenshotting item " + item.Value.Key.Name + "! " + (((float)_catalogueIndex / (float)_modelModList.Count) * 100f) + "% complete!");
+                        Task.Run(() => {
+                            string path = Path.Combine(config.CacheFolder, "ClothingCatalogue\\" + _currentModelMod
+                                + "@" + item.Value.Key.Type + "@" + item.Value.Key.ItemId.Id + ".jpg");
+                            if (!File.Exists(path)) {
+                                Thread.Sleep(500);
+                                try {
+                                    NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
+                                } catch { }
+                                TakeScreenshot(item.Value.Key, path);
+                            }
                         });
+                    } else {
+                        _catalogueScreenShotTaken = true;
                     }
                 } else {
                     if (item.Key == null) {
                         _pluginLog.Warning("Key is null");
                     }
-                    if (item.Value == null) {
+                    if (item.Value.Value == null) {
                         _pluginLog.Warning("Value is null");
                     }
                 }
             }
-
         }
         public void WearOutfit(EquipObject item) {
             //CleanSlate();
@@ -1121,7 +1140,7 @@ namespace RoleplayingVoice {
             return false;
         }
 
-        private void TakeScreenshot(EquipObject clothingItem) {
+        private void TakeScreenshot(EquipObject clothingItem, string pathName) {
             if (clothingItem != null) {
                 Rectangle bounds = Screen.GetBounds(Point.Empty);
                 using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height)) {
@@ -1129,10 +1148,7 @@ namespace RoleplayingVoice {
                         g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
                     }
                     Directory.CreateDirectory(_catalogueWindow.CataloguePath);
-                    new Bitmap(CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)), 250, 250).Save(Path.Combine(config.CacheFolder,
-                      "ClothingCatalogue\\" + _currentModelMod +
-                      "@" + clothingItem.Type + "@" +
-                      clothingItem.ItemId.Id + ".jpg"), ImageFormat.Jpeg);
+                    new Bitmap(CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)), 250, 250).Save(pathName, ImageFormat.Jpeg);
                 }
             }
             _catalogueScreenShotTaken = true;
@@ -3033,10 +3049,13 @@ namespace RoleplayingVoice {
                 int mdlFilesFound = 0;
                 for (int i = 0; i < option.Files.Count; i++) {
                     var item = option.Files.ElementAt(i);
+                    ulong modelId = GetModelID(item.Key);
                     if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
-                        && !directory.Contains("Hrothgar & Viera Hats") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
-                        && GetModelID(item.Key) != 279 && GetModelID(item.Key) != 9903) {
+                        && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
+                        && modelId != 279 && modelId != 9903) {
                         mdlFilesFound++;
+                    } else if (modelId == 279 && modelId == 9903 && !directory.ToLower().Contains("ivcs")) {
+                        _modelDependancyMods[modName] = null;
                     }
                 }
                 if (mdlFilesFound > 0) {
@@ -3056,9 +3075,9 @@ namespace RoleplayingVoice {
                     }
                 }
             }
-            if (newValue > 10000) {
-                _chat?.Print(model);
-            }
+            ////if (newValue > 10000) {
+            ////    _chat?.Print(model);
+            ////}
             return newValue;
         }
 
@@ -3410,12 +3429,16 @@ namespace RoleplayingVoice {
                              "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
                              "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
                              "summon [Custom NPC Name] (Summons the specified custom NPC or dismisses them)\r\n" +
+                             "catalogue (opens the outfit catalogue)\r\n" +
+                             "catalogue scan (starts scanning new outfit mods)\r\n" +
+                             "catalogue stop (stop scanning new outfit mods)\r\n" +
+                             "catalogue clean (disables all outfit mods)\r\n" +
                              "twitch [twitch url] (forcibly tunes into a twitch stream locally)\r\n" +
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
                              "textadvance (Toggles automatic text advancement when community provided dialogue finishes)\r\n" +
-                             "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n",
+                             "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n" +
                              "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)\r\n" +
                              "clearsound (Stops all currently playing sounds, and clears out the sound cache for other players)");
                             break;
@@ -3558,16 +3581,21 @@ namespace RoleplayingVoice {
                             _chat?.Print("All Sounds Cleared!");
                             break;
                         case "catalogue":
-                            if (splitArgs.Length > 1 && splitArgs[1] == "scan") {
-                                Directory.CreateDirectory(_catalogueWindow.CataloguePath);
-                                _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
-                                _chat?.Print("Creating Thumbnails For New Clothing Mods");
-                                CleanSlate();
-                                _catalogueMods = true;
-                                _modelModList = new List<string>();
-                                _modelModList.AddRange(_modelMods.Keys);
-                                _catalogueWindow.ScanCatalogue();
-                                ScanClothingMods();
+                            if (splitArgs.Length > 1) {
+                                switch (splitArgs[1].ToLower()) {
+                                    case "scan":
+                                        StartCatalogingItems();
+                                        break;
+                                    case "clean":
+                                        CleanSlate();
+                                        break;
+                                    case "stop":
+                                        _catalogueMods = false;
+                                        _chat.Print("Stopping cataloguing.");
+                                        Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, _originalCollection.Item3, true, true);
+                                        break;
+                                }
+
                             } else {
                                 _catalogueWindow.IsOpen = true;
                             }
@@ -3581,6 +3609,22 @@ namespace RoleplayingVoice {
                     }
                 }
             }
+        }
+
+        public void StartCatalogingItems() {
+            _catalogueCollectionName = Guid.NewGuid().ToString();
+            _originalCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
+            var item = Ipc.CreateTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName, _clientState.LocalPlayer.Name.TextValue, true);
+            Ipc.AssignTemporaryCollection.Subscriber(pluginInterface).Invoke(item.Item2, _clientState.LocalPlayer.ObjectIndex, true);
+            Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+            _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
+            _chat?.Print("Creating Thumbnails For New Clothing Mods");
+            CleanSlate();
+            _catalogueMods = true;
+            _modelModList = new List<string>();
+            _modelModList.AddRange(_modelMods.Keys);
+            _catalogueWindow.ScanCatalogue();
+            ScanClothingMods();
         }
 
         private void CheckNPCEmoteControl(string[] splitArgs, string args) {
@@ -3985,10 +4029,18 @@ namespace RoleplayingVoice {
                 }
             }
         }
+        private void SetBodyDependancies() {
+            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            int lowestPriority = 10;
+            foreach (string modName in _modelDependancyMods.Keys) {
+                var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+            }
+        }
         private void SetDependancies(string modelMod, bool disableOtherMods = true) {
             var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-            _pluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            _pluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
@@ -4019,13 +4071,14 @@ namespace RoleplayingVoice {
             }
             return false;
         }
-        private void CleanSlate() {
+        public void CleanSlate() {
             string foundModName = "";
             var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             foreach (string modName in _modelMods.Keys) {
                 var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
             }
+            SetBodyDependancies();
         }
         #endregion
         #region Error Logging
