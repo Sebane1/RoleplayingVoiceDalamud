@@ -32,6 +32,10 @@ namespace RoleplayingVoice {
                 catalogueCategory.Value.RefreshCurrentImages();
             }
         }
+        public override void OnOpen() {
+            base.OnOpen();
+            ScanCatalogue();
+        }
         public void SendToCategory(CatalogueItem item) {
             if (!categories.ContainsKey(item.EquipObject.Type.ToString())) {
                 categories[item.EquipObject.Type.ToString()] = new CatalogueCategory(_pluginInterface);
@@ -123,7 +127,8 @@ namespace RoleplayingVoice {
                     "Please note that this process will require taking photos of all your clothing mods and could take a while.\r\n" +
                     "Position your camera at an angle that has your entire character in view, and make sure any UI is out of the way.\r\n\r\n" +
                     "Be aware that this catalogue system automatically sets your clothing mods active or inactive and their priorities when in use.\r\n" +
-                    "You may wish to test on a brand new collection before using this feature.");
+
+                    "For the moment, you will need to assign a brand new collection with only body dependancies enabled to use scan your mods.");
             }
             if (ImGui.Button("Scan And Catalogue Mods", new Vector2(ImGui.CalcItemWidth(), 50))) {
                 _plugin.StartCatalogingItems();

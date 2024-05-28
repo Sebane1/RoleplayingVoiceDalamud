@@ -170,8 +170,8 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, Guid> _lastCharacterDesign = new ConcurrentDictionary<string, Guid>();
         private ConcurrentDictionary<string, List<string>> _animationMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, Task> _emoteWatchList = new ConcurrentDictionary<string, Task>();
-        private Dictionary<string, List<string>> _modelMods = new Dictionary<string, List<string>>();
-        private Dictionary<string, List<string>> _modelDependancyMods = new Dictionary<string, List<string>>();
+        private ConcurrentDictionary<string, List<string>> _modelMods = new ConcurrentDictionary<string, List<string>>();
+        private ConcurrentDictionary<string, List<string>> _modelDependancyMods = new ConcurrentDictionary<string, List<string>>();
 
         private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
         private WaveStream _nativeAudioStream;
@@ -191,7 +191,7 @@ namespace RoleplayingVoice {
         private List<string> _modelModList;
         private int _catalogueIndex;
         private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
-        private ICallGateSubscriber<ValueTuple<Guid, string>[]> _glamourerGetDesignList;
+        private ICallGateSubscriber<Dictionary<Guid, string>> _glamourerGetDesignList;
         private ICallGateSubscriber<ValueTuple<string, Guid>[]> _glamourerGetDesignListLegacy;
         private ICallGateSubscriber<Guid, int, uint, ulong, int> _glamourerApplyDesign;
         private ICallGateSubscriber<string, string, object> _glamourerApplyAll;
@@ -415,7 +415,7 @@ namespace RoleplayingVoice {
                         _pluginLog.Warning(e, e.Message);
                     }
                     try {
-                        _glamourerGetDesignList = pluginInterface.GetIpcSubscriber<ValueTuple<Guid, string>[]>("Glamourer.GetDesignList.V2");
+                        _glamourerGetDesignList = pluginInterface.GetIpcSubscriber<Dictionary<Guid, string>>("Glamourer.GetDesignList.V2");
                         _pluginLog.Debug("Glamourer.GetDesignList.V2 configured.");
                     } catch (Exception e) {
                         _pluginLog.Warning(e, e.Message);
@@ -928,7 +928,6 @@ namespace RoleplayingVoice {
                         if (_catalogueIndex < _modelModList.Count) {
                             ignoreModSettingChanged = true;
                             _catalogueScreenShotTaken = false;
-                            _currentClothingCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
                             _catalogueOffsetTimer.Restart();
                             while (_glamourerScreenshotQueue.Count is not 0) {
                                 Thread.Sleep(500);
@@ -948,11 +947,11 @@ namespace RoleplayingVoice {
                                 if (item != null) {
                                     CleanSlate();
                                     Thread.Sleep(300);
-                                    SetClothingMod(item);
+                                    SetClothingMod(item, _catalogueCollectionName);
                                     Thread.Sleep(100);
                                     _currentClothingChangedItems = new List<object>();
-                                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_currentClothingCollection.Item3).Values);
-                                    SetDependancies(item);
+                                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_catalogueCollectionName).Values);
+                                    SetDependancies(item, _catalogueCollectionName);
                                     Thread.Sleep(100);
                                     Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, RedrawType.Redraw);
                                 }
@@ -960,7 +959,7 @@ namespace RoleplayingVoice {
                             Thread.Sleep(4000);
                             _equipmentFound = false;
                             while (!disposed && _currentChangedItemIndex <
-                            _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod) && _currentClothingChangedItems.Count < 31) {
+                            _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
                                 try {
                                     string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
                                     new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
@@ -1002,7 +1001,7 @@ namespace RoleplayingVoice {
                             RefreshData();
                             CleanSlate();
                             _catalogueWindow.ScanCatalogue();
-                            Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, _originalCollection.Item3,true,true);
+                            Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _originalCollection.Item3, true, true);
                         }
                     }
                 }
@@ -1039,11 +1038,14 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void WearOutfit(EquipObject item) {
+        public void WearOutfit(EquipObject item, string collection = null) {
             //CleanSlate();
+            if (collection == null) {
+                collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex).Item3;
+            }
             if (_glamourerGetAllCustomization != null) {
-                SetClothingMod(item.Name, false);
-                SetDependancies(item.Name, false);
+                SetClothingMod(item.Name, collection, false);
+                SetDependancies(item.Name, collection, false);
                 Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
@@ -1095,11 +1097,7 @@ namespace RoleplayingVoice {
         public Dictionary<Guid, string> GetGlamourerDesigns() {
             try {
                 var glamourerDesignList = _glamourerGetDesignList.InvokeFunc();
-                Dictionary<Guid, string> newList = new Dictionary<Guid, string>();
-                foreach (var item in glamourerDesignList) {
-                    newList.Add(item.Item1, item.Item2);
-                }
-                return newList;
+                return glamourerDesignList;
             } catch (Exception e) {
                 _pluginLog.Warning(e, e.Message);
                 try {
@@ -3592,7 +3590,7 @@ namespace RoleplayingVoice {
                                     case "stop":
                                         _catalogueMods = false;
                                         _chat.Print("Stopping cataloguing.");
-                                        Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, _originalCollection.Item3, true, true);
+                                        Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _originalCollection.Item3, true, true);
                                         break;
                                 }
 
@@ -3612,11 +3610,18 @@ namespace RoleplayingVoice {
         }
 
         public void StartCatalogingItems() {
-            _catalogueCollectionName = Guid.NewGuid().ToString();
+            _catalogueCollectionName = "ArtemisRoleplayingKitCatalogue";
             _originalCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
-            var item = Ipc.CreateTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName, _clientState.LocalPlayer.Name.TextValue, true);
-            Ipc.AssignTemporaryCollection.Subscriber(pluginInterface).Invoke(item.Item2, _clientState.LocalPlayer.ObjectIndex, true);
+            _catalogueCollectionName = _originalCollection.Item3;
+
+            //Ipc.CreateNamedTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName);
+
+            //Ipc.AssignTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName, 0, true);
+
+            //Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _catalogueCollectionName, true, true);
+
             Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
             _chat?.Print("Creating Thumbnails For New Clothing Mods");
             CleanSlate();
@@ -4012,48 +4017,45 @@ namespace RoleplayingVoice {
 
         #endregion
         #region Trigger Clothing Mods
-        private void SetClothingMod(string modelMod, bool disableOtherMods = true) {
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+        private void SetClothingMod(string modelMod, string collection, bool disableOtherMods = true) {
             _pluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 11);
+                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
+                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 11);
                 } else {
                     if (disableOtherMods) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
                     } else {
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
                     }
                 }
             }
         }
-        private void SetBodyDependancies() {
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+        private void SetBodyDependancies(string collection) {
             int lowestPriority = 10;
             foreach (string modName in _modelDependancyMods.Keys) {
-                var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+                var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
+                Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
             }
         }
-        private void SetDependancies(string modelMod, bool disableOtherMods = true) {
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+        private void SetDependancies(string modelMod, string collection, bool disableOtherMods = true) {
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             _pluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 11);
+                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
+                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 11);
                 } else {
                     if (FindStringMatch(modelMod, modName)) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 10);
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 10);
                     } else if (disableOtherMods) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
                     } else {
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", 5);
+                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
                     }
                 }
             }
@@ -4071,14 +4073,16 @@ namespace RoleplayingVoice {
             }
             return false;
         }
-        public void CleanSlate() {
+        public void CleanSlate(string collection = null) {
             string foundModName = "";
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+            if (collection == null) {
+                collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0).Item3;
+            }
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             foreach (string modName in _modelMods.Keys) {
-                var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", false);
+                var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
             }
-            SetBodyDependancies();
+            SetBodyDependancies(collection);
         }
         #endregion
         #region Error Logging
