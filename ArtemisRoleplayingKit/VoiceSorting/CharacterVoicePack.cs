@@ -31,6 +31,8 @@ namespace RoleplayingVoiceDalamud {
         private IDataManager _dataManager;
         private ClientLanguage _clientLanguage;
         private ConcurrentDictionary<Dalamud.ClientLanguage, ExcelSheet<Action>> _dataSheets = new ConcurrentDictionary<ClientLanguage, ExcelSheet<Lumina.Excel.GeneratedSheets.Action>>();
+        private string _sprint;
+        private string _teleport;
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
@@ -44,6 +46,7 @@ namespace RoleplayingVoiceDalamud {
                     }
                 }
             });
+            
         }
         public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
             _dataManager = dataManager;
@@ -174,11 +177,13 @@ namespace RoleplayingVoiceDalamud {
                             AddMisc(final, file);
                         } else {
                             AddMisc(final, file);
-                            if (final.Length > 3) {
+                            if (final.Length > 3 && !InLanguageBlacklist(final)) {
                                 AddMisc(StripNonCharacters(GetNameInClientLanguage(_clientLanguage, final), _clientLanguage).ToLower(), file);
                             }
                         }
                     }
+                    _sprint = GetNameInClientLanguage(_clientLanguage, _sprint).ToLower();
+                    _teleport = GetNameInClientLanguage(_clientLanguage, _teleport).ToLower();
                 }
             }
         }
@@ -201,7 +206,14 @@ namespace RoleplayingVoiceDalamud {
             return str;
         }
 
-
+        private bool InLanguageBlacklist(string name) {
+            List<string> blacklist = new List<string>() {
+            "surprised", "angry", "furious", "cheer",
+            "doze", "fume", "huh", "chuckle", "laugh",
+            "no", "stretch", "upset", "yes", "happy"
+            };
+            return blacklist.Contains(name);
+        }
         private void AddMisc(string category, string file) {
             if (!_misc.ContainsKey(category)) {
                 _misc[category] = new List<string>();
@@ -212,7 +224,7 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public string GetAction(string value) {
-            if (_attack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+            if (_attack.Count > 0 && !value.Contains(_sprint) && !value.ToLower().Contains(_teleport)) {
                 string action = _attack[GetRandom(0, _attack.Count)];
                 if (lastAction != action) {
                     return lastAction = action;
@@ -224,7 +236,7 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public string GetMeleeAction(string value) {
-            if (_meleeAttack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+            if (_meleeAttack.Count > 0 && !value.Contains(_sprint) && !value.ToLower().Contains(_teleport)) {
                 string action = _meleeAttack[GetRandom(0, _meleeAttack.Count)];
                 if (lastAction != action) {
                     return lastAction = action;
@@ -236,7 +248,7 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public string GetCastedAction(string value) {
-            if (_castedAttack.Count > 0 && !value.Contains("sprint") && !value.ToLower().Contains("teleport")) {
+            if (_castedAttack.Count > 0 && !value.Contains(_sprint) && !value.ToLower().Contains(_teleport)) {
                 string action = _castedAttack[GetRandom(0, _castedAttack.Count)];
                 if (lastAction != action) {
                     return lastAction = action;
@@ -301,7 +313,7 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public string GetReadying(string value) {
-            if (_readying.Count > 0 && !value.ToLower().Contains("teleport")) {
+            if (_readying.Count > 0 && !value.ToLower().Contains(_teleport)) {
                 return _readying[GetRandom(0, _readying.Count)];
             } else {
                 return string.Empty;
