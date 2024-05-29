@@ -287,6 +287,8 @@ namespace RoleplayingVoice {
         public IClientState ClientState => _clientState;
 
         public IDataManager DataManager1 { get => _dataManager; set => _dataManager = value; }
+        public unsafe Camera* Camera { get => _camera; set => _camera = value; }
+        public IGameGui GameGui { get => _gameGui; set => _gameGui = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(

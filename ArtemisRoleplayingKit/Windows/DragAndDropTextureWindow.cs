@@ -5,8 +5,7 @@ using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 using ImGuiScene;
-using RoleplayingMediaCore;
-using RoleplayingMediaCore.Twitch;
+using FFXIVClientStructs.Havok;
 using System;
 using System.Diagnostics;
 using System.Drawing.Imaging;
@@ -14,22 +13,25 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using static Penumbra.Api.Ipc;
 using Vector2 = System.Numerics.Vector2;
 using FFXIVLooseTextureCompiler;
-using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVLooseTextureCompiler.PathOrganization;
-using static System.ComponentModel.Design.ObjectSelectorEditor;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Penumbra.Api;
 using FFXIVLooseTextureCompiler.Export;
 using FFXIVLooseTextureCompiler.Racial;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using RoleplayingVoiceDalamud.Glamourer;
-using Penumbra.GameData.Enums;
-using static FFXIVClientStructs.FFXIV.Client.UI.AddonJobHudRDM0.BalanceGauge;
 using System.Threading;
+using Ktisis.Structs;
+using Ktisis.Structs.Actor;
+using Ktisis.Structs.Bones;
+using Ktisis.Structs.Extensions;
+using RoleplayingVoiceDalamud;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+using Microsoft.VisualBasic.Devices;
+using static Anamnesis.Files.PoseFile;
+using Bone = Ktisis.Structs.Bones.Bone;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
@@ -54,8 +56,12 @@ namespace RoleplayingVoice {
         private string[] _faceTypes;
         private string[] _faceParts;
         private string[] _faceScales;
+        private BodyDragPart bodyDragPart;
 
+        //List<string> _alreadyAddedBoneList = new List<string>();
+        //List<Tuple<string, float>> boneSorting = new List<Tuple<string, float>>();
         public Plugin Plugin { get => plugin; set => plugin = value; }
+
         public DragAndDropTextureWindow(DalamudPluginInterface pluginInterface, IDragDropManager dragDropManager) :
             base("DragAndDropTexture", ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoMouseInputs | ImGuiWindowFlags.NoInputs
@@ -101,6 +107,8 @@ namespace RoleplayingVoice {
             _faceTypes = new string[] { "Face 1", "Face 2", "Face 3", "Face 4", "Face 5", "Face 6", "Face 7", "Face 8", "Face 9" };
             _faceParts = new string[] { "Face", "Eyebrows", "Eyes", "Ears", "Face Paint", "Hair", "Face B", "Etc B" };
             _faceScales = new string[] { "Vanilla Scales", "Scaleless Vanilla", "Scaleless Varied" };
+
+
         }
 
         private void TextureProcessor_OnLaunchedXnormal(object? sender, EventArgs e) {
@@ -115,7 +123,62 @@ namespace RoleplayingVoice {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
-                        ImGui.TextUnformatted($"Dragging texture onto desired body part:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                        Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
+                        float closestDistance = float.MaxValue;
+                        Bone closestBone = null;
+                        float yPos;
+                        float aboveNoseYPos = 0;
+                        float aboveNeckYPos = 0;
+                        unsafe {
+                            Actor* characterActor = (Actor*)plugin.ClientState.LocalPlayer.Address;
+                            var model = characterActor->Model;
+                            for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
+                                var partialSkeleton = model->Skeleton->PartialSkeletons[i];
+                                var pos = partialSkeleton.GetHavokPose(0);
+                                if (pos != null) {
+                                    var skeleton = pos->Skeleton;
+                                    for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
+                                        var bone = model->Skeleton->GetBone(i, i2);
+                                        var worldPos = bone.GetWorldPos(characterActor, model);
+                                        Vector2 screenPosition = new Vector2();
+                                        plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
+                                        float distance = Vector2.Distance(screenPosition, cursorPosition);
+                                        if (distance < closestDistance) {
+                                            closestDistance = distance;
+                                            closestBone = bone;
+                                        }
+                                        if (bone.UniqueId.Contains("0_46")) {
+                                            aboveNoseYPos = screenPosition.Y;
+                                        }
+                                        if (bone.UniqueId.Contains("0_63")) {
+                                            aboveNeckYPos = screenPosition.Y;
+                                        }
+                                        //if (!_alreadyAddedBoneList.Contains(bone.UniqueId)) {
+                                        //    _alreadyAddedBoneList.Add(bone.UniqueId);
+                                        //    boneSorting.Add(new Tuple<string, float>(bone.UniqueId, screenPosition.Y));
+                                        //}
+                                    }
+                                }
+                            }
+                        }
+                        try {
+                            if (cursorPosition.Y < aboveNeckYPos) {
+                                if (cursorPosition.Y < aboveNoseYPos) {
+                                    bodyDragPart = BodyDragPart.Eyes;
+                                } else {
+                                    bodyDragPart = BodyDragPart.Face;
+                                }
+                            } else {
+                                bodyDragPart = BodyDragPart.Body;
+                            }
+                            if (closestBone != null) {
+                                ImGui.TextUnformatted($"Dragging texture onto {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                            } else {
+                                ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                            }
+                        } catch {
+                            ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                        }
                         AllowClickthrough = false;
                         return true;
                     });
@@ -131,6 +194,12 @@ namespace RoleplayingVoice {
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
                         List<TextureSet> textureSets = new List<TextureSet>();
                         string modName = plugin.ClientState.LocalPlayer.Name.TextValue.Split(' ')[0] + " Texture Mod";
+                        //boneSorting.Sort((first, second) => {
+                        //    return first.Item2.CompareTo(second.Item2);
+                        //});
+                        //foreach (var item in boneSorting) {
+                        //    plugin.Chat.Print(item.Item1 + " " + item.Item2);
+                        //}
                         foreach (var file in files) {
                             if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
                                 string filePath = file;
@@ -174,6 +243,30 @@ namespace RoleplayingVoice {
                                     item.Normal = file;
                                     textureSets.Add(item);
                                     modName = modName.Replace("Mod", "Eyes");
+                                } else {
+                                    TextureSet item = null;
+                                    switch (bodyDragPart) {
+                                        case BodyDragPart.Body:
+                                            break;
+                                        case BodyDragPart.Face:
+                                            item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
+                                            _currentCustomization.Customize.Gender.Value,
+                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                            _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                            item.Diffuse = file;
+                                            textureSets.Add(item);
+                                            modName = modName.Replace("Mod", "Face");
+                                            break;
+                                        case BodyDragPart.Eyes:
+                                            item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
+                                            _currentCustomization.Customize.Gender.Value,
+                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                            _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                            item.Normal = file;
+                                            textureSets.Add(item);
+                                            modName = modName.Replace("Mod", "Eyes");
+                                            break;
+                                    }
                                 }
                             }
                         }
@@ -367,5 +460,14 @@ namespace RoleplayingVoice {
           ".tex",
         };
         private readonly string _xNormalPath;
+    }
+}
+
+namespace RoleplayingVoiceDalamud {
+    public enum BodyDragPart {
+        Unknown,
+        Eyes,
+        Face,
+        Body
     }
 }
