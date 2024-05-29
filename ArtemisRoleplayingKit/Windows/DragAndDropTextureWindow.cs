@@ -131,31 +131,53 @@ namespace RoleplayingVoice {
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
                         List<TextureSet> textureSets = new List<TextureSet>();
                         string modName = plugin.ClientState.LocalPlayer.Name.TextValue.Split(' ')[0] + " Texture Mod";
-                        string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
                         foreach (var file in files) {
                             if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
                                 string filePath = file;
-                                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                                string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
                                 _currentCustomization = plugin.GetCustomization(plugin.ClientState.LocalPlayer);
-                                if (fileName.ToLower().Contains("mata") || fileName.ToLower().Contains("amat")
-                                    || fileName.ToLower().Contains("materiala") || fileName.ToLower().Contains("gen2")) {
+                                if (fileName.Contains("mata") || fileName.Contains("amat")
+                                    || fileName.Contains("materiala") || fileName.Contains("gen2")) {
                                     var item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value), _currentCustomization.Customize.TailShape.Value, false);
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                } else if (fileName.ToLower().Contains("bibo")) {
+                                    modName += " Body";
+                                } else if (fileName.Contains("bibo")) {
                                     var item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
-                                   RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value), _currentCustomization.Customize.TailShape.Value, false);
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                } else if (fileName.ToLower().Contains("gen3")) {
+                                    modName += " Body";
+                                } else if (fileName.Contains("gen3")) {
                                     var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
-                                   RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value), _currentCustomization.Customize.TailShape.Value, false);
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
+                                    modName += " Body";
+                                } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
+                                    var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
+                                    _currentCustomization.Customize.Gender.Value,
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                    item.Diffuse = file;
+                                    textureSets.Add(item);
+                                    modName += " Face";
+                                } else if (fileName.Contains("eye")) {
+                                    var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
+                                    _currentCustomization.Customize.Gender.Value,
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                    item.Normal = file;
+                                    textureSets.Add(item);
+                                    modName += " Eyes";
                                 }
                             }
                         }
+                        string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
                         if (textureSets.Count > 0) {
                             Task.Run(() => Export(true, textureSets, fullModPath, modName));
                         }
@@ -214,11 +236,11 @@ namespace RoleplayingVoice {
             TextureSet textureSet = new TextureSet();
             textureSet.TextureSetName = _faceParts[facePart] + (facePart == 4 ? " "
                 + (faceExtra + 1) : "") + ", " + (facePart != 4 ? _genders[gender] : "Unisex")
-                + ", " + (facePart != 4 ? subRace : "Multi Race") + ", "
+                + ", " + (facePart != 4 ? _subRaces[subRace] : "Multi Race") + ", "
                 + (facePart != 4 ? _faceTypes[faceType] : "Multi Face");
-            switch (faceType) {
+            switch (facePart) {
                 default:
-                    AddFacePaths(textureSet, subRace, faceType, faceExtra, gender, auraScales, asym);
+                    AddFacePaths(textureSet, subRace, facePart, faceType, gender, auraScales, asym);
                     break;
                 case 2:
                     AddEyePaths(textureSet, subRace, faceType, gender, auraScales, asym);
@@ -316,15 +338,7 @@ namespace RoleplayingVoice {
                 }
                 Directory.CreateDirectory(path);
                 _textureProcessor.CleanGeneratedAssets(path);
-                await _textureProcessor.Export(
-                    textureSets,
-                    new Dictionary<string, int>(),
-                    path,
-                    1,
-                    false,
-                    false,
-                    File.Exists(_xNormalPath) && finalize,
-                    _xNormalPath);
+                await _textureProcessor.Export(textureSets, new Dictionary<string, int>(), path, 1, false, false, File.Exists(_xNormalPath) && finalize, _xNormalPath);
                 ExportJson(jsonFilepath);
                 ExportMeta(metaFilePath, name);
                 Thread.Sleep(100);
@@ -335,12 +349,11 @@ namespace RoleplayingVoice {
                 Ipc.TrySetModPriority.Subscriber(_pluginInterface).Invoke(collection, path, name, 100);
                 var settings = Ipc.GetCurrentModSettings.Subscriber(_pluginInterface).Invoke(collection, path, name, true);
                 foreach (var group in settings.Item2.Value.Item3) {
-                    foreach (var modSetting in group.Value) {
-
-                    }
                     Ipc.TrySetModSetting.Subscriber(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(300);
+                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
+                Thread.Sleep(200);
                 Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
