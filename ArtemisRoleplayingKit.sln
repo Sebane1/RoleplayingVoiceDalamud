@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtterGui", "OtterGui\OtterG
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtterGuiInternal", "OtterGui\OtterGuiInternal\OtterGuiInternal.csproj", "{60B05FC5-32B7-407B-A3BF-BB5768BB4B0E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LooseTextureCompilerCore", "..\LooseTextureCompilerCore\LooseTextureCompilerCore\LooseTextureCompilerCore.csproj", "{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LooseTextureCompilerCore", "LooseTextureCompilerCore\LooseTextureCompilerCore.csproj", "{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -83,14 +83,14 @@ Global
 		{60B05FC5-32B7-407B-A3BF-BB5768BB4B0E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{60B05FC5-32B7-407B-A3BF-BB5768BB4B0E}.Release|x64.ActiveCfg = Release|x64
 		{60B05FC5-32B7-407B-A3BF-BB5768BB4B0E}.Release|x64.Build.0 = Release|x64
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Debug|x64.Build.0 = Debug|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Release|x64.ActiveCfg = Release|Any CPU
-		{F6FB6C5F-CF18-4CF5-9296-BC7FF938EE4C}.Release|x64.Build.0 = Release|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Debug|x64.Build.0 = Debug|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|x64.ActiveCfg = Release|Any CPU
+		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
