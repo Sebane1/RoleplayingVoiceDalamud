@@ -143,21 +143,21 @@ namespace RoleplayingVoice {
                                     _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                    modName += " Body";
+                                    modName = modName.Replace("Mod", "Body");
                                 } else if (fileName.Contains("bibo")) {
                                     var item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                     _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                    modName += " Body";
+                                    modName = modName.Replace("Mod", "Body");
                                 } else if (fileName.Contains("gen3")) {
                                     var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                     _currentCustomization.Customize.TailShape.Value - 1, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                    modName += " Body";
+                                    modName = modName.Replace("Mod", "Body");
                                 } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
                                     var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
                                     _currentCustomization.Customize.Gender.Value,
@@ -165,7 +165,7 @@ namespace RoleplayingVoice {
                                     _currentCustomization.Customize.Clan.Value - 1, 0, false);
                                     item.Diffuse = file;
                                     textureSets.Add(item);
-                                    modName += " Face";
+                                    modName = modName.Replace("Mod", "Face");
                                 } else if (fileName.Contains("eye")) {
                                     var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
                                     _currentCustomization.Customize.Gender.Value,
@@ -173,7 +173,7 @@ namespace RoleplayingVoice {
                                     _currentCustomization.Customize.Clan.Value - 1, 0, false);
                                     item.Normal = file;
                                     textureSets.Add(item);
-                                    modName += " Eyes";
+                                    modName = modName.Replace("Mod", "Eyes");
                                 }
                             }
                         }
