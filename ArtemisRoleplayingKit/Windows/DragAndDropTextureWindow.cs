@@ -227,6 +227,13 @@ namespace RoleplayingVoice {
                                     item.Diffuse = file;
                                     textureSets.Add(item);
                                     modName = modName.Replace("Mod", "Body");
+                                } else if (fileName.Contains("tbse")) {
+                                    var item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                    _currentCustomization.Customize.TailShape.Value - 1, false);
+                                    item.Diffuse = file;
+                                    textureSets.Add(item);
+                                    modName = modName.Replace("Mod", "Body");
                                 } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
                                     var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
                                     _currentCustomization.Customize.Gender.Value,
@@ -247,6 +254,21 @@ namespace RoleplayingVoice {
                                     TextureSet item = null;
                                     switch (bodyDragPart) {
                                         case BodyDragPart.Body:
+                                            if (_currentCustomization.Customize.Race.Value - 1 == 5) {
+                                                item = AddBody(_currentCustomization.Customize.Gender.Value, 7,
+                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                item.Diffuse = file;
+                                                textureSets.Add(item);
+                                                modName = modName.Replace("Mod", "Body");
+                                            } else if (_currentCustomization.Customize.Gender.Value == 0) {
+                                                item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                item.Diffuse = file;
+                                                textureSets.Add(item);
+                                                modName = modName.Replace("Mod", "Body");
+                                            }
                                             break;
                                         case BodyDragPart.Face:
                                             item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
@@ -273,6 +295,8 @@ namespace RoleplayingVoice {
                         string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
                         if (textureSets.Count > 0) {
                             Task.Run(() => Export(true, textureSets, fullModPath, modName));
+                        } else {
+                            plugin.Chat.PrintError("[Artemis Roleplaying Kit] Unable to identify texture type!");
                         }
                     }
                     AllowClickthrough = true;
