@@ -107,6 +107,7 @@ namespace RoleplayingVoice {
         private AnimationCatalogue _animationCatalogue;
         private AnimationEmoteSelection _animationEmoteSelection;
         private NPCPersonalityWindow _npcPersonalityWindow;
+        private DragAndDropTextureWindow _dragAndDropTextures;
         private IPluginLog _pluginLog;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
@@ -330,6 +331,7 @@ namespace RoleplayingVoice {
                 _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();
                 _animationEmoteSelection = this.pluginInterface.Create<AnimationEmoteSelection>();
                 _npcPersonalityWindow = this.pluginInterface.Create<NPCPersonalityWindow>();
+                _dragAndDropTextures = this.pluginInterface.Create<DragAndDropTextureWindow>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
                 _npcPersonalityWindow.Plugin = this;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
@@ -367,6 +369,11 @@ namespace RoleplayingVoice {
                 }
                 if (_npcPersonalityWindow is not null) {
                     this.windowSystem.AddWindow(_npcPersonalityWindow);
+                }
+                if (_dragAndDropTextures is not null) {
+                    this.windowSystem.AddWindow(_dragAndDropTextures);
+                    _dragAndDropTextures.Plugin = this;
+                    _dragAndDropTextures.IsOpen = true;
                 }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();
@@ -3756,8 +3763,12 @@ namespace RoleplayingVoice {
                                         _preOccupiedWithEmoteCommand.Add(targetNPC.Name.TextValue);
                                     }
                                 } else {
-                                    _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
-                                        (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                    if (emoteItem.EmoteMode.Value.ConditionMode == 3 || emoteItem.EmoteMode.Value.ConditionMode == 11) {
+                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
+                                         (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                    } else {
+                                        _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                    }
                                 }
                             }
                             break;

@@ -49,6 +49,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\..\LooseTextureCompilerCore\LooseTextureCompilerCore\LooseTextureCompilerCore.csproj" />
 	  <ProjectReference Include="..\Penumbra.Api\Penumbra.Api.csproj" />
 	  <ProjectReference Include="..\Penumbra.GameData\Penumbra.GameData.csproj" />
 	  <ProjectReference Include="..\Penumbra.String\Penumbra.String.csproj" />

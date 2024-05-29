@@ -46,7 +46,7 @@ namespace RoleplayingVoiceDalamud {
                     }
                 }
             });
-            
+
         }
         public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
             _dataManager = dataManager;
@@ -95,15 +95,17 @@ namespace RoleplayingVoiceDalamud {
             return 0;
         }
         public uint GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage clientLanguage, string name) {
-            string sanitizedNamed = name.ToLower().Replace(" ", null).Trim();
-            if (!_dataSheets.ContainsKey(clientLanguage)) {
-                _dataSheets[clientLanguage] = _dataManager.GetExcelSheet<Action>(clientLanguage);
-            }
-            foreach (var item in _dataSheets[clientLanguage]) {
-                string strippedName = StripNonCharacters(item.Name.RawString, _clientLanguage).ToLower();
-                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : item.Name.RawString;
-                if (final.StartsWith(sanitizedNamed) && sanitizedNamed.Length > 5 || final.StartsWith(sanitizedNamed)) {
-                    return item.RowId;
+            if (!string.IsNullOrEmpty(name)) {
+                string sanitizedNamed = name.ToLower().Replace(" ", null).Trim();
+                if (!_dataSheets.ContainsKey(clientLanguage)) {
+                    _dataSheets[clientLanguage] = _dataManager.GetExcelSheet<Action>(clientLanguage);
+                }
+                foreach (var item in _dataSheets[clientLanguage]) {
+                    string strippedName = StripNonCharacters(item.Name.RawString, _clientLanguage).ToLower();
+                    string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : item.Name.RawString;
+                    if (final.StartsWith(sanitizedNamed) && sanitizedNamed.Length > 5 || final.StartsWith(sanitizedNamed)) {
+                        return item.RowId;
+                    }
                 }
             }
             return 0;
@@ -182,8 +184,8 @@ namespace RoleplayingVoiceDalamud {
                             }
                         }
                     }
-                    _sprint = GetNameInClientLanguage(_clientLanguage, _sprint).ToLower();
-                    _teleport = GetNameInClientLanguage(_clientLanguage, _teleport).ToLower();
+                    _sprint = GetNameInClientLanguage(_clientLanguage, "sprint").ToLower();
+                    _teleport = GetNameInClientLanguage(_clientLanguage, "teleport").ToLower();
                 }
             }
         }
