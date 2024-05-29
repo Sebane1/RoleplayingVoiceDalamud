@@ -105,39 +105,43 @@ namespace RoleplayingVoice {
         }
 
         private void DrawNPCConfigurator() {
-            if (_customNpcCharacters.Count > 0) {
-                Guid guid = Guid.Empty;
-                Guid.TryParse(_customNpcCharacters[_currentSelection].NpcGlamourerAppearanceString, out guid);
-                if (_currentGlamourerDesigns.ContainsKey(guid)) {
-                    var list = new List<string>();
-                    list.AddRange(designList.Contents);
-                    designList.SelectedIndex = list.IndexOf(_currentGlamourerDesigns[Guid.Parse(_customNpcCharacters[_currentSelection].NpcGlamourerAppearanceString)]);
+            if (_currentGlamourerDesigns.Count > 0) {
+                if (_customNpcCharacters.Count > 0) {
+                    Guid guid = Guid.Empty;
+                    Guid.TryParse(_customNpcCharacters[_currentSelection].NpcGlamourerAppearanceString, out guid);
+                    if (_currentGlamourerDesigns.ContainsKey(guid)) {
+                        var list = new List<string>();
+                        list.AddRange(designList.Contents);
+                        designList.SelectedIndex = list.IndexOf(_currentGlamourerDesigns[Guid.Parse(_customNpcCharacters[_currentSelection].NpcGlamourerAppearanceString)]);
+                    }
+
+                    ImGui.LabelText("##personalityLabel", "NPC Name");
+                    ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+                    ImGui.InputText("##NPCName", ref _customNpcCharacters[_currentSelection].NpcName, 255);
+
+                    ImGui.LabelText("##miniontoreplaceLabel", "Minion To Replace");
+                    ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+                    ImGui.InputText("##MinionToReplace", ref _customNpcCharacters[_currentSelection].MinionToReplace, 255);
+
+                    ImGui.LabelText("##glamourerLabel", "Glamourer Design Appearance");
+                    designList.Width = (int)ImGui.GetColumnWidth();
+                    designList.Draw();
+
+                    ImGui.LabelText("##personality", "NPC Greeting");
+                    ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+                    ImGui.InputText("##Greeting", ref _customNpcCharacters[_currentSelection].NPCGreeting, 255);
+
+                    ImGui.LabelText("##personality", "NPC Personality");
+                    ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+                    ImGui.InputText("NPC Personality", ref _customNpcCharacters[_currentSelection].NpcPersonality, 255);
+                    ImGui.TextWrapped(_customNpcCharacters[_currentSelection].NpcPersonality);
+
+                    if (ImGui.Button("Summon/Dismiss")) {
+                        _plugin.MessageQueue.Enqueue("/minion " + @"""" + _customNpcCharacters[_currentSelection].MinionToReplace + @"""");
+                    }
                 }
-
-                ImGui.LabelText("##personalityLabel", "NPC Name");
-                ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-                ImGui.InputText("##NPCName", ref _customNpcCharacters[_currentSelection].NpcName, 255);
-
-                ImGui.LabelText("##miniontoreplaceLabel", "Minion To Replace");
-                ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-                ImGui.InputText("##MinionToReplace", ref _customNpcCharacters[_currentSelection].MinionToReplace, 255);
-
-                ImGui.LabelText("##glamourerLabel", "Glamourer Design Appearance");
-                designList.Width = (int)ImGui.GetColumnWidth();
-                designList.Draw();
-
-                ImGui.LabelText("##personality", "NPC Greeting");
-                ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-                ImGui.InputText("##Greeting", ref _customNpcCharacters[_currentSelection].NPCGreeting, 255);
-
-                ImGui.LabelText("##personality", "NPC Personality");
-                ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-                ImGui.InputText("NPC Personality", ref _customNpcCharacters[_currentSelection].NpcPersonality, 255);
-                ImGui.TextWrapped(_customNpcCharacters[_currentSelection].NpcPersonality);
-
-                if (ImGui.Button("Summon/Dismiss")) {
-                    _plugin.MessageQueue.Enqueue("/minion " + @"""" + _customNpcCharacters[_currentSelection].MinionToReplace + @"""");
-                }
+            } else {
+                ImGui.Text("Glamourer plugin was not detected! This is required to make Custom NPCs");
             }
         }
 
