@@ -33,6 +33,10 @@ using Microsoft.VisualBasic.Devices;
 using static Anamnesis.Files.PoseFile;
 using Bone = Ktisis.Structs.Bones.Bone;
 using FFXIVLooseTextureCompiler.ImageProcessing;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Objects.Enums;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using Character = Dalamud.Game.ClientState.Objects.Types.Character;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
@@ -121,44 +125,91 @@ namespace RoleplayingVoice {
         public override void Draw() {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
+                    var mainPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
+                    string selectedPlayerCollection = "";
+                    KeyValuePair<string, Character> selectedPlayer = new KeyValuePair<string, Character>("", null);
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
-                        Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
-                        float closestDistance = float.MaxValue;
-                        Bone closestBone = null;
-                        float yPos;
-                        float aboveNoseYPos = 0;
-                        float aboveNeckYPos = 0;
-                        unsafe {
-                            Actor* characterActor = (Actor*)plugin.ClientState.LocalPlayer.Address;
-                            var model = characterActor->Model;
-                            for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
-                                var partialSkeleton = model->Skeleton->PartialSkeletons[i];
-                                var pos = partialSkeleton.GetHavokPose(0);
-                                if (pos != null) {
-                                    var skeleton = pos->Skeleton;
-                                    for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
-                                        var bone = model->Skeleton->GetBone(i, i2);
-                                        var worldPos = bone.GetWorldPos(characterActor, model);
-                                        Vector2 screenPosition = new Vector2();
-                                        plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
-                                        float distance = Vector2.Distance(screenPosition, cursorPosition);
-                                        if (distance < closestDistance) {
-                                            closestDistance = distance;
-                                            closestBone = bone;
+                        List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
+                        _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
+                        bool oneMinionOnly = false;
+                        foreach (var item in Plugin.GetNearestObjects()) {
+                            Character character = item as Character;
+                            if (character != null) {
+                                string name = character.Name.TextValue;
+                                if (character.ObjectKind == ObjectKind.Companion) {
+                                    if (!oneMinionOnly) {
+                                        foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {
+                                            if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
+                                                name = customNPC.NpcName;
+                                                _objects.Add(new KeyValuePair<string, Character>(name, character));
+                                            }
                                         }
-                                        if (bone.UniqueId.Contains("0_46")) {
-                                            aboveNoseYPos = screenPosition.Y;
-                                        }
-                                        if (bone.UniqueId.Contains("0_63")) {
-                                            aboveNeckYPos = screenPosition.Y;
-                                        }
+                                        oneMinionOnly = true;
+                                    }
+                                } else if (character.ObjectKind == ObjectKind.EventNpc) {
+                                    if (!string.IsNullOrEmpty(character.Name.TextValue)) {
+                                        _objects.Add(new KeyValuePair<string, Character>(name, character));
                                     }
                                 }
                             }
                         }
+                        float aboveNoseYPosFinal = 0;
+                        float aboveNeckYPosFinal = 0;
+                        Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
+                        foreach (var item in _objects) {
+                            unsafe {
+                                float closestDistance = float.MaxValue;
+                                Bone closestBone = null;
+                                float aboveNoseYPos = 0;
+                                float aboveNeckYPos = 0;
+                                float xPos = 0;
+                                float minWidth = float.MaxValue;
+                                float maxWidth = 0;
+                                float maxDistance = 0;
+                                Actor* characterActor = (Actor*)item.Value.Address;
+                                var model = characterActor->Model;
+                                for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
+                                    var partialSkeleton = model->Skeleton->PartialSkeletons[i];
+                                    var pos = partialSkeleton.GetHavokPose(0);
+                                    if (pos != null) {
+                                        var skeleton = pos->Skeleton;
+                                        for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
+                                            var bone = model->Skeleton->GetBone(i, i2);
+                                            var worldPos = bone.GetWorldPos(characterActor, model);
+                                            Vector2 screenPosition = new Vector2();
+                                            plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
+                                            float distance = Vector2.Distance(screenPosition, cursorPosition);
+                                            if (distance < closestDistance) {
+                                                closestDistance = distance;
+                                                closestBone = bone;
+                                            }
+                                            if (bone.UniqueId.Contains("0_46")) {
+                                                aboveNoseYPos = screenPosition.Y;
+                                                xPos = screenPosition.X;
+                                            }
+                                            if (bone.UniqueId.Contains("0_63")) {
+                                                aboveNeckYPos = screenPosition.Y;
+                                            }
+                                            if (screenPosition.X > maxWidth) {
+                                                maxWidth = screenPosition.X;
+                                            }
+                                            if (screenPosition.X < minWidth) {
+                                                minWidth = screenPosition.X;
+                                            }
+                                        }
+                                    }
+                                }
+                                maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2;
+                                if (Vector2.Distance(new(cursorPosition.X, 0), new(xPos, 0)) < maxDistance) {
+                                    selectedPlayer = item;
+                                    aboveNoseYPosFinal = aboveNoseYPos;
+                                    aboveNeckYPosFinal = aboveNeckYPos;
+                                }
+                            }
+                        }
                         try {
-                            if (cursorPosition.Y < aboveNeckYPos) {
-                                if (cursorPosition.Y < aboveNoseYPos) {
+                            if (cursorPosition.Y < aboveNeckYPosFinal) {
+                                if (cursorPosition.Y < aboveNoseYPosFinal) {
                                     bodyDragPart = BodyDragPart.Eyes;
                                 } else {
                                     bodyDragPart = BodyDragPart.Face;
@@ -166,10 +217,16 @@ namespace RoleplayingVoice {
                             } else {
                                 bodyDragPart = BodyDragPart.Body;
                             }
-                            if (closestBone != null) {
-                                ImGui.TextUnformatted($"Dragging texture onto {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                            selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                            if (selectedPlayer.Value != null) {
+                                if (selectedPlayerCollection != mainPlayerCollection ||
+                                    selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
+                                    ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                                } else {
+                                    ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character.");
+                                }
                             } else {
-                                ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                                ImGui.TextUnformatted($"Dragging onto no character.");
                             }
                         } catch {
                             ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
@@ -188,131 +245,134 @@ namespace RoleplayingVoice {
 
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
                         List<TextureSet> textureSets = new List<TextureSet>();
-                        string modName = plugin.ClientState.LocalPlayer.Name.TextValue.Split(' ')[0] + " Texture Mod";
-                        foreach (var file in files) {
-                            if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
-                                string filePath = file;
-                                string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
-                                _currentCustomization = plugin.GetCustomization(plugin.ClientState.LocalPlayer);
-                                if (fileName.Contains("mata") || fileName.Contains("amat")
-                                    || fileName.Contains("materiala") || fileName.Contains("gen2")) {
-                                    var item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.TailShape.Value - 1, false);
-                                    item.Diffuse = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Body");
-                                } else if (fileName.Contains("bibo")) {
-                                    var item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.TailShape.Value - 1, false);
-                                    item.Diffuse = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Body");
-                                } else if (fileName.Contains("gen3")) {
-                                    var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.TailShape.Value - 1, false);
-                                    item.Diffuse = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Body");
-                                } else if (fileName.Contains("tbse")) {
-                                    var item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.TailShape.Value - 1, false);
-                                    item.Diffuse = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Body");
-                                } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
-                                    var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
-                                    _currentCustomization.Customize.Gender.Value,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.Clan.Value - 1, 0, false);
-                                    item.Diffuse = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Face");
-                                } else if (fileName.Contains("eye")) {
-                                    var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
-                                    _currentCustomization.Customize.Gender.Value,
-                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                    _currentCustomization.Customize.Clan.Value - 1, 0, false);
-                                    item.Normal = file;
-                                    textureSets.Add(item);
-                                    modName = modName.Replace("Mod", "Eyes");
-                                } else {
-                                    TextureSet item = null;
-                                    switch (bodyDragPart) {
-                                        case BodyDragPart.Body:
-                                            if (_currentCustomization.Customize.Race.Value - 1 == 5) {
-                                                item = AddBody(_currentCustomization.Customize.Gender.Value, 7,
-                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                                _currentCustomization.Customize.TailShape.Value - 1, false);
-                                                item.Diffuse = file;
-                                                textureSets.Add(item);
-                                                modName = modName.Replace("Mod", "Body");
-                                            } else if (_currentCustomization.Customize.Gender.Value == 0) {
-                                                item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
-                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                                _currentCustomization.Customize.TailShape.Value - 1, false);
-                                                item.Diffuse = file;
-                                                textureSets.Add(item);
-                                                modName = modName.Replace("Mod", "Body");
-                                            } else {
-                                                switch (ImageManipulation.FemaleBodyUVClassifier(file)) {
-                                                    case LooseTextureCompilerCore.BodyUVType.Bibo:
-                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
-                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
-                                                        item.Diffuse = file;
-                                                        textureSets.Add(item);
-                                                        modName = modName.Replace("Mod", "Body");
-                                                        break;
-                                                    case LooseTextureCompilerCore.BodyUVType.Gen3:
-                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
-                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
-                                                        item.Diffuse = file;
-                                                        textureSets.Add(item);
-                                                        modName = modName.Replace("Mod", "Body");
-                                                        break;
-                                                    case LooseTextureCompilerCore.BodyUVType.Gen2:
-                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
-                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
-                                                        item.Diffuse = file;
-                                                        textureSets.Add(item);
-                                                        modName = modName.Replace("Mod", "Body");
-                                                        break;
+                        if (selectedPlayer.Value != null && selectedPlayerCollection != mainPlayerCollection ||
+                            selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
+                            string modName = selectedPlayer.Key.Split(' ')[0] + " Texture Mod";
+                            foreach (var file in files) {
+                                if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
+                                    string filePath = file;
+                                    string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
+                                    _currentCustomization = plugin.GetCustomization(selectedPlayer.Value);
+                                    if (fileName.Contains("mata") || fileName.Contains("amat")
+                                        || fileName.Contains("materiala") || fileName.Contains("gen2")) {
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                        item.Diffuse = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Body");
+                                    } else if (fileName.Contains("bibo") || fileName.Contains("b+")) {
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                        item.Diffuse = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Body");
+                                    } else if (fileName.Contains("gen3")) {
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                        item.Diffuse = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Body");
+                                    } else if (fileName.Contains("tbse")) {
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                        item.Diffuse = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Body");
+                                    } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
+                                        var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
+                                        _currentCustomization.Customize.Gender.Value,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                        item.Diffuse = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Face");
+                                    } else if (fileName.Contains("eye")) {
+                                        var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
+                                        _currentCustomization.Customize.Gender.Value,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                        item.Normal = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Eyes");
+                                    } else {
+                                        TextureSet item = null;
+                                        switch (bodyDragPart) {
+                                            case BodyDragPart.Body:
+                                                if (_currentCustomization.Customize.Race.Value - 1 == 5) {
+                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 7,
+                                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                    _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                    item.Diffuse = file;
+                                                    textureSets.Add(item);
+                                                    modName = modName.Replace("Mod", "Body");
+                                                } else if (_currentCustomization.Customize.Gender.Value == 0) {
+                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                                    RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                    _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                    item.Diffuse = file;
+                                                    textureSets.Add(item);
+                                                    modName = modName.Replace("Mod", "Body");
+                                                } else {
+                                                    switch (ImageManipulation.FemaleBodyUVClassifier(file)) {
+                                                        case LooseTextureCompilerCore.BodyUVType.Bibo:
+                                                            item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
+                                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                            _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                            item.Diffuse = file;
+                                                            textureSets.Add(item);
+                                                            modName = modName.Replace("Mod", "Body");
+                                                            break;
+                                                        case LooseTextureCompilerCore.BodyUVType.Gen3:
+                                                            item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
+                                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                            _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                            item.Diffuse = file;
+                                                            textureSets.Add(item);
+                                                            modName = modName.Replace("Mod", "Body");
+                                                            break;
+                                                        case LooseTextureCompilerCore.BodyUVType.Gen2:
+                                                            item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
+                                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                            _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                            item.Diffuse = file;
+                                                            textureSets.Add(item);
+                                                            modName = modName.Replace("Mod", "Body");
+                                                            break;
+                                                    }
                                                 }
-                                            }
-                                            break;
-                                        case BodyDragPart.Face:
-                                            item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
-                                            _currentCustomization.Customize.Gender.Value,
-                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                            _currentCustomization.Customize.Clan.Value - 1, 0, false);
-                                            item.Diffuse = file;
-                                            textureSets.Add(item);
-                                            modName = modName.Replace("Mod", "Face");
-                                            break;
-                                        case BodyDragPart.Eyes:
-                                            item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
-                                            _currentCustomization.Customize.Gender.Value,
-                                            RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                            _currentCustomization.Customize.Clan.Value - 1, 0, false);
-                                            item.Normal = file;
-                                            textureSets.Add(item);
-                                            modName = modName.Replace("Mod", "Eyes");
-                                            break;
+                                                break;
+                                            case BodyDragPart.Face:
+                                                item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
+                                                _currentCustomization.Customize.Gender.Value,
+                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                                item.Diffuse = file;
+                                                textureSets.Add(item);
+                                                modName = modName.Replace("Mod", "Face");
+                                                break;
+                                            case BodyDragPart.Eyes:
+                                                item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
+                                                _currentCustomization.Customize.Gender.Value,
+                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                                item.Normal = file;
+                                                textureSets.Add(item);
+                                                modName = modName.Replace("Mod", "Eyes");
+                                                break;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
-                        if (textureSets.Count > 0) {
-                            Task.Run(() => Export(true, textureSets, fullModPath, modName));
-                        } else {
-                            plugin.Chat.PrintError("[Artemis Roleplaying Kit] Unable to identify texture type!");
+                            string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
+                            if (textureSets.Count > 0) {
+                                Task.Run(() => Export(true, textureSets, fullModPath, modName, selectedPlayer));
+                            } else {
+                                plugin.Chat.PrintError("[Artemis Roleplaying Kit] Unable to identify texture type!");
+                            }
                         }
                     }
                     AllowClickthrough = true;
@@ -456,7 +516,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name) {
+        public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, Character> character) {
             if (!_lockDuplicateGeneration) {
                 _exportStatus = "Initializing";
                 _lockDuplicateGeneration = true;
@@ -478,7 +538,7 @@ namespace RoleplayingVoice {
                 Thread.Sleep(100);
                 Ipc.AddMod.Subscriber(_pluginInterface).Invoke(name);
                 Ipc.ReloadMod.Subscriber(_pluginInterface).Invoke(path, name);
-                string collection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(0).Item3;
+                string collection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3;
                 Ipc.TrySetMod.Subscriber(_pluginInterface).Invoke(collection, path, name, true);
                 Ipc.TrySetModPriority.Subscriber(_pluginInterface).Invoke(collection, path, name, 100);
                 var settings = Ipc.GetCurrentModSettings.Subscriber(_pluginInterface).Invoke(collection, path, name, true);
@@ -486,9 +546,9 @@ namespace RoleplayingVoice {
                     Ipc.TrySetModSetting.Subscriber(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
                 }
                 Thread.Sleep(300);
-                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
+                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
                 Thread.Sleep(300);
-                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
+                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
             return true;

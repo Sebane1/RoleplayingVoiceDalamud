@@ -26,7 +26,8 @@ namespace RoleplayingVoiceDalamud.NPC {
             _plugin = plugin;
             _aiCharacter = receivingCharacter;
         }
-        public async Task<string> SendMessage(Character sendingCharacter, Character receivingCharacter, string aiName, string aiGreeting, string message, string setting, string aiDescription) {
+        public async Task<string> SendMessage(Character sendingCharacter, Character receivingCharacter, string aiName,
+            string aiGreeting, string message, string setting, string aiDescription) {
             string senderName = sendingCharacter.Name.TextValue.Split(" ")[0];
             string aiMessage = await _gptWrapper.SendMessage(senderName, message, $@" smiles ""{aiGreeting}""",
             GetPlayerDescription(sendingCharacter), aiDescription.Trim('.').Trim() + ". " + GetPlayerDescription(receivingCharacter, true, aiName), setting, 2);
