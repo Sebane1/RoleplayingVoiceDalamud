@@ -90,7 +90,7 @@ namespace RoleplayingVoice {
             _blank.Position = 0;
             // This will be used for underlay textures.
             // The user will need to download a mod pack with the following path until there is a better way to acquire underlay assets.
-            string underlayTexturePath = Path.Combine(Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke(), @"\LooseTextureCompilerDLC\");
+            string underlayTexturePath = "";
             // This should reference the xNormal install no matter where its been installed.
             // If this path is not found xNormal reliant functions will be disabled until xNormal is installed.
             _xNormalPath = @"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\xNormal\3.19.3\xNormal (x64).lnk";
@@ -107,8 +107,6 @@ namespace RoleplayingVoice {
             _faceTypes = new string[] { "Face 1", "Face 2", "Face 3", "Face 4", "Face 5", "Face 6", "Face 7", "Face 8", "Face 9" };
             _faceParts = new string[] { "Face", "Eyebrows", "Eyes", "Ears", "Face Paint", "Hair", "Face B", "Etc B" };
             _faceScales = new string[] { "Vanilla Scales", "Scaleless Vanilla", "Scaleless Varied" };
-
-
         }
 
         private void TextureProcessor_OnLaunchedXnormal(object? sender, EventArgs e) {
@@ -153,10 +151,6 @@ namespace RoleplayingVoice {
                                         if (bone.UniqueId.Contains("0_63")) {
                                             aboveNeckYPos = screenPosition.Y;
                                         }
-                                        //if (!_alreadyAddedBoneList.Contains(bone.UniqueId)) {
-                                        //    _alreadyAddedBoneList.Add(bone.UniqueId);
-                                        //    boneSorting.Add(new Tuple<string, float>(bone.UniqueId, screenPosition.Y));
-                                        //}
                                     }
                                 }
                             }
@@ -194,12 +188,6 @@ namespace RoleplayingVoice {
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
                         List<TextureSet> textureSets = new List<TextureSet>();
                         string modName = plugin.ClientState.LocalPlayer.Name.TextValue.Split(' ')[0] + " Texture Mod";
-                        //boneSorting.Sort((first, second) => {
-                        //    return first.Item2.CompareTo(second.Item2);
-                        //});
-                        //foreach (var item in boneSorting) {
-                        //    plugin.Chat.Print(item.Item1 + " " + item.Item2);
-                        //}
                         foreach (var file in files) {
                             if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
                                 string filePath = file;
@@ -454,6 +442,7 @@ namespace RoleplayingVoice {
                     textureSets.Add(item);
                 }
                 Directory.CreateDirectory(path);
+                _textureProcessor.BasePath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), @"\LooseTextureCompilerDLC\");
                 _textureProcessor.CleanGeneratedAssets(path);
                 await _textureProcessor.Export(textureSets, new Dictionary<string, int>(), path, 1, false, false, File.Exists(_xNormalPath) && finalize, _xNormalPath);
                 ExportJson(jsonFilepath);
