@@ -3420,6 +3420,11 @@ namespace RoleplayingVoice {
         public void ExecuteCommandC(string command, string args) {
             OpenConfig(command, args);
         }
+        [Command("/cc")]
+        [HelpMessage("Chat With Custom NPC")]
+        public void ExecuteCommandD(string command, string args) {
+            OpenConfig(command, args);
+        }
         public void OpenConfig(string command, string args) {
             if (!disposed) {
                 string[] splitArgs = args.Split(' ');

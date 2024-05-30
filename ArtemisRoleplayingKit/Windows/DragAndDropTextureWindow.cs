@@ -217,7 +217,9 @@ namespace RoleplayingVoice {
                             } else {
                                 bodyDragPart = BodyDragPart.Body;
                             }
-                            selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                            if (selectedPlayer.Value != null) {
+                                selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                            }
                             if (selectedPlayer.Value != null) {
                                 if (selectedPlayerCollection != mainPlayerCollection ||
                                     selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
@@ -418,7 +420,7 @@ namespace RoleplayingVoice {
         }
         private TextureSet AddBody(int gender, int baseBody, int race, int tail, bool uniqueAuRa = false) {
             TextureSet textureSet = new TextureSet();
-            textureSet.TextureSetName = _bodyNames[baseBody] + (!_bodyNames[baseBody].ToLower().Contains("tail") ? " " +
+            textureSet.TextureSetName = _bodyNames[baseBody] + (_bodyNames[baseBody].ToLower().Contains("tail") ? " " +
                 (tail + 1) : "") + ", " + (race == 5 ? "Unisex" : _genders[gender])
                 + ", " + _races[race];
             AddBodyPaths(textureSet, gender, baseBody, race, tail, uniqueAuRa);
@@ -518,19 +520,21 @@ namespace RoleplayingVoice {
         }
         public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, Character> character) {
             if (!_lockDuplicateGeneration) {
+                string modPath = Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke();
+                _textureProcessor.BasePath = modPath + @"\LooseTextureCompilerDLC";
                 _exportStatus = "Initializing";
                 _lockDuplicateGeneration = true;
                 List<TextureSet> textureSets = new List<TextureSet>();
                 string jsonFilepath = Path.Combine(path, "default_mod.json");
                 string metaFilePath = Path.Combine(path, "meta.json");
                 foreach (TextureSet item in exportTextureSets) {
+                    item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                     if (item.OmniExportMode) {
                         UniversalTextureSetCreator.ConfigureOmniConfiguration(item);
                     }
                     textureSets.Add(item);
                 }
                 Directory.CreateDirectory(path);
-                _textureProcessor.BasePath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), @"\LooseTextureCompilerDLC\");
                 _textureProcessor.CleanGeneratedAssets(path);
                 await _textureProcessor.Export(textureSets, new Dictionary<string, int>(), path, 1, false, false, File.Exists(_xNormalPath) && finalize, _xNormalPath);
                 ExportJson(jsonFilepath);
