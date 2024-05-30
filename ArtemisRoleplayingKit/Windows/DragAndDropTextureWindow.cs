@@ -358,8 +358,8 @@ namespace RoleplayingVoice {
         }
         private TextureSet AddBody(int gender, int baseBody, int race, int tail, bool uniqueAuRa = false) {
             TextureSet textureSet = new TextureSet();
-            textureSet.TextureSetName = _bodyNames[baseBody] + (_bodyNames[baseBody].ToLower().Contains("tail") ? " " +
-                (tail + 1) : "") + ", " + (race == 5 ? "Unisex" : gender)
+            textureSet.TextureSetName = _bodyNames[baseBody] + (!_bodyNames[baseBody].ToLower().Contains("tail") ? " " +
+                (tail + 1) : "") + ", " + (race == 5 ? "Unisex" : _genders[gender])
                 + ", " + _races[race];
             AddBodyPaths(textureSet, gender, baseBody, race, tail, uniqueAuRa);
             return textureSet;
