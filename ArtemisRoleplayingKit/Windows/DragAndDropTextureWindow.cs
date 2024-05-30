@@ -32,6 +32,7 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using Microsoft.VisualBasic.Devices;
 using static Anamnesis.Files.PoseFile;
 using Bone = Ktisis.Structs.Bones.Bone;
+using FFXIVLooseTextureCompiler.ImageProcessing;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
@@ -256,6 +257,33 @@ namespace RoleplayingVoice {
                                                 item.Diffuse = file;
                                                 textureSets.Add(item);
                                                 modName = modName.Replace("Mod", "Body");
+                                            } else {
+                                                switch (ImageManipulation.FemaleBodyUVClassifier(file)) {
+                                                    case LooseTextureCompilerCore.BodyUVType.Bibo:
+                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
+                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                        item.Diffuse = file;
+                                                        textureSets.Add(item);
+                                                        modName = modName.Replace("Mod", "Body");
+                                                        break;
+                                                    case LooseTextureCompilerCore.BodyUVType.Gen3:
+                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
+                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                        item.Diffuse = file;
+                                                        textureSets.Add(item);
+                                                        modName = modName.Replace("Mod", "Body");
+                                                        break;
+                                                    case LooseTextureCompilerCore.BodyUVType.Gen2:
+                                                        item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
+                                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                        _currentCustomization.Customize.TailShape.Value - 1, false);
+                                                        item.Diffuse = file;
+                                                        textureSets.Add(item);
+                                                        modName = modName.Replace("Mod", "Body");
+                                                        break;
+                                                }
                                             }
                                             break;
                                         case BodyDragPart.Face:
@@ -459,7 +487,7 @@ namespace RoleplayingVoice {
                 }
                 Thread.Sleep(300);
                 Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
-                Thread.Sleep(200);
+                Thread.Sleep(300);
                 Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
