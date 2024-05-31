@@ -23,6 +23,7 @@ using NAudio.Lame;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
+using RoleplayingMediaCore;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
@@ -40,6 +41,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
+using static Lumina.Data.Parsing.Layer.LayerCommon;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using Character = Dalamud.Game.ClientState.Objects.Types.Character;
@@ -729,6 +731,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Character reference = character;
                     Thread.Sleep(time);
                     StopEmote(reference.Address);
+                    if (_plugin.Config.UsePlayerSync) {
+                        unsafe {
+                            var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                            if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
+                                _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
+                                _plugin.PluginLog.Verbose("Sent emote cancellation to server for " + reference.Name);
+                            }
+                        }
+                    }
                 });
             } catch {
 
@@ -755,6 +767,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (Vector3.Distance(startingPosition, player.Position) > 0.001f) {
                             StopEmote(reference.Address);
                             _currentlyEmotingCharacters.Remove(reference.ObjectId.ToString(), out var item);
+                            if (_plugin.Config.UsePlayerSync) {
+                                unsafe {
+                                    var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)player.Address);
+                                    if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                        _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)0);
+                                        _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)0);
+                                    }
+                                }
+                            }
                             break;
                         } else {
                             Thread.Sleep(1000 * _currentlyEmotingCharacters.Count);
