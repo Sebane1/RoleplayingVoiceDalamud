@@ -64,13 +64,13 @@ namespace RoleplayingVoiceDalamud.IPC {
             }
         }
         public void InvokeOnStoppedAnimation(nint objectAddress) {
-            if (OnTriggerAnimation != null) {
+            if (OnStoppedAnimation != null) {
                 OnStoppedAnimation?.Invoke(this, objectAddress);
             }
         }
 
         public void InvokeOnVoicePackChanged() {
-            if (OnTriggerAnimation != null) {
+            if (OnChangeVoicePack != null) {
                 OnChangeVoicePack?.Invoke(this, EventArgs.Empty);
             }
         }

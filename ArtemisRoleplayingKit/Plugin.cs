@@ -718,7 +718,7 @@ namespace RoleplayingVoice {
                                                                     }
                                                                 });
                                                                 ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
-                                                                
+
                                                                 if (emoteId > 0) {
                                                                     OnEmote(item as Character, emoteId);
                                                                 }
@@ -734,51 +734,52 @@ namespace RoleplayingVoice {
                                                 }
                                             });
                                             _emoteWatchList[playerSender] = task;
-                                            //task = Task.Run(async delegate () {
-                                            //    try {
-                                            //        Vector3 lastPosition = item.Position;
-                                            //        int startingTerritoryId = _clientState.TerritoryType;
-                                            //        while (!disposed && _clientState.IsLoggedIn &&
-                                            //        startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
-                                            //            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                            //                _pluginLog?.Verbose("Checking minion from" + playerSender);
-                                            //                _pluginLog?.Verbose("Getting emote.");
-                                            //                ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
-                                            //                if (animation > 0) {
-                                            //                    _pluginLog?.Verbose("Applying Emote.");
-                                            //                    unsafe {
-                                            //                        var companion = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
-                                            //                        if (companion->Companion != null) {
-                                            //                            _addonTalkHandler.TriggerEmote(companion->CompanionObject->Character.GameObject.g, animation);
-                                            //                        }
-                                            //                    } lastPosition = item.Position;
-                                            //                    _ = Task.Run(() => {
-                                            //                        int startingTerritoryId = _clientState.TerritoryType;
-                                            //                        while (true) {
-                                            //                            Thread.Sleep(500);
-                                            //                            if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
-                                            //                                _addonTalkHandler.StopEmote(item.Address);
-                                            //                                break;
-                                            //                            }
-                                            //                        }
-                                            //                    });
-                                            //                    ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
+                                            task = Task.Run(async delegate () {
+                                                try {
+                                                    Vector3 lastPosition = item.Position;
+                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                    while (!disposed && _clientState.IsLoggedIn &&
+                                                    startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
+                                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                                            _pluginLog?.Verbose("Checking minion from" + playerSender);
+                                                            _pluginLog?.Verbose("Getting emote.");
+                                                            ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
+                                                            if (animation > 0) {
+                                                                _pluginLog?.Verbose("Applying Emote.");
+                                                                unsafe {
+                                                                    var companion = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
+                                                                    if (companion->CompanionObject != null) {
+                                                                        _addonTalkHandler.TriggerEmote((nint)companion->CompanionObject, animation);
+                                                                        lastPosition = item.Position;
+                                                                        _ = Task.Run(() => {
+                                                                            int startingTerritoryId = _clientState.TerritoryType;
+                                                                            while (true) {
+                                                                                Thread.Sleep(500);
+                                                                                if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
+                                                                                    _addonTalkHandler.StopEmote(item.Address);
+                                                                                    break;
+                                                                                }
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }
+                                                                ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
 
-                                            //                    if (emoteId > 0) {
-                                            //                        OnEmote(item as Character, emoteId);
-                                            //                    }
-                                            //                }
-                                            //            } else {
-                                            //                CleanupEmoteWatchList();
-                                            //                break;
-                                            //            }
-                                            //            Thread.Sleep(1000);
-                                            //        }
-                                            //    } catch (Exception e) {
-                                            //        _pluginLog?.Warning(e, e.Message);
-                                            //    }
-                                            //});
-                                            //_emoteWatchList[playerSender] = task;
+                                                                if (emoteId > 0) {
+                                                                    OnEmote(item as Character, emoteId);
+                                                                }
+                                                            }
+                                                        } else {
+                                                            CleanupEmoteWatchList();
+                                                            break;
+                                                        }
+                                                        Thread.Sleep(1000);
+                                                    }
+                                                } catch (Exception e) {
+                                                    _pluginLog?.Warning(e, e.Message);
+                                                }
+                                            });
+                                            _emoteWatchList[playerSender] = task;
                                         }
                                     }
                                 }
@@ -3962,17 +3963,17 @@ namespace RoleplayingVoice {
         }
 
         public void TriggerCharacterEmote(EmoteModData emoteModData, Character character) {
-            if (character.Address == _clientState.LocalPlayer.Address) {
-                if (_wasDoingFakeEmote) {
-                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
-                }
-            }
             Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
-                //Thread.Sleep(1000);
+                Thread.Sleep(1000);
                 if (character.Address == _clientState.LocalPlayer.Address) {
                     _messageQueue.Enqueue(emoteModData.Emote);
                     if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
+                        if (character.Address == _clientState.LocalPlayer.Address) {
+                            if (_wasDoingFakeEmote) {
+                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                            }
+                        }
                         Thread.Sleep(100);
                         _fastMessageQueue.Enqueue(emoteModData.Emote);
                         _animationModsAlreadyTriggered.Add(emoteModData.FoundModName);
@@ -3995,8 +3996,16 @@ namespace RoleplayingVoice {
                             _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
                         }
                     }
-                    _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
-                    _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
+                    unsafe {
+                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                        if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteModData.EmoteId);
+                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteModData.AnimationId);
+                        } else {
+                            _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
+                            _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
+                        }
+                    }
                     Task.Run(() => {
                         Vector3 lastPosition = character.Position;
                         while (true) {
@@ -4004,8 +4013,16 @@ namespace RoleplayingVoice {
                             if (Vector3.Distance(lastPosition, character.Position) > 0.001f) {
                                 _addonTalkHandler.StopEmote(character.Address);
                                 _wasDoingFakeEmote = false;
-                                _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)0);
-                                _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)0);
+                                unsafe {
+                                    var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                    if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name + "MinionEmoteId", (ushort)0);
+                                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name + "MinionEmote", (ushort)0);
+                                    } else {
+                                        _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)0);
+                                        _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)0);
+                                    }
+                                }
                                 if (character.ObjectKind == ObjectKind.Companion) {
                                     if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                         _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);

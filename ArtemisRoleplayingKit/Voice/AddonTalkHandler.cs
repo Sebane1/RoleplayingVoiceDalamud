@@ -709,9 +709,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), animationId, "Base Override");
                 }
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
-                _plugin.IpcSystem.InvokeOnTriggerAnimation(character, animationId);
-            } catch {
-
+                _plugin.IpcSystem?.InvokeOnTriggerAnimation(character, animationId);
+            } catch (Exception e) {
+                _plugin.PluginLog.Warning(e, e.Message);
             }
         }
         public async void TriggerEmoteTimed(Character character, ushort animationId, int time = 2000) {
