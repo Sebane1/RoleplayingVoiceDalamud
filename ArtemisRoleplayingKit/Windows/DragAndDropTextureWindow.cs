@@ -125,115 +125,120 @@ namespace RoleplayingVoice {
         public override void Draw() {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
-                    var mainPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
+                    var mainPlayerCollection = "";
                     string selectedPlayerCollection = "";
                     KeyValuePair<string, Character> selectedPlayer = new KeyValuePair<string, Character>("", null);
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
-                        List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
-                        _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
-                        bool oneMinionOnly = false;
-                        foreach (var item in Plugin.GetNearestObjects()) {
-                            Character character = item as Character;
-                            if (character != null) {
-                                string name = character.Name.TextValue;
-                                if (character.ObjectKind == ObjectKind.Companion) {
-                                    if (!oneMinionOnly) {
-                                        foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {
-                                            if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
-                                                name = customNPC.NpcName;
-                                                _objects.Add(new KeyValuePair<string, Character>(name, character));
-                                            }
-                                        }
-                                        oneMinionOnly = true;
-                                    }
-                                } else if (character.ObjectKind == ObjectKind.EventNpc) {
-                                    if (!string.IsNullOrEmpty(character.Name.TextValue)) {
-                                        _objects.Add(new KeyValuePair<string, Character>(name, character));
-                                    }
-                                }
-                            }
-                        }
-                        float aboveNoseYPosFinal = 0;
-                        float aboveNeckYPosFinal = 0;
-                        Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
-                        foreach (var item in _objects) {
-                            unsafe {
-                                float closestDistance = float.MaxValue;
-                                Bone closestBone = null;
-                                float aboveNoseYPos = 0;
-                                float aboveNeckYPos = 0;
-                                float xPos = 0;
-                                float minWidth = float.MaxValue;
-                                float maxWidth = 0;
-                                float maxDistance = 0;
-                                Actor* characterActor = (Actor*)item.Value.Address;
-                                var model = characterActor->Model;
-                                for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
-                                    var partialSkeleton = model->Skeleton->PartialSkeletons[i];
-                                    var pos = partialSkeleton.GetHavokPose(0);
-                                    if (pos != null) {
-                                        var skeleton = pos->Skeleton;
-                                        for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
-                                            var bone = model->Skeleton->GetBone(i, i2);
-                                            var worldPos = bone.GetWorldPos(characterActor, model);
-                                            Vector2 screenPosition = new Vector2();
-                                            plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
-                                            float distance = Vector2.Distance(screenPosition, cursorPosition);
-                                            if (distance < closestDistance) {
-                                                closestDistance = distance;
-                                                closestBone = bone;
-                                            }
-                                            if (bone.UniqueId.Contains("0_46")) {
-                                                aboveNoseYPos = screenPosition.Y;
-                                                xPos = screenPosition.X;
-                                            }
-                                            if (bone.UniqueId.Contains("0_63")) {
-                                                aboveNeckYPos = screenPosition.Y;
-                                            }
-                                            if (screenPosition.X > maxWidth) {
-                                                maxWidth = screenPosition.X;
-                                            }
-                                            if (screenPosition.X < minWidth) {
-                                                minWidth = screenPosition.X;
-                                            }
-                                        }
-                                    }
-                                }
-                                maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2;
-                                if (Vector2.Distance(new(cursorPosition.X, 0), new(xPos, 0)) < maxDistance) {
-                                    selectedPlayer = item;
-                                    aboveNoseYPosFinal = aboveNoseYPos;
-                                    aboveNeckYPosFinal = aboveNeckYPos;
-                                }
-                            }
-                        }
                         try {
-                            if (cursorPosition.Y < aboveNeckYPosFinal) {
-                                if (cursorPosition.Y < aboveNoseYPosFinal) {
-                                    bodyDragPart = BodyDragPart.Eyes;
-                                } else {
-                                    bodyDragPart = BodyDragPart.Face;
+                            mainPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
+                            List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
+                            _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
+                            bool oneMinionOnly = false;
+                            foreach (var item in Plugin.GetNearestObjects()) {
+                                Character character = item as Character;
+                                if (character != null) {
+                                    string name = character.Name.TextValue;
+                                    if (character.ObjectKind == ObjectKind.Companion) {
+                                        if (!oneMinionOnly) {
+                                            foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {
+                                                if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
+                                                    name = customNPC.NpcName;
+                                                    _objects.Add(new KeyValuePair<string, Character>(name, character));
+                                                }
+                                            }
+                                            oneMinionOnly = true;
+                                        }
+                                    } else if (character.ObjectKind == ObjectKind.EventNpc) {
+                                        if (!string.IsNullOrEmpty(character.Name.TextValue)) {
+                                            _objects.Add(new KeyValuePair<string, Character>(name, character));
+                                        }
+                                    }
                                 }
-                            } else {
-                                bodyDragPart = BodyDragPart.Body;
                             }
-                            if (selectedPlayer.Value != null) {
-                                selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
-                            }
-                            if (selectedPlayer.Value != null) {
-                                if (selectedPlayerCollection != mainPlayerCollection ||
-                                    selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
-                                    ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
-                                } else {
-                                    ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character.");
+                            float aboveNoseYPosFinal = 0;
+                            float aboveNeckYPosFinal = 0;
+                            Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
+                            foreach (var item in _objects) {
+                                unsafe {
+                                    float closestDistance = float.MaxValue;
+                                    Bone closestBone = null;
+                                    float aboveNoseYPos = 0;
+                                    float aboveNeckYPos = 0;
+                                    float xPos = 0;
+                                    float minWidth = float.MaxValue;
+                                    float maxWidth = 0;
+                                    float maxDistance = 0;
+                                    Actor* characterActor = (Actor*)item.Value.Address;
+                                    var model = characterActor->Model;
+                                    for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
+                                        var partialSkeleton = model->Skeleton->PartialSkeletons[i];
+                                        var pos = partialSkeleton.GetHavokPose(0);
+                                        if (pos != null) {
+                                            var skeleton = pos->Skeleton;
+                                            for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
+                                                var bone = model->Skeleton->GetBone(i, i2);
+                                                var worldPos = bone.GetWorldPos(characterActor, model);
+                                                Vector2 screenPosition = new Vector2();
+                                                plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
+                                                float distance = Vector2.Distance(screenPosition, cursorPosition);
+                                                if (distance < closestDistance) {
+                                                    closestDistance = distance;
+                                                    closestBone = bone;
+                                                }
+                                                if (bone.UniqueId.Contains("0_46")) {
+                                                    aboveNoseYPos = screenPosition.Y;
+                                                    xPos = screenPosition.X;
+                                                }
+                                                if (bone.UniqueId.Contains("0_63")) {
+                                                    aboveNeckYPos = screenPosition.Y;
+                                                }
+                                                if (screenPosition.X > maxWidth) {
+                                                    maxWidth = screenPosition.X;
+                                                }
+                                                if (screenPosition.X < minWidth) {
+                                                    minWidth = screenPosition.X;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2;
+                                    if (Vector2.Distance(new(cursorPosition.X, 0), new(xPos, 0)) < maxDistance) {
+                                        selectedPlayer = item;
+                                        aboveNoseYPosFinal = aboveNoseYPos;
+                                        aboveNeckYPosFinal = aboveNeckYPos;
+                                    }
                                 }
-                            } else {
-                                ImGui.TextUnformatted($"Dragging onto no character.");
                             }
+                            try {
+                                if (cursorPosition.Y < aboveNeckYPosFinal) {
+                                    if (cursorPosition.Y < aboveNoseYPosFinal) {
+                                        bodyDragPart = BodyDragPart.Eyes;
+                                    } else {
+                                        bodyDragPart = BodyDragPart.Face;
+                                    }
+                                } else {
+                                    bodyDragPart = BodyDragPart.Body;
+                                }
+                                if (selectedPlayer.Value != null) {
+                                    selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                                }
+                                if (selectedPlayer.Value != null) {
+                                    if (selectedPlayerCollection != mainPlayerCollection ||
+                                        selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
+                                        ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                                    } else {
+                                        ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character.");
+                                    }
+                                } else {
+                                    ImGui.TextUnformatted($"Dragging onto no character.");
+                                }
+                            } catch {
+                                ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                            }
+                            AllowClickthrough = false;
                         } catch {
-                            ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                            ImGui.TextUnformatted($"Penumbra is not installed.");
                         }
-                        AllowClickthrough = false;
                         return true;
                     });
 

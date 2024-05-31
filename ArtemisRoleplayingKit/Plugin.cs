@@ -718,8 +718,9 @@ namespace RoleplayingVoice {
                                                                     }
                                                                 });
                                                                 ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
+                                                                
                                                                 if (emoteId > 0) {
-                                                                    OnEmote(item as PlayerCharacter, emoteId);
+                                                                    OnEmote(item as Character, emoteId);
                                                                 }
                                                             }
                                                         } else {
@@ -733,6 +734,51 @@ namespace RoleplayingVoice {
                                                 }
                                             });
                                             _emoteWatchList[playerSender] = task;
+                                            //task = Task.Run(async delegate () {
+                                            //    try {
+                                            //        Vector3 lastPosition = item.Position;
+                                            //        int startingTerritoryId = _clientState.TerritoryType;
+                                            //        while (!disposed && _clientState.IsLoggedIn &&
+                                            //        startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
+                                            //            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                            //                _pluginLog?.Verbose("Checking minion from" + playerSender);
+                                            //                _pluginLog?.Verbose("Getting emote.");
+                                            //                ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
+                                            //                if (animation > 0) {
+                                            //                    _pluginLog?.Verbose("Applying Emote.");
+                                            //                    unsafe {
+                                            //                        var companion = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
+                                            //                        if (companion->Companion != null) {
+                                            //                            _addonTalkHandler.TriggerEmote(companion->CompanionObject->Character.GameObject.g, animation);
+                                            //                        }
+                                            //                    } lastPosition = item.Position;
+                                            //                    _ = Task.Run(() => {
+                                            //                        int startingTerritoryId = _clientState.TerritoryType;
+                                            //                        while (true) {
+                                            //                            Thread.Sleep(500);
+                                            //                            if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
+                                            //                                _addonTalkHandler.StopEmote(item.Address);
+                                            //                                break;
+                                            //                            }
+                                            //                        }
+                                            //                    });
+                                            //                    ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
+
+                                            //                    if (emoteId > 0) {
+                                            //                        OnEmote(item as Character, emoteId);
+                                            //                    }
+                                            //                }
+                                            //            } else {
+                                            //                CleanupEmoteWatchList();
+                                            //                break;
+                                            //            }
+                                            //            Thread.Sleep(1000);
+                                            //        }
+                                            //    } catch (Exception e) {
+                                            //        _pluginLog?.Warning(e, e.Message);
+                                            //    }
+                                            //});
+                                            //_emoteWatchList[playerSender] = task;
                                         }
                                     }
                                 }
@@ -2922,11 +2968,11 @@ namespace RoleplayingVoice {
             Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
             Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
 
-            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString(), delay);
-            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name, delay);
-            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name, delay);
-            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name, delay);
-            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name, delay);
+            string emotePathId = characterVoicePack.GetMisc(emoteId.ToString(), delay, true);
+            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name, delay, true);
+            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name, delay, true);
+            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name, delay, true);
+            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name, delay, true);
 
             characterVoicePack.EmoteIndex = -1;
             isVoicedEmote = true;
