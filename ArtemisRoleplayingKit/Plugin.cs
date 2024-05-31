@@ -1516,7 +1516,7 @@ namespace RoleplayingVoice {
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
             if (config.VoicePackIsActive) {
                 if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 3000) {
+                    if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 9000) {
                         if (_mainCharacterVoicePack == null) {
                             _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                         }
