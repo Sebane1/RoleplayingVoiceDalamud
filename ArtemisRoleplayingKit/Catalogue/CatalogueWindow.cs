@@ -75,7 +75,7 @@ namespace RoleplayingVoice {
                             if (index < category.Images.Count) {
                                 if (ImGui.ImageButton(category.Images[index].ImGuiHandle, new Vector2(250, 250))) {
                                     selectionIndex = category.PageNumber * 9 + index;
-                                    Plugin.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty);
+                                    Plugin.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty, 0);
                                     category.SelectItem(selectionIndex);
                                 }
                                 index++;
@@ -95,7 +95,7 @@ namespace RoleplayingVoice {
                         for (int x = 0; x < 7; x++) {
                             if (index < category.VariantImages.Count) {
                                 if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].ImGuiHandle, new Vector2(100, 100))) {
-                                    Plugin.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject, Guid.Empty);
+                                    Plugin.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject, Guid.Empty, 0);
                                 }
                                 index++;
                                 if (x < 6 && index < categories[_currentCategory].VariantImages.Count) {

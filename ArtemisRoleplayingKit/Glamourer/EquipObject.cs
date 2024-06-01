@@ -1,4 +1,5 @@
-﻿using Penumbra.GameData.Enums;
+﻿using Glamourer.Api.Enums;
+using Penumbra.GameData.Enums;
 
 public class Identifier {
     public long Id { get; set; }
@@ -25,7 +26,7 @@ public class EquipObject {
     public IdObject ModelId { get; set; }
     public WeaponType WeaponType { get; set; }
     //public Variant Variant { get; set; }
-    public FullEquipType Type { get; set; }
+    public ApiEquipSlot Type { get; set; }
     public long Flags { get; set; }
     public Level Level { get; set; }
     public IdObject JobRestrictions { get; set; }

@@ -1,4 +1,5 @@
-﻿using Penumbra.GameData.Enums;
+﻿using Glamourer.Api.Enums;
+using Penumbra.GameData.Enums;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +20,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             EquipObject.Name = strings[0];
             int offset = 0;
             try {
-                EquipObject.Type = ParseEnum<FullEquipType>(strings[1]);
+                EquipObject.Type = ParseEnum<ApiEquipSlot>(strings[1]);
                 EquipObject.ItemId = new IdObject() { Id = int.Parse(strings[2]) };
             } catch (Exception e) {
                 Dalamud.Logging.PluginLog.LogWarning(e, e.Message);

@@ -125,12 +125,12 @@ namespace RoleplayingVoice {
         public override void Draw() {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
-                    var mainPlayerCollection = "";
-                    string selectedPlayerCollection = "";
+                    Guid mainPlayerCollection = Guid.Empty;
+                    Guid selectedPlayerCollection = Guid.Empty;
                     KeyValuePair<string, Character> selectedPlayer = new KeyValuePair<string, Character>("", null);
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
                         try {
-                            mainPlayerCollection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
+                            mainPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3.Id;
                             List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
                             _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
                             bool oneMinionOnly = false;
@@ -220,7 +220,7 @@ namespace RoleplayingVoice {
                                     bodyDragPart = BodyDragPart.Body;
                                 }
                                 if (selectedPlayer.Value != null) {
-                                    selectedPlayerCollection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                                    selectedPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(selectedPlayer.Value.ObjectIndex).Item3.Id;
                                 }
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
@@ -374,7 +374,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             }
-                            string fullModPath = Path.Combine(new Penumbra.Api.IpcSubscribers.GetModDirectory(_pluginInterface).Invoke(), modName);
+                            string fullModPath = Path.Combine(PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke(), modName);
                             if (textureSets.Count > 0) {
                                 Task.Run(() => Export(true, textureSets, fullModPath, modName, selectedPlayer));
                             } else {
@@ -525,7 +525,7 @@ namespace RoleplayingVoice {
         }
         public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, Character> character) {
             if (!_lockDuplicateGeneration) {
-                string modPath = new Penumbra.Api.IpcSubscribers.GetModDirectory(_pluginInterface).Invoke();
+                string modPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
                 _textureProcessor.BasePath = modPath + @"\LooseTextureCompilerDLC";
                 _exportStatus = "Initializing";
                 _lockDuplicateGeneration = true;
@@ -545,19 +545,19 @@ namespace RoleplayingVoice {
                 ExportJson(jsonFilepath);
                 ExportMeta(metaFilePath, name);
                 Thread.Sleep(100);
-                new Penumbra.Api.IpcSubscribers.AddMod(_pluginInterface).Invoke(name);
-                new Penumbra.Api.IpcSubscribers.ReloadMod(_pluginInterface).Invoke(path, name);
-                Guid collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3.Id;
-                new Penumbra.Api.IpcSubscribers.TrySetMod(_pluginInterface).Invoke(collection, path, true, name);
-                new Penumbra.Api.IpcSubscribers.TrySetModPriority(_pluginInterface).Invoke(collection, path, 100, name);
-                var settings = new Penumbra.Api.IpcSubscribers.GetCurrentModSettings(_pluginInterface).Invoke(collection, path, name, true);
+                PenumbraAndGlamourerIpcWrapper.Instance.AddMod.Invoke(name);
+                PenumbraAndGlamourerIpcWrapper.Instance.ReloadMod.Invoke(path, name);
+                Guid collection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(character.Value.ObjectIndex).Item3.Id;
+                PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, path, true, name);
+                PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, path, 100, name);
+                var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collection, path, name, true);
                 foreach (var group in settings.Item2.Value.Item3) {
-                    new Penumbra.Api.IpcSubscribers.TrySetModSetting(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
+                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModSetting.Invoke(collection, path, name, group.Key, "Enable");
                 }
                 Thread.Sleep(300);
-                new Penumbra.Api.IpcSubscribers.RedrawObject(_pluginInterface).Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
+                PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
                 Thread.Sleep(300);
-                new Penumbra.Api.IpcSubscribers.RedrawObject(_pluginInterface).Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
+                PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
             return true;
