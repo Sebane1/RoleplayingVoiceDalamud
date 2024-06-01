@@ -138,7 +138,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception ex) {
-
+                    _plugin.PluginLog.Warning(ex, ex.Message);
                 }
                 if (ImGui.Button(">")) {
                     if (_categoryPage < (int)((float)_animationPages.Keys.Count / (float)maxItemsPerCategoryPage)) {
@@ -163,7 +163,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception ex) {
-
+                    _plugin.PluginLog.Warning(ex, ex.Message);
                 }
                 ImGui.Dummy(new Vector2(10));
                 if (ImGui.Button("Previous Page")) {

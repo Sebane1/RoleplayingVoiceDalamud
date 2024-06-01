@@ -244,7 +244,7 @@ namespace RoleplayingVoice {
         private EquipObject _currentClothingItem;
         private List<object> _currentClothingChangedItems;
         private string _catalogueCollectionName;
-        private (bool, bool, string) _originalCollection;
+        private (bool ObjectValid, bool IndividualSet, (Guid Id, string Name) EffectiveCollection) _originalCollection;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -415,8 +415,8 @@ namespace RoleplayingVoice {
         private void InitializeEverything() {
             try {
                 try {
-                    Ipc.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
-                    Ipc.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                    Penumbra.Api.IpcSubscribers.Legacy.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                    Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
                     try {
                         _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
                         _pluginLog.Debug("Glamourer.GetAllCustomizationFromCharacter configured.");
@@ -1018,10 +1018,10 @@ namespace RoleplayingVoice {
                                     SetClothingMod(item, _catalogueCollectionName);
                                     Thread.Sleep(100);
                                     _currentClothingChangedItems = new List<object>();
-                                    _currentClothingChangedItems.AddRange(Ipc.GetChangedItems.Subscriber(pluginInterface).Invoke(_catalogueCollectionName).Values);
+                                    _currentClothingChangedItems.AddRange(new Penumbra.Api.IpcSubscribers.Legacy.GetChangedItems(pluginInterface).Invoke(_catalogueCollectionName).Values);
                                     SetDependancies(item, _catalogueCollectionName);
                                     Thread.Sleep(100);
-                                    Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex, RedrawType.Redraw);
+                                    new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
                                 }
                             }
                             Thread.Sleep(4000);
@@ -1069,7 +1069,7 @@ namespace RoleplayingVoice {
                             RefreshData();
                             CleanSlate();
                             _catalogueWindow.ScanCatalogue();
-                            Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _originalCollection.Item3, true, true);
+                            new Penumbra.Api.IpcSubscribers.Legacy.SetCollectionForObject(pluginInterface).Invoke(0, _originalCollection.Item3.Name, true, true);
                         }
                     }
                 }
@@ -1109,12 +1109,12 @@ namespace RoleplayingVoice {
         public void WearOutfit(EquipObject item, string collection = null) {
             //CleanSlate();
             if (collection == null) {
-                collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex).Item3;
+                collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex).Item3.Name;
             }
             if (_glamourerGetAllCustomization != null) {
                 SetClothingMod(item.Name, collection, false);
                 SetDependancies(item.Name, collection, false);
-                Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(0, RedrawType.Redraw);
+                new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(0, RedrawType.Redraw);
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
                 var bytes = System.Convert.FromBase64String(customizationValue);
@@ -3277,9 +3277,9 @@ namespace RoleplayingVoice {
             _currentModPackRefreshGuid = refreshGuid;
             try {
                 if (_penumbraReady) {
-                    string modPath = Ipc.GetModDirectory.Subscriber(pluginInterface).Invoke();
+                    string modPath = new Penumbra.Api.IpcSubscribers.GetModDirectory(pluginInterface).Invoke();
                     if (Directory.Exists(modPath)) {
-                        var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0);
+                        var collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(0);
                         foreach (var directory in Directory.EnumerateDirectories(modPath)) {
                             if (refreshGuid == _currentModPackRefreshGuid) {
                                 if (config.DebugMode) {
@@ -3321,8 +3321,8 @@ namespace RoleplayingVoice {
                                 try {
                                     string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
                                     var currentModSettings =
-                                    Ipc.GetCurrentModSettings.Subscriber(pluginInterface).
-                                    Invoke(collection.Item3, relativeDirectory, null, true);
+                                    new Penumbra.Api.IpcSubscribers.Legacy.GetCurrentModSettings(pluginInterface).
+                                    Invoke(collection.Item3.Name, relativeDirectory, null, true);
                                     var result = currentModSettings.Item1;
                                     if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
                                         if (currentModSettings.Item2 != null) {
@@ -3673,7 +3673,7 @@ namespace RoleplayingVoice {
                                     case "stop":
                                         _catalogueMods = false;
                                         _chat.Print("Stopping cataloguing.");
-                                        Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _originalCollection.Item3, true, true);
+                                        new Penumbra.Api.IpcSubscribers.SetCollectionForObject(pluginInterface).Invoke(0, _originalCollection.Item3.Id, true, true);
                                         break;
                                 }
 
@@ -3694,14 +3694,14 @@ namespace RoleplayingVoice {
 
         public void StartCatalogingItems() {
             _catalogueCollectionName = "ArtemisRoleplayingKitCatalogue";
-            _originalCollection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
-            _catalogueCollectionName = _originalCollection.Item3;
+            _originalCollection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
+            _catalogueCollectionName = _originalCollection.Item3.Name;
 
-            //Ipc.CreateNamedTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName);
+            //new Penumbra.Api.IpcSubscribers.CreateNamedTemporaryCollection(pluginInterface).Invoke(_catalogueCollectionName);
 
-            //Ipc.AssignTemporaryCollection.Subscriber(pluginInterface).Invoke(_catalogueCollectionName, 0, true);
+            //new Penumbra.Api.IpcSubscribers.AssignTemporaryCollection(pluginInterface).Invoke(_catalogueCollectionName, 0, true);
 
-            //Ipc.SetCollectionForObject.Subscriber(pluginInterface).Invoke(0, _catalogueCollectionName, true, true);
+            //new Penumbra.Api.IpcSubscribers.SetCollectionForObject(pluginInterface).Invoke(0, _catalogueCollectionName, true, true);
 
             Directory.CreateDirectory(_catalogueWindow.CataloguePath);
 
@@ -3901,7 +3901,7 @@ namespace RoleplayingVoice {
             var list = CreateEmoteList(_dataManager);
             List<uint> deDuplicate = new List<uint>();
             List<EmoteModData> emoteData = new List<EmoteModData>();
-            var collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke((int)targetObject.ObjectIndex);
+            var collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke((int)targetObject.ObjectIndex);
             string commandArguments = animationName;
             if (config.DebugMode) {
                 _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
@@ -3909,8 +3909,8 @@ namespace RoleplayingVoice {
             for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
                 foreach (string modName in _animationMods.Keys) {
                     if (modName.ToLower().Contains(commandArguments)) {
-                        if (collection.Item3 != "None") {
-                            var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, modName, "", true);
+                        if (collection.Item3.Name != "None") {
+                            var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection.Item3.Name, "", true, modName);
                             _mediaManager.StopAudio(_playerObject);
                             if (config.DebugMode) {
                                 _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
@@ -3945,7 +3945,7 @@ namespace RoleplayingVoice {
                                             }
                                         } else {
                                             // Thread.Sleep(100);
-                                            var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection.Item3, mod.Key, "", false);
+                                            var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection.Item3.Name, "", false, mod.Key);
                                             if (config.DebugMode) {
                                                 _pluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
                                             }
@@ -3990,7 +3990,7 @@ namespace RoleplayingVoice {
                     _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
                 }
             }
-            Ipc.RedrawObjectByIndex.Subscriber(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
+            new Penumbra.Api.IpcSubscribers.Legacy.RedrawObjectByIndex(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
                 Thread.Sleep(1000);
                 if (character.Address == _clientState.LocalPlayer.Address) {
@@ -4128,13 +4128,13 @@ namespace RoleplayingVoice {
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
-                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 11);
+                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
+                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 11, modName);
                 } else {
                     if (disableOtherMods) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", false, modName);
                     } else {
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
+                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
                     }
                 }
             }
@@ -4142,8 +4142,8 @@ namespace RoleplayingVoice {
         private void SetBodyDependancies(string collection) {
             int lowestPriority = 10;
             foreach (string modName in _modelDependancyMods.Keys) {
-                var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
-                Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
+                var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
+                new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
             }
         }
         private void SetDependancies(string modelMod, string collection, bool disableOtherMods = true) {
@@ -4152,16 +4152,16 @@ namespace RoleplayingVoice {
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
-                    Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 11);
+                    var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
+                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 11, modName);
                 } else {
                     if (FindStringMatch(modelMod, modName)) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", true);
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 10);
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, modName, true, "");
+                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 10, modName);
                     } else if (disableOtherMods) {
-                        var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, modName, false, "");
                     } else {
-                        Ipc.TrySetModPriority.Subscriber(pluginInterface).Invoke(collection, modName, "", 5);
+                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
                     }
                 }
             }
@@ -4182,11 +4182,11 @@ namespace RoleplayingVoice {
         public void CleanSlate(string collection = null) {
             string foundModName = "";
             if (collection == null) {
-                collection = Ipc.GetCollectionForObject.Subscriber(pluginInterface).Invoke(0).Item3;
+                collection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(pluginInterface).Invoke(0).Item3;
             }
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             foreach (string modName in _modelMods.Keys) {
-                var ipcResult = Ipc.TrySetMod.Subscriber(pluginInterface).Invoke(collection, modName, "", false);
+                var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", false, modName);
             }
             SetBodyDependancies(collection);
         }
@@ -4252,7 +4252,7 @@ namespace RoleplayingVoice {
                 }
                 CleanupEmoteWatchList();
                 _addonTalkHandler?.Dispose();
-                Ipc.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+                //new Penumbra.Api.IpcSubscribers.ModSettingChanged.Event -= modSettingChanged;
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
             }

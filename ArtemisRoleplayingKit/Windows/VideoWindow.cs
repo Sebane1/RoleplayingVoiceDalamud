@@ -8,7 +8,6 @@ using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
 using System;
 using System.Diagnostics;
-using static Penumbra.Api.Ipc;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {

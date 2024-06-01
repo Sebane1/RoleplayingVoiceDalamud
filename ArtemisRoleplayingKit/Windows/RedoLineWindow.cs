@@ -9,7 +9,6 @@ using RoleplayingVoiceDalamud.Voice;
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
-using static Penumbra.Api.Ipc;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {

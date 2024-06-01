@@ -130,7 +130,7 @@ namespace RoleplayingVoice {
                     KeyValuePair<string, Character> selectedPlayer = new KeyValuePair<string, Character>("", null);
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
                         try {
-                            mainPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
+                            mainPlayerCollection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3;
                             List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
                             _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
                             bool oneMinionOnly = false;
@@ -220,7 +220,7 @@ namespace RoleplayingVoice {
                                     bodyDragPart = BodyDragPart.Body;
                                 }
                                 if (selectedPlayer.Value != null) {
-                                    selectedPlayerCollection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
+                                    selectedPlayerCollection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(selectedPlayer.Value.ObjectIndex).Item3;
                                 }
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
@@ -374,7 +374,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             }
-                            string fullModPath = Path.Combine(Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke(), modName);
+                            string fullModPath = Path.Combine(new Penumbra.Api.IpcSubscribers.GetModDirectory(_pluginInterface).Invoke(), modName);
                             if (textureSets.Count > 0) {
                                 Task.Run(() => Export(true, textureSets, fullModPath, modName, selectedPlayer));
                             } else {
@@ -525,7 +525,7 @@ namespace RoleplayingVoice {
         }
         public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, Character> character) {
             if (!_lockDuplicateGeneration) {
-                string modPath = Ipc.GetModDirectory.Subscriber(_pluginInterface).Invoke();
+                string modPath = new Penumbra.Api.IpcSubscribers.GetModDirectory(_pluginInterface).Invoke();
                 _textureProcessor.BasePath = modPath + @"\LooseTextureCompilerDLC";
                 _exportStatus = "Initializing";
                 _lockDuplicateGeneration = true;
@@ -545,19 +545,19 @@ namespace RoleplayingVoice {
                 ExportJson(jsonFilepath);
                 ExportMeta(metaFilePath, name);
                 Thread.Sleep(100);
-                Ipc.AddMod.Subscriber(_pluginInterface).Invoke(name);
-                Ipc.ReloadMod.Subscriber(_pluginInterface).Invoke(path, name);
-                string collection = Ipc.GetCollectionForObject.Subscriber(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3;
-                Ipc.TrySetMod.Subscriber(_pluginInterface).Invoke(collection, path, name, true);
-                Ipc.TrySetModPriority.Subscriber(_pluginInterface).Invoke(collection, path, name, 100);
-                var settings = Ipc.GetCurrentModSettings.Subscriber(_pluginInterface).Invoke(collection, path, name, true);
+                new Penumbra.Api.IpcSubscribers.Legacy.AddMod(_pluginInterface).Invoke(name);
+                new Penumbra.Api.IpcSubscribers.Legacy.ReloadMod(_pluginInterface).Invoke(path, name);
+                string collection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3;
+                new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(_pluginInterface).Invoke(collection, path, true, name);
+                new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(_pluginInterface).Invoke(collection, path, 100, name);
+                var settings = new Penumbra.Api.IpcSubscribers.Legacy.GetCurrentModSettings(_pluginInterface).Invoke(collection, path, name, true);
                 foreach (var group in settings.Item2.Value.Item3) {
-                    Ipc.TrySetModSetting.Subscriber(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
+                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModSetting(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
                 }
                 Thread.Sleep(300);
-                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
+                new Penumbra.Api.IpcSubscribers.Legacy.RedrawObject(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
                 Thread.Sleep(300);
-                Ipc.RedrawObject.Subscriber(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
+                new Penumbra.Api.IpcSubscribers.Legacy.RedrawObject(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
             return true;
