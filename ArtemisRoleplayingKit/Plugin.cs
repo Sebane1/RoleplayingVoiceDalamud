@@ -79,6 +79,7 @@ using System.Buffers.Text;
 using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
 using System.Diagnostics.Eventing.Reader;
 using Newtonsoft.Json.Linq;
+using Glamourer.Api.Enums;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -234,7 +235,7 @@ namespace RoleplayingVoice {
         private bool _catalogueStage0IsRunning;
         private bool _catalogueStage1IsRunning;
         Queue<string> _catalogueModsToEnable = new Queue<string>();
-        Queue<KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>> _glamourerScreenshotQueue = new Queue<KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>>();
+        Queue<EquipObject> _glamourerScreenshotQueue = new Queue<EquipObject>();
         private bool _equipmentFound;
         private EquipObject _currentClothingItem;
         private List<object> _currentClothingChangedItems;
@@ -986,14 +987,8 @@ namespace RoleplayingVoice {
                                 new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
                                 if (equipItemJson.Length > 200) {
                                     _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
-                                    CharacterCustomization characterCustomization = null;
-                                    string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-                                    var bytes = System.Convert.FromBase64String(customizationValue);
-                                    var version = bytes[0];
-                                    version = bytes.DecompressToString(out var decompressed);
-                                    characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                                    CleanEquipment(characterCustomization);
-                                    _glamourerScreenshotQueue.Enqueue(new KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>(_currentClothingItem, new KeyValuePair<EquipObject, CharacterCustomization>(_currentClothingItem, characterCustomization)));
+                                    CleanEquipment(_clientState.LocalPlayer.ObjectIndex);
+                                    _glamourerScreenshotQueue.Enqueue(_currentClothingItem);
                                     _catalogueScreenShotTaken = false;
                                     while (!_catalogueScreenShotTaken) {
                                         Thread.Sleep(100);
@@ -1030,30 +1025,23 @@ namespace RoleplayingVoice {
         private void CheckCataloging() {
             if (_glamourerScreenshotQueue.Count > 0) {
                 var item = _glamourerScreenshotQueue.Dequeue();
-                if (item.Key != null && item.Value.Value != null) {
-                    _equipmentFound = SetEquipment(item.Key, _clientState.LocalPlayer.ObjectIndex);
+                if (item != null && item != null) {
+                    _equipmentFound = SetEquipment(item, _clientState.LocalPlayer.ObjectIndex);
                     if (_equipmentFound) {
-                        _chat.Print("Screenshotting item " + item.Value.Key.Name + "! " + (((float)_catalogueIndex / (float)_modelModList.Count) * 100f) + "% complete!");
+                        _chat.Print("Screenshotting item " + item.Name + "! " + (((float)_catalogueIndex / (float)_modelModList.Count) * 100f) + "% complete!");
                         Task.Run(() => {
                             string path = Path.Combine(config.CacheFolder, "ClothingCatalogue\\" + _currentModelMod
-                                + "@" + item.Value.Key.Type + "@" + item.Value.Key.ItemId.Id + ".jpg");
+                                + "@" + item.Type + "@" + item.ItemId.Id + ".jpg");
                             if (!File.Exists(path)) {
                                 Thread.Sleep(500);
                                 try {
                                     NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
                                 } catch { }
-                                TakeScreenshot(item.Value.Key, path);
+                                TakeScreenshot(item, path);
                             }
                         });
                     } else {
                         _catalogueScreenShotTaken = true;
-                    }
-                } else {
-                    if (item.Key == null) {
-                        _pluginLog.Warning("Key is null");
-                    }
-                    if (item.Value.Value == null) {
-                        _pluginLog.Warning("Value is null");
                     }
                 }
             }
@@ -3119,17 +3107,17 @@ namespace RoleplayingVoice {
         public void ApplyByGuid(Guid design, Character? character) {
             PenumbraAndGlamourerIpcWrapper.Instance.ApplyDesign.Invoke(design, character.ObjectIndex);
         }
-        public void CleanEquipment(CharacterCustomization characterCustomization) {
-            characterCustomization.Equipment.Head.ItemId = 0;
-            characterCustomization.Equipment.Ears.ItemId = 0;
-            characterCustomization.Equipment.Neck.ItemId = 0;
-            characterCustomization.Equipment.Body.ItemId = 0;
-            characterCustomization.Equipment.Legs.ItemId = 0;
-            characterCustomization.Equipment.Hands.ItemId = 0;
-            characterCustomization.Equipment.LFinger.ItemId = 0;
-            characterCustomization.Equipment.RFinger.ItemId = 0;
-            characterCustomization.Equipment.Feet.ItemId = 0;
-            characterCustomization.Equipment.Wrists.ItemId = 0;
+        public void CleanEquipment(int objectIndex) {
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Head, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Ears, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Neck, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Body, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Legs, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Hands, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.LFinger, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.RFinger, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Feet, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Wrists, 0, 0);
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
