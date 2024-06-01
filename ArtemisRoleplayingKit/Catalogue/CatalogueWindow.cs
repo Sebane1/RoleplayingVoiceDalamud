@@ -63,7 +63,7 @@ namespace RoleplayingVoice {
                 }
                 ImGui.Dummy(new Vector2(1, 1));
                 if (ImGui.Button("Reset Mod Selections", new Vector2(200, 30))) {
-                    _plugin.CleanSlate();
+                    _plugin.CleanSlate(Guid.Empty);
                 }
 
                 if (!string.IsNullOrEmpty(_currentCategory)) {
@@ -75,7 +75,7 @@ namespace RoleplayingVoice {
                             if (index < category.Images.Count) {
                                 if (ImGui.ImageButton(category.Images[index].ImGuiHandle, new Vector2(250, 250))) {
                                     selectionIndex = category.PageNumber * 9 + index;
-                                    Plugin.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject);
+                                    Plugin.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty);
                                     category.SelectItem(selectionIndex);
                                 }
                                 index++;
@@ -95,7 +95,7 @@ namespace RoleplayingVoice {
                         for (int x = 0; x < 7; x++) {
                             if (index < category.VariantImages.Count) {
                                 if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].ImGuiHandle, new Vector2(100, 100))) {
-                                    Plugin.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject);
+                                    Plugin.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject, Guid.Empty);
                                 }
                                 index++;
                                 if (x < 6 && index < categories[_currentCategory].VariantImages.Count) {

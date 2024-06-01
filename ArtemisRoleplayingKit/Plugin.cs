@@ -78,6 +78,7 @@ using static Lumina.Data.Parsing.Layer.LayerCommon;
 using System.Buffers.Text;
 using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
 using System.Diagnostics.Eventing.Reader;
+using Newtonsoft.Json.Linq;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -165,11 +166,11 @@ namespace RoleplayingVoice {
         private Stopwatch _messageTimer = new Stopwatch();
         private ConcurrentDictionary<string, string> _scdReplacements = new ConcurrentDictionary<string, string>();
         private ConcurrentDictionary<string, bool> _alreadyScannedMods = new ConcurrentDictionary<string, bool>();
-        private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _papSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
+        private ConcurrentDictionary<string, List<Tuple<string, string, bool>>> _papSorting = new ConcurrentDictionary<string, List<Tuple<string, string, bool>>>();
         private ConcurrentDictionary<string, List<KeyValuePair<string, bool>>> _mdlSorting = new ConcurrentDictionary<string, List<KeyValuePair<string, bool>>>();
         private ConcurrentDictionary<string, KeyValuePair<CustomNpcCharacter, NPCConversationManager>> _npcConversationManagers = new ConcurrentDictionary<string, KeyValuePair<CustomNpcCharacter, NPCConversationManager>>();
         private ConcurrentDictionary<string, Guid> _lastCharacterDesign = new ConcurrentDictionary<string, Guid>();
-        private ConcurrentDictionary<string, List<string>> _animationMods = new ConcurrentDictionary<string, List<string>>();
+        private ConcurrentDictionary<string, KeyValuePair<string, List<string>>> _animationMods = new ConcurrentDictionary<string, KeyValuePair<string, List<string>>>();
         private ConcurrentDictionary<string, Task> _emoteWatchList = new ConcurrentDictionary<string, Task>();
         private ConcurrentDictionary<string, List<string>> _modelMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, List<string>> _modelDependancyMods = new ConcurrentDictionary<string, List<string>>();
@@ -191,11 +192,6 @@ namespace RoleplayingVoice {
         private bool _catalogueMods;
         private List<string> _modelModList;
         private int _catalogueIndex;
-        private ICallGateSubscriber<GameObject, string> _glamourerGetAllCustomization;
-        private ICallGateSubscriber<Dictionary<Guid, string>> _glamourerGetDesignList;
-        private ICallGateSubscriber<ValueTuple<string, Guid>[]> _glamourerGetDesignListLegacy;
-        private ICallGateSubscriber<Guid, int, uint, ulong, int> _glamourerApplyDesign;
-        private ICallGateSubscriber<string, string, object> _glamourerApplyAll;
         uint LockCode = 0x6D617265;
         private bool ignoreModSettingChanged;
         private int _catalogueStage;
@@ -226,7 +222,7 @@ namespace RoleplayingVoice {
         private int _failCount;
         Stopwatch pollingTimer = new Stopwatch();
         private bool _playerDied;
-        private bool _isLoadingAnimation;
+        private bool _blockDataRefreshes;
         private CharacterVoicePack _mainCharacterVoicePack;
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
         private Emote _lastEmoteAnimationUsed;
@@ -234,7 +230,6 @@ namespace RoleplayingVoice {
         List<string> _preOccupiedWithEmoteCommand = new List<string>();
         private string _currentModPackRefreshGuid;
         private ICallGateSubscriber<ValueTuple<Guid, string>[]> _glamourerGetDesignListLegacyAlternate;
-        private ICallGateSubscriber<Guid, Character?, int> _glamourerApplyByGuid;
         private int _playerCount;
         private bool _catalogueStage0IsRunning;
         private bool _catalogueStage1IsRunning;
@@ -243,7 +238,7 @@ namespace RoleplayingVoice {
         private bool _equipmentFound;
         private EquipObject _currentClothingItem;
         private List<object> _currentClothingChangedItems;
-        private string _catalogueCollectionName;
+        private Guid _catalogueCollectionName;
         private (bool ObjectValid, bool IndividualSet, (Guid Id, string Name) EffectiveCollection) _originalCollection;
 
         public string Name => "Artemis Roleplaying Kit";
@@ -415,50 +410,8 @@ namespace RoleplayingVoice {
         private void InitializeEverything() {
             try {
                 try {
-                    Penumbra.Api.IpcSubscribers.Legacy.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                    Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                     Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-                    try {
-                        _glamourerGetAllCustomization = pluginInterface.GetIpcSubscriber<GameObject?, string>("Glamourer.GetAllCustomizationFromCharacter");
-                        _pluginLog.Debug("Glamourer.GetAllCustomizationFromCharacter configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerGetDesignList = pluginInterface.GetIpcSubscriber<Dictionary<Guid, string>>("Glamourer.GetDesignList.V2");
-                        _pluginLog.Debug("Glamourer.GetDesignList.V2 configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerGetDesignListLegacy = pluginInterface.GetIpcSubscriber<ValueTuple<string, Guid>[]>("Glamourer.GetDesignList");
-                        _pluginLog.Debug("Glamourer.GetDesignList configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerGetDesignListLegacyAlternate = pluginInterface.GetIpcSubscriber<ValueTuple<Guid, string>[]>("Glamourer.GetDesignList");
-                        _pluginLog.Debug("Alternate Glamourer.GetDesignList configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
-                        _pluginLog.Debug("Glamourer.ApplyDesign configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerApplyByGuid = pluginInterface.GetIpcSubscriber<Guid, Character?, int>("Glamourer.ApplyByGuidToCharacter");
-                        _pluginLog.Debug("Glamourer.ApplyByGuid configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
-                    try {
-                        _glamourerApplyAll = pluginInterface.GetIpcSubscriber<string, string, object>("Glamourer.ApplyAll");
-                        _pluginLog.Debug("Glamourer.ApplyAll configured.");
-                    } catch (Exception e) {
-                        _pluginLog.Warning(e, e.Message);
-                    }
                     _pluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
                 } catch (Exception e) {
@@ -491,7 +444,7 @@ namespace RoleplayingVoice {
                     _chat?.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
                     _gposeWindow.Initialize();
                 }
-                RefreshData(false);
+                RefreshData();
             } catch (Exception e) {
                 _pluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -582,7 +535,7 @@ namespace RoleplayingVoice {
             _pluginLog.Error(e.Exception, e.Exception.Message);
         }
 
-        private void modSettingChanged(ModSettingChange arg1, string arg2, string arg3, bool arg4) {
+        private void modSettingChanged(ModSettingChange arg1, Guid arg2, string arg3, bool arg4) {
             RefreshData();
         }
         #endregion
@@ -991,86 +944,84 @@ namespace RoleplayingVoice {
         }
         private void ScanClothingMods() {
             Task.Run(() => {
-                if (_glamourerGetAllCustomization != null) {
-                    while (_catalogueMods && !disposed) {
-                        if (_catalogueIndex < _modelModList.Count) {
-                            ignoreModSettingChanged = true;
-                            _catalogueScreenShotTaken = false;
-                            _catalogueOffsetTimer.Restart();
-                            while (_glamourerScreenshotQueue.Count is not 0) {
-                                Thread.Sleep(500);
-                            }
-                            while (_catalogueIndex < _modelModList.Count) {
-                                _currentModelMod = _modelModList[_catalogueIndex];
-                                if (!AlreadyHasScreenShots(_currentModelMod) && !_currentModelMod.ToLower().Contains("megapack")
-                                && !_currentModelMod.ToLower().Contains("mega pack") && !_currentModelMod.ToLower().Contains("hrothgar & viera")) {
-                                    _catalogueModsToEnable.Enqueue(_currentModelMod);
-                                    break;
-                                } else {
-                                    _catalogueIndex++;
-                                }
-                            }
-                            if (_catalogueModsToEnable.Count > 0) {
-                                var item = _catalogueModsToEnable.Dequeue();
-                                if (item != null) {
-                                    CleanSlate();
-                                    Thread.Sleep(300);
-                                    SetClothingMod(item, _catalogueCollectionName);
-                                    Thread.Sleep(100);
-                                    _currentClothingChangedItems = new List<object>();
-                                    _currentClothingChangedItems.AddRange(new Penumbra.Api.IpcSubscribers.Legacy.GetChangedItems(pluginInterface).Invoke(_catalogueCollectionName).Values);
-                                    SetDependancies(item, _catalogueCollectionName);
-                                    Thread.Sleep(100);
-                                    new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
-                                }
-                            }
-                            Thread.Sleep(4000);
-                            _equipmentFound = false;
-                            while (!disposed && _currentChangedItemIndex <
-                            _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
-                                try {
-                                    string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
-                                    new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
-                                    if (equipItemJson.Length > 200) {
-                                        _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
-                                        CharacterCustomization characterCustomization = null;
-                                        string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
-                                        var bytes = System.Convert.FromBase64String(customizationValue);
-                                        var version = bytes[0];
-                                        version = bytes.DecompressToString(out var decompressed);
-                                        characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                                        CleanEquipment(characterCustomization);
-                                        _glamourerScreenshotQueue.Enqueue(new KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>(_currentClothingItem, new KeyValuePair<EquipObject, CharacterCustomization>(_currentClothingItem, characterCustomization)));
-                                        _catalogueScreenShotTaken = false;
-                                        while (!_catalogueScreenShotTaken) {
-                                            Thread.Sleep(100);
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    _pluginLog.Debug(e, e.Message);
-                                }
-                                _currentChangedItemIndex++;
-                                if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
-                                    _catalogueIndex++;
-                                    _catalogueStage = 0;
-                                    _currentChangedItemIndex = 0;
-                                    _currentClothingItem = null;
-                                    break;
-                                }
-                            }
-                            _catalogueTimer.Restart();
-                            _catalogueIndex++;
-                        } else {
-                            _catalogueIndex = 0;
-                            _catalogueMods = false;
-                            ignoreModSettingChanged = false;
-                            _chat?.Print("Done Catalog");
-                            _catalogueTimer.Reset();
-                            RefreshData();
-                            CleanSlate();
-                            _catalogueWindow.ScanCatalogue();
-                            new Penumbra.Api.IpcSubscribers.Legacy.SetCollectionForObject(pluginInterface).Invoke(0, _originalCollection.Item3.Name, true, true);
+                while (_catalogueMods && !disposed) {
+                    if (_catalogueIndex < _modelModList.Count) {
+                        ignoreModSettingChanged = true;
+                        _catalogueScreenShotTaken = false;
+                        _catalogueOffsetTimer.Restart();
+                        while (_glamourerScreenshotQueue.Count is not 0) {
+                            Thread.Sleep(500);
                         }
+                        while (_catalogueIndex < _modelModList.Count) {
+                            _currentModelMod = _modelModList[_catalogueIndex];
+                            if (!AlreadyHasScreenShots(_currentModelMod) && !_currentModelMod.ToLower().Contains("megapack")
+                            && !_currentModelMod.ToLower().Contains("mega pack") && !_currentModelMod.ToLower().Contains("hrothgar & viera")) {
+                                _catalogueModsToEnable.Enqueue(_currentModelMod);
+                                break;
+                            } else {
+                                _catalogueIndex++;
+                            }
+                        }
+                        if (_catalogueModsToEnable.Count > 0) {
+                            var item = _catalogueModsToEnable.Dequeue();
+                            if (item != null) {
+                                CleanSlate(Guid.Empty);
+                                Thread.Sleep(300);
+                                SetClothingMod(item, _catalogueCollectionName);
+                                Thread.Sleep(100);
+                                _currentClothingChangedItems = new List<object>();
+                                _currentClothingChangedItems.AddRange(new Penumbra.Api.IpcSubscribers.GetChangedItemsForCollection(pluginInterface).Invoke(_catalogueCollectionName).Values);
+                                SetDependancies(item, _catalogueCollectionName);
+                                Thread.Sleep(100);
+                                new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
+                            }
+                        }
+                        Thread.Sleep(4000);
+                        _equipmentFound = false;
+                        while (!disposed && _currentChangedItemIndex <
+                        _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
+                            try {
+                                string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
+                                new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
+                                if (equipItemJson.Length > 200) {
+                                    _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                                    CharacterCustomization characterCustomization = null;
+                                    string customizationValue = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
+                                    var bytes = System.Convert.FromBase64String(customizationValue);
+                                    var version = bytes[0];
+                                    version = bytes.DecompressToString(out var decompressed);
+                                    characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                                    CleanEquipment(characterCustomization);
+                                    _glamourerScreenshotQueue.Enqueue(new KeyValuePair<EquipObject, KeyValuePair<EquipObject, CharacterCustomization>>(_currentClothingItem, new KeyValuePair<EquipObject, CharacterCustomization>(_currentClothingItem, characterCustomization)));
+                                    _catalogueScreenShotTaken = false;
+                                    while (!_catalogueScreenShotTaken) {
+                                        Thread.Sleep(100);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                _pluginLog.Debug(e, e.Message);
+                            }
+                            _currentChangedItemIndex++;
+                            if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
+                                _catalogueIndex++;
+                                _catalogueStage = 0;
+                                _currentChangedItemIndex = 0;
+                                _currentClothingItem = null;
+                                break;
+                            }
+                        }
+                        _catalogueTimer.Restart();
+                        _catalogueIndex++;
+                    } else {
+                        _catalogueIndex = 0;
+                        _catalogueMods = false;
+                        ignoreModSettingChanged = false;
+                        _chat?.Print("Done Catalog");
+                        _catalogueTimer.Reset();
+                        RefreshData();
+                        CleanSlate(Guid.Empty);
+                        _catalogueWindow.ScanCatalogue();
+                        new Penumbra.Api.IpcSubscribers.SetCollectionForObject(pluginInterface).Invoke(0, _originalCollection.Item3.Id, true, true);
                     }
                 }
             });
@@ -1106,28 +1057,28 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void WearOutfit(EquipObject item, string collection = null) {
+        public void WearOutfit(EquipObject item, Guid collection) {
             //CleanSlate();
-            if (collection == null) {
-                collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex).Item3.Name;
+            _blockDataRefreshes = true;
+            if (collection == Guid.Empty) {
+                collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex).Item3.Id;
             }
-            if (_glamourerGetAllCustomization != null) {
-                SetClothingMod(item.Name, collection, false);
-                SetDependancies(item.Name, collection, false);
-                new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(0, RedrawType.Redraw);
-                CharacterCustomization characterCustomization = null;
-                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(_clientState.LocalPlayer);
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                SetEquipment(item, characterCustomization);
-            }
+            SetClothingMod(item.Name, collection, false);
+            SetDependancies(item.Name, collection, false);
+            new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(0, RedrawType.Redraw);
+            CharacterCustomization characterCustomization = null;
+            string customizationValue = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
+            var bytes = System.Convert.FromBase64String(customizationValue);
+            var version = bytes[0];
+            version = bytes.DecompressToString(out var decompressed);
+            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+            SetEquipment(item, characterCustomization);
+            _blockDataRefreshes = false;
         }
         public int GetRace(Character playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
-                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                string customizationValue = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                 var bytes = System.Convert.FromBase64String(customizationValue);
                 var version = bytes[0];
                 version = bytes.DecompressToString(out var decompressed);
@@ -1140,7 +1091,7 @@ namespace RoleplayingVoice {
         public CharacterCustomization GetCustomization(Character playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
-                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                string customizationValue = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                 var bytes = System.Convert.FromBase64String(customizationValue);
                 var version = bytes[0];
                 version = bytes.DecompressToString(out var decompressed);
@@ -1164,27 +1115,17 @@ namespace RoleplayingVoice {
         }
         public Dictionary<Guid, string> GetGlamourerDesigns() {
             try {
-                var glamourerDesignList = _glamourerGetDesignList.InvokeFunc();
+                var glamourerDesignList = new Glamourer.Api.IpcSubscribers.GetDesignList(pluginInterface).Invoke();
                 return glamourerDesignList;
             } catch (Exception e) {
                 _pluginLog.Warning(e, e.Message);
-                try {
-                    var glamourerDesignList = _glamourerGetDesignListLegacy.InvokeFunc();
-                    Dictionary<Guid, string> newList = new Dictionary<Guid, string>();
-                    foreach (var item in glamourerDesignList) {
-                        newList.Add(item.Item2, item.Item1);
-                    }
-                    return newList;
-                } catch (Exception e2) {
-                    _pluginLog.Warning(e2, e2.Message);
-                    return new Dictionary<Guid, string>();
-                }
+                return new Dictionary<Guid, string>();
             }
         }
         public bool IsHumanoid(Character playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
-                string customizationValue = _glamourerGetAllCustomization.InvokeFunc(playerCharacter);
+                string customizationValue = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                 var bytes = System.Convert.FromBase64String(customizationValue);
                 var version = bytes[0];
                 version = bytes.DecompressToString(out var decompressed);
@@ -1638,7 +1579,7 @@ namespace RoleplayingVoice {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
-                    if (!_isLoadingAnimation && !_isAlreadyRunningEmote && _clientState.LocalPlayer.Name.TextValue == instigator.Name.TextValue) {
+                    if (!_blockDataRefreshes && !_isAlreadyRunningEmote && _clientState.LocalPlayer.Name.TextValue == instigator.Name.TextValue) {
                         _lastEmoteAnimationUsed = GetEmoteData(emoteId);
                     }
                     _timeSinceLastEmoteDone.Restart();
@@ -2419,7 +2360,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (!IsPartOfQuestOrImportant(character)) {
-                                                var value = _glamourerGetAllCustomization.InvokeFunc(character);
+                                                var value = (new Glamourer.Api.IpcSubscribers.GetStateBase64(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                                                 if (character.ObjectKind != ObjectKind.Companion || IsHumanoid(character)) {
                                                     characters.Add(character);
                                                 } else if (config.DebugMode) {
@@ -2552,13 +2493,15 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Collect Sound Data
-        public async void RefreshData(bool skipModelData = false) {
+        public async void RefreshData(bool skipModelData = false, bool skipPenumbraScan = false) {
             if (!disposed) {
-                if (!_isLoadingAnimation) {
+                if (!_blockDataRefreshes) {
                     _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
                     _ = Task.Run(async () => {
                         try {
-                            penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
+                            if (penumbraSoundPacks == null || penumbraSoundPacks.Count == 0 || !skipPenumbraScan) {
+                                penumbraSoundPacks = await GetPrioritySortedModPacks(skipModelData);
+                            }
                             combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                             IpcSystem?.InvokeOnVoicePackChanged();
                         } catch (Exception e) {
@@ -3095,16 +3038,16 @@ namespace RoleplayingVoice {
                         string[] strings = item.Key.Split("/");
                         string value = strings[strings.Length - 1];
                         if (!_animationMods.ContainsKey(modName)) {
-                            _animationMods[modName] = new List<string>();
+                            _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
                         }
-                        if (!_animationMods[modName].Contains(value)) {
-                            _animationMods[modName].Add(value);
+                        if (!_animationMods[modName].Value.Contains(value)) {
+                            _animationMods[modName].Value.Add(value);
                         }
                         papFilesFound++;
                         if (!_papSorting.ContainsKey(value)) {
                             try {
-                                _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
-                                { new KeyValuePair<string, bool>(modName, !skipScd) });
+                                _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipScd) });
+
                                 if (config.DebugMode) {
                                     _pluginLog?.Verbose("Found: " + item.Value);
                                 }
@@ -3112,7 +3055,7 @@ namespace RoleplayingVoice {
                                 _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                             }
                         } else {
-                            _papSorting[value].Add(new KeyValuePair<string, bool>(modName, !skipScd));
+                            _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipScd));
                         }
                     }
                 }
@@ -3158,71 +3101,58 @@ namespace RoleplayingVoice {
         }
 
         public bool SetEquipment(EquipObject equipItem, CharacterCustomization characterCustomization) {
-            if (_glamourerApplyAll != null) {
-                bool changed = false;
-                switch (equipItem.Type) {
-                    case Penumbra.GameData.Enums.FullEquipType.Ears:
-                        characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Neck:
-                        characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Body:
-                        characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Legs:
-                        characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Hands:
-                        characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Finger:
-                        characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
-                        characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Feet:
-                        characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                    case Penumbra.GameData.Enums.FullEquipType.Wrists:
-                        characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
-                        changed = true;
-                        break;
-                }
-                if (changed) {
-                    var json = JsonConvert.SerializeObject(characterCustomization);
-                    var compressed = json.Compress(6);
-                    string base64 = System.Convert.ToBase64String(compressed);
-                    _glamourerApplyAll.InvokeAction(base64, _clientState.LocalPlayer.Name.TextValue);
-                }
-                return changed;
+            bool changed = false;
+            switch (equipItem.Type) {
+                case Penumbra.GameData.Enums.FullEquipType.Ears:
+                    characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Neck:
+                    characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Body:
+                    characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Legs:
+                    characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Hands:
+                    characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Finger:
+                    characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
+                    characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Feet:
+                    characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
+                case Penumbra.GameData.Enums.FullEquipType.Wrists:
+                    characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
+                    changed = true;
+                    break;
             }
-            return false;
+            if (changed) {
+                var json = JsonConvert.SerializeObject(characterCustomization);
+                new Glamourer.Api.IpcSubscribers.ApplyState(pluginInterface).Invoke(JObject.Parse(json), _clientState.LocalPlayer.ObjectIndex);
+            }
+            return changed;
         }
-        public void SetCustomizationString(string stringValue, string characterName) {
-            _glamourerApplyAll.InvokeAction(stringValue, characterName);
-        }
+
         public void SetDesign(Guid design, int objectId) {
             try {
-                _glamourerApplyDesign.InvokeFunc(design, objectId, 0, 0);
-            } catch {
-                try {
-                    _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
-                    _glamourerApplyDesign.InvokeFunc(design, objectId, 0, 0);
-                } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
-                    _glamourerApplyDesign = pluginInterface.GetIpcSubscriber<Guid, int, uint, ulong, int>("Glamourer.ApplyDesign");
-                }
+                new Glamourer.Api.IpcSubscribers.ApplyDesign(pluginInterface).Invoke(design, objectId);
+            } catch (Exception e) {
+                _pluginLog.Warning(e, e.Message);
             }
         }
         public void ApplyByGuid(Guid design, Character? character) {
-            _glamourerApplyByGuid.InvokeAction(design, character);
+            new Glamourer.Api.IpcSubscribers.ApplyDesign(pluginInterface).Invoke(design, character.ObjectIndex);
         }
         public void CleanEquipment(CharacterCustomization characterCustomization) {
             characterCustomization.Equipment.Head.ItemId = 0;
@@ -3243,20 +3173,20 @@ namespace RoleplayingVoice {
                     string[] strings = file.Split("\\");
                     string value = strings[strings.Length - 1];
                     if (!_animationMods.ContainsKey(modName)) {
-                        _animationMods[modName] = new List<string>();
+                        _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
                     }
-                    if (!_animationMods[modName].Contains(value)) {
-                        _animationMods[modName].Add(value);
+                    if (!_animationMods[modName].Value.Contains(value)) {
+                        _animationMods[modName].Value.Add(value);
                     }
                     if (!_papSorting.ContainsKey(value)) {
                         try {
-                            _papSorting.TryAdd(value, new List<KeyValuePair<string, bool>>()
-                            { new KeyValuePair<string, bool>(modName, false) });
+                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>()
+                            { new Tuple<string, string, bool>(directory, modName, false) });
                         } catch {
                             _pluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
                         }
                     } else {
-                        _papSorting[value].Add(new KeyValuePair<string, bool>(modName, false));
+                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, false));
                     }
                 }
             }
@@ -3321,8 +3251,8 @@ namespace RoleplayingVoice {
                                 try {
                                     string relativeDirectory = directory.Replace(modPath, null).TrimStart('\\');
                                     var currentModSettings =
-                                    new Penumbra.Api.IpcSubscribers.Legacy.GetCurrentModSettings(pluginInterface).
-                                    Invoke(collection.Item3.Name, relativeDirectory, null, true);
+                                    new Penumbra.Api.IpcSubscribers.GetCurrentModSettings(pluginInterface).
+                                    Invoke(collection.Item3.Id, relativeDirectory, null, true);
                                     var result = currentModSettings.Item1;
                                     if (result == Penumbra.Api.Enums.PenumbraApiEc.Success) {
                                         if (currentModSettings.Item2 != null) {
@@ -3668,7 +3598,7 @@ namespace RoleplayingVoice {
                                         StartCatalogingItems();
                                         break;
                                     case "clean":
-                                        CleanSlate();
+                                        CleanSlate(Guid.Empty);
                                         break;
                                     case "stop":
                                         _catalogueMods = false;
@@ -3693,9 +3623,9 @@ namespace RoleplayingVoice {
         }
 
         public void StartCatalogingItems() {
-            _catalogueCollectionName = "ArtemisRoleplayingKitCatalogue";
+            //_catalogueCollectionName = "ArtemisRoleplayingKitCatalogue";
             _originalCollection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex);
-            _catalogueCollectionName = _originalCollection.Item3.Name;
+            _catalogueCollectionName = _originalCollection.Item3.Id;
 
             //new Penumbra.Api.IpcSubscribers.CreateNamedTemporaryCollection(pluginInterface).Invoke(_catalogueCollectionName);
 
@@ -3707,7 +3637,7 @@ namespace RoleplayingVoice {
 
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
             _chat?.Print("Creating Thumbnails For New Clothing Mods");
-            CleanSlate();
+            CleanSlate(Guid.Empty);
             _catalogueMods = true;
             _modelModList = new List<string>();
             _modelModList.AddRange(_modelMods.Keys);
@@ -3875,7 +3805,7 @@ namespace RoleplayingVoice {
                     var list = CreateEmoteList(_dataManager);
                     var newList = new List<string>();
                     foreach (string key in _animationMods.Keys) {
-                        foreach (string emote in _animationMods[key]) {
+                        foreach (string emote in _animationMods[key].Value) {
                             string[] strings = emote.Split("/");
                             string option = strings[strings.Length - 1];
                             if (list.ContainsKey(option)) {
@@ -3897,7 +3827,7 @@ namespace RoleplayingVoice {
         }
 
         public void DoAnimation(string animationName, int index, Character targetObject) {
-            _isLoadingAnimation = true;
+            _blockDataRefreshes = true;
             var list = CreateEmoteList(_dataManager);
             List<uint> deDuplicate = new List<uint>();
             List<EmoteModData> emoteData = new List<EmoteModData>();
@@ -3907,21 +3837,21 @@ namespace RoleplayingVoice {
                 _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
             }
             for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
-                foreach (string modName in _animationMods.Keys) {
+                foreach (var modName in _animationMods.Keys) {
                     if (modName.ToLower().Contains(commandArguments)) {
                         if (collection.Item3.Name != "None") {
-                            var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection.Item3.Name, "", true, modName);
+                            var result = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, modName, true);
                             _mediaManager.StopAudio(_playerObject);
                             if (config.DebugMode) {
                                 _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
                             }
                             var animationItems = _animationMods[modName];
-                            foreach (var foundAnimation in animationItems) {
+                            foreach (var foundAnimation in animationItems.Value) {
                                 bool foundEmote = false;
                                 if (_papSorting.ContainsKey(foundAnimation)) {
                                     var sortedList = _papSorting[foundAnimation];
                                     foreach (var mod in sortedList) {
-                                        if (mod.Key.ToLower().Contains(modName.ToLower().Trim())) {
+                                        if (mod.Item2.ToLower().Contains(modName.ToLower().Trim())) {
                                             _mediaManager.CleanNonStreamingSounds();
                                             if (!foundEmote) {
                                                 if (list.ContainsKey(foundAnimation)) {
@@ -3945,9 +3875,9 @@ namespace RoleplayingVoice {
                                             }
                                         } else {
                                             // Thread.Sleep(100);
-                                            var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection.Item3.Name, "", false, mod.Key);
+                                            var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, mod.Item2, false);
                                             if (config.DebugMode) {
-                                                _pluginLog.Debug(mod.Key + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                _pluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
                                             }
                                         }
                                     }
@@ -3981,7 +3911,7 @@ namespace RoleplayingVoice {
                     }
                 });
             }
-            _isLoadingAnimation = false;
+            _blockDataRefreshes = false;
         }
 
         public void TriggerCharacterEmote(EmoteModData emoteModData, Character character) {
@@ -3990,7 +3920,7 @@ namespace RoleplayingVoice {
                     _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
                 }
             }
-            new Penumbra.Api.IpcSubscribers.Legacy.RedrawObjectByIndex(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
+            new Penumbra.Api.IpcSubscribers.RedrawObject(pluginInterface).Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
                 Thread.Sleep(1000);
                 if (character.Address == _clientState.LocalPlayer.Address) {
@@ -4123,45 +4053,45 @@ namespace RoleplayingVoice {
 
         #endregion
         #region Trigger Clothing Mods
-        private void SetClothingMod(string modelMod, string collection, bool disableOtherMods = true) {
+        private void SetClothingMod(string modelMod, Guid collection, bool disableOtherMods = true) {
             _pluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
-                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 11, modName);
+                    new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, true);
+                    new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 11);
                 } else {
                     if (disableOtherMods) {
-                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", false, modName);
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, false);
                     } else {
-                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
+                        new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 5);
                     }
                 }
             }
         }
-        private void SetBodyDependancies(string collection) {
+        private void SetBodyDependancies(Guid collection) {
             int lowestPriority = 10;
             foreach (string modName in _modelDependancyMods.Keys) {
-                var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
-                new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
+                var result = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, true);
+                new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 5);
             }
         }
-        private void SetDependancies(string modelMod, string collection, bool disableOtherMods = true) {
+        private void SetDependancies(string modelMod, Guid collection, bool disableOtherMods = true) {
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             _pluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
             foreach (string modName in _modelMods.Keys) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", true, modName);
-                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 11, modName);
+                    var result = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, true);
+                    new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 11);
                 } else {
                     if (FindStringMatch(modelMod, modName)) {
-                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, modName, true, "");
-                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 10, modName);
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, true);
+                        new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 10);
                     } else if (disableOtherMods) {
-                        var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, modName, false, "");
+                        var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, modName, false);
                     } else {
-                        new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(pluginInterface).Invoke(collection, "", 5, modName);
+                        new Penumbra.Api.IpcSubscribers.TrySetModPriority(pluginInterface).Invoke(collection, modName, 5);
                     }
                 }
             }
@@ -4179,14 +4109,14 @@ namespace RoleplayingVoice {
             }
             return false;
         }
-        public void CleanSlate(string collection = null) {
+        public void CleanSlate(Guid collection) {
             string foundModName = "";
-            if (collection == null) {
-                collection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(pluginInterface).Invoke(0).Item3;
+            if (collection == Guid.Empty) {
+                collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke(0).EffectiveCollection.Id;
             }
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             foreach (string modName in _modelMods.Keys) {
-                var ipcResult = new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(pluginInterface).Invoke(collection, "", false, modName);
+                var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection, "", false, modName);
             }
             SetBodyDependancies(collection);
         }

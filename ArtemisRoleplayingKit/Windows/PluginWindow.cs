@@ -801,7 +801,7 @@ namespace RoleplayingVoice {
                 }
                 if (PluginInterface != null) {
                     try {
-                        PluginReference.RefreshData();
+                        PluginReference.RefreshData(false, true);
                     } catch (Exception ex) { }
                 }
                 _refreshing = false;

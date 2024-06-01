@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OtterGuiInternal", "OtterGu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LooseTextureCompilerCore", "LooseTextureCompilerCore\LooseTextureCompilerCore.csproj", "{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Glamourer.Api", "Glamourer.Api\Glamourer.Api.csproj", "{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -91,6 +93,14 @@ Global
 		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|x64.ActiveCfg = Release|Any CPU
 		{17A5EA08-6667-45CD-BFAC-6FAB8739DAFB}.Release|x64.Build.0 = Release|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Debug|x64.Build.0 = Debug|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Release|x64.ActiveCfg = Release|Any CPU
+		{87AD4BF0-605D-4FCB-BFCE-ED704C36624B}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

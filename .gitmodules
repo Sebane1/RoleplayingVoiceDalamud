@@ -16,3 +16,6 @@
 [submodule "LooseTextureCompilerCore"]
 	path = LooseTextureCompilerCore
 	url = https://github.com/Sebane1/LooseTextureCompilerCore
+[submodule "Glamourer.Api"]
+	path = Glamourer.Api
+	url = https://github.com/Ottermandias/Glamourer.Api

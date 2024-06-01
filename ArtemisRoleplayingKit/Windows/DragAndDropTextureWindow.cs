@@ -545,19 +545,19 @@ namespace RoleplayingVoice {
                 ExportJson(jsonFilepath);
                 ExportMeta(metaFilePath, name);
                 Thread.Sleep(100);
-                new Penumbra.Api.IpcSubscribers.Legacy.AddMod(_pluginInterface).Invoke(name);
-                new Penumbra.Api.IpcSubscribers.Legacy.ReloadMod(_pluginInterface).Invoke(path, name);
-                string collection = new Penumbra.Api.IpcSubscribers.Legacy.GetCollectionForObject(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3;
-                new Penumbra.Api.IpcSubscribers.Legacy.TrySetMod(_pluginInterface).Invoke(collection, path, true, name);
-                new Penumbra.Api.IpcSubscribers.Legacy.TrySetModPriority(_pluginInterface).Invoke(collection, path, 100, name);
-                var settings = new Penumbra.Api.IpcSubscribers.Legacy.GetCurrentModSettings(_pluginInterface).Invoke(collection, path, name, true);
+                new Penumbra.Api.IpcSubscribers.AddMod(_pluginInterface).Invoke(name);
+                new Penumbra.Api.IpcSubscribers.ReloadMod(_pluginInterface).Invoke(path, name);
+                Guid collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(_pluginInterface).Invoke(character.Value.ObjectIndex).Item3.Id;
+                new Penumbra.Api.IpcSubscribers.TrySetMod(_pluginInterface).Invoke(collection, path, true, name);
+                new Penumbra.Api.IpcSubscribers.TrySetModPriority(_pluginInterface).Invoke(collection, path, 100, name);
+                var settings = new Penumbra.Api.IpcSubscribers.GetCurrentModSettings(_pluginInterface).Invoke(collection, path, name, true);
                 foreach (var group in settings.Item2.Value.Item3) {
-                    new Penumbra.Api.IpcSubscribers.Legacy.TrySetModSetting(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
+                    new Penumbra.Api.IpcSubscribers.TrySetModSetting(_pluginInterface).Invoke(collection, path, name, group.Key, "Enable");
                 }
                 Thread.Sleep(300);
-                new Penumbra.Api.IpcSubscribers.Legacy.RedrawObject(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
+                new Penumbra.Api.IpcSubscribers.RedrawObject(_pluginInterface).Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
                 Thread.Sleep(300);
-                new Penumbra.Api.IpcSubscribers.Legacy.RedrawObject(_pluginInterface).Invoke(character.Value, Penumbra.Api.Enums.RedrawType.Redraw);
+                new Penumbra.Api.IpcSubscribers.RedrawObject(_pluginInterface).Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
                 _lockDuplicateGeneration = false;
             }
             return true;
