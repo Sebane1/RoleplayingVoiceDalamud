@@ -14,6 +14,7 @@ using System.Linq;
 using Penumbra.Api;
 using static RoleplayingVoice.PluginWindow;
 using Vector2 = System.Numerics.Vector2;
+using RoleplayingVoiceDalamud.Catalogue;
 
 namespace RoleplayingVoice {
     internal class NPCPersonalityWindow : Window {
@@ -43,7 +44,7 @@ namespace RoleplayingVoice {
             RefreshDesignList();
         }
         public void RefreshDesignList() {
-            _currentGlamourerDesigns = _plugin.GetGlamourerDesigns();
+            _currentGlamourerDesigns = PenumbraAndGlamourerHelperFunctions.GetGlamourerDesigns();
             var list = _currentGlamourerDesigns.Values.ToList();
             list.Sort();
             designList = new BetterComboBox("##savedDesigns", list.ToArray(), 0, 100);

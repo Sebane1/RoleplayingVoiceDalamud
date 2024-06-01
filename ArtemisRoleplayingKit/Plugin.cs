@@ -80,6 +80,7 @@ using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
 using System.Diagnostics.Eventing.Reader;
 using Newtonsoft.Json.Linq;
 using Glamourer.Api.Enums;
+using RoleplayingVoiceDalamud.Catalogue;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -110,7 +111,7 @@ namespace RoleplayingVoice {
         private AnimationEmoteSelection _animationEmoteSelection;
         private NPCPersonalityWindow _npcPersonalityWindow;
         private DragAndDropTextureWindow _dragAndDropTextures;
-        private IPluginLog _pluginLog;
+        private static IPluginLog _plugin;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
         private Stopwatch _stopwatch;
@@ -223,7 +224,7 @@ namespace RoleplayingVoice {
         private int _failCount;
         Stopwatch pollingTimer = new Stopwatch();
         private bool _playerDied;
-        private bool _blockDataRefreshes;
+        private static bool _blockDataRefreshes;
         private CharacterVoicePack _mainCharacterVoicePack;
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
         private Emote _lastEmoteAnimationUsed;
@@ -274,7 +275,7 @@ namespace RoleplayingVoice {
         public IDragDropManager DragDrop { get => _dragDrop; set => _dragDrop = value; }
         internal GposeWindow GposeWindow { get => _gposeWindow; set => _gposeWindow = value; }
         public AddonTalkHandler AddonTalkHandler { get => _addonTalkHandler; set => _addonTalkHandler = value; }
-        public IPluginLog PluginLog { get => _pluginLog; set => _pluginLog = value; }
+        public static IPluginLog PluginLog { get => _plugin; set => _plugin = value; }
         internal AnimationCatalogue AnimationCatalogue { get => _animationCatalogue; set => _animationCatalogue = value; }
         public IpcSystem IpcSystem { get => _ipcSystem; set => _ipcSystem = value; }
         internal NPCPersonalityWindow NpcPersonalityWindow { get => _npcPersonalityWindow; set => _npcPersonalityWindow = value; }
@@ -285,6 +286,10 @@ namespace RoleplayingVoice {
         public IDataManager DataManager1 { get => _dataManager; set => _dataManager = value; }
         public unsafe Camera* Camera { get => _camera; set => _camera = value; }
         public IGameGui GameGui { get => _gameGui; set => _gameGui = value; }
+        public List<string> ModelModList { get => _modelModList; set => _modelModList = value; }
+        public ConcurrentDictionary<string, List<string>> ModelMods { get => _modelMods; set => _modelMods = value; }
+        public ConcurrentDictionary<string, List<string>> ModelDependancyMods { get => _modelDependancyMods; set => _modelDependancyMods = value; }
+        public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
@@ -303,7 +308,7 @@ namespace RoleplayingVoice {
             IGameGui gameGui,
             IDragDropManager dragDrop,
             IPluginLog pluginLog) {
-            _pluginLog = pluginLog;
+            Plugin.PluginLog = pluginLog;
             this._chat = chat;
             #region Constructor
             try {
@@ -397,7 +402,7 @@ namespace RoleplayingVoice {
                 _videoWindow.WindowResized += _videoWindow_WindowResized;
                 _toast.ErrorToast += _toast_ErrorToast;
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
             pollingTimer.Start();
@@ -414,10 +419,10 @@ namespace RoleplayingVoice {
                     new PenumbraAndGlamourerIpcWrapper(pluginInterface);
                     Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                     Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
-                    _pluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
+                    Plugin.PluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
                 } catch (Exception e) {
-                    _pluginLog.Warning(e, e.Message);
+                    Plugin.PluginLog.Warning(e, e.Message);
                 }
                 AttemptConnection();
                 if (config.ApiKey != null) {
@@ -448,7 +453,7 @@ namespace RoleplayingVoice {
                 }
                 RefreshData();
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
         }
@@ -534,7 +539,7 @@ namespace RoleplayingVoice {
         }
 
         private void _roleplayingMediaManager_OnVoiceFailed(object sender, VoiceFailure e) {
-            _pluginLog.Error(e.Exception, e.Exception.Message);
+            Plugin.PluginLog.Error(e.Exception, e.Exception.Message);
         }
 
         private void modSettingChanged(ModSettingChange arg1, Guid arg2, string arg3, bool arg4) {
@@ -607,7 +612,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Error(e, e.Message);
+                Plugin.PluginLog.Error(e, e.Message);
             }
         }
 
@@ -655,11 +660,11 @@ namespace RoleplayingVoice {
                                                     while (!disposed && _clientState.IsLoggedIn &&
                                                     startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
                                                         if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                                            _pluginLog?.Verbose("Checking " + playerSender);
-                                                            _pluginLog?.Verbose("Getting emote.");
+                                                            Plugin.PluginLog?.Verbose("Checking " + playerSender);
+                                                            Plugin.PluginLog?.Verbose("Getting emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
                                                             if (animation > 0) {
-                                                                _pluginLog?.Verbose("Applying Emote.");
+                                                                Plugin.PluginLog?.Verbose("Applying Emote.");
                                                                 if (animation == ushort.MaxValue) {
                                                                     animation = 0;
                                                                 }
@@ -691,7 +696,7 @@ namespace RoleplayingVoice {
                                                         Thread.Sleep(1000);
                                                     }
                                                 } catch (Exception e) {
-                                                    _pluginLog?.Warning(e, e.Message);
+                                                    Plugin.PluginLog?.Warning(e, e.Message);
                                                 }
                                             });
                                             _emoteWatchList[playerSender] = task;
@@ -702,11 +707,11 @@ namespace RoleplayingVoice {
                                                     while (!disposed && _clientState.IsLoggedIn &&
                                                     startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
                                                         if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                                            _pluginLog?.Verbose("Checking minion from" + playerSender);
-                                                            _pluginLog?.Verbose("Getting Minion Emote.");
+                                                            Plugin.PluginLog?.Verbose("Checking minion from" + playerSender);
+                                                            Plugin.PluginLog?.Verbose("Getting Minion Emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
                                                             if (animation > 0) {
-                                                                _pluginLog?.Verbose("Applying Minion Emote.");
+                                                                Plugin.PluginLog?.Verbose("Applying Minion Emote.");
                                                                 if (animation == ushort.MaxValue) {
                                                                     animation = 0;
                                                                 }
@@ -743,7 +748,7 @@ namespace RoleplayingVoice {
                                                         Thread.Sleep(1000);
                                                     }
                                                 } catch (Exception e) {
-                                                    _pluginLog?.Warning(e, e.Message);
+                                                    Plugin.PluginLog?.Warning(e, e.Message);
                                                 }
                                             });
                                             _emoteWatchList[playerSender] = task;
@@ -752,7 +757,7 @@ namespace RoleplayingVoice {
                                 }
                             }
                         } catch (Exception e) {
-                            _pluginLog?.Warning(e, e.Message);
+                            Plugin.PluginLog?.Warning(e, e.Message);
                         }
                     }
 
@@ -785,7 +790,7 @@ namespace RoleplayingVoice {
 
         private void PlayVoiceLine(string value) {
             if (config.DebugMode) {
-                _pluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
             }
             Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
@@ -809,7 +814,7 @@ namespace RoleplayingVoice {
                 });
             });
             if (config.DebugMode) {
-                _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) + " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
             }
             if (!_muteTimer.IsRunning) {
                 if (Filter != null) {
@@ -817,7 +822,7 @@ namespace RoleplayingVoice {
                 }
             }
             if (config.DebugMode) {
-                _pluginLog.Debug("Battle Voice Muted");
+                Plugin.PluginLog.Debug("Battle Voice Muted");
             }
             _muteTimer.Restart();
         }
@@ -860,7 +865,7 @@ namespace RoleplayingVoice {
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                                 } catch (Exception e) {
-                                    _pluginLog?.Warning(e, e.Message);
+                                    Plugin.PluginLog?.Warning(e, e.Message);
                                 }
                                 _combatMusicWasPlayed = true;
                             }
@@ -878,7 +883,7 @@ namespace RoleplayingVoice {
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                                 } catch (Exception e) {
-                                    _pluginLog?.Warning(e, e.Message);
+                                    Plugin.PluginLog?.Warning(e, e.Message);
                                 }
                                 _combatMusicWasPlayed = false;
                             });
@@ -916,7 +921,7 @@ namespace RoleplayingVoice {
                                         try {
                                             _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                                         } catch (Exception e) {
-                                            _pluginLog?.Warning(e, e.Message);
+                                            Plugin.PluginLog?.Warning(e, e.Message);
                                         }
                                         _mountMusicWasPlayed = true;
                                     }
@@ -935,7 +940,7 @@ namespace RoleplayingVoice {
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                                 } catch (Exception e) {
-                                    _pluginLog?.Warning(e, e.Message);
+                                    Plugin.PluginLog?.Warning(e, e.Message);
                                 }
                                 _mountMusicWasPlayed = false;
                             }
@@ -967,13 +972,13 @@ namespace RoleplayingVoice {
                         if (_catalogueModsToEnable.Count > 0) {
                             var item = _catalogueModsToEnable.Dequeue();
                             if (item != null) {
-                                CleanSlate(Guid.Empty);
+                                PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                                 Thread.Sleep(300);
-                                SetClothingMod(item, _catalogueCollectionName);
+                                PenumbraAndGlamourerHelperFunctions.SetClothingMod(item, _modelMods.Keys, _catalogueCollectionName);
                                 Thread.Sleep(100);
                                 _currentClothingChangedItems = new List<object>();
                                 _currentClothingChangedItems.AddRange(PenumbraAndGlamourerIpcWrapper.Instance.GetChangedItemsForCollection.Invoke(_catalogueCollectionName).Values);
-                                SetDependancies(item, _catalogueCollectionName);
+                                PenumbraAndGlamourerHelperFunctions.SetDependancies(item, _modelMods.Keys, _catalogueCollectionName);
                                 Thread.Sleep(100);
                                 PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
                             }
@@ -995,7 +1000,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                             } catch (Exception e) {
-                                _pluginLog.Debug(e, e.Message);
+                                Plugin.PluginLog.Debug(e, e.Message);
                             }
                             _currentChangedItemIndex++;
                             if (_currentChangedItemIndex >= _currentClothingChangedItems.Count) {
@@ -1015,7 +1020,7 @@ namespace RoleplayingVoice {
                         _chat?.Print("Done Catalog");
                         _catalogueTimer.Reset();
                         RefreshData();
-                        CleanSlate(Guid.Empty);
+                        PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                         _catalogueWindow.ScanCatalogue();
                         PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
                     }
@@ -1026,7 +1031,7 @@ namespace RoleplayingVoice {
             if (_glamourerScreenshotQueue.Count > 0) {
                 var item = _glamourerScreenshotQueue.Dequeue();
                 if (item != null && item != null) {
-                    _equipmentFound = SetEquipment(item, _clientState.LocalPlayer.ObjectIndex);
+                    _equipmentFound = PenumbraAndGlamourerHelperFunctions.SetEquipment(item, _clientState.LocalPlayer.ObjectIndex);
                     if (_equipmentFound) {
                         _chat.Print("Screenshotting item " + item.Name + "! " + (((float)_catalogueIndex / (float)_modelModList.Count) * 100f) + "% complete!");
                         Task.Run(() => {
@@ -1044,85 +1049,6 @@ namespace RoleplayingVoice {
                         _catalogueScreenShotTaken = true;
                     }
                 }
-            }
-        }
-        public void WearOutfit(EquipObject item, Guid collection, int objectIndex) {
-            //CleanSlate();
-            _blockDataRefreshes = true;
-            if (collection == Guid.Empty) {
-                collection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_clientState.LocalPlayer.ObjectIndex).Item3.Id;
-            }
-            SetClothingMod(item.Name, collection, false);
-            SetDependancies(item.Name, collection, false);
-            PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(0, RedrawType.Redraw);
-            CharacterCustomization characterCustomization = null;
-            string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-            var bytes = System.Convert.FromBase64String(customizationValue);
-            var version = bytes[0];
-            version = bytes.DecompressToString(out var decompressed);
-            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-            SetEquipment(item, objectIndex);
-            _blockDataRefreshes = false;
-        }
-        public int GetRace(Character playerCharacter) {
-            try {
-                CharacterCustomization characterCustomization = null;
-                string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                return characterCustomization.Customize.Race.Value - 1;
-            } catch {
-                return playerCharacter.Customize[(int)CustomizeIndex.Race];
-            }
-        }
-        public CharacterCustomization GetCustomization(Character playerCharacter) {
-            try {
-                CharacterCustomization characterCustomization = null;
-                string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                return characterCustomization;
-            } catch {
-                return new CharacterCustomization() {
-                    Customize = new Customize() {
-                        EyeColorLeft = new FacialValue() { Value = playerCharacter.Customize[(int)CustomizeIndex.EyeColor] },
-                        EyeColorRight = new FacialValue() { Value = playerCharacter.Customize[(int)CustomizeIndex.EyeColor2] },
-                        BustSize = new BustSize() { Value = playerCharacter.Customize[(int)CustomizeIndex.BustSize] },
-                        LipColor = new LipColor() { Value = playerCharacter.Customize[(int)CustomizeIndex.LipColor] },
-                        Gender = new Gender() { Value = playerCharacter.Customize[(int)CustomizeIndex.Gender] },
-                        Height = new Height() { Value = playerCharacter.Customize[(int)CustomizeIndex.Height] },
-                        Clan = new Clan() { Value = playerCharacter.Customize[(int)CustomizeIndex.Tribe] },
-                        Race = new Race() { Value = playerCharacter.Customize[(int)CustomizeIndex.Race] },
-                        BodyType = new BodyType() { Value = playerCharacter.Customize[(int)CustomizeIndex.ModelType] }
-                    }
-                };
-            }
-        }
-        public Dictionary<Guid, string> GetGlamourerDesigns() {
-            try {
-                var glamourerDesignList = PenumbraAndGlamourerIpcWrapper.Instance.GetDesignList.Invoke();
-                return glamourerDesignList;
-            } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
-                return new Dictionary<Guid, string>();
-            }
-        }
-        public bool IsHumanoid(Character playerCharacter) {
-            try {
-                CharacterCustomization characterCustomization = null;
-                string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                return characterCustomization.Customize.ModelId < 5;
-            } catch {
-                var modelType = playerCharacter.Customize[(int)CustomizeIndex.ModelType];
-                return modelType is not 0 && modelType < 5;
             }
         }
 
@@ -1293,7 +1219,7 @@ namespace RoleplayingVoice {
                                             }
                                         }
                                     } catch (Exception e) {
-                                        _pluginLog.Warning(e, e.Message);
+                                        Plugin.PluginLog.Warning(e, e.Message);
                                     }
                                 });
                             }
@@ -1384,7 +1310,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                Plugin.PluginLog.Warning(e, e.Message);
             }
         }
 
@@ -1533,7 +1459,7 @@ namespace RoleplayingVoice {
             if (config.MoveSCDBasedModsToPerformanceSlider) {
                 if (_scdReplacements.ContainsKey(e.SoundPath)) {
                     if (!e.SoundPath.Contains("vo_emote") && !e.SoundPath.Contains("vo_battle")) {
-                        _pluginLog.Debug("Sound Mod Intercepted");
+                        Plugin.PluginLog.Debug("Sound Mod Intercepted");
                         int i = 0;
                         try {
                             _scdProcessingDelayTimer = new Stopwatch();
@@ -1551,11 +1477,11 @@ namespace RoleplayingVoice {
                                     QueueSCDTrigger(scdFile);
                                     CheckForValidSCD(_lastPlayerToEmote, _lastEmoteUsed, stagingPath, soundPath, true);
                                 } catch (Exception ex) {
-                                    _pluginLog?.Warning(ex, ex.Message);
+                                    Plugin.PluginLog?.Warning(ex, ex.Message);
                                 }
                             });
                         } catch (Exception ex) {
-                            _pluginLog?.Warning(ex, ex.Message);
+                            Plugin.PluginLog?.Warning(ex, ex.Message);
                         }
                     }
                 }
@@ -1627,7 +1553,7 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
             );
@@ -1668,13 +1594,13 @@ namespace RoleplayingVoice {
                                 RefreshPlayerVoiceMuted();
                                 _muteTimer.Stop();
                                 _muteTimer.Reset();
-                                _pluginLog.Debug("Voice Mute End");
+                                Plugin.PluginLog.Debug("Voice Mute End");
                             }
                         }
                     }
                 }
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
             }
         }
         public void MuteVoiceCheck(int length = 6000) {
@@ -1683,7 +1609,7 @@ namespace RoleplayingVoice {
                     Filter.Muted = voiceMuted = true;
                 }
                 RefreshPlayerVoiceMuted();
-                _pluginLog.Debug("Mute Triggered");
+                Plugin.PluginLog.Debug("Mute Triggered");
             }
             _muteTimer.Restart();
             _muteLength = length;
@@ -1697,7 +1623,7 @@ namespace RoleplayingVoice {
                         _gameConfig.Set(SystemConfigOption.IsSndVoice, false);
                     }
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e.Message);
+                    Plugin.PluginLog?.Warning(e.Message);
                 }
             }
         }
@@ -1718,7 +1644,7 @@ namespace RoleplayingVoice {
                             if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                                 if (config.DebugMode) {
-                                    _pluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                    Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
                                 }
                             }
                             performanceTimer.Restart();
@@ -1731,12 +1657,12 @@ namespace RoleplayingVoice {
                                 }
                             }
                             if (config.DebugMode) {
-                                _pluginLog.Debug("[Artemis Roleplaying Kit] voice line decision took " + performanceTimer.ElapsedMilliseconds + " milliseconds to calculate.");
+                                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice line decision took " + performanceTimer.ElapsedMilliseconds + " milliseconds to calculate.");
                             }
                             if (!string.IsNullOrEmpty(value) || attackIntended) {
                                 if (!attackIntended) {
                                     if (config.DebugMode) {
-                                        _pluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+                                        Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
                                     }
                                     Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
                                     _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default,
@@ -1765,8 +1691,8 @@ namespace RoleplayingVoice {
                                   }
                                     : null);
                                     if (config.DebugMode) {
-                                        _pluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
-                                        " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                        Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
+                                       " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
                                     }
                                 }
                                 if (!_muteTimer.IsRunning) {
@@ -1784,7 +1710,7 @@ namespace RoleplayingVoice {
                                     });
                                 }
                                 if (config.DebugMode) {
-                                    _pluginLog.Debug("Battle Voice Muted");
+                                    Plugin.PluginLog.Debug("Battle Voice Muted");
                                 }
                                 _muteTimer.Restart();
                             }
@@ -2165,7 +2091,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
             }
         }
 
@@ -2205,7 +2131,7 @@ namespace RoleplayingVoice {
     string stagingPath = "", string soundPath = "", bool isSending = false) {
             if (_nativeAudioStream != null) {
                 if (isSending) {
-                    _pluginLog.Debug("Emote Trigger Detected");
+                    Plugin.PluginLog.Debug("Emote Trigger Detected");
                     if (!string.IsNullOrEmpty(soundPath)) {
                         try {
                             Stream diskCopy = new MemoryStream();
@@ -2245,21 +2171,21 @@ namespace RoleplayingVoice {
                                         _nativeAudioStream = null;
                                         diskCopy?.Dispose();
                                     } catch (Exception e) {
-                                        _pluginLog?.Warning(".scd conversion to .mp3 failed");
+                                        Plugin.PluginLog?.Warning(".scd conversion to .mp3 failed");
                                         diskCopy?.Dispose();
                                     }
                                 });
                             }
                             soundPath = null;
                         } catch (Exception e) {
-                            _pluginLog?.Warning(e, e.Message);
+                            Plugin.PluginLog?.Warning(e, e.Message);
                         }
                     }
                 } else {
-                    _pluginLog?.Warning("Not currently sending");
+                    Plugin.PluginLog?.Warning("Not currently sending");
                 }
             } else {
-                _pluginLog?.Warning("There is no available audio stream to play");
+                Plugin.PluginLog?.Warning("There is no available audio stream to play");
             }
         }
         private void QueueSCDTrigger(ScdFile scdFile) {
@@ -2296,7 +2222,7 @@ namespace RoleplayingVoice {
                             try {
                                 _realChat.SendMessage(_messageQueue.Dequeue());
                             } catch (Exception e) {
-                                _pluginLog?.Warning(e, e.Message);
+                                Plugin.PluginLog?.Warning(e, e.Message);
                             }
                             _messageTimer.Restart();
                         }
@@ -2306,7 +2232,7 @@ namespace RoleplayingVoice {
                     try {
                         _realChat.SendMessage(_fastMessageQueue.Dequeue());
                     } catch (Exception e) {
-                        _pluginLog?.Warning(e, e.Message);
+                        Plugin.PluginLog?.Warning(e, e.Message);
                     }
                 }
                 if (_aiMessageQueue.Count > 0 && !disposed) {
@@ -2320,7 +2246,7 @@ namespace RoleplayingVoice {
                     });
                 }
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
             }
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
@@ -2340,7 +2266,7 @@ namespace RoleplayingVoice {
                                 Character character = gameObject as Character;
                                 if (character != null) {
                                     if (config.DebugMode) {
-                                        _pluginLog.Debug(character.Name.TextValue + " found!");
+                                        Plugin.PluginLog.Debug(character.Name.TextValue + " found!");
                                     }
                                     if (!character.IsDead) {
                                         if (character.ObjectKind == ObjectKind.Retainer ||
@@ -2350,7 +2276,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (!IsPartOfQuestOrImportant(character)) {
                                                 var value = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
-                                                if (character.ObjectKind != ObjectKind.Companion || IsHumanoid(character)) {
+                                                if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
                                                     characters.Add(character);
                                                 } else if (config.DebugMode) {
                                                     _chat.Print("Cannot apply animations to non humanoid minions.");
@@ -2385,7 +2311,7 @@ namespace RoleplayingVoice {
                                             if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
                                                 _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.ActionTimeline[0].Value.RowId);
                                                 _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
-                                                _pluginLog.Verbose("Sent emote to server for " + character.Name);
+                                                Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                             }
                                         }
                                     }
@@ -2494,7 +2420,7 @@ namespace RoleplayingVoice {
                             combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                             IpcSystem?.InvokeOnVoicePackChanged();
                         } catch (Exception e) {
-                            _pluginLog.Error(e.Message);
+                            Plugin.PluginLog.Error(e.Message);
                         }
                     });
                     if (!config.VoicePackIsActive) {
@@ -2505,7 +2431,7 @@ namespace RoleplayingVoice {
                                 RefreshPlayerVoiceMuted();
                             }
                         } catch (Exception e) {
-                            _pluginLog.Error(e.Message);
+                            Plugin.PluginLog.Error(e.Message);
                         }
                     } else {
                         _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
@@ -2588,7 +2514,7 @@ namespace RoleplayingVoice {
                     try {
                         File.Delete(file);
                     } catch (Exception e) {
-                        _pluginLog?.Warning(e, e.Message);
+                        Plugin.PluginLog?.Warning(e, e.Message);
                     }
                 }
             }
@@ -2612,7 +2538,7 @@ namespace RoleplayingVoice {
                         try {
                             RemoveFiles(clipPath);
                         } catch (Exception e) {
-                            _pluginLog?.Warning(e, e.Message);
+                            Plugin.PluginLog?.Warning(e, e.Message);
                         }
                     }
                 } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
@@ -2686,14 +2612,14 @@ namespace RoleplayingVoice {
                 try {
                     Directory.Delete(othersPath, true);
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
             if (Directory.Exists(incomingPath)) {
                 try {
                     Directory.Delete(incomingPath, true);
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
             CleanupEmoteWatchList();
@@ -2707,7 +2633,7 @@ namespace RoleplayingVoice {
                 try {
                     _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
             potentialStream = "";
@@ -2736,7 +2662,7 @@ namespace RoleplayingVoice {
         }
 
         private void _networkedClient_OnConnectionFailed(object sender, FailureMessage e) {
-            _pluginLog.Error(e.Message);
+            Plugin.PluginLog.Error(e.Message);
         }
         #endregion
         #region Emote Processing
@@ -2794,7 +2720,7 @@ namespace RoleplayingVoice {
                                                 string value = GetEmotePath(characterVoicePack, emoteId, (int)copyTimer.Elapsed.TotalSeconds, out isVoicedEmote);
                                                 if (!string.IsNullOrEmpty(value)) {
                                                     string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                                                    TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
+                                                    TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     bool lipWasSynced = false;
                                                     _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
@@ -2830,11 +2756,11 @@ namespace RoleplayingVoice {
                                 }
                             }
                         } catch (Exception e) {
-                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
+                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
                         }
                     }
                 } catch (Exception e) {
-                    _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
+                    Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
                 }
             }
         }
@@ -2852,7 +2778,7 @@ namespace RoleplayingVoice {
                     string emotePath = GetEmotePath(_mainCharacterVoicePack, emoteId, 0, out isVoicedEmote);
                     if (!string.IsNullOrEmpty(emotePath)) {
                         string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
-                        TimeCodeData data = RaceVoice.TimeCodeData[GetRace(instigator) + "_" + gender];
+                        TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                         _mediaManager.StopAudio(new MediaGameObject(instigator));
                         bool lipWasSynced = false;
                         _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
@@ -3005,10 +2931,10 @@ namespace RoleplayingVoice {
                                 try {
                                     _scdReplacements.TryAdd(item.Key, directory + @"\" + item.Value);
                                     if (config.DebugMode) {
-                                        _pluginLog?.Verbose("Found: " + item.Value);
+                                        Plugin.PluginLog?.Verbose("Found: " + item.Value);
                                     }
                                 } catch {
-                                    _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                                    Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                                 }
                             }
                         }
@@ -3038,10 +2964,10 @@ namespace RoleplayingVoice {
                                 _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipScd) });
 
                                 if (config.DebugMode) {
-                                    _pluginLog?.Verbose("Found: " + item.Value);
+                                    Plugin.PluginLog?.Verbose("Found: " + item.Value);
                                 }
                             } catch {
-                                _pluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                                Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                             }
                         } else {
                             _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipScd));
@@ -3083,25 +3009,16 @@ namespace RoleplayingVoice {
                     }
                 }
             }
-            ////if (newValue > 10000) {
-            ////    _chat?.Print(model);
-            ////}
             return newValue;
         }
 
-        public bool SetEquipment(EquipObject equipItem, int objectIndex) {
-            bool changed = false;
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, equipItem.Type, (ulong)equipItem.ItemId.Id, 0);
-            changed = true;
-            _pluginLog.Verbose("Completed sending IPC to glamourer");
-            return changed;
-        }
+
 
         public void SetDesign(Guid design, int objectId) {
             try {
                 PenumbraAndGlamourerIpcWrapper.Instance.ApplyDesign.Invoke(design, objectId);
             } catch (Exception e) {
-                _pluginLog.Warning(e, e.Message);
+                Plugin.PluginLog.Warning(e, e.Message);
             }
         }
         public void ApplyByGuid(Guid design, Character? character) {
@@ -3136,7 +3053,7 @@ namespace RoleplayingVoice {
                             _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>()
                             { new Tuple<string, string, bool>(directory, modName, false) });
                         } catch {
-                            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
+                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
                         }
                     } else {
                         _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, false));
@@ -3166,7 +3083,7 @@ namespace RoleplayingVoice {
                         foreach (var directory in Directory.EnumerateDirectories(modPath)) {
                             if (refreshGuid == _currentModPackRefreshGuid) {
                                 if (config.DebugMode) {
-                                    _pluginLog?.Verbose("Examining: " + directory);
+                                    Plugin.PluginLog?.Verbose("Examining: " + directory);
                                 }
                                 Option option = null;
                                 List<Group> groups = new List<Group>();
@@ -3230,7 +3147,7 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                 } catch (Exception e) {
-                                    _pluginLog?.Warning(e, e.Message);
+                                    Plugin.PluginLog?.Warning(e, e.Message);
                                 }
                             } else {
                                 break;
@@ -3239,7 +3156,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                _pluginLog?.Warning("Error 404, penumbra not found.");
+                Plugin.PluginLog?.Warning("Error 404, penumbra not found.");
             }
             if (config != null) {
                 if (config.CharacterVoicePacks != null) {
@@ -3322,7 +3239,7 @@ namespace RoleplayingVoice {
             try {
                 _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
             }
             _streamSetCooldown.Stop();
             _streamSetCooldown.Reset();
@@ -3338,7 +3255,7 @@ namespace RoleplayingVoice {
                                     _mediaManager.ChangeStream(_lastStreamObject,
                                          _streamURLs[(int)_videoWindow.FeedType], _videoWindow.Size.Value.X);
                                 } catch (Exception e) {
-                                    _pluginLog?.Warning(e, e.Message);
+                                    Plugin.PluginLog?.Warning(e, e.Message);
                                 }
                             }
                         }
@@ -3479,7 +3396,7 @@ namespace RoleplayingVoice {
                                             Verb = "OPEN"
                                         });
                                     } catch (Exception e) {
-                                        _pluginLog?.Warning(e, e.Message);
+                                        Plugin.PluginLog?.Warning(e, e.Message);
                                     }
                                 } else {
                                     _chat?.PrintError("There is no active stream");
@@ -3551,7 +3468,7 @@ namespace RoleplayingVoice {
                                         StartCatalogingItems();
                                         break;
                                     case "clean":
-                                        CleanSlate(Guid.Empty);
+                                        PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                                         break;
                                     case "stop":
                                         _catalogueMods = false;
@@ -3590,7 +3507,7 @@ namespace RoleplayingVoice {
 
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
             _chat?.Print("Creating Thumbnails For New Clothing Mods");
-            CleanSlate(Guid.Empty);
+            PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
             _catalogueMods = true;
             _modelModList = new List<string>();
             _modelModList.AddRange(_modelMods.Keys);
@@ -3788,7 +3705,7 @@ namespace RoleplayingVoice {
                 var collection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke((int)targetObject.ObjectIndex);
                 string commandArguments = animationName;
                 if (config.DebugMode) {
-                    _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+                    Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
                 }
                 for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
                     foreach (var modName in _animationMods.Keys) {
@@ -3797,7 +3714,7 @@ namespace RoleplayingVoice {
                                 var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, modName, true);
                                 _mediaManager.StopAudio(_playerObject);
                                 if (config.DebugMode) {
-                                    _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                                    Plugin.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
                                 }
                                 var animationItems = _animationMods[modName];
                                 foreach (var foundAnimation in animationItems.Value) {
@@ -3831,7 +3748,7 @@ namespace RoleplayingVoice {
                                                 // Thread.Sleep(100);
                                                 var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, mod.Item2, false);
                                                 if (config.DebugMode) {
-                                                    _pluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                    Plugin.PluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
                                                 }
                                             }
                                         }
@@ -3913,7 +3830,7 @@ namespace RoleplayingVoice {
                             _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
                             _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
                         }
-                        _pluginLog.Verbose("Sent emote to server for " + character.Name);
+                        Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                     }
                     Task.Run(() => {
                         Vector3 lastPosition = character.Position;
@@ -3931,7 +3848,7 @@ namespace RoleplayingVoice {
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort.MaxValue));
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort.MaxValue));
                                     }
-                                    _pluginLog.Verbose("Sent emote to server for " + character.Name);
+                                    Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                 }
                                 if (character.ObjectKind == ObjectKind.Companion) {
                                     if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
@@ -4007,85 +3924,16 @@ namespace RoleplayingVoice {
         }
 
         #endregion
-        #region Trigger Clothing Mods
-        private void SetClothingMod(string modelMod, Guid collection, bool disableOtherMods = true) {
-            _pluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
-            int lowestPriority = 10;
-            foreach (string modName in _modelMods.Keys) {
-                if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
-                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 11);
-                } else {
-                    if (disableOtherMods) {
-                        var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    } else {
-                        PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
-                    }
-                }
-            }
-        }
-        private void SetBodyDependancies(Guid collection) {
-            int lowestPriority = 10;
-            foreach (string modName in _modelDependancyMods.Keys) {
-                var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
-                PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
-            }
-        }
-        private void SetDependancies(string modelMod, Guid collection, bool disableOtherMods = true) {
-            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-            _pluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\".");
-            int lowestPriority = 10;
-            foreach (string modName in _modelMods.Keys) {
-                if (modName.ToLower().Contains(modelMod.ToLower())) {
-                    var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
-                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 11);
-                } else {
-                    if (FindStringMatch(modelMod, modName)) {
-                        var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
-                        PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 10);
-                    } else if (disableOtherMods) {
-                        var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    } else {
-                        PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
-                    }
-                }
-            }
-        }
-        private bool FindStringMatch(string sourceMod, string comparisonMod) {
-            string[] strings = sourceMod.Split(' ');
-            foreach (string value in strings) {
-                string loweredValue = value.ToLower();
-                if (comparisonMod.ToLower().Contains(loweredValue)
-                  && loweredValue.Length > 4 && !loweredValue.Contains("[") && !loweredValue.Contains("]")
-                  && !loweredValue.Contains("by") && !loweredValue.Contains("update")
-                  && !loweredValue.Contains("megapack") && !comparisonMod.Contains("megapack")) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        public void CleanSlate(Guid collection) {
-            string foundModName = "";
-            if (collection == Guid.Empty) {
-                collection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(0).EffectiveCollection.Id;
-            }
-            Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-            foreach (string modName in _modelMods.Keys) {
-                var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, "", false, modName);
-            }
-            SetBodyDependancies(collection);
-        }
-        #endregion
         #region Error Logging
         private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
             _chat?.PrintError("[Artemis Roleplaying Kit] " + e.Message);
-            _pluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
+            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
         }
         private void Window_OnMoveFailed(object sender, EventArgs e) {
             _chat?.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
         }
         private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
-            _pluginLog?.Warning(e.Exception, e.Exception.Message);
+            Plugin.PluginLog?.Warning(e.Exception, e.Exception.Message);
         }
         #endregion
         #region IDisposable Support
@@ -4110,7 +3958,7 @@ namespace RoleplayingVoice {
                         _mediaManager?.Dispose();
                     }
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _clientState.Login -= _clientState_Login;
@@ -4118,17 +3966,17 @@ namespace RoleplayingVoice {
                     _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                     _clientState.LeavePvP -= _clientState_LeavePvP;
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _toast.ErrorToast -= _toast_ErrorToast;
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
                 try {
                     _framework.Update -= framework_Update;
                 } catch (Exception e) {
-                    _pluginLog?.Warning(e, e.Message);
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
@@ -4139,7 +3987,7 @@ namespace RoleplayingVoice {
                 _addonTalkHandler?.Dispose();
                 //PenumbraAndGlamourerIPCWrapper.Instance.ModSettingChanged.Event -= modSettingChanged;
             } catch (Exception e) {
-                _pluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, e.Message);
             }
         }
 

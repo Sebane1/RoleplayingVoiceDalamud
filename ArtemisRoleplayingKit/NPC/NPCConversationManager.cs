@@ -6,6 +6,7 @@ using Dalamud.Plugin.Services;
 using Lumina.Excel.GeneratedSheets;
 using RoleplayingSpeechDalamud;
 using RoleplayingVoice;
+using RoleplayingVoiceDalamud.Catalogue;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,7 +39,7 @@ namespace RoleplayingVoiceDalamud.NPC {
             return aiMessage;
         }
         public string GetPlayerDescription(Character player, bool skipSummary = false, string alias = "") {
-            var customization = _plugin.GetCustomization(player);
+            var customization = PenumbraAndGlamourerHelperFunctions.GetCustomization(player);
             string gender = customization.Customize.Gender.Value == 1 ? "female" : "male";
             string pronouns = customization.Customize.Gender.Value == 1 ? "she/her" : "he/him";
             string pronounSingular = customization.Customize.Gender.Value == 1 ? "her" : "his";

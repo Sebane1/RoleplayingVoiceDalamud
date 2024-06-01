@@ -37,6 +37,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.ClientState.Objects.Enums;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Character = Dalamud.Game.ClientState.Objects.Types.Character;
+using RoleplayingVoiceDalamud.Catalogue;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
@@ -259,7 +260,7 @@ namespace RoleplayingVoice {
                                 if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
                                     string filePath = file;
                                     string fileName = Path.GetFileNameWithoutExtension(filePath).ToLower();
-                                    _currentCustomization = plugin.GetCustomization(selectedPlayer.Value);
+                                    _currentCustomization = PenumbraAndGlamourerHelperFunctions.GetCustomization(selectedPlayer.Value);
                                     if (fileName.Contains("mata") || fileName.Contains("amat")
                                         || fileName.Contains("materiala") || fileName.Contains("gen2")) {
                                         var item = AddBody(_currentCustomization.Customize.Gender.Value, 0,

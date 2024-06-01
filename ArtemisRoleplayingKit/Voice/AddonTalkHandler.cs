@@ -172,7 +172,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _targetService.Start();
                 _gposeService.Start();
             } catch (Exception e) {
-                _plugin.PluginLog.Warning(e, e.Message);
+                Plugin.PluginLog.Warning(e, e.Message);
             }
             pollingTimer.Start();
         }
@@ -713,7 +713,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
                 _plugin.IpcSystem?.InvokeOnTriggerAnimation(character, animationId);
             } catch (Exception e) {
-                _plugin.PluginLog.Warning(e, e.Message);
+                Plugin.PluginLog.Warning(e, e.Message);
             }
         }
         public async void TriggerEmoteTimed(Character character, ushort animationId, int time = 2000) {
@@ -737,7 +737,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
                                 _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
                                 _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
-                                _plugin.PluginLog.Verbose("Sent emote cancellation to server for " + reference.Name);
+                                Plugin.PluginLog.Verbose("Sent emote cancellation to server for " + reference.Name);
                             }
                         }
                     }

@@ -203,7 +203,7 @@ namespace RoleplayingVoice {
                         _fileSystemWatcher.EnableRaisingEvents = true;
                         _fileSystemWatcher.BeginInit();
                     } catch (Exception e) {
-                        PluginReference.PluginLog.Warning(e, e.Message);
+                        Plugin.PluginLog.Warning(e, e.Message);
                     }
                 }
             }
@@ -449,7 +449,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                PluginReference.PluginLog.Warning(e, e.Message);
+                Plugin.PluginLog.Warning(e, e.Message);
             }
         }
 
