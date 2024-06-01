@@ -3105,35 +3105,53 @@ namespace RoleplayingVoice {
             switch (equipItem.Type) {
                 case Penumbra.GameData.Enums.FullEquipType.Ears:
                     characterCustomization.Equipment.Head.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+                        Glamourer.Api.Enums.ApiEquipSlot.Ears, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Neck:
                     characterCustomization.Equipment.Neck.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Neck, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Body:
                     characterCustomization.Equipment.Body.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Body, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Legs:
                     characterCustomization.Equipment.Legs.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Legs, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Hands:
                     characterCustomization.Equipment.Hands.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Hands, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Finger:
                     characterCustomization.Equipment.LFinger.ItemId = equipItem.ItemId.Id;
                     characterCustomization.Equipment.RFinger.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.LFinger, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.RFinger, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Feet:
                     characterCustomization.Equipment.Feet.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Feet, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
                 case Penumbra.GameData.Enums.FullEquipType.Wrists:
                     characterCustomization.Equipment.Wrists.ItemId = equipItem.ItemId.Id;
+                    new Glamourer.Api.IpcSubscribers.SetItem(pluginInterface).Invoke(_clientState.LocalPlayer.ObjectIndex,
+               Glamourer.Api.Enums.ApiEquipSlot.Wrists, (ulong)equipItem.ItemId.Id, (byte)equipItem.ModelId.Id);
                     changed = true;
                     break;
             }
@@ -3827,91 +3845,93 @@ namespace RoleplayingVoice {
         }
 
         public void DoAnimation(string animationName, int index, Character targetObject) {
-            _blockDataRefreshes = true;
-            var list = CreateEmoteList(_dataManager);
-            List<uint> deDuplicate = new List<uint>();
-            List<EmoteModData> emoteData = new List<EmoteModData>();
-            var collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke((int)targetObject.ObjectIndex);
-            string commandArguments = animationName;
-            if (config.DebugMode) {
-                _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
-            }
-            for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
-                foreach (var modName in _animationMods.Keys) {
-                    if (modName.ToLower().Contains(commandArguments)) {
-                        if (collection.Item3.Name != "None") {
-                            var result = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, modName, true);
-                            _mediaManager.StopAudio(_playerObject);
-                            if (config.DebugMode) {
-                                _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
-                            }
-                            var animationItems = _animationMods[modName];
-                            foreach (var foundAnimation in animationItems.Value) {
-                                bool foundEmote = false;
-                                if (_papSorting.ContainsKey(foundAnimation)) {
-                                    var sortedList = _papSorting[foundAnimation];
-                                    foreach (var mod in sortedList) {
-                                        if (mod.Item2.ToLower().Contains(modName.ToLower().Trim())) {
-                                            _mediaManager.CleanNonStreamingSounds();
-                                            if (!foundEmote) {
-                                                if (list.ContainsKey(foundAnimation)) {
-                                                    foreach (var value in list[foundAnimation]) {
-                                                        string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                        if (!string.IsNullOrEmpty(name)) {
-                                                            if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
-                                                                emoteData.Add(new
-                                                                EmoteModData(
-                                                                name,
-                                                                value.RowId,
-                                                                value.ActionTimeline[0].Value.RowId,
-                                                                modName));
-                                                                deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+            Task.Run(() => {
+                _blockDataRefreshes = true;
+                var list = CreateEmoteList(_dataManager);
+                List<uint> deDuplicate = new List<uint>();
+                List<EmoteModData> emoteData = new List<EmoteModData>();
+                var collection = new Penumbra.Api.IpcSubscribers.GetCollectionForObject(pluginInterface).Invoke((int)targetObject.ObjectIndex);
+                string commandArguments = animationName;
+                if (config.DebugMode) {
+                    _pluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+                }
+                for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
+                    foreach (var modName in _animationMods.Keys) {
+                        if (modName.ToLower().Contains(commandArguments)) {
+                            if (collection.Item3.Name != "None") {
+                                var result = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, modName, true);
+                                _mediaManager.StopAudio(_playerObject);
+                                if (config.DebugMode) {
+                                    _pluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                                }
+                                var animationItems = _animationMods[modName];
+                                foreach (var foundAnimation in animationItems.Value) {
+                                    bool foundEmote = false;
+                                    if (_papSorting.ContainsKey(foundAnimation)) {
+                                        var sortedList = _papSorting[foundAnimation];
+                                        foreach (var mod in sortedList) {
+                                            if (mod.Item2.ToLower().Contains(modName.ToLower().Trim())) {
+                                                _mediaManager.CleanNonStreamingSounds();
+                                                if (!foundEmote) {
+                                                    if (list.ContainsKey(foundAnimation)) {
+                                                        foreach (var value in list[foundAnimation]) {
+                                                            string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                            if (!string.IsNullOrEmpty(name)) {
+                                                                if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
+                                                                    emoteData.Add(new
+                                                                    EmoteModData(
+                                                                    name,
+                                                                    value.RowId,
+                                                                    value.ActionTimeline[0].Value.RowId,
+                                                                    modName));
+                                                                    deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+                                                                }
+                                                                foundEmote = true;
+                                                                break;
                                                             }
-                                                            foundEmote = true;
-                                                            break;
                                                         }
                                                     }
                                                 }
-                                            }
-                                        } else {
-                                            // Thread.Sleep(100);
-                                            var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, mod.Item2, false);
-                                            if (config.DebugMode) {
-                                                _pluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                            } else {
+                                                // Thread.Sleep(100);
+                                                var ipcResult = new Penumbra.Api.IpcSubscribers.TrySetMod(pluginInterface).Invoke(collection.Item3.Id, mod.Item2, false);
+                                                if (config.DebugMode) {
+                                                    _pluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                break;
+                            } else {
+                                _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
                             }
-                            break;
-                        } else {
-                            _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
                         }
                     }
                 }
-            }
-            if (emoteData.Count > 0) {
-                if (emoteData.Count == 1) {
-                    TriggerCharacterEmote(emoteData[0], targetObject);
-                } else if (emoteData.Count > 1) {
-                    if (index == 0) {
-                        _animationEmoteSelection.PopulateList(emoteData, targetObject);
-                        _animationEmoteSelection.IsOpen = true;
-                    } else {
-                        TriggerCharacterEmote(emoteData[index - 1], targetObject);
+                if (emoteData.Count > 0) {
+                    if (emoteData.Count == 1) {
+                        TriggerCharacterEmote(emoteData[0], targetObject);
+                    } else if (emoteData.Count > 1) {
+                        if (index == 0) {
+                            _animationEmoteSelection.PopulateList(emoteData, targetObject);
+                            _animationEmoteSelection.IsOpen = true;
+                        } else {
+                            TriggerCharacterEmote(emoteData[index - 1], targetObject);
+                        }
                     }
+                } else {
+                    Task.Run(() => {
+                        if (_failCount++ < 10) {
+                            Thread.Sleep(3000);
+                            DoAnimation(animationName, index, targetObject);
+                        } else {
+                            _failCount = 0;
+                        }
+                    });
                 }
-            } else {
-                Task.Run(() => {
-                    if (_failCount++ < 10) {
-                        Thread.Sleep(3000);
-                        DoAnimation(animationName, index, targetObject);
-                    } else {
-                        _failCount = 0;
-                    }
-                });
-            }
-            _blockDataRefreshes = false;
+                _blockDataRefreshes = false;
+            });
         }
 
         public void TriggerCharacterEmote(EmoteModData emoteModData, Character character) {
