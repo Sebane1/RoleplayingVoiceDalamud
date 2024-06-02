@@ -269,6 +269,7 @@ namespace RoleplayingVoice {
                                         item.Diffuse = file;
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Body");
+                                        item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                     } else if (fileName.Contains("bibo") || fileName.Contains("b+")) {
                                         var item = AddBody(_currentCustomization.Customize.Gender.Value, 1,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
@@ -276,6 +277,7 @@ namespace RoleplayingVoice {
                                         item.Diffuse = file;
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Body");
+                                        item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                     } else if (fileName.Contains("gen3")) {
                                         var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
@@ -283,6 +285,7 @@ namespace RoleplayingVoice {
                                         item.Diffuse = file;
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Body");
+                                        item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                     } else if (fileName.Contains("tbse")) {
                                         var item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
@@ -317,6 +320,7 @@ namespace RoleplayingVoice {
                                                     item.Diffuse = file;
                                                     textureSets.Add(item);
                                                     modName = modName.Replace("Mod", "Body");
+                                                    item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                                 } else if (_currentCustomization.Customize.Gender.Value == 0) {
                                                     item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
                                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
@@ -324,6 +328,7 @@ namespace RoleplayingVoice {
                                                     item.Diffuse = file;
                                                     textureSets.Add(item);
                                                     modName = modName.Replace("Mod", "Body");
+                                                    item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                                 } else {
                                                     switch (ImageManipulation.FemaleBodyUVClassifier(file)) {
                                                         case LooseTextureCompilerCore.BodyUVType.Bibo:
@@ -333,6 +338,7 @@ namespace RoleplayingVoice {
                                                             item.Diffuse = file;
                                                             textureSets.Add(item);
                                                             modName = modName.Replace("Mod", "Body");
+                                                            item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                                             break;
                                                         case LooseTextureCompilerCore.BodyUVType.Gen3:
                                                             item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
@@ -341,6 +347,7 @@ namespace RoleplayingVoice {
                                                             item.Diffuse = file;
                                                             textureSets.Add(item);
                                                             modName = modName.Replace("Mod", "Body");
+                                                            item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                                             break;
                                                         case LooseTextureCompilerCore.BodyUVType.Gen2:
                                                             item = AddBody(_currentCustomization.Customize.Gender.Value, 0,
@@ -349,6 +356,7 @@ namespace RoleplayingVoice {
                                                             item.Diffuse = file;
                                                             textureSets.Add(item);
                                                             modName = modName.Replace("Mod", "Body");
+                                                            item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                                                             break;
                                                     }
                                                 }
@@ -534,7 +542,6 @@ namespace RoleplayingVoice {
                 string jsonFilepath = Path.Combine(path, "default_mod.json");
                 string metaFilePath = Path.Combine(path, "meta.json");
                 foreach (TextureSet item in exportTextureSets) {
-                    item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath);
                     if (item.OmniExportMode) {
                         UniversalTextureSetCreator.ConfigureOmniConfiguration(item);
                     }
