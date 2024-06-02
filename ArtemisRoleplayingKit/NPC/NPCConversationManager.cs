@@ -32,11 +32,12 @@ namespace RoleplayingVoiceDalamud.NPC {
             string senderName = sendingCharacter.Name.TextValue.Split(" ")[0];
             string aiMessage = await _gptWrapper.SendMessage(senderName, message, $@" smiles ""{aiGreeting}""",
             GetPlayerDescription(sendingCharacter), aiDescription.Trim('.').Trim() + ". " + GetPlayerDescription(receivingCharacter, true, aiName), setting, 2);
-            _gptWrapper.AddToHistory(senderName, message, aiMessage);
+            string correctedMessage = PenumbraAndGlamourerHelperFunctions.GetCustomization(sendingCharacter).Customize.Gender.Value == 1 ? GenderFix(aiMessage) : aiMessage;
+            _gptWrapper.AddToHistory(senderName, message, correctedMessage);
             Task.Run(() => {
-                EmoteReaction(aiMessage);
+                EmoteReaction(correctedMessage);
             });
-            return aiMessage;
+            return correctedMessage;
         }
         public string GetPlayerDescription(Character player, bool skipSummary = false, string alias = "") {
             var customization = PenumbraAndGlamourerHelperFunctions.GetCustomization(player);
@@ -218,6 +219,14 @@ namespace RoleplayingVoiceDalamud.NPC {
                     return "dark " + names[yCoordinate].ToLower();
             }
             return "unknown skinned";
+        }
+        string GenderFix(string value) {
+            return value.Replace(" himself", " herself").Replace("He ", "She ")
+                                 .Replace(" he ", " she ").Replace(" he?", " she?")
+                                 .Replace(" hes ", " she's ").Replace(" he's ", " she's ").Replace("He's ", "She's ")
+                                 .Replace(" him ", " her ").Replace(" him,", " her,").Replace(" him.", " her.").Replace(" his ", " her ").Replace(" his.", " her.")
+                                 .Replace("His ", "Her ").Replace(" men ", " women ").Replace(" men.", " women.").Replace(" sir ", " ma'am ")
+                                 .Replace(" man ", " woman ").Replace(" boy", " girl").Replace(" man.", " woman.");
         }
         private async void EmoteReaction(string messageValue) {
             var emotes = _plugin.DataManager.GetExcelSheet<Emote>();
