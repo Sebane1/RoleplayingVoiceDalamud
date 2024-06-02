@@ -2294,7 +2294,7 @@ namespace RoleplayingVoice {
                                 }
                             } catch {
                                 if (config.DebugMode) {
-                                    _chat.Print("Could not trgger emote on " + gameObject.Name.TextValue + ".");
+                                    _chat.Print("Could not trigger emote on " + gameObject.Name.TextValue + ".");
                                 }
                             }
                         }

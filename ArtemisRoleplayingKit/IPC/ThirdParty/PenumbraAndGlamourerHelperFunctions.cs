@@ -50,7 +50,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 var version = bytes[0];
                 version = bytes.DecompressToString(out var decompressed);
                 characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                return characterCustomization.Customize.Race.Value - 1;
+                return characterCustomization.Customize.Race.Value;
             } catch {
                 return playerCharacter.Customize[(int)CustomizeIndex.Race];
             }
