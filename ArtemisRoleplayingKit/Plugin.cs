@@ -3643,7 +3643,7 @@ namespace RoleplayingVoice {
                                         _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
                                          (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                     } else {
-                                        _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                        _addonTalkHandler.TriggerEmoteTimed(targetNPC, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                     }
                                 }
                             }
