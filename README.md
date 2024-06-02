@@ -1,5 +1,8 @@
 Artemis Roleplaying Kit aims to be the go to plugin for most things related to sound, and roleplaying quality of life!
 
+Want a full overview? Check out the the plugin website!
+https://artemisroleplayingkit.carrd.co/
+
 Features:
 - Crowdsourced NPC Dialogue that aims to provide voiceover for all unvoiced text in the MSQ, and side content.
 - Generative voicelines for anything you type via Elevenlabs (after providing your own API key).
@@ -68,3 +71,5 @@ https://discord.gg/rtGXwMn7pX
 
 SEO:
 TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback Plugin, FFXIV Voices, XIV Voices, Final Fantasy 14 Voices, Free FFXIV Voice, Free XIV Voice
+'final fantasy'
+'final fantasy'
