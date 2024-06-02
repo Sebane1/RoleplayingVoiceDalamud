@@ -2251,7 +2251,8 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (!Conditions.IsWatchingCutscene && _clientState.LocalPlayer.TargetObject == null) {
+                if (!Conditions.IsWatchingCutscene && (_clientState.LocalPlayer.TargetObject == null 
+                    || _clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player)) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         if (value.EmoteMode.Value.ConditionMode is not 3) {
