@@ -1,10 +1,12 @@
-﻿using Dalamud.Interface.Windowing;
+﻿using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {
@@ -14,6 +16,10 @@ namespace RoleplayingVoice {
         private string _currentCategory;
         Dictionary<string, CatalogueCategory> categories = new Dictionary<string, CatalogueCategory>();
         private Plugin _plugin;
+        private bool incognito;
+        private Dictionary<string, Character> _characterList;
+        private int _currentSelection;
+
         public CatalogueWindow(DalamudPluginInterface pluginInterface) : base("Catalogue Window (Alpha)") {
             //IsOpen = true;
             //windowSize = Size = new Vector2(1000, 1000);
@@ -54,6 +60,26 @@ namespace RoleplayingVoice {
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
 
         public override void Draw() {
+            ImGui.BeginTable("##Catalogue Table", 2);
+            ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("Custom Animation Mods", ImGuiTableColumnFlags.WidthStretch, 300);
+            ImGui.TableHeadersRow();
+            ImGui.TableNextRow();
+            ImGui.TableSetColumnIndex(0);
+            DrawObjectList();
+            ImGui.TableSetColumnIndex(1);
+            DrawCatalogue();
+            ImGui.EndTable();
+        }
+        private void DrawObjectList() {
+            if (ImGui.Button("Toggle Incognito", new Vector2(ImGui.GetColumnWidth(), 30))) {
+                incognito = !incognito;
+            }
+            _characterList = Plugin.GetLocalCharacters(incognito);
+            ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
+            ImGui.ListBox("##catalogueCharacter", ref _currentSelection, _characterList.Keys.ToArray(), _characterList.Count, 29);
+        }
+        private void DrawCatalogue() {
             if (categories.Count > 0) {
                 foreach (var item in categories.Keys) {
                     if (ImGui.Button(item)) {
@@ -73,9 +99,10 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < 3; y++) {
                         for (int x = 0; x < 3; x++) {
                             if (index < category.Images.Count) {
-                                if (ImGui.ImageButton(category.Images[index].ImGuiHandle, new Vector2(250, 250))) {
+                                if (ImGui.ImageButton(category.Images[index].ImGuiHandle, new Vector2(150, 150))) {
                                     selectionIndex = category.PageNumber * 9 + index;
-                                    PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty, 0, _plugin.ModelMods.Keys);
+                                    PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty,
+                                        _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
                                     category.SelectItem(selectionIndex);
                                 }
                                 index++;
@@ -95,7 +122,8 @@ namespace RoleplayingVoice {
                         for (int x = 0; x < 7; x++) {
                             if (index < category.VariantImages.Count) {
                                 if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].ImGuiHandle, new Vector2(100, 100))) {
-                                    PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject, Guid.Empty, 0, _plugin.ModelMods.Keys);
+                                    PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject,
+                                        Guid.Empty, _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
                                 }
                                 index++;
                                 if (x < 6 && index < categories[_currentCategory].VariantImages.Count) {

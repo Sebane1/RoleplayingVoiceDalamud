@@ -2251,8 +2251,7 @@ namespace RoleplayingVoice {
             if (_lastEmoteAnimationUsed != null) {
                 Emote value = _lastEmoteAnimationUsed;
                 _lastEmoteAnimationUsed = null;
-                if (!Conditions.IsWatchingCutscene && (_clientState.LocalPlayer.TargetObject == null 
-                    || _clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player)) {
+                if (!Conditions.IsWatchingCutscene) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
                         if (value.EmoteMode.Value.ConditionMode is not 3) {
@@ -2344,7 +2343,36 @@ namespace RoleplayingVoice {
             return null;
 
         }
-
+        public Dictionary<string, Character> GetLocalCharacters(bool incognito) {
+            var _objects = new Dictionary<string, Character>();
+            _objects.Add(incognito ? "Player Character" :
+            _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as Character);
+            bool oneMinionOnly = false;
+            foreach (var item in GetNearestObjects()) {
+                Character character = item as Character;
+                if (character != null) {
+                    if (character.ObjectKind == ObjectKind.Companion) {
+                        if (!oneMinionOnly) {
+                            string name = "";
+                            foreach (var customNPC in config.CustomNpcCharacters) {
+                                if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
+                                    name = customNPC.NpcName;
+                                }
+                            }
+                            if (!string.IsNullOrEmpty(name)) {
+                                _objects.Add(name, character);
+                            }
+                            oneMinionOnly = true;
+                        }
+                    } else if (character.ObjectKind == ObjectKind.EventNpc) {
+                        if (!string.IsNullOrEmpty(character.Name.TextValue)) {
+                            _objects.Add(character.Name.TextValue, character);
+                        }
+                    }
+                }
+            }
+            return _objects;
+        }
         public unsafe bool IsPartOfQuestOrImportant(GameObject gameObject) {
             return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address)->NamePlateIconId is not 0;
         }
