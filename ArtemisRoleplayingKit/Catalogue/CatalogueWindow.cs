@@ -62,7 +62,7 @@ namespace RoleplayingVoice {
         public override void Draw() {
             ImGui.BeginTable("##Catalogue Table", 2);
             ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
-            ImGui.TableSetupColumn("Custom Animation Mods", ImGuiTableColumnFlags.WidthStretch, 300);
+            ImGui.TableSetupColumn("Catalogued Outfit Mods", ImGuiTableColumnFlags.WidthStretch, 300);
             ImGui.TableHeadersRow();
             ImGui.TableNextRow();
             ImGui.TableSetColumnIndex(0);
@@ -91,7 +91,11 @@ namespace RoleplayingVoice {
                 if (ImGui.Button("Reset Mod Selections", new Vector2(200, 30))) {
                     PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _plugin.ModelMods.Keys, _plugin.ModelDependancyMods.Keys);
                 }
-
+                ImGui.SameLine();
+                if (ImGui.Button("Scan And Catalogue Mods", new Vector2(200, 30))) {
+                    _plugin.StartCatalogingItems();
+                    IsOpen = false;
+                }
                 if (!string.IsNullOrEmpty(_currentCategory)) {
                     var category = categories[_currentCategory];
                     int index = 0;
@@ -157,10 +161,10 @@ namespace RoleplayingVoice {
                     "Be aware that this catalogue system automatically sets your clothing mods active or inactive and their priorities when in use.\r\n" +
 
                     "For the moment, you will need to assign a brand new collection with only body dependancies enabled to use scan your mods.");
-            }
-            if (ImGui.Button("Scan And Catalogue Mods", new Vector2(ImGui.CalcItemWidth(), 50))) {
-                _plugin.StartCatalogingItems();
-                IsOpen = false;
+                if (ImGui.Button("Scan And Catalogue Mods", new Vector2(ImGui.CalcItemWidth(), 50))) {
+                    _plugin.StartCatalogingItems();
+                    IsOpen = false;
+                }
             }
         }
     }

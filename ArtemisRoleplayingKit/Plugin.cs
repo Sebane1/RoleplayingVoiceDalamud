@@ -3334,8 +3334,8 @@ namespace RoleplayingVoice {
                              "video (toggle twitch stream video)\r\n" +
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
-                             "anim [partial emote name] (triggers an animation mod that contains the desired text in its name)\r\n" +
-                             "companionanim [partial emote name] (triggers an animation mod that contains the desired text in its name on the currently summoned minion)\r\n" +
+                             "anim [partial animation mod name] (triggers an animation mod that contains the desired text in its name)\r\n" +
+                             "companionanim [partial animation mod name] (triggers an animation mod that contains the desired text in its name on the currently summoned minion)\r\n" +
                              "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
                              "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
                              "summon [Custom NPC Name] (Summons the specified custom NPC or dismisses them)\r\n" +
@@ -3756,19 +3756,23 @@ namespace RoleplayingVoice {
                                                 if (!foundEmote) {
                                                     if (list.ContainsKey(foundAnimation)) {
                                                         foreach (var value in list[foundAnimation]) {
-                                                            string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                            if (!string.IsNullOrEmpty(name)) {
-                                                                if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
-                                                                    emoteData.Add(new
-                                                                    EmoteModData(
-                                                                    name,
-                                                                    value.RowId,
-                                                                    value.ActionTimeline[0].Value.RowId,
-                                                                    modName));
-                                                                    deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+                                                            try {
+                                                                string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                                if (!string.IsNullOrEmpty(name)) {
+                                                                    if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
+                                                                        emoteData.Add(new
+                                                                        EmoteModData(
+                                                                        name,
+                                                                        value.RowId,
+                                                                        value.ActionTimeline[0].Value.RowId,
+                                                                        modName));
+                                                                        deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+                                                                    }
+                                                                    foundEmote = true;
+                                                                    break;
                                                                 }
-                                                                foundEmote = true;
-                                                                break;
+                                                            } catch {
+
                                                             }
                                                         }
                                                     }
