@@ -81,6 +81,7 @@ using System.Diagnostics.Eventing.Reader;
 using Newtonsoft.Json.Linq;
 using Glamourer.Api.Enums;
 using RoleplayingVoiceDalamud.Catalogue;
+using Dalamud.Game.ClientState.Objects;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -242,6 +243,7 @@ namespace RoleplayingVoice {
         private List<object> _currentClothingChangedItems;
         private Guid _catalogueCollectionName;
         private (bool ObjectValid, bool IndividualSet, (Guid Id, string Name) EffectiveCollection) _originalCollection;
+        private ITargetManager _targetManager;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -307,7 +309,8 @@ namespace RoleplayingVoice {
             ICondition condition,
             IGameGui gameGui,
             IDragDropManager dragDrop,
-            IPluginLog pluginLog) {
+            IPluginLog pluginLog,
+             ITargetManager targetManager) {
             Plugin.PluginLog = pluginLog;
             this._chat = chat;
             #region Constructor
@@ -346,6 +349,7 @@ namespace RoleplayingVoice {
                 _gposeWindow.Plugin = this;
                 _animationCatalogue.Plugin = this;
                 _animationEmoteSelection.Plugin = this;
+                _targetManager = targetManager;
                 if (_window is not null) {
                     this.windowSystem.AddWindow(_window);
                 }
@@ -633,6 +637,19 @@ namespace RoleplayingVoice {
                                 }
                             } catch {
                                 customNPC.NpcGlamourerAppearanceString = "";
+                            }
+                            unsafe {
+                                var minionNPC = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
+                                var minionNPCOwner = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
+                                if (_targetManager.Target != null) {
+                                    // Have the minion look at what the player is looking at.
+                                    minionNPC->SetTargetId(_targetManager.Target.ObjectId);
+                                    minionNPC->TargetId = _targetManager.Target.ObjectId;
+                                } else {
+                                    // Have thw minion look at the player.
+                                    minionNPC->SetTargetId(_clientState.LocalPlayer.ObjectId);
+                                    minionNPC->TargetId = _clientState.LocalPlayer.ObjectId;
+                                }
                             }
                         }
                     }
@@ -3772,7 +3789,6 @@ namespace RoleplayingVoice {
                                                                     break;
                                                                 }
                                                             } catch {
-
                                                             }
                                                         }
                                                     }
