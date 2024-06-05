@@ -256,14 +256,16 @@ namespace SoundFilter {
             } else if (specificPath.Contains("/strm/")) {
                 return true;
             }
-            if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
-                if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
-                    && !Plugin.Config.NpcSpeechGenerationDisabled) {
-                    OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
-                    return true;
-                } else {
-                    OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
-                    return false;
+            if (Plugin.ClientState.ClientLanguage == Dalamud.ClientLanguage.English) {
+                if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
+                    if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
+                        && !Plugin.Config.NpcSpeechGenerationDisabled) {
+                        OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
+                        return true;
+                    } else {
+                        OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
+                        return false;
+                    }
                 }
             }
             OnFilterWasRan?.Invoke(this, new InterceptedSound { SoundPath = splitPath });
