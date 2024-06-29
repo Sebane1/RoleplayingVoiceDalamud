@@ -44,7 +44,7 @@ namespace RoleplayingVoice {
         private bool _lowPerformanceMode;
         private int _spatialAudioAccuracy = 100;
 
-        List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>(); 
+        List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -85,7 +85,16 @@ namespace RoleplayingVoice {
         public bool UsePlayerSync { get => usePlayerSync; set => usePlayerSync = value; }
         public bool IgnoreWhitelist { get => ignoreWhitelist; set => ignoreWhitelist = value; }
         public bool MoveSCDBasedModsToPerformanceSlider { get; set; }
-        public string CacheFolder { get => cacheFolder; set => cacheFolder = value; }
+        public string CacheFolder {
+            get {
+                if (Directory.Exists(cacheFolder)) {
+                    return cacheFolder;
+                } else {
+                    return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
+                }
+            }
+            set => cacheFolder = value;
+        }
         public List<string> Whitelist { get => whitelist; set => whitelist = value; }
         public float LoopingSFXVolume {
             get => _loopingSFXVolume; set {
