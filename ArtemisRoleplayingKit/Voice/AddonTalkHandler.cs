@@ -25,6 +25,7 @@ using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingMediaCore;
 using RoleplayingVoice;
+using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
 using System;
@@ -433,46 +434,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return null;
         }
-        public string AliasDetector(string name) {
-            switch (name) {
-                case "Obnoxious Merchant":
-                    return "Ungust";
-                case "Woman in White":
-                    return "2B";
-                case "Android in Black":
-                    return "2B";
-                case "Self-assured Youth":
-                    return "Alphinaud";
-                case "Cynical Girl":
-                    return "Alisaie";
-                case "Animated Pugilist":
-                    return "Yda";
-                case "Short-tempered Thaumaturge":
-                    return "Papalymo";
-                case "Dwarf Facsimile":
-                    return "Anogg";
-                case "Mysterious Machina":
-                    return "Machine Lifeform";
-                case "Audacious Woman":
-                    return "Llymlaen";
-                case "Sagely Man":
-                    return "Thaliak";
-                case "Spirited Woman's Voice":
-                case "Meerkat with Azeyma's Voice":
-                    return "Azeyma";
-                case "Sagely Man's Voice":
-                case "Hawk with Rhalgr's Voice":
-                    return "Rhalgr";
-                case "Measured Mens Voice":
-                    return "Nald'thal";
-                case "Cheery Voice":
-                    return "Nophica";
-                case "Omphalos Monument":
-                    return "Krile";
-                default:
-                    return name;
-            }
-        }
         private void Framework_Update(IFramework framework) {
             if (!disposed)
                 if (_npcDungeonDialogueQueue.Count > 0) {
@@ -539,7 +500,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _currentText = _state.Text;
                                         _redoLineWindow.IsOpen = false;
                                         if (!_blockAudioGeneration) {
-                                            NPCText(AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, true);
+                                            NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, true);
                                             _startedNewDialogue = true;
                                             _passthroughTimer.Reset();
                                         }
