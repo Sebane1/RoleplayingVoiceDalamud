@@ -1,0 +1,383 @@
+{
+  "CharacterToVoiceList": {
+    "Alphinaud": "Alev",
+    "Self-assured Youth": "Alev",
+    "Alisaie": "Alilev",
+    "Cynical Girl": "Alilev",
+    "Haurchefant": "HFort",
+    "Artoirel": "Afort",
+    "Charibert": "Cbert",
+    "Hilda": "Hda",
+    "Honoroit": "Hroit",
+    "Ilberd": "Ird",
+    "Alpha": "Kop",
+    "King Thordan": "thord",
+    "Y'shtola": "Yrhul",
+    "Cultured Conjurer": "Yrhul",
+    "Thancred": "Twaters",
+    "Charming Thaumaturge": "Twaters",
+    "Tataru": "Taru",
+    "Yda": "Lhext",
+    "Lyse": "Lhext",
+    "Animated Pugilist": "Lhext",
+    "Urianger": "Uauger",
+    "Masked Man": "Uauger",
+    "G'raha": "Gia",
+    "Crystal Exarch": "Gia",
+    "Minfilia": "Mward",
+    "Ryne": "Mward",
+    "Kokkol Dankkol": "Kool",
+    "Papalymo": "Ptotol",
+    "Short-tempered Thaumaturge": "Ptotol",
+    "Krile": "Kmayerbal",
+    "Matoya": "Moya",
+    "Hydaelyn": "Hyn",
+    "Kan-E-Senna": "Kes",
+    "Merlwyb": "Mbloe",
+    "Nanamo Ul Namo": "Nulnamo",
+    "Lilira": "Nulnamo",
+    "Aymeric": "Adeborel",
+    "Lucia": "Lcia",
+    "Taciturn Temple Knight": "Lcia",
+    "Raubahn": "Rahn",
+    "Pipin": "Pin",
+    "Marques": "Cnangarl",
+    "Cid": "Cnangarl",
+    "Biggs": "Bman",
+    "Airship Crewman": "Bman",
+    "Wedge": "Wman",
+    "Vidofnir": "Vnir",
+    "House": "Hfk",
+    "Warrior of Darkness": "ard",
+    "Ardbert": "ard",
+    "Arenvald": "Avald",
+    "Azemi": "Azmi",
+    "Bunchin": "Bchin",
+    "Carvallain": "Cvain",
+    "Cirina": "Cina",
+    "Conrad": "Crad",
+    "Curtis": "Ctis",
+    "Grynewaht": "Gaht",
+    "Gyoto": "Goto",
+    "Hancock": "Hock",
+    "Ikaruga": "Iruga",
+    "Hien": "Hen",
+    "Fordola": "Fola",
+    "2B": "To be",
+    "2P": "To be",
+    "9S": "Nines",
+    "Isse": "Isse",
+    "Jifuya": "Juya",
+    "Lakshmi": "Lhmi",
+    "Lolorito": "Lito",
+    "Magnai": "Mai",
+    "Meffrid": "Mrid",
+    "M'naago": "Mago",
+    "Rasho": "Rho",
+    "Sadu": "Su",
+    "Shar": "Sar",
+    "Soroban": "Sban",
+    "Tansui": "Tui",
+    "Temulun": "Tun",
+    "Vira Battlemaid": "Vaid",
+    "Tsukuyomi": "Tomi",
+    "Katliss": "Kliss",
+    "Theyler": "Ter",
+    "Gaia": "irhm",
+    "Emet-Selch": "Eselch",
+    "Hades": "Eselch",
+    "Almet": "Aet",
+    "Beq Lugg": "Bug",
+    "Bragi": "Bi",
+    "Cassard": "Card",
+    "Chai-Nuzz": "Cuz",
+    "Dulia-Chai": "Dai",
+    "Cymet": "Cet",
+    "Feo Ul": "Ful",
+    "Gynard": "Gard",
+    "Gen Gen": "Geen",
+    "Guthjon": "Gon",
+    "Kai-Shirr": "Kir",
+    "Lyna": "Lna",
+    "Magnus": "Mus",
+    "Seto": "So",
+    "Sul Uin": "Sin",
+    "Oul Sigun": "Sun",
+    "Tesleen": "Ten",
+    "Thaffe": "Tafe",
+    "Theva": "Tva",
+    "Uimet": "Uet",
+    "Wrenden": "Wen",
+    "Ys Iala": "Yala",
+    "Hoary Boulder": "Hlder",
+    "Erenvile": "Eille",
+    "Fourchenault": "Fault",
+    "Barnier": "Bier",
+    "Montichaigne": "Montne",
+    "Kytte": "Kte",
+    "Varshahn": "Vahn",
+    "Nidhana": "Nana",
+    "Ahewann": "Aann",
+    "Vrtra": "Vra",
+    "A-Ruhn-Senna": "Aenna",
+    "Sicard": "Sard",
+    "Maxima": "Mima",
+    "Jullus": "Jlus",
+    "Quintus": "Qus",
+    "Livingway": "Lway",
+    "Mappingway": "Mway",
+    "Growingway": "Gway",
+    "Loporrit": "Lrit",
+    "Matsya": "Mya",
+    "Mehvan": "Mvan",
+    "Elidibus": "Ebus",
+    "Themis": "Ebus",
+    "White-robed Ascian": "Ebus",
+    "Hermes": "Hes",
+    "Meteion": "Mion",
+    "Hythlodaeus": "Hdaeus",
+    "Venat": "Vnat",
+    "Lahabrea": "Lbrea",
+    "Galene": "Gene",
+    "Wilfsunn": "Wun",
+    "Bloewyda": "Byda",
+    "Moenbryda": "Lhext",
+    "Eya": "Eya",
+    "Sir": "techBot",
+    "Omega": "techBot",
+    "M-017": "m7",
+    "Zero": "Zo",
+    "Wuk Lamat": "Wamat",
+    "Fandaniel": "Fdaniel",
+    "Asahi": "Fdaniel",
+    "Midgardsormr": "Msrmr",
+    "Worldly Affairs Official": "Wao",
+    "Ameliance": "Aiance",
+    "Moogle": "Kop",
+    "Kuplo Kopp": "Kop",
+    "Sula": "tf1",
+    "Sevrin": "Sard",
+    "Masked Mage": "Lbrea",
+    "???": "Sys",
+    "Ifrit": "Rava",
+    "Varis zos Galvus": "Vzosgal",
+    "Zenos": "Zyaegal",
+    "Gaius": "Gvanbael",
+    "Shadowhunter": "Gvanbael",
+    "Menacing Mercenary": "Gvanbael",
+    "Nero": "Ntolscae",
+    "Runar": "Rar",
+    "Estinien": "Ewyrm",
+    "Ysayle": "Ydango",
+    "Iceheart": "Ydango",
+    "Count Edmont de Fortemps": "Edefort",
+    "Emmanellain": "Emmdefort",
+    "Yugiri": "Ymist",
+    "Nabriales": "Lbrea",
+    "Gosetsu": "Gever",
+    "Yotsuyu": "Ygoeb",
+    "Radovan": "Rvan",
+    "Hraesvelgr": "Hralgr",
+    "Byregot": "Bgot",
+    "Rhalgr": "Rhgr",
+    "Azeyma": "Azma",
+    "Nald'thal": "Nathal",
+    "Menphina": "Mhina",
+    "Halone": "Hone",
+    "Nymeia": "Nmea",
+    "Althyk": "Ahyk",
+    "Nophica": "Nhica",
+    "Thaliak": "Thaak",
+    "Llymlaen": "Llaen",
+    "Oschon": "Oson",
+    "Eulogia": "Euia"
+  },
+  "NameAndAliasesList": {
+    "Ungust": [
+      "Obnoxious Merchant"
+    ],
+    "2B": [
+      "Woman in White",
+      "Android in Black"
+    ],
+    "Alpinaud": [
+      "Self-assured Youth"
+    ],
+    "Alisaie": [
+      "Cynical Girl"
+    ],
+    "Yda": [
+      "Animated Pugilist"
+    ],
+    "Papalymo": [
+      "Short-tempered Thaumaturge"
+    ],
+    "Anogg": [
+      "Dwarf Facsimile"
+    ],
+    "Machine Lifeform": [
+      "Mysterious Machina"
+    ],
+    "Llymlaen": [
+      "Audacious Woman"
+    ],
+    "Thaliak": [
+      "Sagely Man"
+    ],
+    "Azeyma": [
+      "Spirited Woman's Voice",
+      "Meerkat with Azeyma's Voice"
+    ],
+    "Rhalgr": [
+      "Sagely Man's Voice",
+      "Hawk with Rhalgr's Voice"
+    ],
+    "Nald'thal": [
+      "Measured Mens Voice"
+    ],
+    "Nophica": [
+      "Cheery"
+    ],
+    "Krile": [
+      "Omphalos Monument"
+    ]
+  },
+  "ExtrasVoiceList": [
+    {
+      "Key": "Tattooed Man",
+      "Value": "Beggarly"
+    },
+    {
+      "Key": "Storm Officer",
+      "Value": "Beggarly"
+    },
+    {
+      "Key": "Flame Sergeant",
+      "Value": "Beggarly"
+    },
+    {
+      "Key": "Traitorous Flame Soldier",
+      "Value": "Beggarly"
+    },
+    {
+      "Key": "Riol",
+      "Value": "Mciv"
+    },
+    {
+      "Key": "Titan",
+      "Value": "Rava"
+    },
+    {
+      "Key": "Ramuh",
+      "Value": "Rava"
+    },
+    {
+      "Key": "Garuda",
+      "Value": "Hyn"
+    },
+    {
+      "Key": "Baderon",
+      "Value": "Mciv"
+    },
+    {
+      "Key": "Frixio",
+      "Value": "Moya"
+    },
+    {
+      "Key": "Raya-O-Senna",
+      "Value": "Kes"
+    },
+    {
+      "Key": "Livia sas Junius",
+      "Value": "Ygoeb"
+    },
+    {
+      "Key": "Teledji Adeledji",
+      "Value": "Lito"
+    },
+    {
+      "Key": "Nabriales",
+      "Value": "Lbrea"
+    },
+    {
+      "Key": "Mogloo",
+      "Value": "Beggarly"
+    }
+  ],
+  "EchoValuesList": [
+    {
+      "Key": "Gaius van Baelsar",
+      "Value": true
+    },
+    {
+      "Key": "Hades",
+      "Value": true
+    },
+    {
+      "Key": "Rhitahtyn sas Arvina",
+      "Value": true
+    },
+    {
+      "Key": "Livia sas Junius",
+      "Value": true
+    },
+    {
+      "Key": "King Thordan",
+      "Value": true
+    }
+  ],
+  "PitchValuesList": [
+    {
+      "Key": "Gaius van Baelsar",
+      "Value": 0.9
+    },
+    {
+      "Key": "Rhitahtyn sas Arvina",
+      "Value": 0.9
+    },
+    {
+      "Key": "Livia sas Junius",
+      "Value": 0.9
+    },
+    {
+      "Key": "Frixio",
+      "Value": 1.1
+    },
+    {
+      "Key": "Raya-O-Senna",
+      "Value": 1.05
+    },
+    {
+      "Key": "Teledji Adeledji",
+      "Value": 1.1
+    },
+    {
+      "Key": "Titan",
+      "Value": 0.8
+    },
+    {
+      "Key": "Ramuh",
+      "Value": 0.9
+    },
+    {
+      "Key": "Hraesvelgr",
+      "Value": 0.8
+    },
+    {
+      "Key": "Hades",
+      "Value": 0.9
+    },
+    {
+      "Key": "Moenbryda",
+      "Value": 0.9
+    },
+    {
+      "Key": "Nabriales",
+      "Value": 1.05
+    },
+    {
+      "Key": "King Thordan",
+      "Value": 0.9
+    }
+  ]
+}
