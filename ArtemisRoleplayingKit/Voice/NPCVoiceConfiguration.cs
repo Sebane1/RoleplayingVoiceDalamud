@@ -144,7 +144,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 { "Wrenden", "Wen" },
                 { "Ys Iala", "Yala" },
                 { "Hoary Boulder", "Hlder" },
-                { "Erenvile", "Eille" },
+                { "Erenville", "Eille" },
                 { "Fourchenault", "Fault" },
                 { "Barnier", "Bier" },
                 { "Montichaigne", "Montne" },
