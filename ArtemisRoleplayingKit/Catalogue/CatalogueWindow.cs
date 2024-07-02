@@ -1,6 +1,7 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using ImGuiNET;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
@@ -11,16 +12,17 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {
     internal class CatalogueWindow : Window {
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
+        private ITextureProvider _textureProvider;
         private string _cataloguePath;
         private string _currentCategory;
         Dictionary<string, CatalogueCategory> categories = new Dictionary<string, CatalogueCategory>();
         private Plugin _plugin;
         private bool incognito;
-        private Dictionary<string, Character> _characterList;
+        private Dictionary<string, ICharacter> _characterList;
         private int _currentSelection;
 
-        public CatalogueWindow(DalamudPluginInterface pluginInterface) : base("Catalogue Window (Alpha)") {
+        public CatalogueWindow(IDalamudPluginInterface pluginInterface, ITextureProvider textureProvider) : base("Catalogue Window (Alpha)") {
             //IsOpen = true;
             //windowSize = Size = new Vector2(1000, 1000);
             //initialSize = Size;
@@ -28,6 +30,7 @@ namespace RoleplayingVoice {
             //Position = new Vector2(1920/2 + 250, 0);
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
             _pluginInterface = pluginInterface;
+            _textureProvider = textureProvider;
         }
         public void ScanCatalogue() {
             categories.Clear();
@@ -44,7 +47,7 @@ namespace RoleplayingVoice {
         }
         public void SendToCategory(CatalogueItem item) {
             if (!categories.ContainsKey(item.EquipObject.Type.ToString())) {
-                categories[item.EquipObject.Type.ToString()] = new CatalogueCategory(_pluginInterface);
+                categories[item.EquipObject.Type.ToString()] = new CatalogueCategory(_pluginInterface, _textureProvider);
                 categories[item.EquipObject.Type.ToString()].Add(item);
             } else {
                 categories[item.EquipObject.Type.ToString()].Add(item);
@@ -61,7 +64,7 @@ namespace RoleplayingVoice {
 
         public override void Draw() {
             ImGui.BeginTable("##Catalogue Table", 2);
-            ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("ICharacter List", ImGuiTableColumnFlags.WidthFixed, 200);
             ImGui.TableSetupColumn("Catalogued Outfit Mods", ImGuiTableColumnFlags.WidthStretch, 300);
             ImGui.TableHeadersRow();
             ImGui.TableNextRow();
@@ -103,7 +106,7 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < 3; y++) {
                         for (int x = 0; x < 3; x++) {
                             if (index < category.Images.Count) {
-                                if (ImGui.ImageButton(category.Images[index].ImGuiHandle, new Vector2(150, 150))) {
+                                if (ImGui.ImageButton(category.Images[index].GetWrapOrDefault().ImGuiHandle, new Vector2(150, 150))) {
                                     selectionIndex = category.PageNumber * 9 + index;
                                     PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[selectionIndex].EquipObject, Guid.Empty,
                                         _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
@@ -125,7 +128,7 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < Math.Ceiling(category.VariantImages.Count / 7f); y++) {
                         for (int x = 0; x < 7; x++) {
                             if (index < category.VariantImages.Count) {
-                                if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].ImGuiHandle, new Vector2(100, 100))) {
+                                if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].GetWrapOrDefault().ImGuiHandle, new Vector2(100, 100))) {
                                     PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject,
                                         Guid.Empty, _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
                                 }

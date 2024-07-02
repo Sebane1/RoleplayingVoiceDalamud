@@ -1,4 +1,5 @@
 ﻿using Dalamud.Interface.Internal;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
@@ -17,11 +18,11 @@ namespace RoleplayingVoice {
         private Vector2? initialSize;
         private IDalamudTextureWrap textureWrap;
         private MediaManager _mediaManager;
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
         public event EventHandler RedoLineClicked;
 
 
-        public RedoLineWIndow(DalamudPluginInterface pluginInterface) :
+        public RedoLineWIndow(IDalamudPluginInterface pluginInterface) :
             base("Redo Line", ImGuiWindowFlags.NoScrollbar
                 | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoTitleBar, false) {
             //IsOpen = true;

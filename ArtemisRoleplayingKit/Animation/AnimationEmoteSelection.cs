@@ -18,9 +18,9 @@ namespace RoleplayingVoice {
         int maxItemsPerCategoryPage = 8;
         int _categoryPage = 0;
         private List<EmoteModData> _emoteData;
-        private Character _character;
+        private ICharacter _character;
 
-        public AnimationEmoteSelection(DalamudPluginInterface pluginInterface) : base("Animation Emote Selections Window") {
+        public AnimationEmoteSelection(IDalamudPluginInterface pluginInterface) : base("Animation Emote Selections Window") {
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
         }
@@ -28,7 +28,7 @@ namespace RoleplayingVoice {
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<EmoteModData> EmoteData { get => _emoteData; }
 
-        public void PopulateList(List<EmoteModData> list, Character character) {
+        public void PopulateList(List<EmoteModData> list, ICharacter character) {
             _emoteData = list;
             _character = character;
         }

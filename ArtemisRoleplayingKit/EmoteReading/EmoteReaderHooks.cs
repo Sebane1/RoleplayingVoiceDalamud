@@ -5,6 +5,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Logging;
 using Dalamud.Plugin.Services;
+using RoleplayingVoice;
 using System;
 using System.Linq;
 
@@ -13,7 +14,7 @@ namespace ArtemisRoleplayingKit {
     /// Implementation Based On Findings From PatMe
     /// </summary>
     public class EmoteReaderHooks : IDisposable {
-        public Action<GameObject, ushort> OnEmote;
+        public Action<IGameObject, ushort> OnEmote;
 
         public delegate void OnEmoteFuncDelegate(ulong unk, ulong instigatorAddr, ushort emoteId, ulong targetId, ulong unk2);
         private readonly Hook<OnEmoteFuncDelegate> hookEmote;
@@ -32,7 +33,7 @@ namespace ArtemisRoleplayingKit {
 
                 IsValid = true;
             } catch (Exception ex) {
-                PluginLog.Error(ex, "oh noes!");
+                Plugin.PluginLog.Error(ex, "oh noes!");
             }
             _clientState = clientState;
             _objectTable = objectTable;
@@ -48,7 +49,7 @@ namespace ArtemisRoleplayingKit {
             // PluginLog.Log($"Emote >> unk:{unk:X}, instigatorAddr:{instigatorAddr:X}, emoteId:{emoteId}, targetId:{targetId:X}, unk2:{unk2:X}");
             try {
                 if (_clientState.LocalPlayer != null) {
-                    var instigatorOb = _objectTable.FirstOrDefault(x => (ulong)x.Address == instigatorAddr);
+                    var instigatorOb = _objectTable.FirstOrDefault(x => (ulong)x == instigatorAddr);
                     if (instigatorOb != null) {
                         OnEmote?.Invoke(instigatorOb, emoteId);
                     }

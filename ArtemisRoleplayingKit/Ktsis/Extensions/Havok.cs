@@ -4,6 +4,11 @@ using FFXIVClientStructs.Havok;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 
 using Ktisis.Structs.Bones;
+using FFXIVClientStructs.Havok.Common.Base.Math.Vector;
+using FFXIVClientStructs.Havok.Common.Base.Math.Quaternion;
+using FFXIVClientStructs.Havok.Animation.Rig;
+using FFXIVClientStructs.Havok.Common.Base.Container.Array;
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 
 namespace Ktisis.Structs {
 	public static class Havok {

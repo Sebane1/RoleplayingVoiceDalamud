@@ -18,16 +18,16 @@ namespace RoleplayingVoiceDalamud.NPC {
     public class NPCConversationManager {
         private GPTWrapper _gptWrapper;
         private Plugin _plugin;
-        private Character _aiCharacter;
+        private ICharacter _aiCharacter;
         private string emotion;
 
-        public NPCConversationManager(string name, string baseDirectory, Plugin plugin, Character receivingCharacter) {
+        public NPCConversationManager(string name, string baseDirectory, Plugin plugin, ICharacter receivingCharacter) {
             string aiName = name.Split(" ")[0];
             _gptWrapper = new GPTWrapper(aiName, Path.Combine(baseDirectory, name + "-memories.json"));
             _plugin = plugin;
             _aiCharacter = receivingCharacter;
         }
-        public async Task<string> SendMessage(Character sendingCharacter, Character receivingCharacter, string aiName,
+        public async Task<string> SendMessage(ICharacter sendingCharacter, ICharacter receivingCharacter, string aiName,
             string aiGreeting, string message, string setting, string aiDescription) {
             string senderName = sendingCharacter.Name.TextValue.Split(" ")[0];
             string aiMessage = await _gptWrapper.SendMessage(senderName, message, $@" smiles ""{aiGreeting}""",
@@ -39,7 +39,7 @@ namespace RoleplayingVoiceDalamud.NPC {
             });
             return correctedMessage;
         }
-        public string GetPlayerDescription(Character player, bool skipSummary = false, string alias = "") {
+        public string GetPlayerDescription(ICharacter player, bool skipSummary = false, string alias = "") {
             var customization = PenumbraAndGlamourerHelperFunctions.GetCustomization(player);
             string gender = customization.Customize.Gender.Value == 1 ? "female" : "male";
             string pronouns = customization.Customize.Gender.Value == 1 ? "she/her" : "he/him";

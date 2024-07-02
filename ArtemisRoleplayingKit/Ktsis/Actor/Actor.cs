@@ -73,48 +73,48 @@ namespace Ktisis.Structs.Actor {
 
 		// Apply new customize
 
-		public unsafe void ApplyCustomize(Customize custom) {
-			if (this.ModelId != 0) return;
+		//public unsafe void ApplyCustomize(Customize custom) {
+		//	if (this.ModelId != 0) return;
 			
-			var cur = GetCustomize();
+		//	var cur = GetCustomize();
 
-			// Fix UpdateCustomize on Carbuncles & Minions
-			if (custom.ModelType == 0)
-				custom.ModelType = 1;
+		//	// Fix UpdateCustomize on Carbuncles & Minions
+		//	if (custom.ModelType == 0)
+		//		custom.ModelType = 1;
 			
-			if (custom.Race == Race.Viera) {
-				// avoid crash when loading invalid ears
-				var ears = custom.RaceFeatureType;
-				custom.RaceFeatureType = ears switch {
-					> 4 => 1,
-					0 => 4,
-					_ => ears
-				};
-			}
+		//	if (custom.Race == Race.Viera) {
+		//		// avoid crash when loading invalid ears
+		//		var ears = custom.RaceFeatureType;
+		//		custom.RaceFeatureType = ears switch {
+		//			> 4 => 1,
+		//			0 => 4,
+		//			_ => ears
+		//		};
+		//	}
 
-			var faceHack = cur.FaceType != custom.FaceType;
-			DrawData.Customize = custom;
-			var redraw = !UpdateCustomize()
-				|| faceHack
-				|| cur.Tribe != custom.Tribe
-				|| cur.Gender != custom.Gender;
+		//	var faceHack = cur.FaceType != custom.FaceType;
+		//	DrawData.Customize = custom;
+		//	var redraw = !UpdateCustomize()
+		//		|| faceHack
+		//		|| cur.Tribe != custom.Tribe
+		//		|| cur.Gender != custom.Gender;
 
-			if (redraw) {
-				Redraw();
-			} else if (cur.BustSize != custom.BustSize && Model != null) {
-				Model->ScaleBust();
-			}
-		}
+		//	if (redraw) {
+		//		Redraw();
+		//	} else if (cur.BustSize != custom.BustSize && Model != null) {
+		//		Model->ScaleBust();
+		//	}
+		//}
 
 		// Actor redraw
 
-		public void Redraw() {
-			var faceHack = GameObject.ObjectKind == (byte)ObjectKind.Pc;
-			GameObject.DisableDraw();
-			if (faceHack) GameObject.ObjectKind = (byte)ObjectKind.BattleNpc;
-			GameObject.EnableDraw();
-			if (faceHack) GameObject.ObjectKind = (byte)ObjectKind.Pc;
-		}
+		//public void Redraw() {
+		//	var faceHack = GameObject.ObjectKind == (byte)ObjectKind.Pc;
+		//	GameObject.DisableDraw();
+		//	if (faceHack) GameObject.ObjectKind = (byte)ObjectKind.BattleNpc;
+		//	GameObject.EnableDraw();
+		//	if (faceHack) GameObject.ObjectKind = (byte)ObjectKind.Pc;
+		//}
 		
 		// weapons
 

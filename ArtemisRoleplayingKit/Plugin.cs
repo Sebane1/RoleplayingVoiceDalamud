@@ -27,7 +27,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FFXIVClientStructs.FFXIV.Client.Game.Housing;
 using Newtonsoft.Json;
 using XivCommon.Functions;
 using Dalamud.Plugin.Services;
@@ -67,12 +66,12 @@ using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Map = FFXIVClientStructs.FFXIV.Client.Game.UI.Map;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using GameObject = Dalamud.Game.ClientState.Objects.Types.GameObject;
+using GameObject = Dalamud.Game.ClientState.Objects.Types.IGameObject;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 using RoleplayingVoiceDalamud.IPC;
 using Race = RoleplayingVoiceDalamud.Glamourer.Race;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using Character = Dalamud.Game.ClientState.Objects.Types.Character;
+using ICharacter = Dalamud.Game.ClientState.Objects.Types.ICharacter;
 using RoleplayingVoiceDalamud.NPC;
 using static Lumina.Data.Parsing.Layer.LayerCommon;
 using System.Buffers.Text;
@@ -82,12 +81,13 @@ using Newtonsoft.Json.Linq;
 using Glamourer.Api.Enums;
 using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
+using IGameObject = RoleplayingMediaCore.IGameObject;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
         #region Fields
         private int performanceLimiter;
-        private readonly DalamudPluginInterface pluginInterface;
+        private readonly IDalamudPluginInterface pluginInterface;
         private readonly IChatGui _chat;
         private readonly IClientState _clientState;
         private IObjectTable _objectTable;
@@ -295,7 +295,7 @@ namespace RoleplayingVoice {
         #endregion
         #region Plugin Initiialization
         public unsafe Plugin(
-            DalamudPluginInterface pi,
+            IDalamudPluginInterface pi,
             ICommandManager commands,
             IChatGui chat,
             IClientState clientState,
@@ -436,7 +436,7 @@ namespace RoleplayingVoice {
                 _window.OnMoveFailed += Window_OnMoveFailed;
                 config.OnConfigurationChanged += Config_OnConfigurationChanged;
                 _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTable);
-                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();
                 CheckDependancies();
@@ -622,7 +622,7 @@ namespace RoleplayingVoice {
 
         private void CheckForCustomNPCMinion() {
             foreach (var gameObject in GetNearestObjects()) {
-                var item = gameObject as Character;
+                var item = gameObject as ICharacter;
                 if (item != null) {
                     foreach (var customNPC in config.CustomNpcCharacters) {
                         if (item.Name.TextValue.Contains(customNPC.MinionToReplace)) {
@@ -639,16 +639,16 @@ namespace RoleplayingVoice {
                                 customNPC.NpcGlamourerAppearanceString = "";
                             }
                             unsafe {
-                                var minionNPC = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
+                                var minionNPC = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address;
                                 var minionNPCOwner = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
                                 if (_targetManager.Target != null) {
                                     // Have the minion look at what the player is looking at.
-                                    minionNPC->SetTargetId(_targetManager.Target.ObjectId);
-                                    minionNPC->TargetId = _targetManager.Target.ObjectId;
+                                    minionNPC->SetTargetId(_targetManager.Target.GameObjectId);
+                                    minionNPC->TargetId = _targetManager.Target.GameObjectId;
                                 } else {
                                     // Have thw minion look at the player.
-                                    minionNPC->SetTargetId(_clientState.LocalPlayer.ObjectId);
-                                    minionNPC->TargetId = _clientState.LocalPlayer.ObjectId;
+                                    minionNPC->SetTargetId(_clientState.LocalPlayer.GameObjectId);
+                                    minionNPC->TargetId = _clientState.LocalPlayer.GameObjectId;
                                 }
                             }
                         }
@@ -663,9 +663,9 @@ namespace RoleplayingVoice {
                     if (_emoteSyncCheck.ElapsedMilliseconds > 5000) {
                         _emoteSyncCheck.Restart();
                         try {
-                            foreach (var item in _objectTable) {
-                                if (item.ObjectKind == ObjectKind.Player && item.Name.TextValue != _clientState.LocalPlayer.Name.TextValue) {
-                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(item.Name.TextValue)).Split(" ");
+                            foreach (IGameObject item in _objectTable) {
+                                if ((item as GameObject).ObjectKind == ObjectKind.Player && item.Name != _clientState.LocalPlayer.Name.TextValue) {
+                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(item.Name)).Split(" ");
                                     bool isShoutYell = false;
                                     if (senderStrings.Length > 2) {
                                         string playerSender = senderStrings[0] + " " + senderStrings[2];
@@ -685,14 +685,14 @@ namespace RoleplayingVoice {
                                                                 if (animation == ushort.MaxValue) {
                                                                     animation = 0;
                                                                 }
-                                                                _addonTalkHandler.TriggerEmote(item.Address, animation);
+                                                                _addonTalkHandler.TriggerEmote((item as ICharacter).Address, animation);
                                                                 lastPosition = item.Position;
                                                                 _ = Task.Run(() => {
                                                                     int startingTerritoryId = _clientState.TerritoryType;
                                                                     while (true) {
                                                                         Thread.Sleep(500);
                                                                         if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
-                                                                            _addonTalkHandler.StopEmote(item.Address);
+                                                                            _addonTalkHandler.StopEmote((item as ICharacter).Address);
                                                                             break;
                                                                         }
                                                                     }
@@ -701,7 +701,7 @@ namespace RoleplayingVoice {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
 
                                                                     if (emoteId > 0) {
-                                                                        OnEmote(item as Character, emoteId);
+                                                                        OnEmote(item as ICharacter, emoteId);
                                                                     }
                                                                 });
                                                                 Thread.Sleep(3000);
@@ -733,7 +733,7 @@ namespace RoleplayingVoice {
                                                                     animation = 0;
                                                                 }
                                                                 unsafe {
-                                                                    var companion = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)item.Address;
+                                                                    var companion = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address;
                                                                     if (companion->CompanionObject != null) {
                                                                         _addonTalkHandler.TriggerEmote((nint)companion->CompanionObject, animation);
                                                                         var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)companion->CompanionObject);
@@ -753,7 +753,7 @@ namespace RoleplayingVoice {
                                                                 Task.Run(async () => {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
                                                                     if (emoteId > 0) {
-                                                                        OnEmote(item as Character, emoteId);
+                                                                        OnEmote(item as ICharacter, emoteId);
                                                                     }
                                                                 });
                                                                 Thread.Sleep(3000);
@@ -813,7 +813,7 @@ namespace RoleplayingVoice {
             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
                 Task.Run(delegate {
                     if (_clientState.LocalPlayer != null) {
-                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                     }
                 });
             },
@@ -822,9 +822,9 @@ namespace RoleplayingVoice {
                     if (_clientState.LocalPlayer != null) {
                         if (e.MaxSampleValues.Length > 0) {
                             if (e.MaxSampleValues[0] > 0.2) {
-                                _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer as ICharacter, 4);
                             } else {
-                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                             }
                         }
                     }
@@ -926,7 +926,7 @@ namespace RoleplayingVoice {
                                     bool isVoicedEmote = false;
                                     var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
                                     var mountId = characterReference->Mount.MountId;
-                                    var mount = DataManager.GetExcelSheet<Mount>(Dalamud.ClientLanguage.English).GetRow(mountId);
+                                    var mount = DataManager.GetExcelSheet<Mount>(ClientLanguage.English).GetRow(mountId);
                                     string value = _mainCharacterVoicePack.GetMisc(mount.Singular.RawString);
                                     if (!string.IsNullOrEmpty(value)) {
                                         //if (config.UsePlayerSync) {
@@ -1108,8 +1108,7 @@ namespace RoleplayingVoice {
                         ", RFinger: " + customization.Equipment.RFinger.ItemId +
                         ", LFinger: " + customization.Equipment.LFinger.ItemId);
         }
-        private void Chat_ChatMessage(XivChatType type, uint senderId,
-        ref SeString sender, ref SeString message, ref bool isHandled) {
+        private void Chat_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
             if (!disposed) {
                 CheckDependancies();
                 string playerName = "";
@@ -1156,7 +1155,7 @@ namespace RoleplayingVoice {
                         case XivChatType.CrossParty:
                         case XivChatType.TellIncoming:
                         case XivChatType.TellOutgoing:
-                            ChatText(playerName, message, type, senderId);
+                            ChatText(playerName, message, type);
                             break;
                         case XivChatType.NPCDialogue:
                         case XivChatType.NPCDialogueAnnouncements:
@@ -1183,7 +1182,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void ChatText(string sender, SeString message, XivChatType type, uint senderId) {
+        private void ChatText(string sender, SeString message, XivChatType type) {
             try {
                 if (_clientState.LocalPlayer != null) {
                     if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
@@ -1200,7 +1199,7 @@ namespace RoleplayingVoice {
                                     try {
                                         if (_playerCount is 1) {
                                             foreach (var gameObject in GetNearestObjects()) {
-                                                Character character = gameObject as Character;
+                                                ICharacter character = gameObject as ICharacter;
                                                 if (character != null) {
                                                     if (character.ObjectKind == ObjectKind.Companion) {
                                                         if (!_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
@@ -1247,7 +1246,7 @@ namespace RoleplayingVoice {
                             (senderStrings[0] + " " + senderStrings[1]) :
                             (senderStrings[0] + " " + senderStrings[2]);
                         string playerMessage = message.TextValue;
-                        Character player = (Character)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                        ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                         if (config.TwitchStreamTriggersIfShouter && !Conditions.IsBoundByDuty) {
                             TwitchChatCheck(message, type, player, playerSender);
                         }
@@ -1259,14 +1258,14 @@ namespace RoleplayingVoice {
                                 config.PlayerCharacterVolume,
                                 _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
-                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                                 }, delegate (object sender, StreamVolumeEventArgs e) {
                                     if (e.MaxSampleValues.Length > 0) {
                                         if (e.MaxSampleValues[0] > 0.2) {
-                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 5);
+                                            _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer as ICharacter, 5);
                                             lipWasSynced = true;
                                         } else {
-                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                                         }
                                     }
                                 });
@@ -1292,7 +1291,7 @@ namespace RoleplayingVoice {
                             } else {
                                 audioFocus = true;
                             }
-                            Character player = (Character)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
+                            ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
                             if (config.UsePlayerSync) {
                                 if (GetCombinedWhitelist().Contains(playerSender)) {
                                     Task.Run(async () => {
@@ -1339,7 +1338,7 @@ namespace RoleplayingVoice {
             return value;
         }
 
-        public void TwitchChatCheck(SeString message, XivChatType type, Character player, string name) {
+        public void TwitchChatCheck(SeString message, XivChatType type, ICharacter player, string name) {
             if (type == XivChatType.Yell || type == XivChatType.Shout || type == XivChatType.TellIncoming) {
                 if (config.TuneIntoTwitchStreams && IsResidential()) {
                     if (!_streamSetCooldown.IsRunning || _streamSetCooldown.ElapsedMilliseconds > 10000) {
@@ -1347,7 +1346,7 @@ namespace RoleplayingVoice {
                         foreach (string value in strings) {
                             if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                 _lastStreamObject = player != null ?
-                                    player.TargetObject != null ?
+                                    player != null ?
                                     new MediaGameObject(player.TargetObject) :
                                     new MediaGameObject(player) :
                                     new MediaGameObject(name, _clientState.LocalPlayer.Position);
@@ -1378,7 +1377,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private async void CheckForChatSoundEffectOtherPlayer(string sender, Character player, SeString message) {
+        private async void CheckForChatSoundEffectOtherPlayer(string sender, ICharacter player, SeString message) {
             if (message.TextValue.Contains("<") && message.TextValue.Contains(">")) {
                 string[] tokenArray = message.TextValue.Replace(">", "<").Split('<');
                 string soundTrigger = tokenArray[1];
@@ -1455,14 +1454,14 @@ namespace RoleplayingVoice {
                         string value = _mainCharacterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
                             _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
-                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                             },
                             delegate (object sender, StreamVolumeEventArgs e) {
                                 if (e.MaxSampleValues.Length > 0) {
                                     if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer as ICharacter, 4);
                                     } else {
-                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                                     }
                                 }
                             });
@@ -1504,10 +1503,10 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void OnEmote(Character instigator, ushort emoteId) {
+        public void OnEmote(ICharacter instigator, ushort emoteId) {
             if (!disposed) {
                 _lastPlayerToEmote = new MediaGameObject(instigator);
-                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue || instigator.OwnerId == _clientState.LocalPlayer.ObjectId) {
+                if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue || instigator.OwnerId == _clientState.LocalPlayer.GameObjectId) {
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }
@@ -1667,7 +1666,7 @@ namespace RoleplayingVoice {
                             performanceTimer.Restart();
                             if (!message.TextValue.Contains("cancel")) {
                                 if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
-                                    LocalPlayerCombat(playerName, _clientState.ClientLanguage == Dalamud.ClientLanguage.Japanese ?
+                                    LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
                                         playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
                                 } else {
                                     PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
@@ -1683,30 +1682,30 @@ namespace RoleplayingVoice {
                                     }
                                     Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
                                     _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default,
-                                        !Conditions.IsBoundByDuty ?
-                                        delegate {
-                                            Task.Run(delegate {
-                                                if (_clientState.LocalPlayer != null) {
-                                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        Conditions.IsBoundByDuty ?
+                                        null
+                                    : delegate {
+                                        Task.Run(delegate {
+                                            if (_clientState.LocalPlayer != null) {
+                                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                            }
+                                        });
+                                    },
+                                  Conditions.IsBoundByDuty ?
+                                  null
+                                    : delegate (object sender, StreamVolumeEventArgs e) {
+                                        Task.Run(delegate {
+                                            if (_clientState.LocalPlayer != null) {
+                                                if (e.MaxSampleValues.Length > 0) {
+                                                    if (e.MaxSampleValues[0] > 0.2) {
+                                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
+                                                    } else {
+                                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                                    }
                                                 }
-                                            });
-                                        }
-                                    : null,
-                                  !Conditions.IsBoundByDuty ?
-                                  delegate (object sender, StreamVolumeEventArgs e) {
-                                      Task.Run(delegate {
-                                          if (_clientState.LocalPlayer != null) {
-                                              if (e.MaxSampleValues.Length > 0) {
-                                                  if (e.MaxSampleValues[0] > 0.2) {
-                                                      _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 4);
-                                                  } else {
-                                                      _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                                  }
-                                              }
-                                          }
-                                      });
-                                  }
-                                    : null);
+                                            }
+                                        });
+                                    });
                                     if (config.DebugMode) {
                                         Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
                                        " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
@@ -1776,7 +1775,7 @@ namespace RoleplayingVoice {
                                         } else {
                                             PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
                                         }
-                                        PlayerCharacter player = (PlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                                        IPlayerCharacter player = (IPlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                         Task.Run(async () => {
                                             GameObject character = null;
                                             if (_otherPlayerCombatTrigger > 6 || type == (XivChatType)4139) {
@@ -1788,18 +1787,18 @@ namespace RoleplayingVoice {
                                                         break;
                                                     }
                                                 }
-                                                _mediaManager.PlayAudio(new MediaGameObject((PlayerCharacter)character,
+                                                _mediaManager.PlayAudio(new MediaGameObject((IPlayerCharacter)character,
                                                 playerSender, character.Position), value, SoundType.OtherPlayerCombat, 0, default, delegate {
                                                     Task.Run(delegate {
-                                                        _addonTalkHandler.StopLipSync(player);
+                                                        _addonTalkHandler.StopLipSync(player as ICharacter);
                                                     });
                                                 },
                                         delegate (object sender, StreamVolumeEventArgs e) {
                                             if (e.MaxSampleValues.Length > 0) {
                                                 if (e.MaxSampleValues[0] > 0.2) {
-                                                    _addonTalkHandler.TriggerLipSync(player, 4);
+                                                    _addonTalkHandler.TriggerLipSync(player as ICharacter, 4);
                                                 } else {
-                                                    _addonTalkHandler.StopLipSync(player);
+                                                    _addonTalkHandler.StopLipSync(player as ICharacter);
                                                 }
                                             }
                                         });
@@ -1951,109 +1950,109 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private bool LanguageSpecificHurt(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificHurt(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("damage");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("dégâts");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("schaden");
             }
             return false;
         }
-        private bool LanguageSpecificRevive(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificRevive(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("revive");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("réanimes") || message.TextValue.ToLower().Contains("réanimée");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("belebst") || message.TextValue.ToLower().Contains("wiederbelebt");
             }
             return false;
         }
-        private bool LanguageSpecificCasting(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificCasting(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("casting");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("lancer");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("ihren");
             }
             return false;
         }
-        private bool LanguageSpecificMiss(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificMiss(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("misses");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("manque");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("ihrem");
             }
             return false;
         }
-        private bool LanguageSpecificDefeat(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificDefeat(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("defeated");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("vaincue");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("besiegt");
             }
             return false;
         }
-        private bool LanguageSpecificHit(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificHit(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("use") || message.TextValue.ToLower().Contains("uses");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("utiliser") || message.TextValue.ToLower().Contains("utilise");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("verwendest") || message.TextValue.ToLower().Contains("benutz");
-                case Dalamud.ClientLanguage.Japanese:
+                case ClientLanguage.Japanese:
                     return message.TextValue.ToLower().Contains("の攻撃");
             }
             return false;
         }
-        private bool LanguageSpecificCast(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificCast(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("hit") || message.TextValue.ToLower().Contains("hits");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("lancé")
                         || message.TextValue.ToLower().Contains("jette")
                         || message.TextValue.ToLower().Contains("jeté");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("sprichst") || message.TextValue.ToLower().Contains("spricht");
-                case Dalamud.ClientLanguage.Japanese:
+                case ClientLanguage.Japanese:
                     return message.TextValue.Contains("を唱えた");
             }
             return false;
         }
-        private bool LanguageSpecificMount(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificMount(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("mount") || message.TextValue.ToLower().Contains("mounts");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("montes") || message.TextValue.ToLower().Contains("monte");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("besteigst") || message.TextValue.ToLower().Contains("besteigt");
             }
             return false;
         }
-        private bool LanguageSpecificReadying(Dalamud.ClientLanguage language, SeString message) {
+        private bool LanguageSpecificReadying(ClientLanguage language, SeString message) {
             switch (language) {
-                case Dalamud.ClientLanguage.English:
+                case ClientLanguage.English:
                     return message.TextValue.ToLower().Contains("ready") || message.TextValue.ToLower().Contains("readies");
-                case Dalamud.ClientLanguage.French:
+                case ClientLanguage.French:
                     return message.TextValue.ToLower().Contains("prépares") || message.TextValue.ToLower().Contains("prépare");
-                case Dalamud.ClientLanguage.German:
+                case ClientLanguage.German:
                     return message.TextValue.ToLower().Contains("bereitest") || message.TextValue.ToLower().Contains("bereitet");
-                case Dalamud.ClientLanguage.Japanese:
+                case ClientLanguage.Japanese:
                     return message.TextValue.Split(' ').Length == 5;
             }
             return false;
@@ -2165,7 +2164,7 @@ namespace RoleplayingVoice {
                             _nativeAudioStream.CurrentTime = _scdProcessingDelayTimer.Elapsed;
                             _scdProcessingDelayTimer.Stop();
                             bool lipWasSynced = false;
-                            Character character = mediaObject.GameObject as Character;
+                            ICharacter character = mediaObject.GameObject as ICharacter;
                             _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1, 0, false, delegate {
                                 _addonTalkHandler.StopLipSync(character);
                             }, delegate (object sender, StreamVolumeEventArgs e) {
@@ -2257,7 +2256,6 @@ namespace RoleplayingVoice {
                     _chat.Print(new XivChatEntry() {
                         Message = new SeString(new List<Payload>() {
                         new TextPayload(" " + message.Value) }),
-                        SenderId = 0,
                         Name = message.Key,
                         Type = XivChatType.CustomEmote
                     });
@@ -2277,10 +2275,10 @@ namespace RoleplayingVoice {
                         if (config.DebugMode) {
                             _chat.Print("Attempt to find nearest objects.");
                         }
-                        List<Character> characters = new List<Character>();
+                        List<ICharacter> characters = new List<ICharacter>();
                         foreach (var gameObject in GetNearestObjects()) {
                             try {
-                                Character character = gameObject as Character;
+                                ICharacter character = gameObject as ICharacter;
                                 if (character != null) {
                                     if (config.DebugMode) {
                                         Plugin.PluginLog.Debug(character.Name.TextValue + " found!");
@@ -2291,7 +2289,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.EventNpc ||
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
-                                            if (!IsPartOfQuestOrImportant(character)) {
+                                            if (!IsPartOfQuestOrImportant(character as IGameObject)) {
                                                 var value = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                                                 if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
                                                     characters.Add(character);
@@ -2310,11 +2308,11 @@ namespace RoleplayingVoice {
                                 }
                             } catch {
                                 if (config.DebugMode) {
-                                    _chat.Print("Could not trigger emote on " + gameObject.Name.TextValue + ".");
+                                    _chat.Print("Could not trigger emote on " + gameObject.Name + ".");
                                 }
                             }
                         }
-                        foreach (Character character in characters) {
+                        foreach (ICharacter character in characters) {
                             try {
                                 if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                     if (config.DebugMode) {
@@ -2353,20 +2351,20 @@ namespace RoleplayingVoice {
 
         private GameObject GetObjectByTargetId(ulong objectId) {
             foreach (var item in _objectTable) {
-                if (item.ObjectId == objectId) {
+                if (item.GameObjectId == objectId) {
                     return item;
                 }
             }
             return null;
 
         }
-        public Dictionary<string, Character> GetLocalCharacters(bool incognito) {
-            var _objects = new Dictionary<string, Character>();
+        public Dictionary<string, ICharacter> GetLocalCharacters(bool incognito) {
+            var _objects = new Dictionary<string, ICharacter>();
             _objects.Add(incognito ? "Player Character" :
-            _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as Character);
+            _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as ICharacter);
             bool oneMinionOnly = false;
             foreach (var item in GetNearestObjects()) {
-                Character character = item as Character;
+                ICharacter character = item as ICharacter;
                 if (character != null) {
                     if (character.ObjectKind == ObjectKind.Companion) {
                         if (!oneMinionOnly) {
@@ -2390,18 +2388,18 @@ namespace RoleplayingVoice {
             }
             return _objects;
         }
-        public unsafe bool IsPartOfQuestOrImportant(GameObject gameObject) {
-            return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address)->NamePlateIconId is not 0;
+        public unsafe bool IsPartOfQuestOrImportant(IGameObject gameObject) {
+            return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(gameObject as ICharacter).Address)->NamePlateIconId is not 0;
         }
 
-        public GameObject[] GetNearestObjects() {
+        public IGameObject[] GetNearestObjects() {
             _playerCount = 0;
-            List<GameObject> gameObjects = new List<GameObject>();
+            List<IGameObject> gameObjects = new List<IGameObject>();
             foreach (var item in _objectTable) {
                 if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 3f
-                    && item.ObjectId != _clientState.LocalPlayer.ObjectId) {
+                    && item.GameObjectId != _clientState.LocalPlayer.GameObjectId) {
                     if (item.IsValid()) {
-                        gameObjects.Add(item);
+                        gameObjects.Add((item as IGameObject));
                     }
                 }
                 if (item.ObjectKind == ObjectKind.Player) {
@@ -2522,7 +2520,7 @@ namespace RoleplayingVoice {
                             try {
                                 File.Delete(file);
                             } catch (Exception e) {
-                                //Dalamud.Logging.PluginLog.Warning(e, e.Message);
+                                //Plugin.PluginLog.Warning(e, e.Message);
                             }
                         }
                     }
@@ -2722,7 +2720,7 @@ namespace RoleplayingVoice {
             }
             return false;
         }
-        private async void ReceivingEmote(Character instigator, ushort emoteId) {
+        private async void ReceivingEmote(ICharacter instigator, ushort emoteId) {
             if (instigator != null) {
                 try {
                     string[] senderStrings = SplitCamelCase(
@@ -2810,7 +2808,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        private void SendingEmote(Character instigator, ushort emoteId) {
+        private void SendingEmote(ICharacter instigator, ushort emoteId) {
             Task.Run(delegate {
                 if (config.CharacterVoicePacks.ContainsKey(instigator.Name.TextValue)) {
                     _voice = config.CharacterVoicePacks[instigator.Name.TextValue];
@@ -2890,10 +2888,10 @@ namespace RoleplayingVoice {
             return CleanSenderName(emote.TextCommand.Value.Command.RawString).Replace(" ", "").ToLower();
         }
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, int delay, out bool isVoicedEmote) {
-            Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.English).GetRow(emoteId);
-            Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.French).GetRow(emoteId);
-            Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.German).GetRow(emoteId);
-            Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(Dalamud.ClientLanguage.Japanese).GetRow(emoteId);
+            Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(ClientLanguage.English).GetRow(emoteId);
+            Emote emoteFrench = _dataManager.GetExcelSheet<Emote>(ClientLanguage.French).GetRow(emoteId);
+            Emote emoteGerman = _dataManager.GetExcelSheet<Emote>(ClientLanguage.German).GetRow(emoteId);
+            Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(ClientLanguage.Japanese).GetRow(emoteId);
 
             string emotePathId = characterVoicePack.GetMisc(emoteId.ToString(), delay, true);
             string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name, delay, true);
@@ -3067,7 +3065,7 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog.Warning(e, e.Message);
             }
         }
-        public void ApplyByGuid(Guid design, Character? character) {
+        public void ApplyByGuid(Guid design, ICharacter? character) {
             PenumbraAndGlamourerIpcWrapper.Instance.ApplyDesign.Invoke(design, character.ObjectIndex);
         }
         public void CleanEquipment(int objectIndex) {
@@ -3388,14 +3386,14 @@ namespace RoleplayingVoice {
                             AttemptConnection();
                             break;
                         case "anim":
-                            CheckAnimationMods(splitArgs, args, _clientState.LocalPlayer);
+                            CheckAnimationMods(splitArgs, args, _clientState.LocalPlayer as ICharacter);
                             break;
                         case "companionanim":
                             Task.Run(() => {
-                                Character foundCharacter = null;
+                                ICharacter foundCharacter = null;
                                 for (int i = 0; i < 4; i++) {
                                     foreach (var item in GetNearestObjects()) {
-                                        Character character = item as Character;
+                                        ICharacter character = item as ICharacter;
                                         if (character != null && character.ObjectKind == ObjectKind.Companion) {
                                             foundCharacter = character;
                                             break;
@@ -3569,7 +3567,7 @@ namespace RoleplayingVoice {
                 case "stop":
                     foreach (var gameObject in GetNearestObjects()) {
                         try {
-                            Character character = gameObject as Character;
+                            ICharacter character = gameObject as ICharacter;
                             if (character != null) {
                                 if (!character.IsDead) {
                                     if (character.ObjectKind == ObjectKind.Retainer ||
@@ -3578,7 +3576,7 @@ namespace RoleplayingVoice {
                                         character.ObjectKind == ObjectKind.Companion ||
                                         character.ObjectKind == ObjectKind.Housing) {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
-                                            if (!IsPartOfQuestOrImportant(character)) {
+                                            if (!IsPartOfQuestOrImportant(character as IGameObject)) {
                                                 _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
                                                 _addonTalkHandler.StopEmote(character.Address);
                                                 if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
@@ -3596,7 +3594,7 @@ namespace RoleplayingVoice {
                 case "playerpos":
                     foreach (var gameObject in GetNearestObjects()) {
                         try {
-                            Character character = gameObject as Character;
+                            ICharacter character = gameObject as ICharacter;
                             if (character != null) {
                                 if (!character.IsDead) {
                                     if (character.ObjectKind == ObjectKind.Retainer ||
@@ -3607,7 +3605,7 @@ namespace RoleplayingVoice {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
                                             bool hasQuest = false;
                                             unsafe {
-                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)character.Address;
+                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(character as ICharacter).Address;
                                                 item->Balloon.PlayTimer = 1;
                                                 item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String("I will stand here master!");
                                                 item->Balloon.Type = BalloonType.Timer;
@@ -3635,7 +3633,7 @@ namespace RoleplayingVoice {
                         emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
                         foreach (var gameObject in GetNearestObjects()) {
                             try {
-                                Character character = gameObject as Character;
+                                ICharacter character = gameObject as ICharacter;
                                 if (character != null) {
                                     if (!character.IsDead) {
                                         if (character.ObjectKind == ObjectKind.Retainer ||
@@ -3644,7 +3642,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
-                                                if (!IsPartOfQuestOrImportant(character)) {
+                                                if (!IsPartOfQuestOrImportant(character as IGameObject)) {
                                                     _toast.ShowNormal(character.Name.TextValue + " follows your command!");
                                                     if (becomesPreOccupied) {
                                                         _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
@@ -3670,7 +3668,9 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public void DoEmote(string command, Character targetNPC, bool becomesPreOccupied = true) {
+        #endregion
+        #region Trigger Animation Mods
+        public void DoEmote(string command, ICharacter targetNPC, bool becomesPreOccupied = true) {
             try {
                 foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
                     if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
@@ -3678,7 +3678,7 @@ namespace RoleplayingVoice {
                         emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
                         emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
                         emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
-                            if (!IsPartOfQuestOrImportant(targetNPC)) {
+                            if (!IsPartOfQuestOrImportant(targetNPC as IGameObject)) {
                                 if (becomesPreOccupied) {
                                     _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                     if (!_preOccupiedWithEmoteCommand.Contains(targetNPC.Name.TextValue)) {
@@ -3701,9 +3701,7 @@ namespace RoleplayingVoice {
 
             }
         }
-        #endregion
-        #region Trigger Animation Mods
-        public void CheckAnimationMods(string[] splitArgs, string args, Character character, bool willOpen = true) {
+        public void CheckAnimationMods(string[] splitArgs, string args, ICharacter character, bool willOpen = true) {
             if (splitArgs.Length > 1) {
                 string[] command = null;
                 command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
@@ -3742,7 +3740,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        public void DoAnimation(string animationName, int index, Character targetObject) {
+        public void DoAnimation(string animationName, int index, ICharacter targetObject) {
             Task.Run(() => {
                 _blockDataRefreshes = true;
                 var list = CreateEmoteList(_dataManager);
@@ -3835,8 +3833,8 @@ namespace RoleplayingVoice {
             });
         }
 
-        public void TriggerCharacterEmote(EmoteModData emoteModData, Character character) {
-            if (character.Address == _clientState.LocalPlayer.Address) {
+        public void TriggerCharacterEmote(EmoteModData emoteModData, ICharacter character) {
+            if (character == _clientState.LocalPlayer) {
                 if (_wasDoingFakeEmote) {
                     _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
                 }
@@ -3844,7 +3842,7 @@ namespace RoleplayingVoice {
             PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
                 Thread.Sleep(1000);
-                if (character.Address == _clientState.LocalPlayer.Address) {
+                if (character == _clientState.LocalPlayer) {
                     _messageQueue.Enqueue(emoteModData.Emote);
                     if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
 
@@ -3860,7 +3858,7 @@ namespace RoleplayingVoice {
                 }
                 ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
                 if (!_didRealEmote) {
-                    if (character.Address == _clientState.LocalPlayer.Address) {
+                    if (character == _clientState.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
                     OnEmote(character, (ushort)emoteModData.EmoteId);
@@ -4030,7 +4028,7 @@ namespace RoleplayingVoice {
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
                 if (_emoteReaderHook.OnEmote != null) {
-                    _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as PlayerCharacter, emoteId);
+                    _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
                 }
                 CleanupEmoteWatchList();
                 _addonTalkHandler?.Dispose();

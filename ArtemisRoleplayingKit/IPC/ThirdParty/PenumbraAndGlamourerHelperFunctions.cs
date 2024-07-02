@@ -42,7 +42,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             Plugin.PluginLog.Verbose("Completed sending IPC to glamourer");
             return changed;
         }
-        public static int GetRace(Character playerCharacter) {
+        public static int GetRace(ICharacter playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex)).Item2;
@@ -55,7 +55,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 return playerCharacter.Customize[(int)CustomizeIndex.Race];
             }
         }
-        public static CharacterCustomization GetCustomization(Character playerCharacter) {
+        public static CharacterCustomization GetCustomization(ICharacter playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex)).Item2;
@@ -89,7 +89,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 return new Dictionary<Guid, string>();
             }
         }
-        public static bool IsHumanoid(Character playerCharacter) {
+        public static bool IsHumanoid(ICharacter playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
                 string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex)).Item2;

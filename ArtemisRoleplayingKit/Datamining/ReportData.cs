@@ -16,7 +16,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
         private ushort territoryId;
         public string speaker { get; set; }
         public string sentence { get; set; }
-        public uint npcid { get; set; }
+        public ulong npcid { get; set; }
         public int body { get; set; }
         public bool gender { get; set; }
         public byte race { get; set; }
@@ -26,13 +26,13 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public string user { get; set; }
         public ushort TerritoryId { get => territoryId; set => territoryId = value; }
 
-        public ReportData(string name, string message, GameObject gameObject, ushort territoryId) {
-            Character character = gameObject as Character;
+        public ReportData(string name, string message, IGameObject gameObject, ushort territoryId) {
+            ICharacter character = gameObject as ICharacter;
             if (character != null) {
                 this.territoryId = territoryId;
                 speaker = name;
                 sentence = message;
-                npcid = character.ObjectId;
+                npcid = character.GameObjectId;
                 body = character.Customize[(int)CustomizeIndex.ModelType];
                 gender = character.Customize[(int)CustomizeIndex.Gender] == 0;
                 race = character.Customize[(int)CustomizeIndex.Race];

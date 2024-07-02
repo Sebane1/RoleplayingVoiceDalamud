@@ -28,7 +28,6 @@ public class PenumbraAndGlamourerIpcWrapper {
     public GetChangedItemsForCollection GetChangedItemsForCollection { get => _getChangedItemsForCollection; set => _getChangedItemsForCollection = value; }
     public GetModDirectory GetModDirectory { get => _getModDirectory; set => _getModDirectory = value; }
     public RedrawObject RedrawObject { get => _redrawObject; set => _redrawObject = value; }
-
     private GetCollection _getCollection;
     private SetCollection _setCollection;
     private GetCollectionForObject _getCollectionForObject;
@@ -49,7 +48,7 @@ public class PenumbraAndGlamourerIpcWrapper {
     private SetItem _setItem;
     private GetStateBase64 _getStateBase64;
 
-    public PenumbraAndGlamourerIpcWrapper(DalamudPluginInterface dalamudPluginInterface) {
+    public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface) {
         Instance = this;
         _getModDirectory = new GetModDirectory(dalamudPluginInterface);
         _getCollection = new GetCollection(dalamudPluginInterface);

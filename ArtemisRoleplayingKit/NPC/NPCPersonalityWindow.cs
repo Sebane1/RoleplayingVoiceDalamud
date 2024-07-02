@@ -18,7 +18,7 @@ using RoleplayingVoiceDalamud.Catalogue;
 
 namespace RoleplayingVoice {
     internal class NPCPersonalityWindow : Window {
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
         private string[] npcItemNames = new string[] { };
         private List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
         private int _currentSelection = 0;
@@ -29,7 +29,7 @@ namespace RoleplayingVoice {
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<CustomNpcCharacter> CustomNpcCharacters { get => _customNpcCharacters; set => _customNpcCharacters = value; }
 
-        public NPCPersonalityWindow(DalamudPluginInterface pluginInterface) :
+        public NPCPersonalityWindow(IDalamudPluginInterface pluginInterface) :
             base("NPC Personality Window") {
             _pluginInterface = pluginInterface;
             _customNpcCharacters.Add(new CustomNpcCharacter());

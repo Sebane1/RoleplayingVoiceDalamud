@@ -1,6 +1,9 @@
 ﻿using Dalamud.Interface.Internal;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 using ImGuiNET;
 using RoleplayingMediaCore;
 using System.Collections.Generic;
@@ -15,9 +18,9 @@ namespace RoleplayingVoice {
     internal class GposeWindow : Window {
         private System.Numerics.Vector2? windowSize;
         private Vector2? initialSize;
-        IDalamudTextureWrap textureWrap;
+        ISharedImmediateTexture textureWrap;
         Plugin _plugin;
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
         List<byte[]> _frames = new List<byte[]>();
         List<string> _frameName = new List<string>();
         private int _currentFrame;
@@ -25,11 +28,12 @@ namespace RoleplayingVoice {
         private FileSystemWatcher _fileWatcher;
         private string path;
         private bool _alreadyLoadingFrames;
+        private ITextureProvider _textureProvider;
 
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<string> FrameNames { get => _frameName; set => _frameName = value; }
 
-        public GposeWindow(DalamudPluginInterface pluginInterface) :
+        public GposeWindow(IDalamudPluginInterface pluginInterface, ITextureProvider textureProvider) :
             base("Gpose Window", ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoMouseInputs
                 | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoScrollbar |
@@ -41,6 +45,7 @@ namespace RoleplayingVoice {
             _pluginInterface = pluginInterface;
             Position = new Vector2(0, 0);
             AllowClickthrough = true;
+            _textureProvider = textureProvider;
         }
         public void Initialize() {
             _path = Path.Combine(_plugin.Config.CacheFolder, @"PhotoFrames\");
@@ -100,8 +105,8 @@ namespace RoleplayingVoice {
             windowSize = Size = new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.X);
             try {
                 if (_frames != null && _frames.Count > 0 && _currentFrame < _frames.Count) {
-                    textureWrap = _pluginInterface.UiBuilder.LoadImage(_frames[_currentFrame]);
-                    ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
+                    textureWrap = _textureProvider.GetFromFile(_frames[_currentFrame]);
+                    ImGui.Image(textureWrap.GetWrapOrDefault().ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
                 }
             } catch {
 

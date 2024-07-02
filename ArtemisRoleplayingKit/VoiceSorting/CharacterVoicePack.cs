@@ -12,6 +12,8 @@ using Task = System.Threading.Tasks.Task;
 using Lumina.Excel;
 using System.Windows.Forms;
 using System.Collections.Concurrent;
+using Dalamud.Game;
+using RoleplayingVoice;
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
         private List<string> _castedAttack = new List<string>();
@@ -30,13 +32,13 @@ namespace RoleplayingVoiceDalamud {
         private string lastAction;
         private IDataManager _dataManager;
         private ClientLanguage _clientLanguage;
-        private ConcurrentDictionary<Dalamud.ClientLanguage, ExcelSheet<Action>> _dataSheets = new ConcurrentDictionary<ClientLanguage, ExcelSheet<Lumina.Excel.GeneratedSheets.Action>>();
+        private ConcurrentDictionary<ClientLanguage, ExcelSheet<Action>> _dataSheets = new ConcurrentDictionary<ClientLanguage, ExcelSheet<Lumina.Excel.GeneratedSheets.Action>>();
         private string _sprint;
         private string _teleport;
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
-        public CharacterVoicePack(string directory, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
+        public CharacterVoicePack(string directory, IDataManager dataManager, ClientLanguage clientLanguage) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
             Task.Run(() => {
@@ -48,7 +50,7 @@ namespace RoleplayingVoiceDalamud {
             });
 
         }
-        public CharacterVoicePack(List<string> files, IDataManager dataManager, Dalamud.ClientLanguage clientLanguage) {
+        public CharacterVoicePack(List<string> files, IDataManager dataManager, ClientLanguage clientLanguage) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
             Task.Run(() => {
@@ -60,14 +62,14 @@ namespace RoleplayingVoiceDalamud {
             });
         }
 
-        public string GetNameInClientLanguage(Dalamud.ClientLanguage clientLanguage, string name) {
+        public string GetNameInClientLanguage(ClientLanguage clientLanguage, string name) {
             uint index = GetLanguageAgnosticActionIndex(name);
             if (index is not 0) {
                 return GetActionInLanguage(clientLanguage, index, name);
             }
             return name;
         }
-        public string GetActionInLanguage(Dalamud.ClientLanguage clientLanguage, uint index, string name) {
+        public string GetActionInLanguage(ClientLanguage clientLanguage, uint index, string name) {
             Action actionName = _dataSheets[clientLanguage].GetRow(index);
             if (!string.IsNullOrEmpty(actionName.Name.RawString)) {
                 return actionName.Name.RawString;
@@ -76,25 +78,25 @@ namespace RoleplayingVoiceDalamud {
             }
         }
         public uint GetLanguageAgnosticActionIndex(string name) {
-            uint englishIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.English, name);
+            uint englishIndex = GetLanguageSpecifcActionIndex(ClientLanguage.English, name);
             if (englishIndex is not 0) {
                 return englishIndex;
             }
-            uint japaneseIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.Japanese, name);
+            uint japaneseIndex = GetLanguageSpecifcActionIndex(ClientLanguage.Japanese, name);
             if (japaneseIndex is not 0) {
                 return japaneseIndex;
             }
-            uint germanIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.German, name);
+            uint germanIndex = GetLanguageSpecifcActionIndex(ClientLanguage.German, name);
             if (germanIndex is not 0) {
                 return germanIndex;
             }
-            uint frenchIndex = GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage.French, name);
+            uint frenchIndex = GetLanguageSpecifcActionIndex(ClientLanguage.French, name);
             if (frenchIndex is not 0) {
                 return frenchIndex;
             }
             return 0;
         }
-        public uint GetLanguageSpecifcActionIndex(Dalamud.ClientLanguage clientLanguage, string name) {
+        public uint GetLanguageSpecifcActionIndex(ClientLanguage clientLanguage, string name) {
             if (!string.IsNullOrEmpty(name)) {
                 string sanitizedNamed = name.ToLower().Replace(" ", null).Trim();
                 if (!_dataSheets.ContainsKey(clientLanguage)) {
@@ -115,14 +117,14 @@ namespace RoleplayingVoiceDalamud {
             var utcTime = Framework.GetServerTime();
             long mod = utcTime / 10;
             Random random = new Random((int)mod);
-            Dalamud.Logging.PluginLog.Log("Time seed is " + mod);
+            Plugin.PluginLog.Info("Time seed is " + mod);
             return random.Next(min, max);
         }
         public unsafe int GetRandom(int min, int max, int delay) {
             var utcTime = Framework.GetServerTime();
             long mod = (utcTime - delay) / 10;
             Random random = new Random((int)mod);
-            Dalamud.Logging.PluginLog.Log("Time seed is " + mod);
+            Plugin.PluginLog.Info("Time seed is " + mod);
             return random.Next(min, max);
         }
         private static int GetSimpleHash(string s) {
@@ -189,7 +191,7 @@ namespace RoleplayingVoiceDalamud {
                 }
             }
         }
-        public static string StripNonCharacters(string str, Dalamud.ClientLanguage clientLanguage) {
+        public static string StripNonCharacters(string str, ClientLanguage clientLanguage) {
             if (clientLanguage == ClientLanguage.English) {
                 if (str != null) {
                     Regex rgx = new Regex("[^a-zA-Z]");

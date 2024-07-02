@@ -138,9 +138,9 @@ namespace RoleplayingVoice {
 
         #endregion
 
-        private readonly DalamudPluginInterface pluginInterface;
+        private readonly IDalamudPluginInterface pluginInterface;
 
-        public Configuration(DalamudPluginInterface pi) {
+        public Configuration(IDalamudPluginInterface pi) {
             this.pluginInterface = pi;
         }
 

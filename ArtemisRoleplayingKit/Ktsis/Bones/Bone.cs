@@ -3,9 +3,11 @@ using System.Collections.Generic;
 
 using FFXIVClientStructs.Havok;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
-using static FFXIVClientStructs.Havok.hkaPose;
 using Ktisis.Structs.Actor;
 using Ktisis.Structs.Extensions;
+using static FFXIVClientStructs.Havok.Animation.Rig.hkaPose;
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
+using FFXIVClientStructs.Havok.Animation.Rig;
 
 namespace Ktisis.Structs.Bones {
     public class Bone {

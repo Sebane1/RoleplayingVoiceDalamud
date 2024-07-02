@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Dalamud.Game;
 using Dalamud.Hooking;
 using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
@@ -75,7 +76,7 @@ namespace SoundFilter {
         private IntPtr MusicManager {
             get {
                 if (!this.Plugin.SigScanner.TryScanText(Signatures.MusicManagerOffset, out var instructionPtr)) {
-                    PluginLog.LogWarning("Could not find music manager");
+                    Plugin.PluginLog.Warning("Could not find music manager");
                     return IntPtr.Zero;
                 }
 
@@ -197,7 +198,7 @@ namespace SoundFilter {
                     idx = 0;
                 }
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Error in PlaySpecificSoundDetour");
+                Plugin.PluginLog.Error(ex, "Error in PlaySpecificSoundDetour");
             }
             return this.PlaySpecificSoundHook!.Original(a1, idx);
         }
@@ -250,13 +251,13 @@ namespace SoundFilter {
             string splitPath = specificPath.Split(".scd")[0] + ".scd";
             if ((specificPath.Contains("vo_battle") && muted)
                 || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider) && !splitPath.Contains("sound/foot")) {
-                Dalamud.Logging.PluginLog.Log("Trigger Sound Interception");
+                Plugin.PluginLog.Info("Trigger Sound Interception");
                 OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
                 return true;
             } else if (specificPath.Contains("/strm/")) {
                 return true;
             }
-            if (Plugin.ClientState.ClientLanguage == Dalamud.ClientLanguage.English) {
+            if (Plugin.ClientState.ClientLanguage == ClientLanguage.English) {
                 if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
                     if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
                         && !Plugin.Config.NpcSpeechGenerationDisabled) {
@@ -285,7 +286,7 @@ namespace SoundFilter {
                     this.Scds[dataPtr] = name;
                 }
             } catch (Exception ex) {
-                PluginLog.LogError(ex, "Error in LoadSoundFileDetour");
+                Plugin.PluginLog.Error(ex, "Error in LoadSoundFileDetour");
             }
 
             return ret;

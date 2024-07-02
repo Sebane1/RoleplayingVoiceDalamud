@@ -16,15 +16,16 @@ using RoleplayingVoiceDalamud;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using Dalamud.Interface.Textures.TextureWraps;
 namespace RoleplayingVoice {
     internal class GposePhotoTakerWindow : Window {
         IDalamudTextureWrap textureWrap;
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
         GposeWindow gposeWindow;
         BetterComboBox betterComboBox = new BetterComboBox("#photoFrames", null, 0, 300);
         private bool _takingScreenShot;
 
-        public GposePhotoTakerWindow(DalamudPluginInterface pluginInterface) :
+        public GposePhotoTakerWindow(IDalamudPluginInterface pluginInterface) :
             base("Gpose Photo Window", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoDecoration
                 | ImGuiWindowFlags.NoTitleBar, false) {
             //IsOpen = true;

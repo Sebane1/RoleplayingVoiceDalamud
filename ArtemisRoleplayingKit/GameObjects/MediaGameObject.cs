@@ -5,10 +5,11 @@ using Dalamud.Memory;
 using RoleplayingMediaCore;
 using System;
 using System.Numerics;
+using IGameObject = RoleplayingMediaCore.IGameObject;
 
 namespace RoleplayingVoiceDalamud {
     public unsafe class MediaGameObject : IGameObject {
-        private GameObject _gameObject;
+        private Dalamud.Game.ClientState.Objects.Types.IGameObject _gameObject;
         private FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* _gameObjectPointer;
         private string _name = "";
         private Vector3 _position = new Vector3();
@@ -72,12 +73,12 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        public GameObject GameObject { get => _gameObject; set => _gameObject = value; }
+        public Dalamud.Game.ClientState.Objects.Types.IGameObject GameObject { get => _gameObject; set => _gameObject = value; }
 
-        public MediaGameObject(GameObject gameObject) {
+        public MediaGameObject(Dalamud.Game.ClientState.Objects.Types.IGameObject gameObject) {
             if (gameObject != null) {
                 _gameObject = gameObject;
-                _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address;
+                _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(gameObject as ICharacter).Address;
             }
         }
         unsafe public MediaGameObject(FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* gameObject) {
@@ -87,9 +88,9 @@ namespace RoleplayingVoiceDalamud {
             _name = name;
             _position = position;
         }
-        public MediaGameObject(GameObject gameObject, string name, Vector3 position) {
+        public MediaGameObject(Dalamud.Game.ClientState.Objects.Types.IGameObject gameObject, string name, Vector3 position) {
             _gameObject = gameObject;
-            _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)gameObject.Address;
+            _gameObjectPointer = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(gameObject as ICharacter).Address;
             _name = name;
             _position = position;
         }

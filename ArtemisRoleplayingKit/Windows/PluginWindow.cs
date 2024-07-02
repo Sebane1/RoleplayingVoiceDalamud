@@ -26,6 +26,8 @@ using RoleplayingVoiceCore;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System.Xml.Linq;
 using RoleplayingVoiceDalamud;
+using Dalamud.Game;
+using Dalamud.Game.ClientState.Objects.Types;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -119,7 +121,7 @@ namespace RoleplayingVoice {
         }
         public override void OnOpen() {
             base.OnOpen();
-            PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ClientState.LocalPlayer, false);
+            PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ClientState.LocalPlayer as ICharacter, false);
             PluginReference.NpcPersonalityWindow.OnOpen();
         }
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
@@ -225,7 +227,7 @@ namespace RoleplayingVoice {
             RefreshVoices();
         }
 
-        public DalamudPluginInterface PluginInterface { get; internal set; }
+        public IDalamudPluginInterface PluginInterface { get; internal set; }
         public RoleplayingMediaManager Manager {
             get => _manager; set {
                 _manager = value;
@@ -290,7 +292,7 @@ namespace RoleplayingVoice {
                         DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
-                    if (PluginReference.ClientState.ClientLanguage == Dalamud.ClientLanguage.English) {
+                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English) {
                         if (ImGui.BeginTabItem("NPC Dialogue")) {
                             DrawNPCDialogue();
                             ImGui.EndTabItem();
@@ -881,7 +883,7 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
             ImGui.Dummy(new Vector2(0, 10));
-            ImGui.LabelText("##GCVSLabel", "Generative Character Voice ");
+            ImGui.LabelText("##GCVSLabel", "Generative ICharacter Voice ");
             ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
             ImGui.SameLine();
             ImGui.Text("Generative Voice Enabled");

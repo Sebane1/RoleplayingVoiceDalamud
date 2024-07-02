@@ -36,14 +36,17 @@ using FFXIVLooseTextureCompiler.ImageProcessing;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.ClientState.Objects.Enums;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
-using Character = Dalamud.Game.ClientState.Objects.Types.Character;
+using ICharacter = Dalamud.Game.ClientState.Objects.Types.ICharacter;
 using RoleplayingVoiceDalamud.Catalogue;
 using LooseTextureCompilerCore;
+using Dalamud.Interface.Textures.TextureWraps;
+using Dalamud.Plugin.Services;
+using static FFXIVLooseTextureCompiler.ImageProcessing.ImageManipulation;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
         IDalamudTextureWrap textureWrap;
-        private DalamudPluginInterface _pluginInterface;
+        private IDalamudPluginInterface _pluginInterface;
         private readonly IDragDropManager _dragDropManager;
         private readonly MemoryStream _blank;
         Plugin plugin;
@@ -63,13 +66,14 @@ namespace RoleplayingVoice {
         private string[] _faceTypes;
         private string[] _faceParts;
         private string[] _faceScales;
+        private ITextureProvider _textureProvider;
         private BodyDragPart bodyDragPart;
 
         //List<string> _alreadyAddedBoneList = new List<string>();
         //List<Tuple<string, float>> boneSorting = new List<Tuple<string, float>>();
         public Plugin Plugin { get => plugin; set => plugin = value; }
 
-        public DragAndDropTextureWindow(DalamudPluginInterface pluginInterface, IDragDropManager dragDropManager) :
+        public DragAndDropTextureWindow(IDalamudPluginInterface pluginInterface, IDragDropManager dragDropManager, ITextureProvider textureProvider) :
             base("DragAndDropTexture", ImGuiWindowFlags.NoFocusOnAppearing
                 | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoMouseInputs | ImGuiWindowFlags.NoInputs
                 | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoScrollbar |
@@ -114,6 +118,7 @@ namespace RoleplayingVoice {
             _faceTypes = new string[] { "Face 1", "Face 2", "Face 3", "Face 4", "Face 5", "Face 6", "Face 7", "Face 8", "Face 9" };
             _faceParts = new string[] { "Face", "Eyebrows", "Eyes", "Ears", "Face Paint", "Hair", "Face B", "Etc B" };
             _faceScales = new string[] { "Vanilla Scales", "Scaleless Vanilla", "Scaleless Varied" };
+            _textureProvider = textureProvider;
         }
 
         private void TextureProcessor_OnLaunchedXnormal(object? sender, EventArgs e) {
@@ -126,21 +131,21 @@ namespace RoleplayingVoice {
             plugin.Chat.Print("[Artemis Roleplaying Kit] " + _exportStatus);
         }
 
-        public override void Draw() {
+        public override async void Draw() {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
                     Guid mainPlayerCollection = Guid.Empty;
                     Guid selectedPlayerCollection = Guid.Empty;
-                    KeyValuePair<string, Character> selectedPlayer = new KeyValuePair<string, Character>("", null);
+                    KeyValuePair<string, ICharacter> selectedPlayer = new KeyValuePair<string, ICharacter>("", null);
                     bool holdingModifier = ImGui.GetIO().KeyShift;
                     _dragDropManager.CreateImGuiSource("TextureDragDrop", m => m.Extensions.Any(e => ValidTextureExtensions.Contains(e.ToLowerInvariant())), m => {
                         try {
                             mainPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(plugin.ClientState.LocalPlayer.ObjectIndex).Item3.Id;
-                            List<KeyValuePair<string, Character>> _objects = new List<KeyValuePair<string, Character>>();
-                            _objects.Add(new KeyValuePair<string, Character>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as Character));
+                            List<KeyValuePair<string, ICharacter>> _objects = new List<KeyValuePair<string, ICharacter>>();
+                            _objects.Add(new KeyValuePair<string, ICharacter>(plugin.ClientState.LocalPlayer.Name.TextValue, Plugin.ClientState.LocalPlayer as ICharacter));
                             bool oneMinionOnly = false;
                             foreach (var item in Plugin.GetNearestObjects()) {
-                                Character character = item as Character;
+                                ICharacter character = item as ICharacter;
                                 if (character != null) {
                                     string name = character.Name.TextValue;
                                     if (character.ObjectKind == ObjectKind.Companion) {
@@ -148,14 +153,14 @@ namespace RoleplayingVoice {
                                             foreach (var customNPC in Plugin.Config.CustomNpcCharacters) {
                                                 if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
                                                     name = customNPC.NpcName;
-                                                    _objects.Add(new KeyValuePair<string, Character>(name, character));
+                                                    _objects.Add(new KeyValuePair<string, ICharacter>(name, character));
                                                 }
                                             }
                                             oneMinionOnly = true;
                                         }
                                     } else if (character.ObjectKind == ObjectKind.EventNpc) {
                                         if (!string.IsNullOrEmpty(character.Name.TextValue)) {
-                                            _objects.Add(new KeyValuePair<string, Character>(name, character));
+                                            _objects.Add(new KeyValuePair<string, ICharacter>(name, character));
                                         }
                                     }
                                 }
@@ -229,7 +234,7 @@ namespace RoleplayingVoice {
                                 }
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
-                                        selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
+                                        selectedPlayer.Value == plugin.ClientState.LocalPlayer) {
                                         ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
                                     } else {
                                         ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character.");
@@ -249,7 +254,7 @@ namespace RoleplayingVoice {
 
                     if (!AllowClickthrough) {
                         Flags = _dragAndDropFlags;
-                        textureWrap = _pluginInterface.UiBuilder.LoadImage(_blank.ToArray());
+                        textureWrap = (await _textureProvider.CreateFromImageAsync((_blank.ToArray()))).CreateWrapSharingLowLevelResource();
                         ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
                     } else {
                         Flags = _defaultFlags;
@@ -258,7 +263,7 @@ namespace RoleplayingVoice {
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
                         List<TextureSet> textureSets = new List<TextureSet>();
                         if (selectedPlayer.Value != null && selectedPlayerCollection != mainPlayerCollection ||
-                            selectedPlayer.Value.Address == plugin.ClientState.LocalPlayer.Address) {
+                            selectedPlayer.Value == plugin.ClientState.LocalPlayer) {
                             string modName = selectedPlayer.Key.Split(' ')[0] + " Texture Mod";
                             foreach (var file in files) {
                                 if (ValidTextureExtensions.Contains(Path.GetExtension(file))) {
@@ -485,7 +490,7 @@ namespace RoleplayingVoice {
         }
         private void AddBodyPaths(TextureSet textureSet, int gender, int baseBody, int race, int tail, bool uniqueAuRa = false) {
             if (race != 3 || baseBody != 6) {
-                textureSet.InternalDiffusePath = RacePaths.GetBodyTexturePath(0, gender,
+                textureSet.InternalBasePath = RacePaths.GetBodyTexturePath(0, gender,
                   baseBody, race, tail, uniqueAuRa);
             }
             textureSet.InternalNormalPath = RacePaths.GetBodyTexturePath(1, gender,
@@ -493,11 +498,11 @@ namespace RoleplayingVoice {
 
             textureSet.InternalMultiPath = RacePaths.GetBodyTexturePath(2, gender,
                   baseBody, race, tail, uniqueAuRa);
-            BackupTexturePaths.AddBackupPaths(gender, race, textureSet);
+            BackupTexturePaths.AddBodyBackupPaths(gender, race, textureSet);
         }
 
         private void AddDecalPath(TextureSet textureSet, int faceExtra) {
-            textureSet.InternalDiffusePath = RacePaths.GetFaceTexturePath(faceExtra);
+            textureSet.InternalBasePath = RacePaths.GetFaceTexturePath(faceExtra);
         }
 
         private void AddHairPaths(TextureSet textureSet, int gender, int facePart, int faceExtra, int race, int subrace) {
@@ -512,7 +517,7 @@ namespace RoleplayingVoice {
         }
 
         private void AddEyePaths(TextureSet textureSet, int subrace, int faceType, int gender, int auraScales, bool asym) {
-            textureSet.InternalDiffusePath = RacePaths.GetFaceTexturePath(1, gender, subrace,
+            textureSet.InternalBasePath = RacePaths.GetFaceTexturePath(1, gender, subrace,
             2, faceType, auraScales, asym);
 
             textureSet.InternalNormalPath = RacePaths.GetFaceTexturePath(2, gender, subrace,
@@ -524,14 +529,14 @@ namespace RoleplayingVoice {
 
         private void AddFacePaths(TextureSet textureSet, int subrace, int facePart, int faceType, int gender, int auraScales, bool asym) {
             if (facePart != 1) {
-                textureSet.InternalDiffusePath = RacePaths.GetFaceTexturePath(0, gender, subrace,
+                textureSet.InternalBasePath = RacePaths.GetFaceTexturePath(0, gender, subrace,
                     facePart, faceType, auraScales, asym);
             }
 
             textureSet.InternalNormalPath = RacePaths.GetFaceTexturePath(1, gender, subrace,
             facePart, faceType, auraScales, asym);
 
-            textureSet.InternalMultiPath = RacePaths.GetFaceTexturePath(2, gender, subrace,
+            textureSet.InternalMaskPath = RacePaths.GetFaceTexturePath(2, gender, subrace,
             facePart, faceType, auraScales, asym);
 
             if (facePart == 0) {
@@ -550,7 +555,7 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, Character> character) {
+        public async Task<bool> Export(bool finalize, List<TextureSet> exportTextureSets, string path, string name, KeyValuePair<string, ICharacter> character) {
             if (!_lockDuplicateGeneration) {
                 plugin.Chat.Print("[Artemis Roleplaying Kit] Processing textures, please wait.");
                 string modPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();

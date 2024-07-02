@@ -6,6 +6,7 @@ using FFXIVClientStructs.Havok;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using ModelType = FFXIVClientStructs.FFXIV.Client.Graphics.Scene.CharacterBase.ModelType;
+using FFXIVClientStructs.Havok.Common.Base.Math.QsTransform;
 
 namespace Ktisis.Structs.Actor {
 	[StructLayout(LayoutKind.Explicit)]
