@@ -21,11 +21,11 @@ namespace SoundFilter {
         private static class Signatures {
             internal const string PlaySpecificSound = "48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20 33 F6 8B DA 48 8B F9 0F BA E2 0F";
 
-            internal const string GetResourceSync = "E8 ?? ?? ?? ?? 48 8D 8F ?? ?? ?? ?? 48 89 87 ?? ?? ?? ?? 48 8D 54 24";
+            internal const string GetResourceSync = "E8 ?? ?? ?? ?? 48 8B D8 8B C7";
             internal const string GetResourceAsync = "E8 ?? ?? ?? ?? 48 8B D8 EB 07 F0 FF 83";
             internal const string LoadSoundFile = "E8 ?? ?? ?? ?? 48 85 C0 75 04 B0 F6";
 
-            internal const string MusicManagerOffset = "48 89 87 ?? ?? ?? ?? 49 8B CF E8 ?? ?? ?? ?? 48 8B 8F";
+            internal const string MusicManagerOffset = "48 89 87 ?? ?? ?? ?? 49 8B CC E8 ?? ?? ?? ?? 48 8B 8F";
 
         }
 
