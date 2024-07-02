@@ -68,6 +68,10 @@ namespace RoleplayingVoice {
         private string[] _faceScales;
         private ITextureProvider _textureProvider;
         private BodyDragPart bodyDragPart;
+        private bool _alreadyLoadingFrame;
+        private byte[] _nextFrameToLoad;
+        private IDalamudTextureWrap _frameToLoad;
+        private byte[] _lastLoadedFrame;
 
         //List<string> _alreadyAddedBoneList = new List<string>();
         //List<Tuple<string, float>> boneSorting = new List<Tuple<string, float>>();
@@ -131,7 +135,7 @@ namespace RoleplayingVoice {
             plugin.Chat.Print("[Artemis Roleplaying Kit] " + _exportStatus);
         }
 
-        public override async void Draw() {
+        public override void Draw() {
             if (IsOpen) {
                 if (!_lockDuplicateGeneration) {
                     Guid mainPlayerCollection = Guid.Empty;
@@ -254,7 +258,18 @@ namespace RoleplayingVoice {
 
                     if (!AllowClickthrough) {
                         Flags = _dragAndDropFlags;
-                        textureWrap = (await _textureProvider.CreateFromImageAsync((_blank.ToArray()))).CreateWrapSharingLowLevelResource();
+                        if (!_alreadyLoadingFrame) {
+                            Task.Run(async () => {
+                                _alreadyLoadingFrame = true;
+                                _nextFrameToLoad = _blank.ToArray();
+                                if (_lastLoadedFrame != _nextFrameToLoad) {
+                                    _frameToLoad = await _textureProvider.CreateFromImageAsync(_nextFrameToLoad);
+                                    _lastLoadedFrame = _nextFrameToLoad;
+                                }
+                                _alreadyLoadingFrame = false;
+                            });
+                        }
+                        textureWrap = _frameToLoad.CreateWrapSharingLowLevelResource();
                         ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
                     } else {
                         Flags = _defaultFlags;
@@ -442,9 +457,9 @@ namespace RoleplayingVoice {
   ""FileVersion"": 3,
   ""Name"": """ + (!string.IsNullOrEmpty(name) ? name : "") + @""",
   ""Author"": """ + (!string.IsNullOrEmpty(author) ? author :
-    "FFXIV Loose Texture Compiler") + @""",
+        "FFXIV Loose Texture Compiler") + @""",
   ""Description"": """ + (!string.IsNullOrEmpty(description) ? description :
-    "Exported by FFXIV Loose Texture Compiler") + @""",
+        "Exported by FFXIV Loose Texture Compiler") + @""",
   ""Version"": """ + modVersion + @""",
   ""Website"": """ + modWebsite + @""",
   ""ModTags"": []
@@ -596,7 +611,7 @@ namespace RoleplayingVoice {
             return true;
         }
         private static readonly string[] ValidTextureExtensions = new[]
-{
+        {
           ".png",
           ".dds",
           ".bmp",

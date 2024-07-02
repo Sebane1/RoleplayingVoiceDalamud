@@ -4,7 +4,6 @@ using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 using ImGuiScene;
-using OtterGui;
 using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
 using System;
@@ -54,7 +53,7 @@ namespace RoleplayingVoice {
         private void DesignList_OnSelectedIndexChanged(object sender, EventArgs e) {
             if (_currentGlamourerDesigns != null && _currentGlamourerDesigns.Count > 0) {
                 _customNpcCharacters[_currentSelection].NpcGlamourerAppearanceString = _currentGlamourerDesigns
-                .ElementAt(_currentGlamourerDesigns.Values.IndexOf(designList.Contents[designList.SelectedIndex])).Key.ToString();
+                .ElementAt(_currentGlamourerDesigns.Values.ToList<string>().IndexOf(designList.Contents[designList.SelectedIndex])).Key.ToString();
             }
         }
 

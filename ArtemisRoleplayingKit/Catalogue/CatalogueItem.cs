@@ -1,5 +1,4 @@
 ﻿using Glamourer.Api.Enums;
-using Penumbra.GameData.Enums;
 using RoleplayingVoice;
 using System;
 using System.Collections.Generic;

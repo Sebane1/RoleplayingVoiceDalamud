@@ -8,19 +8,19 @@ using System.Threading.Tasks;
 namespace RoleplayingVoiceDalamud.Voice {
     public static class NPCVoiceMapping {
         public static NPCVoiceConfiguration _npcVoiceConfiguration;
-        public static void Initialize() {
-            Task.Run(async () => {
-                try {
-                    HttpClient httpClient = new HttpClient();
-                    string json = await httpClient.GetStringAsync(
-                    "https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/npcVoiceConfiguration.json");
-                    _npcVoiceConfiguration = JsonConvert.DeserializeObject<NPCVoiceConfiguration>(json);
-                } catch (Exception ex) {
-                    if(_npcVoiceConfiguration == null) {
-                        _npcVoiceConfiguration = new NPCVoiceConfiguration();
-                    }
+        public static async Task<bool> Initialize() {
+            try {
+                HttpClient httpClient = new HttpClient();
+                string json = await httpClient.GetStringAsync(
+                "https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/npcVoiceConfiguration.json");
+                _npcVoiceConfiguration = JsonConvert.DeserializeObject<NPCVoiceConfiguration>(json);
+                return true;
+            } catch (Exception ex) {
+                if (_npcVoiceConfiguration == null) {
+                    _npcVoiceConfiguration = new NPCVoiceConfiguration();
                 }
-            });
+                return false;
+            }
         }
 
         public static string AliasDetector(string name) {
@@ -34,7 +34,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             return name;
         }
 
-        public static Dictionary<string, string> GetVoiceMappings() {
+        public static async Task<Dictionary<string, string>> GetVoiceMappings() {
+            if( _npcVoiceConfiguration == null) {
+                await Initialize();
+            }
             return _npcVoiceConfiguration.CharacterToVoiceList;
         }
         public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {

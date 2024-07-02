@@ -76,7 +76,7 @@ namespace SoundFilter {
         private IntPtr MusicManager {
             get {
                 if (!this.Plugin.SigScanner.TryScanText(Signatures.MusicManagerOffset, out var instructionPtr)) {
-                    Plugin.PluginLog.Warning("Could not find music manager");
+                    //Plugin.PluginLog.Warning("Could not find music manager");
                     return IntPtr.Zero;
                 }
 

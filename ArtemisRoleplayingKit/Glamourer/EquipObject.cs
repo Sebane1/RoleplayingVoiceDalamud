@@ -1,6 +1,4 @@
 ﻿using Glamourer.Api.Enums;
-using Penumbra.GameData.Enums;
-
 public class Identifier {
     public long Id { get; set; }
     public bool IsItem { get; set; }

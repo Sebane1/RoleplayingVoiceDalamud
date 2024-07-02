@@ -81,7 +81,6 @@ using Newtonsoft.Json.Linq;
 using Glamourer.Api.Enums;
 using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
-using IGameObject = RoleplayingMediaCore.IGameObject;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -178,7 +177,7 @@ namespace RoleplayingVoice {
         private ConcurrentDictionary<string, List<string>> _modelMods = new ConcurrentDictionary<string, List<string>>();
         private ConcurrentDictionary<string, List<string>> _modelDependancyMods = new ConcurrentDictionary<string, List<string>>();
 
-        private Dictionary<string, IGameObject> _loopEarlyQueue = new Dictionary<string, IGameObject>();
+        private Dictionary<string, RoleplayingMediaCore.IMediaGameObject> _loopEarlyQueue = new Dictionary<string, RoleplayingMediaCore.IMediaGameObject>();
         private WaveStream _nativeAudioStream;
         private MediaGameObject _lastPlayerToEmote;
         private string _voice;
@@ -294,7 +293,7 @@ namespace RoleplayingVoice {
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         #endregion
         #region Plugin Initiialization
-        public unsafe Plugin(
+        public Plugin(
             IDalamudPluginInterface pi,
             ICommandManager commands,
             IChatGui chat,
@@ -397,14 +396,17 @@ namespace RoleplayingVoice {
                 _objectTable = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
-                _npcVoiceManager = new NPCVoiceManager(NPCVoiceMapping.GetVoiceMappings());
-                _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
-                _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
-                _gameGui = gameGui;
-                _dragDrop = dragDrop;
-                _videoWindow.WindowResized += _videoWindow_WindowResized;
-                _toast.ErrorToast += _toast_ErrorToast;
+                NPCVoiceMapping.Initialize();
+                Task.Run(async () => {
+                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings());
+                    _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
+                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                    _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
+                    _gameGui = gameGui;
+                    _dragDrop = dragDrop;
+                    _videoWindow.WindowResized += _videoWindow_WindowResized;
+                    _toast.ErrorToast += _toast_ErrorToast;
+                });
             } catch (Exception e) {
                 Plugin.PluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
@@ -421,8 +423,8 @@ namespace RoleplayingVoice {
             try {
                 try {
                     new PenumbraAndGlamourerIpcWrapper(pluginInterface);
-                    Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
-                    Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                    //Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                    //Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
                     Plugin.PluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
                 } catch (Exception e) {
@@ -663,9 +665,9 @@ namespace RoleplayingVoice {
                     if (_emoteSyncCheck.ElapsedMilliseconds > 5000) {
                         _emoteSyncCheck.Restart();
                         try {
-                            foreach (IGameObject item in _objectTable) {
-                                if ((item as GameObject).ObjectKind == ObjectKind.Player && item.Name != _clientState.LocalPlayer.Name.TextValue) {
-                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(item.Name)).Split(" ");
+                            foreach (Dalamud.Game.ClientState.Objects.Types.IGameObject item in _objectTable) {
+                                if ((item as GameObject).ObjectKind == ObjectKind.Player && item.Name.TextValue != _clientState.LocalPlayer.Name.TextValue) {
+                                    string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(item.Name.TextValue)).Split(" ");
                                     bool isShoutYell = false;
                                     if (senderStrings.Length > 2) {
                                         string playerSender = senderStrings[0] + " " + senderStrings[2];
@@ -846,10 +848,12 @@ namespace RoleplayingVoice {
         private void CheckForGPose() {
             if (_clientState != null && _gameGui != null) {
                 if (_clientState.LocalPlayer != null) {
-                    if (_clientState.IsGPosing && _gameGui.GameUiHidden && !_gposeWindow.IsOpen) {
-                        _gposeWindow.RespectCloseHotkey = false;
-                        _gposeWindow.IsOpen = true;
-                        _gposePhotoTakerWindow.IsOpen = true;
+                    if (_clientState.IsGPosing && _gameGui.GameUiHidden) {
+                        if (!_gposeWindow.IsOpen) {
+                            _gposeWindow.RespectCloseHotkey = false;
+                            _gposeWindow.IsOpen = true;
+                            _gposePhotoTakerWindow.IsOpen = true;
+                        }
                     } else if (_gposeWindow.IsOpen) {
                         _gposeWindow.IsOpen = false;
                         _gposePhotoTakerWindow.IsOpen = false;
@@ -2289,7 +2293,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.EventNpc ||
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
-                                            if (!IsPartOfQuestOrImportant(character as IGameObject)) {
+                                            if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                 var value = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                                                 if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
                                                     characters.Add(character);
@@ -2388,18 +2392,18 @@ namespace RoleplayingVoice {
             }
             return _objects;
         }
-        public unsafe bool IsPartOfQuestOrImportant(IGameObject gameObject) {
+        public unsafe bool IsPartOfQuestOrImportant(Dalamud.Game.ClientState.Objects.Types.IGameObject gameObject) {
             return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(gameObject as ICharacter).Address)->NamePlateIconId is not 0;
         }
 
-        public IGameObject[] GetNearestObjects() {
+        public Dalamud.Game.ClientState.Objects.Types.IGameObject[] GetNearestObjects() {
             _playerCount = 0;
-            List<IGameObject> gameObjects = new List<IGameObject>();
+            List<Dalamud.Game.ClientState.Objects.Types.IGameObject> gameObjects = new List<Dalamud.Game.ClientState.Objects.Types.IGameObject>();
             foreach (var item in _objectTable) {
                 if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 3f
                     && item.GameObjectId != _clientState.LocalPlayer.GameObjectId) {
                     if (item.IsValid()) {
-                        gameObjects.Add((item as IGameObject));
+                        gameObjects.Add((item as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                     }
                 }
                 if (item.ObjectKind == ObjectKind.Player) {
@@ -3258,7 +3262,7 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Stream Management
-        private void TuneIntoStream(string url, IGameObject audioGameObject, bool isNotTwitch) {
+        private void TuneIntoStream(string url, RoleplayingMediaCore.IMediaGameObject audioGameObject, bool isNotTwitch) {
             Task.Run(async () => {
                 string cleanedURL = RemoveSpecialSymbols(url);
                 _streamURLs = isNotTwitch ? new string[] { url } : TwitchFeedManager.GetServerResponse(cleanedURL);
@@ -3576,7 +3580,7 @@ namespace RoleplayingVoice {
                                         character.ObjectKind == ObjectKind.Companion ||
                                         character.ObjectKind == ObjectKind.Housing) {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
-                                            if (!IsPartOfQuestOrImportant(character as IGameObject)) {
+                                            if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                 _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
                                                 _addonTalkHandler.StopEmote(character.Address);
                                                 if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
@@ -3642,7 +3646,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
-                                                if (!IsPartOfQuestOrImportant(character as IGameObject)) {
+                                                if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                     _toast.ShowNormal(character.Name.TextValue + " follows your command!");
                                                     if (becomesPreOccupied) {
                                                         _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
@@ -3678,7 +3682,7 @@ namespace RoleplayingVoice {
                         emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
                         emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
                         emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
-                            if (!IsPartOfQuestOrImportant(targetNPC as IGameObject)) {
+                            if (!IsPartOfQuestOrImportant(targetNPC as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                 if (becomesPreOccupied) {
                                     _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                     if (!_preOccupiedWithEmoteCommand.Contains(targetNPC.Name.TextValue)) {

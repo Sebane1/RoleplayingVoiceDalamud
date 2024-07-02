@@ -10,6 +10,7 @@ using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Vector2 = System.Numerics.Vector2;
 
 namespace RoleplayingVoice {
@@ -29,6 +30,9 @@ namespace RoleplayingVoice {
         public TwitchFeedType FeedType = TwitchFeedType._360p;
         private bool _wasNotOpen;
         Stopwatch eventTriggerCooldown = new Stopwatch();
+        private IDalamudTextureWrap _frameToLoad;
+        private byte[] _lastLoadedFrame;
+        private bool taskAlreadyRunning;
 
         public VideoWindow(IDalamudPluginInterface pluginInterface, ITextureProvider textureProvider) :
             base("Video Window", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar, false) {
@@ -51,13 +55,27 @@ namespace RoleplayingVoice {
                 SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size, MinimumSize = new Vector2(360, 480) };
                 if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
                     try {
-                        ReadOnlyMemory<byte> bytes = null;
-                        lock (_mediaManager.LastFrame) {
-                            bytes = _mediaManager.LastFrame;
+                        if (!taskAlreadyRunning) {
+                            _ = Task.Run(async () => {
+                                taskAlreadyRunning = true;
+                                ReadOnlyMemory<byte> bytes = null;
+                                lock (_mediaManager.LastFrame) {
+                                    bytes = _mediaManager.LastFrame;
+                                }
+                                if (bytes.Length > 0) {
+                                    if (_lastLoadedFrame != _mediaManager.LastFrame) {
+                                        _frameToLoad = await _textureProvider.CreateFromImageAsync(bytes);
+                                        _lastLoadedFrame = _mediaManager.LastFrame;
+                                    }
+                                }
+                                taskAlreadyRunning = false;
+                            });
                         }
-                        ImGui.Image((await _textureProvider.CreateFromImageAsync(bytes)).ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
-                    } catch {
-
+                        if (_frameToLoad != null) {
+                            ImGui.Image(_frameToLoad.ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
+                        }
+                    } catch (Exception e) {
+                        Plugin.PluginLog.Warning(e, e.Message);
                     }
                     if (deadStreamTimer.IsRunning) {
                         deadStreamTimer.Stop();

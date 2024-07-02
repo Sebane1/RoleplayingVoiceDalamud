@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Vector2 = System.Numerics.Vector2;
 
@@ -29,6 +30,9 @@ namespace RoleplayingVoice {
         private string path;
         private bool _alreadyLoadingFrames;
         private ITextureProvider _textureProvider;
+        private IDalamudTextureWrap _frameToLoad;
+        private byte[] _lastLoadedFrame;
+        private bool _alreadyLoadingFrame;
 
         public Plugin Plugin { get => _plugin; set => _plugin = value; }
         public List<string> FrameNames { get => _frameName; set => _frameName = value; }
@@ -105,8 +109,20 @@ namespace RoleplayingVoice {
             windowSize = Size = new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.X);
             try {
                 if (_frames != null && _frames.Count > 0 && _currentFrame < _frames.Count) {
-                    textureWrap = _textureProvider.GetFromFile(_frames[_currentFrame]);
-                    ImGui.Image(textureWrap.GetWrapOrDefault().ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
+                    if (!_alreadyLoadingFrame) {
+                        Task.Run(async () => {
+                            _alreadyLoadingFrame = true;
+                            if (_lastLoadedFrame != _frames[_currentFrame]) {
+                                _frameToLoad = await _textureProvider.CreateFromImageAsync(_frames[_currentFrame]);
+                                _lastLoadedFrame = _frames[_currentFrame];
+                            }
+                            _alreadyLoadingFrame = false;
+                        });
+                    }
+                    if (_frameToLoad != null) {
+                        ImGui.Image(_frameToLoad.ImGuiHandle,
+                            new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
+                    }
                 }
             } catch {
 

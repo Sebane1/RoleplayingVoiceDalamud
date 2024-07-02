@@ -55,7 +55,7 @@ public class Chat {
             throw new InvalidOperationException("Could not find signature for chat sending");
         }
 
-        var uiModule = (IntPtr)Framework.Instance()->GetUiModule();
+        var uiModule = (IntPtr)Framework.Instance()->UIModule;
 
         using var payload = new ChatPayload(message);
         var mem1 = Marshal.AllocHGlobal(400);

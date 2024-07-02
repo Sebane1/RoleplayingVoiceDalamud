@@ -5,26 +5,26 @@ using Dalamud.Memory;
 using RoleplayingMediaCore;
 using System;
 using System.Numerics;
-using IGameObject = RoleplayingMediaCore.IGameObject;
+using IMediaGameObject = RoleplayingMediaCore.IMediaGameObject;
 
 namespace RoleplayingVoiceDalamud {
-    public unsafe class MediaGameObject : IGameObject {
+    public unsafe class MediaGameObject : IMediaGameObject {
         private Dalamud.Game.ClientState.Objects.Types.IGameObject _gameObject;
         private FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* _gameObjectPointer;
         private string _name = "";
         private Vector3 _position = new Vector3();
 
-        string IGameObject.Name {
+        string IMediaGameObject.Name {
             get {
                 try {
-                    return _gameObjectPointer != null ? (_gameObjectPointer != null ? MemoryHelper.ReadSeString((nint)_gameObjectPointer->Name, 64).TextValue : _name) : _name;
+                    return _gameObjectPointer != null ? (_gameObjectPointer != null ? _gameObjectPointer->NameString : _name) : _name;
                 } catch {
                     return _name;
                 }
             }
         }
 
-        Vector3 IGameObject.Position {
+        Vector3 IMediaGameObject.Position {
             get {
                 try {
                     return (_gameObjectPointer != null ? _gameObjectPointer->Position : _position);
@@ -34,7 +34,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        float IGameObject.Rotation {
+        float IMediaGameObject.Rotation {
             get {
                 try {
                     return _gameObjectPointer != null ? _gameObjectPointer->Rotation : 0;
@@ -44,7 +44,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        string IGameObject.FocusedPlayerObject {
+        string IMediaGameObject.FocusedPlayerObject {
             get {
                 if (_gameObject != null) {
                     try {
@@ -60,7 +60,7 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        Vector3 IGameObject.Forward {
+        Vector3 IMediaGameObject.Forward {
             get {
                 float rotation = _gameObjectPointer != null ? _gameObjectPointer->Rotation : 0;
                 return new Vector3((float)Math.Cos(rotation), 0, (float)Math.Sin(rotation));

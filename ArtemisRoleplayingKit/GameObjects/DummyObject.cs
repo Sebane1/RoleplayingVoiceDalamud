@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace RoleplayingVoiceDalamud {
-    internal class DummyObject : IGameObject {
+    internal class DummyObject : IMediaGameObject {
         public DummyObject() {
             Name = Guid.NewGuid().ToString();
         }
