@@ -375,11 +375,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
                                         if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
                                             string nameID =
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Chest].Value.ToString() + 
+                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Chest].Value.ToString() +
                                             character->DrawData.EquipmentModelIds[(int)EquipIndex.Head].Value.ToString() +
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Feet].Value.ToString() + 
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Earring].Value.ToString() + 
-                                            speakerName.TextValue + 
+                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Feet].Value.ToString() +
+                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Earring].Value.ToString() +
+                                            speakerName.TextValue +
                                             character->BaseId;
                                             ICharacter characterObject = GetCharacterFromId(character->GameObject.GetGameObjectId().ObjectId);
                                             string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) ? characterObject.Name.TextValue : nameID;
@@ -589,38 +589,39 @@ namespace RoleplayingVoiceDalamud.Voice {
                 if (_currentDialoguePaths.Count > 0) {
                     Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\");
                     string name = speaker;
-                    string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
-                    string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + Guid.NewGuid() + ".wav";
-                    FileInfo fileInfo = null;
-                    try {
-                        fileInfo = new FileInfo(path);
-                    } catch {
+                    //string path = _plugin.Config.CacheFolder + @"\Dump\" + name + ".mp3";
+                    Directory.CreateDirectory(_plugin.Config.CacheFolder + @"\Dump\" + name);
+                    string pathWave = _plugin.Config.CacheFolder + @"\Dump\" + name + @"\" + name + " - " + Guid.NewGuid() + ".wav";
+                    //FileInfo fileInfo = null;
+                    //try {
+                    //    fileInfo = new FileInfo(path);
+                    //} catch {
 
+                    //}
+                    //if (!fileInfo.Exists || fileInfo.Length < 7500000) {
+                    //    try {
+                    ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                    WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                    var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                    using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
+                        pcmStream.CopyTo(fileStreamWave);
+                        fileStreamWave.Close();
+                        fileStreamWave.Dispose();
                     }
-                    if (!fileInfo.Exists || fileInfo.Length < 7500000) {
-                        try {
-                            ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                            using (WaveFileWriter fileStreamWave = new WaveFileWriter(pathWave, pcmStream.WaveFormat)) {
-                                pcmStream.CopyTo(fileStreamWave);
-                                fileStreamWave.Close();
-                                fileStreamWave.Dispose();
-                            }
-                            if (scdFile != null) {
-                                using (var waveStream = new AudioFileReader(pathWave)) {
-                                    using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
-                                        using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
-                                            waveStream.CopyTo(lame);
-                                        }
-                                    }
-                                }
-                            }
-                            File.Delete(pathWave);
-                        } catch (Exception e) {
-                            Plugin.PluginLog.Error(e, e.Message);
-                        }
-                    }
+                    //if (scdFile != null) {
+                    //    using (var waveStream = new AudioFileReader(pathWave)) {
+                    //        using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write)) {
+                    //            using (LameMP3FileWriter lame = new LameMP3FileWriter(fileStream, waveStream.WaveFormat, LAMEPreset.VBR_90)) {
+                    //                waveStream.CopyTo(lame);
+                    //            }
+                    //        }
+                    //    }
+                    //}
+                    //File.Delete(pathWave);
+                    //    } catch (Exception e) {
+                    //        Plugin.PluginLog.Error(e, e.Message);
+                    //    }
+                    //}
                 }
             } catch (Exception e) {
                 Plugin.PluginLog.Error(e, e.Message);
