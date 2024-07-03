@@ -441,7 +441,7 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     if (ImGui.Button(PluginReference.Config.QualityAssuranceMode ? $"Report Line ({1 + (count++)})" : $"Replay Line ({1 + (count++)})")) {
                         var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                             item.Gender, item.BackupVoice, false, true, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
+                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
                         if (stream.Length > 0) {
                             var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                             PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);

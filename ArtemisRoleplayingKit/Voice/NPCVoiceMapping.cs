@@ -58,7 +58,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return name;
         }
         public static async Task<bool> CheckForUpdates() {
-            if (_npcVoiceConfiguration == null || (_timeSinceLastUpdate != null && _timeSinceLastUpdate.ElapsedMilliseconds > 60000)) {
+            if (_npcVoiceConfiguration == null || (_timeSinceLastUpdate != null && _timeSinceLastUpdate.ElapsedMilliseconds > 120000)) {
                 await Initialize();
             }
             return true;
@@ -68,15 +68,21 @@ namespace RoleplayingVoiceDalamud.Voice {
             return _npcVoiceConfiguration.CharacterToVoiceList;
         }
         public static List<KeyValuePair<string, string>> GetExtrasVoiceMappings() {
-            CheckForUpdates();
+            Task.Run(() => {
+                CheckForUpdates();
+            });
             return _npcVoiceConfiguration.ExtrasVoiceList;
         }
         public static List<KeyValuePair<string, bool>> GetEchoType() {
-            CheckForUpdates();
+            Task.Run(() => {
+                CheckForUpdates();
+            });
             return _npcVoiceConfiguration.EchoValuesList;
         }
         public static List<KeyValuePair<string, float>> GetPitchValues() {
-            CheckForUpdates();
+            Task.Run(() => {
+                CheckForUpdates();
+            });
             return _npcVoiceConfiguration.PitchValuesList;
         }
     }

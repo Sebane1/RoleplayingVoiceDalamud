@@ -197,7 +197,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         .Replace(@"7/", "7 out of ")
                         .Replace(@"8/", "8 out of ")
                         .Replace(@"9/", "9 out of ")
-                        .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", true, !_plugin.Config.ReadQuestObjectives);
+                        .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadQuestObjectives);
                 }
             }
         }
@@ -235,7 +235,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_clientState.IsLoggedIn) {
                 if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
-                    NPCText("Narrator", message.TextValue, "Hyn", true, !_plugin.Config.ReadLocationsAndToastNotifications);
+                    NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Speed, true, !_plugin.Config.ReadLocationsAndToastNotifications);
                 }
             }
         }
@@ -247,7 +247,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private void RedoLineWIndow_RedoLineClicked(object sender, EventArgs e) {
             if (!_blockAudioGeneration) {
-                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, true, true);
+                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, true, true);
                 _startedNewDialogue = true;
                 _passthroughTimer.Reset();
                 _redoLineWindow.IsOpen = false;
@@ -389,11 +389,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             character->BaseId;
                                             ICharacter characterObject = GetCharacterFromId(character->GameObject.GetGameObjectId().ObjectId);
                                             string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) ? characterObject.Name.TextValue : nameID;
-                                            if (!_lastBattleNPCLines.ContainsKey(characterObject.Name.TextValue)) {
-                                                _lastBattleNPCLines[characterObject.Name.TextValue] = "";
+                                            if (!_lastBattleNPCLines.ContainsKey(finalName)) {
+                                                _lastBattleNPCLines[finalName] = "";
                                             }
-                                            if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[characterObject.Name.TextValue]) {
-                                                _lastBattleNPCLines[characterObject.Name.TextValue] = npcBubbleInformaton.MessageText.TextValue;
+                                            if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[finalName]) {
+                                                _lastBattleNPCLines[finalName] = npcBubbleInformaton.MessageText.TextValue;
                                                 if (_blockAudioGenerationCount < 1) {
                                                     if (characterObject != null && characterObject.Customize[(int)CustomizeIndex.ModelType] != 0) {
                                                         if (!_knownNPCBossAnnouncers.Contains(finalName)) {
@@ -410,7 +410,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
                                                             character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
                                                             character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
-                                                            character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor));
+                                                            character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor), NPCVoiceManager.VoiceModel.Speed);
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         _plugin.Chat.Print("Sent audio from NPC bubble.");
@@ -427,7 +427,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         bubbleCooldown.Restart();
                                         _blockAudioGeneration = false;
                                     } catch {
-                                        NPCText(speakerName.TextValue, npcBubbleInformaton.MessageText.TextValue, true);
+                                        NPCText(speakerName.TextValue, npcBubbleInformaton.MessageText.TextValue, true, NPCVoiceManager.VoiceModel.Speed);
                                     }
                                 }
                                 );
@@ -456,7 +456,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         while (_npcDungeonDialogueQueue.Count > 0) {
                             var item = _npcDungeonDialogueQueue.Dequeue();
                             if (_blockAudioGenerationCount is 0 && !_blockAudioGeneration) {
-                                NPCText(item.Key, item.Value.TrimStart('.'), true, !Conditions.IsBoundByDuty);
+                                NPCText(item.Key, item.Value.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, !Conditions.IsBoundByDuty);
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Sent audio from NPC chat.");
                                 }
@@ -515,7 +515,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _currentText = _state.Text;
                                         _redoLineWindow.IsOpen = false;
                                         if (!_blockAudioGeneration) {
-                                            NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, true);
+                                            NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
                                             _startedNewDialogue = true;
                                             _passthroughTimer.Reset();
                                         }
@@ -866,7 +866,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return message;
         }
-        private async void NPCText(string npcName, string message, string voice, bool lowLatencyMode = false, bool onlySendData = false) {
+        private async void NPCText(string npcName, string message, string voice, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool onlySendData = false) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     bool gender = false;
@@ -882,7 +882,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         KeyValuePair<Stream, bool> stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, true, npcData, false);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false);
                         //if (!previouslyAddedLines.Contains(value + nameToUse)) {
                         //    _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, "", true));
                         //    previouslyAddedLines.Add(value + nameToUse);
@@ -947,7 +947,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, bool lowLatencyMode = false, bool redoLine = false) {
+        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool redoLine = false) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     bool gender = false;
@@ -969,7 +969,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
                         KeyValuePair<Stream, bool> stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine);
                         if (!previouslyAddedLines.Contains(value + nameToUse)) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
                             previouslyAddedLines.Add(value + nameToUse);
@@ -1167,7 +1167,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private async void NPCText(string name, string message, bool gender,
-            byte race, int body, byte tribe, byte eyes, uint objectId, MediaGameObject mediaGameObject) {
+            byte race, int body, byte tribe, byte eyes, uint objectId, MediaGameObject mediaGameObject, NPCVoiceManager.VoiceModel voiceModel) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     string nameToUse = name;
@@ -1179,7 +1179,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     KeyValuePair<Stream, bool> stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value,
                     StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
-                    PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, true, npcData);
+                    PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, voiceModel, npcData);
                     if (stream.Key != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                         WaveStream wavePlayer = GetWavePlayer(name, stream.Key, reportData);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
