@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using RoleplayingVoiceDalamud.Datamining;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,11 @@ namespace RoleplayingVoiceDalamud.Voice {
     public static class NPCVoiceMapping {
         public static NPCVoiceConfiguration _npcVoiceConfiguration;
         private static Stopwatch _timeSinceLastUpdate;
+        private static Dictionary<string, ReportData> _speakerList;
+        private static Dictionary<ulong, string> _npcBubbleRecovery = new Dictionary<ulong, string>();
+        private static bool alreadyLoaded;
+
+        public static Dictionary<ulong, string> NpcBubbleRecovery { get => _npcBubbleRecovery; set => _npcBubbleRecovery = value; }
 
         public static async Task<bool> Initialize() {
             try {
@@ -17,6 +23,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                 string json = await httpClient.GetStringAsync(
                 "https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/npcVoiceConfiguration.json");
                 _npcVoiceConfiguration = JsonConvert.DeserializeObject<NPCVoiceConfiguration>(json);
+                httpClient = new HttpClient();
+                json = await httpClient.GetStringAsync("https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/speakers.json");
+                if (!alreadyLoaded) {
+                    _speakerList = JsonConvert.DeserializeObject<Dictionary<string, ReportData>>(json);
+
+                    _npcBubbleRecovery.Clear();
+                    foreach (var item in _speakerList) {
+                        _npcBubbleRecovery.Add(item.Value.npcid, item.Key);
+                    }
+                    alreadyLoaded = true;
+                }
                 if (_timeSinceLastUpdate == null) {
                     _timeSinceLastUpdate = new Stopwatch();
                 }

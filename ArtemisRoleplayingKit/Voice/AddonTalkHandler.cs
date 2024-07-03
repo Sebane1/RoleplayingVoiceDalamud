@@ -10,6 +10,7 @@ using Concentus.Structs;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -358,7 +359,12 @@ namespace RoleplayingVoiceDalamud.Voice {
 
                             SeString speakerName = SeString.Empty;
                             if (pActor != null && pActor->Name != null) {
-                                speakerName = ((IMediaGameObject*)pActor)->Name;
+                                var objectId = pActor->GetGameObjectId().ObjectId;
+                                if (NPCVoiceMapping.NpcBubbleRecovery.ContainsKey(objectId)) {
+                                    speakerName = NPCVoiceMapping.NpcBubbleRecovery[objectId];
+                                } else {
+                                    speakerName = pActor->NameString;
+                                }
                             }
                             var npcBubbleInformaton = new NPCBubbleInformation(MemoryHelper.ReadSeStringNullTerminated(pString), currentTime_mSec, speakerName);
                             var extantMatch = _speechBubbleInfo.Find((x) => { return x.IsSameMessageAs(npcBubbleInformaton); });
