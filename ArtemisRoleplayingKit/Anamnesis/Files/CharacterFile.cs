@@ -436,14 +436,15 @@ public class CharacterFile : JsonFileBase
 			//this.DyeId = from.Dye;
 		}
 
-		public Color Color { get; set; }
-		public Vector Scale { get; set; }
-		public ushort ModelSet { get; set; }
-		public ushort ModelBase { get; set; }
-		public ushort ModelVariant { get; set; }
-		public byte DyeId { get; set; }
+        public Color Color { get; set; }
+        public Vector Scale { get; set; }
+        public ushort ModelSet { get; set; }
+        public ushort ModelBase { get; set; }
+        public ushort ModelVariant { get; set; }
+        public byte DyeId { get; set; }
+        public byte DyeId2 { get; set; }
 
-		public void Write(WeaponMemory? vm, bool isMainHand)
+        public void Write(WeaponMemory? vm, bool isMainHand)
 		{
 			if (vm == null)
 				return;
