@@ -1001,7 +1001,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     //lipId = 630;
                                     animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
                                     if (wavePlayer.TotalTime.Seconds < 2) {
-                                        lipId = LipSyncTypes[4].Timeline.AnimationId;
+                                        lipId = LipSyncTypes[2].Timeline.AnimationId;
                                     } else if (wavePlayer.TotalTime.Seconds < 7) {
                                         lipId = LipSyncTypes[5].Timeline.AnimationId;
                                     } else {
@@ -1077,7 +1077,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
                                                     if (percentage > 0.90f) {
                                                         if (seconds < 2000) {
-                                                            lipId = LipSyncTypes[4].Timeline.AnimationId;
+                                                            lipId = LipSyncTypes[2].Timeline.AnimationId;
                                                         } else if (wavePlayer.TotalTime.Seconds < 7000) {
                                                             lipId = LipSyncTypes[5].Timeline.AnimationId;
                                                         } else {
