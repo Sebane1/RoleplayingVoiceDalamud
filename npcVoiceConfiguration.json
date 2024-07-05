@@ -203,7 +203,29 @@
     "Zoraal Ja": "Zorja",
     "Koana": "Koana",
     "Vow of Resolve Gulool Ja Ja": "Vowaja",
-    "Vow of Reason Gulool Ja Ja": "Vowaja"
+    "Vow of Reason Gulool Ja Ja": "Vowareja",
+    "Zurmurwur": "Zwur",
+    "Zereel Ja": "Zereja",
+    "Wuk Evu": "Wevu",    
+    "Vorporlor": "Vorlor",
+    "Ketenramm": "Ketenam",
+    "Miilal Ja": "Mija",   
+    "Linuhanu": "Lihanu",
+    "Hunmu Rruk": "Hruk",
+    "Gurfurlur": "Gurlur",
+    "Zekowa": "Zewa",
+    "Wawlika": "Waika",
+    "Zawpya": "Zpya",
+    "Shenza": "Snza",
+    "Wihuwte": "Wuwte",
+    "Nitowikwe": "Nkwe",
+    "Sphene": "Spne",
+    "Cahciua": "Cciua",
+    "Otis": "Otis",
+    "Gulool Ja": "Gulja",
+    "Shale": "Shale",
+    "Genolt": "Golt",
+    "Pepoane": "Poane"
   },
   "NameAndAliasesList": {
     "Ungust": [
@@ -253,6 +275,9 @@
     ],
     "Krile": [
       "Omphalos Monument"
+    ],
+    "Ketenramm": [
+      "Tankwa"
     ]
   },
   "ExtrasVoiceList": [
