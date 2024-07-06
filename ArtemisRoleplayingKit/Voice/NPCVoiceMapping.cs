@@ -46,7 +46,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return false;
             }
         }
-
+        public static string CheckForNameVariant(string name, int variantDiscriminator) {
+            Dictionary<int, Dictionary<string, string>> voiceVariants = new Dictionary<int, Dictionary<string, string>>();
+            voiceVariants[1192] = new Dictionary<string, string>() { { "Cahciua", "Cahciua Living" }, { "Otis", "Otis Living" } };
+            if (voiceVariants.ContainsKey(variantDiscriminator)) {
+                if (voiceVariants[variantDiscriminator].ContainsKey(name)) {
+                    return voiceVariants[variantDiscriminator][name];
+                }
+            }
+            return name;
+        }
         public static string AliasDetector(string name) {
             foreach (var key in _npcVoiceConfiguration.NameAndAliasesList.Keys) {
                 foreach (var aliases in _npcVoiceConfiguration.NameAndAliasesList[key]) {

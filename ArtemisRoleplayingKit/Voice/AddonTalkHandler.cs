@@ -956,13 +956,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                     bool isRetainer = false;
                     Dalamud.Game.ClientState.Objects.Types.IGameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body, ref isRetainer);
                     if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
-                        string nameToUse = npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue;
+                        string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
                         MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_clientState.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                         _currentSpeechObject = currentSpeechObject;
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
-                        string value = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
-                        string arcValue = FeoUlRetainerCleanup(npcName, StripPlayerNameFromNPCDialogueArc(message));
+                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
+                        string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
                         string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         if (_plugin.Config.DebugMode) {
@@ -999,7 +999,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         initialState = actorMemory.CharacterMode;
                                         animationMemory = actorMemory.Animation;
                                         animationMemory.LipsOverride = 630;
-                                        //lipId = 630;
                                         animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
                                         if (wavePlayer.TotalTime.Seconds < 2 || !Conditions.IsWatchingCutscene) {
                                             lipId = LipSyncTypes[2].Timeline.AnimationId;
