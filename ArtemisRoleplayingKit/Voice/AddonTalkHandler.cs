@@ -1044,13 +1044,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
                                             if (_hook != null) {
                                                 try {
-                                                    //if (npcObject != null && canDoLipSync) {
-                                                    //    animationMemory.LipsOverride = 0;
-                                                    //    if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                    //        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                                    //    }
-                                                    //    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                                    //}
+                                                    if (npcObject != null && canDoLipSync) {
+                                                        animationMemory.LipsOverride = 0;
+                                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
+                                                        }
+                                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                                    }
                                                     if (_state != null) {
                                                         if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
                                                     && !_plugin.Config.QualityAssuranceMode)) {
