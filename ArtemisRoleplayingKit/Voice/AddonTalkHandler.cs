@@ -968,7 +968,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (_plugin.Config.DebugMode) {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
-                        for (int i = 0; i < 5; i++) {
+                        for (int i = 0; i < 2; i++) {
                             KeyValuePair<Stream, bool> stream =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine);
                             if (!previouslyAddedLines.Contains(value + nameToUse)) {
@@ -1116,6 +1116,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                             } else {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream was null! trying again. " + downloadTimer.Elapsed.ToString());
+                                }
+                                if (_plugin.Config.NpcSpeechGenerationDisabled) {
+                                    break;
                                 }
                             }
                         }
