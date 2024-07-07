@@ -1,4 +1,4 @@
-Artemis Roleplaying Kit aims to be the go to plugin for most things related to sound, and roleplaying quality of life!
+Artemis Roleplaying Kit can voice every NPC Dialogue and Player Dialogue, and change any character combat sound. Among many other Roleplaying Quality of life features!
 
 Want a full overview? Check out the the plugin website!
 https://artemisroleplayingkit.carrd.co/
