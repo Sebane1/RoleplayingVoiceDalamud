@@ -995,38 +995,42 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                     if (npcObject != null && canDoLipSync) {
                                         actorMemory = new ActorMemory();
-                                        actorMemory.SetAddress(npcObject.Address);
-                                        initialState = actorMemory.CharacterMode;
-                                        animationMemory = actorMemory.Animation;
-                                        animationMemory.LipsOverride = 630;
-                                        animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                                        if (wavePlayer.TotalTime.Seconds < 2 || !Conditions.IsWatchingCutscene) {
-                                            lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                        } else if (wavePlayer.TotalTime.Seconds < 7) {
-                                            lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                        } else {
-                                            lipId = LipSyncTypes[6].Timeline.AnimationId;
-                                        }
-                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
-                                        }
-                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                        }
-                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                        task = Task.Run(delegate {
-                                            Thread.Sleep(500);
+                                        try {
+                                            actorMemory.SetAddress(npcObject.Address);
+                                            initialState = actorMemory.CharacterMode;
+                                            animationMemory = actorMemory.Animation;
+                                            animationMemory.LipsOverride = 630;
+                                            animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                                            if (wavePlayer.TotalTime.Seconds < 2 || !Conditions.IsWatchingCutscene) {
+                                                lipId = LipSyncTypes[2].Timeline.AnimationId;
+                                            } else if (wavePlayer.TotalTime.Seconds < 7) {
+                                                lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                            } else {
+                                                lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                            }
                                             if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
                                                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                             }
                                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                            Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
                                             if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
                                                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                             }
                                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                        });
+                                            task = Task.Run(delegate {
+                                                Thread.Sleep(500);
+                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                }
+                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                                                Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
+                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
+                                                }
+                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                            });
+                                        } catch {
+                                            Plugin.PluginLog.Error("Lip sync has failed, developer please fix!");
+                                        }
                                     }
                                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                                     float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
@@ -1043,12 +1047,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         Conditions.IsWatchingCutscene || Conditions.IsWatchingCutscene78 || lowLatencyMode, delegate {
                                             if (_hook != null) {
                                                 try {
-                                                    if (npcObject != null && canDoLipSync) {
-                                                        animationMemory.LipsOverride = 0;
-                                                        if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                            MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
+                                                    if (animationMemory != null) {
+                                                        if (npcObject != null && canDoLipSync) {
+                                                            animationMemory.LipsOverride = 0;
+                                                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
+                                                            }
+                                                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                                         }
-                                                        MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                                     }
                                                     if (_state != null) {
                                                         if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
@@ -1070,36 +1076,38 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 }
                                             }
                                         }, delegate (object sender, StreamVolumeEventArgs e) {
-                                            if (npcObject != null && canDoLipSync) {
-                                                if (e.MaxSampleValues.Length > 0) {
-                                                    if (e.MaxSampleValues[0] > 0.2) {
-                                                        int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
-                                                        float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
-                                                        if (percentage > 0.90f) {
-                                                            if (seconds < 2000) {
-                                                                lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                                            } else if (wavePlayer.TotalTime.Seconds < 7000) {
-                                                                lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                                            } else {
-                                                                lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                            if (animationMemory != null) {
+                                                if (npcObject != null && canDoLipSync) {
+                                                    if (e.MaxSampleValues.Length > 0) {
+                                                        if (e.MaxSampleValues[0] > 0.2) {
+                                                            int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
+                                                            float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
+                                                            if (percentage > 0.90f) {
+                                                                if (seconds < 2000) {
+                                                                    lipId = LipSyncTypes[2].Timeline.AnimationId;
+                                                                } else if (wavePlayer.TotalTime.Seconds < 7000) {
+                                                                    lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                                                } else {
+                                                                    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                                                }
                                                             }
-                                                        }
-                                                        if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
-                                                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
-                                                                    ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                            if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
+                                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
+                                                                        ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                                }
+                                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
+                                                                lipWasSynced = true;
                                                             }
-                                                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                                            lipWasSynced = true;
-                                                        }
-                                                    } else {
-                                                        if (lipWasSynced) {
-                                                            if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
-                                                                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
-                                                                    ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                        } else {
+                                                            if (lipWasSynced) {
+                                                                if (!Conditions.IsBoundByDuty || Conditions.IsWatchingCutscene) {
+                                                                    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
+                                                                        ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
+                                                                }
+                                                                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
+                                                                lipWasSynced = false;
                                                             }
-                                                            MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                                            lipWasSynced = false;
                                                         }
                                                     }
                                                 }
@@ -1135,7 +1143,16 @@ namespace RoleplayingVoiceDalamud.Voice {
             WaveStream wavePlayer = null;
             try {
                 stream.Position = 0;
-                wavePlayer = new Mp3FileReader(stream);
+                if (stream.Length > 0) {
+                    var player = new Mp3FileReader(stream);
+                    if (player.Length > 300) {
+                        wavePlayer = player;
+                    } else {
+                        Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
+                    }
+                } else {
+                    Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
+                }
             } catch {
                 stream.Position = 0;
                 if (stream.Length > 0) {
@@ -1155,7 +1172,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
                             }
                         } else {
-                            Plugin.PluginLog.Warning($"Memory stream stream for {npcName} is empty.");
+                            Plugin.PluginLog.Warning($"Memory stream  for {npcName} is empty.");
                         }
                     } else {
                         Plugin.PluginLog.Warning($"PCM Decoded audio stream for {npcName} is empty.");
