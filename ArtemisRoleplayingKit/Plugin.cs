@@ -2518,33 +2518,35 @@ namespace RoleplayingVoice {
                         Thread.Sleep(1000);
                     }
                     staging = true;
-                    stagingPath = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                    if (Directory.Exists(config.CacheFolder + @"\Staging")) {
-                        foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
-                            try {
-                                File.Delete(file);
-                            } catch (Exception e) {
-                                //Plugin.PluginLog.Warning(e, e.Message);
+                    if (_clientState.LocalPlayer != null) {
+                        stagingPath = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                        if (Directory.Exists(config.CacheFolder + @"\Staging")) {
+                            foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
+                                try {
+                                    File.Delete(file);
+                                } catch (Exception e) {
+                                    //Plugin.PluginLog.Warning(e, e.Message);
+                                }
                             }
                         }
-                    }
-                    try {
-                        Directory.CreateDirectory(stagingPath);
-                    } catch {
-                        _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
-                    }
-                    if (Directory.Exists(stagingPath)) {
-                        foreach (string file in Directory.EnumerateFiles(stagingPath)) {
-                            try {
-                                File.Delete(file);
-                            } catch (Exception e) {
-                            }
-                        }
-                    }
-                    foreach (var sound in list) {
                         try {
-                            File.Copy(sound, Path.Combine(stagingPath, Path.GetFileName(sound)), true);
-                        } catch (Exception e) {
+                            Directory.CreateDirectory(stagingPath);
+                        } catch {
+                            _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                        }
+                        if (Directory.Exists(stagingPath)) {
+                            foreach (string file in Directory.EnumerateFiles(stagingPath)) {
+                                try {
+                                    File.Delete(file);
+                                } catch (Exception e) {
+                                }
+                            }
+                        }
+                        foreach (var sound in list) {
+                            try {
+                                File.Copy(sound, Path.Combine(stagingPath, Path.GetFileName(sound)), true);
+                            } catch (Exception e) {
+                            }
                         }
                     }
                     staging = false;
