@@ -2294,7 +2294,6 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
-                                                var value = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(_clientState.LocalPlayer.ObjectIndex)).Item2;
                                                 if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
                                                     characters.Add(character);
                                                 } else if (config.DebugMode) {
