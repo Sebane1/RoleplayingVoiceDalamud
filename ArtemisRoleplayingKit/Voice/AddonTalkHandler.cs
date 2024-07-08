@@ -978,7 +978,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _npcVoiceHistoryItems.RemoveAt(0);
                                 }
                             }
-                            if (stream.Key != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            if (stream.Key != null && stream.Key.Length > 50 && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
@@ -1149,7 +1149,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         memoryStream.Position = 0;
                         if (memoryStream.Length > 0) {
                             var newPlayer = new WaveFileReader(memoryStream);
-                            if (newPlayer.TotalTime.Milliseconds > 100) {
+                            if (newPlayer.TotalTime.Milliseconds > 300) {
                                 wavePlayer = newPlayer;
                             } else {
                                 Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
