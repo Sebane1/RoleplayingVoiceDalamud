@@ -50,22 +50,22 @@ public class PenumbraAndGlamourerIpcWrapper {
 
     public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface) {
         Instance = this;
-        //_getModDirectory = new GetModDirectory(dalamudPluginInterface);
-        //_getCollection = new GetCollection(dalamudPluginInterface);
-        //_setCollection = new SetCollection(dalamudPluginInterface);
-        //_getCollectionForObject = new GetCollectionForObject(dalamudPluginInterface);
-        //_setCollectionForObject = new SetCollectionForObject(dalamudPluginInterface);
-        //_getChangedItemsForCollection = new GetChangedItemsForCollection(dalamudPluginInterface);
-        //_getModList = new GetModList(dalamudPluginInterface);
-        //_addMod = new AddMod(dalamudPluginInterface);
-        //_reloadMod = new ReloadMod(dalamudPluginInterface);
-        //_getCurrentModSettings = new GetCurrentModSettings(dalamudPluginInterface);
-        //_getAvailableModSettings = new GetAvailableModSettings(dalamudPluginInterface);
-        //_trySetMod = new TrySetMod(dalamudPluginInterface);
-        //_trySetModPriority = new TrySetModPriority(dalamudPluginInterface);
-        //_trySetModSetting = new TrySetModSetting(dalamudPluginInterface);
-        //_trySetModSettings = new TrySetModSettings(dalamudPluginInterface);
-        //_redrawObject = new RedrawObject(dalamudPluginInterface);
+        _getModDirectory = new GetModDirectory(dalamudPluginInterface);
+        _getCollection = new GetCollection(dalamudPluginInterface);
+        _setCollection = new SetCollection(dalamudPluginInterface);
+        _getCollectionForObject = new GetCollectionForObject(dalamudPluginInterface);
+        _setCollectionForObject = new SetCollectionForObject(dalamudPluginInterface);
+        _getChangedItemsForCollection = new GetChangedItemsForCollection(dalamudPluginInterface);
+        _getModList = new GetModList(dalamudPluginInterface);
+        _addMod = new AddMod(dalamudPluginInterface);
+        _reloadMod = new ReloadMod(dalamudPluginInterface);
+        _getCurrentModSettings = new GetCurrentModSettings(dalamudPluginInterface);
+        _getAvailableModSettings = new GetAvailableModSettings(dalamudPluginInterface);
+        _trySetMod = new TrySetMod(dalamudPluginInterface);
+        _trySetModPriority = new TrySetModPriority(dalamudPluginInterface);
+        _trySetModSetting = new TrySetModSetting(dalamudPluginInterface);
+        _trySetModSettings = new TrySetModSettings(dalamudPluginInterface);
+        _redrawObject = new RedrawObject(dalamudPluginInterface);
 
         //_getDesignList = new GetDesignList(dalamudPluginInterface);
         //_applyDesign = new ApplyDesign(dalamudPluginInterface);

@@ -23,9 +23,11 @@ using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Ktisis.Structs.Actor;
 using Lumina.Excel.GeneratedSheets;
 using NAudio.Lame;
+using NAudio.Vorbis;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
+using NVorbis;
 using RoleplayingMediaCore;
 using RoleplayingVoice;
 using RoleplayingVoiceCore;
@@ -235,7 +237,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_clientState.IsLoggedIn) {
                 if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
-                    NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Speed, true, !_plugin.Config.ReadLocationsAndToastNotifications);
+                    NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications);
                 }
             }
         }
@@ -634,7 +636,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        public string ConvertRomanNumberals(string text) {
+        public static string ConvertRomanNumberals(string text) {
             string value = text;
             for (int i = 25; i > 5; i--) {
                 string numeral = Numerals.Roman.To(i);
@@ -819,7 +821,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        public static float[] DecodeOggOpusToPCM(Stream stream) {
+        public static RawSourceWaveStream DecodeOggOpusToPCM(Stream stream) {
             // Read the Opus file
             // Initialize the decoder
             OpusDecoder decoder = new OpusDecoder(48000, 1); // Assuming a sample rate of 48000 Hz and mono audio
@@ -838,7 +840,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
 
-            return pcmSamples.ToArray();
+            var waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 1);
+            var memoryStream = new MemoryStream();
+            var writer = new BinaryWriter(stream);
+            foreach (var sample in pcmSamples.ToArray()) {
+                writer.Write(sample);
+            }
+            memoryStream.Position = 0;
+            return new RawSourceWaveStream(stream, waveFormat);
         }
 
         public string FeoUlRetainerCleanup(string npcName, string message) {
@@ -883,13 +892,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                         string npcData = JsonConvert.SerializeObject(reportData);
                         KeyValuePair<Stream, bool> stream =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false);
-                        //if (!previouslyAddedLines.Contains(value + nameToUse)) {
-                        //    _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, "", true));
-                        //    previouslyAddedLines.Add(value + nameToUse);
-                        //    if (_npcVoiceHistoryItems.Count > 12) {
-                        //        _npcVoiceHistoryItems.RemoveAt(0);
-                        //    }
-                        //}
                         if (!_plugin.Config.NpcSpeechGenerationDisabled && !onlySendData) {
                             if (stream.Key != null) {
                                 if (_plugin.Config.DebugMode) {
@@ -947,6 +949,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
+        public static string CleanMessage(string message, string name) {
+            return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)),name);
+        }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool redoLine = false) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
@@ -961,7 +966,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _currentSpeechObject = currentSpeechObject;
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
-                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message))));
+                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue));
                         string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
                         string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
                         Stopwatch downloadTimer = Stopwatch.StartNew();
@@ -1140,11 +1145,18 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
+            _plugin.Chat.Print("Stream length " + stream.Length);
+            float streamLength = stream.Length;
             WaveStream wavePlayer = null;
             try {
                 stream.Position = 0;
+                _plugin.Chat.Print("Trying MP3");
                 if (stream.Length > 0) {
                     var player = new Mp3FileReader(stream);
+                    _plugin.Chat.Print("Data length " + player.Length);
+                    if (player.Length < streamLength) {
+                        throw new Exception();
+                    }
                     if (player.Length > 300) {
                         wavePlayer = player;
                     } else {
@@ -1154,33 +1166,40 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
                 }
             } catch {
-                stream.Position = 0;
-                if (stream.Length > 0) {
-                    float[] data = DecodeOggOpusToPCM(stream);
-                    if (data.Length > 0) {
-                        WaveFormat waveFormat = new WaveFormat(48000, 16, 1);
-                        MemoryStream memoryStream = new MemoryStream();
-                        WaveFileWriter writer = new WaveFileWriter(memoryStream, waveFormat);
-                        writer.WriteSamples(data.ToArray(), 0, data.Length);
-                        writer.Flush();
-                        memoryStream.Position = 0;
-                        if (memoryStream.Length > 0) {
-                            var newPlayer = new WaveFileReader(memoryStream);
-                            if (newPlayer.TotalTime.Milliseconds > 300) {
-                                wavePlayer = newPlayer;
-                            } else {
-                                Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
-                            }
+                try {
+                    stream.Position = 0;
+                    _plugin.Chat.Print("Trying OGG Opus ");
+                    if (stream.Length > 0) {
+                        var data = DecodeOggOpusToPCM(stream);
+                        if (data.Length > 0) {
+                            _plugin.Chat.Print("Data length " + data.Length);
+                            var newPlayer = data;
+                            //if (newPlayer.TotalTime.Milliseconds > 300) {
+                            wavePlayer = newPlayer;
+                            //} else {
+                            //    Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
+                            //}
                         } else {
-                            Plugin.PluginLog.Warning($"Memory stream  for {npcName} is empty.");
+                            Plugin.PluginLog.Warning($"PCM Decoded audio stream for {npcName} is empty.");
                         }
                     } else {
-                        Plugin.PluginLog.Warning($"PCM Decoded audio stream for {npcName} is empty.");
+                        Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
+                        if (reportData != null) {
+                            reportData.ReportToXivVoice();
+                        }
                     }
-                } else {
-                    Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
-                    if (reportData != null) {
-                        reportData.ReportToXivVoice();
+                } catch {
+                    stream.Position = 0;
+                    _plugin.Chat.Print("Trying Normal OGG");
+                    if (stream.Length > 0) {
+                        var player = new VorbisWaveReader(stream);
+                        if (player.Length > 300) {
+                            wavePlayer = player;
+                        } else {
+                            Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
+                        }
+                    } else {
+                        Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
                     }
                 }
             }
@@ -1194,7 +1213,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string nameToUse = name;
                     MediaGameObject currentSpeechObject = mediaGameObject;
                     _currentSpeechObject = currentSpeechObject;
-                    string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)));
+                    string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     KeyValuePair<Stream, bool> stream =
@@ -1362,8 +1381,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             return character;
         }
 
-        private string StripPlayerNameFromNPCDialogue(string value) {
-            string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
+        private static string StripPlayerNameFromNPCDialogue(string value, string playerName) {
+            string[] mainCharacterName = playerName.Split(" ");
             return value.Replace(mainCharacterName[0], null).Replace(mainCharacterName[1], null);
         }
         private string StripPlayerNameFromNPCDialogueArc(string value) {
@@ -1400,7 +1419,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             return 1;
         }
-        private string PhoneticLexiconCorrection(string value) {
+        private static string PhoneticLexiconCorrection(string value) {
             List<KeyValuePair<string, string>> phoneticPronunciations = new List<KeyValuePair<string, string>>();
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Urianger", "Uriawnjay"));
             phoneticPronunciations.Add(new KeyValuePair<string, string>("Alphinaud", "Alphinau"));
