@@ -2384,7 +2384,9 @@ namespace RoleplayingVoice {
                         }
                     } else if (character.ObjectKind == ObjectKind.EventNpc) {
                         if (!string.IsNullOrEmpty(character.Name.TextValue)) {
-                            _objects.Add(character.Name.TextValue, character);
+                            if (!_objects.ContainsKey(character.Name.TextValue)) {
+                                _objects.Add(character.Name.TextValue, character);
+                            }
                         }
                     }
                 }

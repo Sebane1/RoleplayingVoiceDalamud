@@ -97,9 +97,14 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < maxItemsPerCategoryPage; y++) {
                         if (index < _animationPages.Keys.Count) {
                             selectionIndex = _categoryPage * maxItemsPerCategoryPage + index;
-                            string category = _animationPages.Keys.ElementAt(selectionIndex);
-                            if (ImGui.Button(category)) {
-                                _currentCategory = category;
+                            string category = "";
+                            if (selectionIndex < _animationPages.Keys.Count) {
+                                category = _animationPages.Keys.ElementAt(selectionIndex);
+                            }
+                            if (!string.IsNullOrEmpty(category)) {
+                                if (ImGui.Button(category)) {
+                                    _currentCategory = category;
+                                }
                             }
                             ImGui.SameLine();
                             index++;
