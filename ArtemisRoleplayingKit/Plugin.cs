@@ -81,6 +81,7 @@ using Newtonsoft.Json.Linq;
 using Glamourer.Api.Enums;
 using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
+using NAudio.Lame;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -498,6 +499,7 @@ namespace RoleplayingVoice {
                     if (_mediaManager != null) {
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                     }
+                    LameDLL.LoadNativeDLL(Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
                     _videoWindow.MediaManager = _mediaManager;
@@ -536,12 +538,22 @@ namespace RoleplayingVoice {
         }
         public void InitialzeManager() {
             if (_roleplayingMediaManager == null) {
-                _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices);
+                _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices, _roleplayingMediaManager_InitializationStatus);
+                if (config.PlayerVoiceEngine == 1) {
+                    _roleplayingMediaManager.InitializeXTTS();
+                }
+                _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
                 _window.Manager = _roleplayingMediaManager;
             }
             _window.RefreshVoices();
+        }
+        private void _roleplayingMediaManager_InitializationStatus(object sender, string e) {
+            _chat.Print(e);
+        }
+        private void _roleplayingMediaManager_XTTSStatus(object sender, string e) {
+            PluginLog.Verbose(e);
         }
 
         private void _roleplayingMediaManager_OnVoiceFailed(object sender, VoiceFailure e) {
@@ -1257,12 +1269,20 @@ namespace RoleplayingVoice {
                         if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
-                                string value = await _roleplayingMediaManager.DoVoice(playerSender, playerMessage,
+                                string value = config.PlayerVoiceEngine == 1 ? await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
+                                type == XivChatType.CustomEmote,
+                                config.PlayerCharacterVolume,
+                                _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync) :
+                                await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
                                 type == XivChatType.CustomEmote,
                                 config.PlayerCharacterVolume,
                                 _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
-                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
+                                    if (_addonTalkHandler != null) {
+                                        if (_clientState.LocalPlayer != null) {
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
+                                        }
+                                    }
                                 }, delegate (object sender, StreamVolumeEventArgs e) {
                                     if (e.MaxSampleValues.Length > 0) {
                                         if (e.MaxSampleValues[0] > 0.2) {
@@ -2460,6 +2480,11 @@ namespace RoleplayingVoice {
         public async void RefreshData(bool skipModelData = false, bool skipPenumbraScan = false) {
             if (!disposed) {
                 if (!_blockDataRefreshes) {
+                    if (config.PlayerVoiceEngine == 1) {
+                        if (_roleplayingMediaManager != null) {
+                            _roleplayingMediaManager?.InitializeXTTS();
+                        }
+                    }
                     _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
                     _ = Task.Run(async () => {
                         try {

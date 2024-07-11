@@ -55,6 +55,7 @@
 	  <ProjectReference Include="..\LooseTextureCompilerCore\LooseTextureCompilerCore.csproj" />
 	  <ProjectReference Include="..\RoleplayingVoiceCore\RoleplayingVoiceCore.csproj">
 	    <ReferenceOutputAssembly>True</ReferenceOutputAssembly>
+	    <Private>True</Private>
 	  </ProjectReference>
 	</ItemGroup>
 

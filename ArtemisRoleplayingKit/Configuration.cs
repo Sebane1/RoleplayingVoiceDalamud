@@ -45,6 +45,7 @@ namespace RoleplayingVoice {
         private int _spatialAudioAccuracy = 100;
 
         List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
+        private int _playerVoiceEngine;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -135,6 +136,7 @@ namespace RoleplayingVoice {
         public bool LowPerformanceMode { get => _lowPerformanceMode; set => _lowPerformanceMode = value; }
         public int SpatialAudioAccuracy { get => _spatialAudioAccuracy; set => _spatialAudioAccuracy = value; }
         public List<CustomNpcCharacter> CustomNpcCharacters { get => _customNpcCharacters; set => _customNpcCharacters = value; }
+        public int PlayerVoiceEngine { get => _playerVoiceEngine; set => _playerVoiceEngine = value; }
 
         #endregion
 

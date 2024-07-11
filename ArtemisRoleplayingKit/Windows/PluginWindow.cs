@@ -28,11 +28,13 @@ using System.Xml.Linq;
 using RoleplayingVoiceDalamud;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Types;
+using static System.Net.WebRequestMethods;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingMediaManager _manager = null;
+        BetterComboBox _voiceEngineComboBox = new BetterComboBox("Generative Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)" }, 0, 390);
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         BetterComboBox _twitchDefaultPlayback = new BetterComboBox("##twitchDefaultPlayback",
@@ -110,15 +112,20 @@ namespace RoleplayingVoice {
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
-            voiceComboBox = new BetterComboBox("AI Voice List", _voiceList, 0, 390);
+            voiceComboBox = new BetterComboBox("Generative Voice List", _voiceList, 0, 390);
             voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 0, 235);
+            _voiceEngineComboBox.OnSelectedIndexChanged += VoiceEngineComboBox_OnSelectedIndexChanged;
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
             voicePackComboBox.OnSelectedIndexChanged += VoicePackComboBox_OnSelectedIndexChanged;
             fileDialogManager = new FileDialogManager();
             hook = new FFXIVHook();
             hook.Hook(Process.GetCurrentProcess());
-
         }
+
+        private void VoiceEngineComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
+            RefreshVoices();
+        }
+
         public override void OnOpen() {
             base.OnOpen();
             PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ClientState.LocalPlayer as ICharacter, false);
@@ -177,6 +184,7 @@ namespace RoleplayingVoice {
                     _lowPerformanceMode = configuration.LowPerformanceMode;
                     _spatialAudioAccuracy = configuration.SpatialAudioAccuracy;
                     PluginReference.NpcPersonalityWindow.LoadNPCCharacters(configuration.CustomNpcCharacters);
+                    _voiceEngineComboBox.SelectedIndex = configuration.PlayerVoiceEngine;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -384,7 +392,7 @@ namespace RoleplayingVoice {
                     if (ValidTextureExtensions.Contains(Path.GetExtension(files[0]))) {
                         string path = Path.Combine(PluginReference.Config.CacheFolder, @"PhotoFrames\");
                         foreach (string file in files) {
-                            File.Copy(files[0], Path.Combine(path, Path.GetFileName(files[0])));
+                            System.IO.File.Copy(files[0], Path.Combine(path, Path.GetFileName(files[0])));
                         }
                         PluginReference.GposeWindow.LoadFrames();
                     }
@@ -671,7 +679,7 @@ namespace RoleplayingVoice {
             configuration.LowPerformanceMode = _lowPerformanceMode;
             configuration.SpatialAudioAccuracy = (int)_spatialAudioAccuracy;
             configuration.CustomNpcCharacters = PluginReference.NpcPersonalityWindow.CustomNpcCharacters;
-
+            configuration.PlayerVoiceEngine = _voiceEngineComboBox.SelectedIndex;
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                     characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -721,7 +729,7 @@ namespace RoleplayingVoice {
         }
 
         public async void RefreshVoices() {
-            Task.Run(async delegate () {
+            _ = Task.Run(async delegate () {
                 _refreshing = true;
                 try {
                     if (clientState.LocalPlayer != null) {
@@ -764,16 +772,20 @@ namespace RoleplayingVoice {
                             }
                         }
                         if (_manager != null) {
-                            var newVoiceList = await _manager.GetVoiceList();
-                            if (newVoiceList != null && newVoiceList.Length > 0 && newVoiceList.Length > voiceComboBox.Contents.Length) {
+                            var newVoiceList = _voiceEngineComboBox.SelectedIndex == 0 ? (await _manager.GetVoiceListElevenlabs()) : await _manager.GetVoiceListXTTS();
+                            if (newVoiceList != null && newVoiceList.Length > 0) {
                                 _voiceList = newVoiceList;
                                 voiceComboBox.Contents = newVoiceList;
                             }
-                            _manager.SetVoice(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                            if (_voiceEngineComboBox.SelectedIndex == 0) {
+                                _manager.SetVoiceElevenlabs(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                _manager.RefreshElevenlabsSubscriptionInfo();
+                            } else {
+                                _manager.SetVoiceXTTS(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                            }
                             if (_voiceList != null && _voiceList.Length > 0) {
                                 voiceComboBox.Contents = _voiceList;
                             }
-                            _manager.RefreshElevenlabsSubscriptionInfo();
                         }
                         if (configuration.Characters == null) {
                             configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
@@ -883,29 +895,39 @@ namespace RoleplayingVoice {
                 ImGui.EndPopup();
             }
             ImGui.Dummy(new Vector2(0, 10));
-            ImGui.LabelText("##GCVSLabel", "Generative ICharacter Voice ");
+            ImGui.LabelText("##GCVSLabel", "Generative Character Voice ");
             ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
             ImGui.SameLine();
             ImGui.Text("Generative Voice Enabled");
             if (clientState.LocalPlayer != null && _aiVoiceActive) {
-                ImGui.Text("Elevenlabs API Key");
+                ImGui.Text("Generative Voice Engine");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
-                if (string.IsNullOrEmpty(apiKey)) {
-                    if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
-                        Process process = new Process();
-                        try {
-                            process.StartInfo.UseShellExecute = true;
-                            process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
-                            process.Start();
-                        } catch (Exception e) {
+                _voiceEngineComboBox.Width = (int)ImGui.GetContentRegionMax().X;
+                _voiceEngineComboBox.Draw();
+                if (_voiceEngineComboBox.SelectedIndex == 0) {
+                    ImGui.Text("Elevenlabs API Key");
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                    ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
+                    if (string.IsNullOrEmpty(apiKey)) {
+                        if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                            Process process = new Process();
+                            try {
+                                process.StartInfo.UseShellExecute = true;
+                                process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
+                                process.Start();
+                            } catch (Exception e) {
 
+                            }
                         }
+                    }
+                } else {
+                    if (!_manager.XttsReady) {
+                        ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
                     }
                 }
                 if (voiceComboBox != null && _voiceList != null) {
                     if (_voiceList.Length > 0) {
-                        ImGui.Text("AI Voice");
+                        ImGui.Text("Generative Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
                         ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
@@ -917,9 +939,47 @@ namespace RoleplayingVoice {
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
                     RefreshVoices();
                 }
-                if (_manager != null && _manager.Info != null && isApiKeyValid) {
-                    ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
-                    ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
+                if (_voiceEngineComboBox.SelectedIndex == 1) {
+                    if (Environment.GetEnvironmentVariable("Path").Contains("Python")) {
+                        ImGui.TextWrapped($"To add more voices, simply place .wav files of what you want to sound like in the folder the buttons below manage.");
+                        if (ImGui.Button("Add More Voices", new Vector2(ImGui.GetWindowSize().X / 2 - 5, 25))) {
+                            Process process = new Process();
+                            try {
+                                Directory.CreateDirectory(Path.Combine(configuration.CacheFolder, "speakers"));
+                                process.StartInfo.UseShellExecute = true;
+                                process.StartInfo.FileName = Path.Combine(configuration.CacheFolder, "speakers");
+                                process.Start();
+                            } catch (Exception e) {
+
+                            }
+                        }
+                        ImGui.SameLine();
+                        if (_voiceEngineComboBox.SelectedIndex == 1) {
+                            if (ImGui.Button("Refresh Voices", new Vector2(ImGui.GetWindowSize().X / 2 - 5, 25))) {
+                                RefreshVoices();
+                            }
+                        }
+                    } else {
+                        ImGui.TextWrapped("Python is required to install locally generated player voice dependancies. Click the button below to download the installer. Make sure you enable path variable support.");
+                        if (ImGui.Button("Download Python Dependancy", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                            Process process = new Process();
+                            try {
+                                process.StartInfo.UseShellExecute = true;
+                                process.StartInfo.FileName = @"https://www.python.org/ftp/python/3.10.0/python-3.10.0-amd64.exe";
+                                process.Start();
+                            } catch (Exception e) {
+
+                            }
+                        }
+                    }
+                }
+                if (_voiceEngineComboBox.SelectedIndex == 0) {
+                    if (_manager != null && _manager.Info != null && isApiKeyValid) {
+                        ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                        ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
+                    }
+                } else {
+                    ImGui.TextWrapped($"XTTS is free to use and runs on your own machine. Generation speed is hardware dependant. Requires Python 3.10 or below.");
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
               && !isApiKeyValid && _aiVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _aiVoiceActive) {
