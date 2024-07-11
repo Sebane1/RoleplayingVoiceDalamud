@@ -550,10 +550,22 @@ namespace RoleplayingVoice {
             _window.RefreshVoices();
         }
         private void _roleplayingMediaManager_InitializationStatus(object sender, string e) {
-            _chat.Print(e);
+            try {
+                if (_clientState.LocalPlayer != null) {
+                    if (_chat != null) {
+                        _chat.Print(e);
+                    }
+                }
+            } catch (Exception error) {
+                if (PluginLog != null) {
+                    PluginLog.Warning(error, error.Message);
+                }
+            }
         }
         private void _roleplayingMediaManager_XTTSStatus(object sender, string e) {
-            PluginLog.Verbose(e);
+            if (PluginLog != null) {
+                PluginLog.Verbose(e);
+            }
         }
 
         private void _roleplayingMediaManager_OnVoiceFailed(object sender, VoiceFailure e) {
