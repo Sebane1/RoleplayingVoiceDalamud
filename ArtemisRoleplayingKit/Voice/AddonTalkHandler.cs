@@ -1150,10 +1150,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             WaveStream wavePlayer = null;
             try {
                 stream.Position = 0;
-                _plugin.Chat.Print("Trying MP3");
+                if (_plugin.Config.DebugMode) {
+                    _plugin.Chat.Print("Trying MP3");
+                    }
                 if (stream.Length > 0) {
                     var player = new Mp3FileReader(stream);
-                    _plugin.Chat.Print("Data length " + player.Length);
+                    if (_plugin.Config.DebugMode) {
+                        _plugin.Chat.Print("Data length " + player.Length);
+                    }
                     if (player.Length < streamLength) {
                         throw new Exception();
                     }
@@ -1168,11 +1172,15 @@ namespace RoleplayingVoiceDalamud.Voice {
             } catch {
                 try {
                     stream.Position = 0;
-                    _plugin.Chat.Print("Trying OGG Opus ");
+                    if (_plugin.Config.DebugMode) {
+                        _plugin.Chat.Print("Trying OGG Opus ");
+                    }
                     if (stream.Length > 0) {
                         var data = DecodeOggOpusToPCM(stream);
                         if (data.Length > 0) {
-                            _plugin.Chat.Print("Data length " + data.Length);
+                            if (_plugin.Config.DebugMode) {
+                                _plugin.Chat.Print("Data length " + data.Length);
+                            }
                             var newPlayer = data;
                             //if (newPlayer.TotalTime.Milliseconds > 300) {
                             wavePlayer = newPlayer;
@@ -1190,7 +1198,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                 } catch {
                     stream.Position = 0;
-                    _plugin.Chat.Print("Trying Normal OGG");
+                    if (_plugin.Config.DebugMode) {
+                        _plugin.Chat.Print("Trying Normal OGG");
+                    }
                     if (stream.Length > 0) {
                         var player = new VorbisWaveReader(stream);
                         if (player.Length > 300) {
