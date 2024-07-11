@@ -1145,7 +1145,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
-            _plugin.Chat.Print("Stream length " + stream.Length);
+            if (_plugin.Config.DebugMode) {
+                _plugin.Chat.Print("Stream length " + stream.Length);
+            }
             float streamLength = stream.Length;
             WaveStream wavePlayer = null;
             try {
