@@ -1269,7 +1269,7 @@ namespace RoleplayingVoice {
                         if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
-                                string value = config.PlayerVoiceEngine == 1 ? await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
+                                string value = config.PlayerVoiceEngine == 0 ? await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
                                 type == XivChatType.CustomEmote,
                                 config.PlayerCharacterVolume,
                                 _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync) :
