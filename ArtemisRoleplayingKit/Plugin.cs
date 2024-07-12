@@ -499,7 +499,6 @@ namespace RoleplayingVoice {
                     if (_mediaManager != null) {
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                     }
-                    LameDLL.LoadNativeDLL(Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
                     _videoWindow.MediaManager = _mediaManager;
@@ -541,6 +540,7 @@ namespace RoleplayingVoice {
                 _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices, _roleplayingMediaManager_InitializationStatus);
                 if (config.PlayerVoiceEngine == 1) {
                     _roleplayingMediaManager.InitializeXTTS();
+                    _roleplayingMediaManager.BasePath = Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName);
                 }
                 _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
