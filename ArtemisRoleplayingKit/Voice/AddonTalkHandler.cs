@@ -85,7 +85,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _chatId;
         private RedoLineWIndow _redoLineWindow;
         private IToastGui _toast;
-        private Dictionary<string, string> _knownNpcs;
+        //private Dictionary<string, string> _knownNpcs;
         private MemoryService _memoryService;
         private SettingsService _settingService;
         private AnimationService _animationService;
@@ -147,7 +147,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             noSound.CopyTo(memoryStream);
             memoryStream.Position = 0;
             using (StreamReader reader = new StreamReader(memoryStream)) {
-                _knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
+                //_knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
             }
             _memoryService = new MemoryService();
             _settingService = new SettingsService();
@@ -1267,7 +1267,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private string FindNPCNameFromMessage(string message) {
             try {
-                return _knownNpcs[message.Replace(_clientState.LocalPlayer.Name.TextValue.Split(" ")[0], "_NAME_")];
+                return NPCVoiceMapping.GetNamelessNPCs()[message.Replace(_clientState.LocalPlayer.Name.TextValue.Split(" ")[0], "_NAME_")];
             } catch {
                 return "???";
             }

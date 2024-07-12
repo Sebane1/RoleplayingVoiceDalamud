@@ -444,10 +444,10 @@ namespace RoleplayingVoice {
                 ImGui.Text("Previously Played Lines:");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
-                    ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * 0.2f));
+                    ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? 0.1f : 0.2f)));
                     ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
-                    if (ImGui.Button(PluginReference.Config.QualityAssuranceMode ? $"Report Line ({1 + (count++)})" : $"Replay Line ({1 + (count++)})")) {
+                    if (ImGui.Button($"Replay Line ({1 + (count++)})")) {
                         var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                              item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
                         if (stream.Length > 0) {
@@ -458,6 +458,21 @@ namespace RoleplayingVoice {
                             PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                         }
                         break;
+                    }
+                    ImGui.SameLine();
+                    if (PluginReference.Config.QualityAssuranceMode) {
+                        if (ImGui.Button($"Report Line ({1 + (count++)})")) {
+                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
+                            if (stream.Length > 0) {
+                                var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                                PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                            }
+                            if (PluginReference.Config.QualityAssuranceMode) {
+                                PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                            }
+                            break;
+                        }
                     }
                 }
             } catch (Exception e) {
