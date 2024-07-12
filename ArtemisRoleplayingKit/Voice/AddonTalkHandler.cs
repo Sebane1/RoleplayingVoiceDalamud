@@ -458,7 +458,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         while (_npcDungeonDialogueQueue.Count > 0) {
                             var item = _npcDungeonDialogueQueue.Dequeue();
                             if (_blockAudioGenerationCount is 0 && !_blockAudioGeneration) {
-                                NPCText(item.Key, item.Value.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, !Conditions.IsBoundByDuty);
+                                NPCText(item.Key, item.Value.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, Conditions.IsBoundByDuty);
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Sent audio from NPC chat.");
                                 }
@@ -950,7 +950,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         public static string CleanMessage(string message, string name) {
-            return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)),name);
+            return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), name);
         }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool redoLine = false) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
@@ -1154,7 +1154,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 stream.Position = 0;
                 if (_plugin.Config.DebugMode) {
                     _plugin.Chat.Print("Trying MP3");
-                    }
+                }
                 if (stream.Length > 0) {
                     var player = new Mp3FileReader(stream);
                     if (_plugin.Config.DebugMode) {
