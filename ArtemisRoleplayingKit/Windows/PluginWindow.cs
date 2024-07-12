@@ -449,21 +449,18 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count)) {
                         var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Key;
+                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                         if (stream.Length > 0) {
                             var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                             PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
-                        }
-                        if (PluginReference.Config.QualityAssuranceMode) {
-                            PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
-                        }
+                        }  
                         break;
                     }
                     if (PluginReference.Config.QualityAssuranceMode) {
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Key;
+                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                             if (stream.Length > 0) {
                                 var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                                 PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);

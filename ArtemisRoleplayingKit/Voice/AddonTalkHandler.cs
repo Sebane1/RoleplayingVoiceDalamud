@@ -890,14 +890,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
-                        KeyValuePair<Stream, bool> stream =
+                        var stream =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false);
                         if (!_plugin.Config.NpcSpeechGenerationDisabled && !onlySendData) {
-                            if (stream.Key != null) {
+                            if (stream.Item1 != null) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, null);
+                                WaveStream wavePlayer = GetWavePlayer(npcName, stream.Item1, null);
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -909,7 +909,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _plugin.Chat.Print("Waveplayer is valid");
                                     }
                                     bool useSmbPitch = false;
-                                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                                    float pitch = stream.Item2 ? CheckForDefinedPitch(nameToUse) :
                                     CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                                     _chatId = Guid.NewGuid().ToString();
                                     string chatId = _chatId;
@@ -976,7 +976,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
                         for (int i = 0; i < 2; i++) {
-                            KeyValuePair<Stream, bool> stream =
+                            var stream =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, foundName ? VoiceLinePriority.AlternativeCache : VoiceLinePriority.None);
                             if (!previouslyAddedLines.Contains(value + nameToUse)) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
@@ -985,11 +985,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _npcVoiceHistoryItems.RemoveAt(0);
                                 }
                             }
-                            if (stream.Key != null && stream.Key.Length > 50 && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            if (stream.Item1 != null && stream.Item1.Length > 50 && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = GetWavePlayer(npcName, stream.Key, reportData);
+                                WaveStream wavePlayer = GetWavePlayer(npcName, stream.Item1, reportData);
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -1040,7 +1040,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         }
                                     }
                                     bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
-                                    float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                                    float pitch = stream.Item2 ? CheckForDefinedPitch(nameToUse) :
                                     CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                                     _chatId = Guid.NewGuid().ToString();
                                     string chatId = _chatId;
@@ -1119,7 +1119,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                 }
                                             }
-                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f);
+                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f, stream.Item3 == "Elevenlabs" ? 0 : stream.Item3 == "XTTS" ? 1.2f : 0.5f);
                                     }
                                     break;
                                 } else {
@@ -1162,9 +1162,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                     if (_plugin.Config.DebugMode) {
                         _plugin.Chat.Print("Data length " + player.Length);
                     }
-                    if (player.Length < streamLength) {
-                        throw new Exception();
-                    }
                     if (player.Length > 300) {
                         wavePlayer = player;
                     } else {
@@ -1174,48 +1171,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
                 }
             } catch {
-                try {
-                    stream.Position = 0;
-                    if (_plugin.Config.DebugMode) {
-                        _plugin.Chat.Print("Trying OGG Opus ");
-                    }
-                    if (stream.Length > 0) {
-                        var data = DecodeOggOpusToPCM(stream);
-                        if (data.Length > 0) {
-                            if (_plugin.Config.DebugMode) {
-                                _plugin.Chat.Print("Data length " + data.Length);
-                            }
-                            var newPlayer = data;
-                            //if (newPlayer.TotalTime.Milliseconds > 300) {
-                            wavePlayer = newPlayer;
-                            //} else {
-                            //    Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
-                            //}
-                        } else {
-                            Plugin.PluginLog.Warning($"PCM Decoded audio stream for {npcName} is empty.");
-                        }
-                    } else {
-                        Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
-                        if (reportData != null) {
-                            reportData.ReportToXivVoice();
-                        }
-                    }
-                } catch {
-                    stream.Position = 0;
-                    if (_plugin.Config.DebugMode) {
-                        _plugin.Chat.Print("Trying Normal OGG");
-                    }
-                    if (stream.Length > 0) {
-                        var player = new VorbisWaveReader(stream);
-                        if (player.Length > 300) {
-                            wavePlayer = player;
-                        } else {
-                            Plugin.PluginLog.Warning($"Sound for {npcName} is too short.");
-                        }
-                    } else {
-                        Plugin.PluginLog.Warning($"Received audio stream for {npcName} is empty.");
-                    }
-                }
+
             }
             return wavePlayer;
         }
@@ -1231,14 +1187,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType);
                     string npcData = JsonConvert.SerializeObject(reportData);
-                    KeyValuePair<Stream, bool> stream =
+                    var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value,
                     StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
                     PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, voiceModel, npcData);
-                    if (stream.Key != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                        WaveStream wavePlayer = GetWavePlayer(name, stream.Key, reportData);
+                    if (stream.Item1 != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                        WaveStream wavePlayer = GetWavePlayer(name, stream.Item1, reportData);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
-                        float pitch = stream.Value ? CheckForDefinedPitch(nameToUse) :
+                        float pitch = stream.Item2 ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
                         _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
                        Conditions.IsBoundByDuty && Conditions.IsWatchingCutscene, useSmbPitch, pitch, 0,
