@@ -950,7 +950,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         public static string CleanMessage(string message, string name) {
-            return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), name);
+            bool foundName = false;
+            return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), name, ref foundName);
         }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool redoLine = false) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
@@ -966,7 +967,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _currentSpeechObject = currentSpeechObject;
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
-                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue));
+                        bool foundName = false;
+                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName));
                         string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
                         string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
                         Stopwatch downloadTimer = Stopwatch.StartNew();
@@ -975,7 +977,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                         for (int i = 0; i < 2; i++) {
                             KeyValuePair<Stream, bool> stream =
-                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine);
+                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, foundName ? VoiceLinePriority.AlternativeCache : VoiceLinePriority.None);
                             if (!previouslyAddedLines.Contains(value + nameToUse)) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
                                 previouslyAddedLines.Add(value + nameToUse);
@@ -1225,7 +1227,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string nameToUse = name;
                     MediaGameObject currentSpeechObject = mediaGameObject;
                     _currentSpeechObject = currentSpeechObject;
-                    string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue);
+                    bool foundName = false;
+                    string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     KeyValuePair<Stream, bool> stream =
@@ -1393,8 +1396,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             return character;
         }
 
-        private static string StripPlayerNameFromNPCDialogue(string value, string playerName) {
+        private static string StripPlayerNameFromNPCDialogue(string value, string playerName, ref bool foundName) {
             string[] mainCharacterName = playerName.Split(" ");
+            foundName = value.Contains(mainCharacterName[0]) || value.Contains(mainCharacterName[1]);
             return value.Replace(mainCharacterName[0], null).Replace(mainCharacterName[1], null);
         }
         private string StripPlayerNameFromNPCDialogueArc(string value) {
