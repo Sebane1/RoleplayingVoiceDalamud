@@ -444,12 +444,12 @@ namespace RoleplayingVoice {
                 ImGui.Text("Previously Played Lines:");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
-                    ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? 0.1f : 0.2f)));
+                    ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? 0.3f : 0.2f)));
                     ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
-                    if (ImGui.Button($"Replay Line ({1 + (count++)})")) {
+                    if (ImGui.Button($"Replay Line")) {
                         var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
+                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Key;
                         if (stream.Length > 0) {
                             var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                             PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
@@ -461,9 +461,9 @@ namespace RoleplayingVoice {
                     }
                     ImGui.SameLine();
                     if (PluginReference.Config.QualityAssuranceMode) {
-                        if (ImGui.Button($"Report Line ({1 + (count++)})")) {
+                        if (ImGui.Button($"Report Line")) {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, PluginReference.Config.QualityAssuranceMode)).Key;
+                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Key;
                             if (stream.Length > 0) {
                                 var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                                 PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
