@@ -46,6 +46,7 @@ namespace RoleplayingVoice {
 
         List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
         private int _playerVoiceEngine;
+        private bool _ignoreSpatialAudioForTTS;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -137,6 +138,7 @@ namespace RoleplayingVoice {
         public int SpatialAudioAccuracy { get => _spatialAudioAccuracy; set => _spatialAudioAccuracy = value; }
         public List<CustomNpcCharacter> CustomNpcCharacters { get => _customNpcCharacters; set => _customNpcCharacters = value; }
         public int PlayerVoiceEngine { get => _playerVoiceEngine; set => _playerVoiceEngine = value; }
+        public bool IgnoreSpatialAudioForTTS { get => _ignoreSpatialAudioForTTS; set => _ignoreSpatialAudioForTTS = value; }
 
         #endregion
 
