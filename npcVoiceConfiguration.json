@@ -228,6 +228,11 @@
     "Shale": "Shale",
     "Genolt": "Golt",
     "Pepoane": "Poane"
+  },  
+  "CharacterToCacheType": {
+    "Cid": 1,
+    "Tobli": 0,
+    "Gaius van Baelsar": 1
   },
   "NameAndAliasesList": {
     "Ungust": [
