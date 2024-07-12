@@ -1120,7 +1120,7 @@ namespace RoleplayingVoice {
             ImGui.SliderFloat("##livestreamVolume", ref _livestreamVolume, 0.000001f, 3);
             ImGui.Text("NPC Volume");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 1f);
+            ImGui.SliderFloat("##npcVolumeSlider", ref _npcVolume, 0.000001f, 2f);
             ImGui.Text("Audio Output System (Change if you notice playback issues)");
             _audioOutputType.Width = (int)ImGui.GetContentRegionMax().X;
             _audioOutputType.Draw();
