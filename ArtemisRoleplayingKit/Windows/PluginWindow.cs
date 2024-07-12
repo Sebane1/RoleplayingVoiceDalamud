@@ -459,8 +459,8 @@ namespace RoleplayingVoice {
                         }
                         break;
                     }
-                    ImGui.SameLine();
                     if (PluginReference.Config.QualityAssuranceMode) {
+                        ImGui.SameLine();
                         if (ImGui.Button($"Report Line")) {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Key;
