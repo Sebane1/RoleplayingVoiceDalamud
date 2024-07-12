@@ -4071,8 +4071,10 @@ namespace RoleplayingVoice {
                 }
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
-                if (_emoteReaderHook.OnEmote != null) {
-                    _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
+                if (_emoteReaderHook != null) {
+                    if (_emoteReaderHook.OnEmote != null) {
+                        _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
+                    }
                 }
                 CleanupEmoteWatchList();
                 _addonTalkHandler?.Dispose();
