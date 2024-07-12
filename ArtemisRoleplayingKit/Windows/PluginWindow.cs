@@ -447,7 +447,7 @@ namespace RoleplayingVoice {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? 0.3f : 0.2f)));
                     ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
-                    if (ImGui.Button($"Replay Line")) {
+                    if (ImGui.Button($"Replay Line##" + count)) {
                         var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                              item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Key;
                         if (stream.Length > 0) {
@@ -461,7 +461,7 @@ namespace RoleplayingVoice {
                     }
                     if (PluginReference.Config.QualityAssuranceMode) {
                         ImGui.SameLine();
-                        if (ImGui.Button($"Report Line")) {
+                        if (ImGui.Button($"Report Line##" + count++)) {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Key;
                             if (stream.Length > 0) {
