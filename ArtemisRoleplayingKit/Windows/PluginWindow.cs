@@ -464,7 +464,7 @@ namespace RoleplayingVoice {
                             ImGui.SameLine();
                             if (ImGui.Button($"Mute Line##" + count)) {
                                 var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                                     item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Blacklist)).Item1;
+                                     item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
                                 PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                                 break;
                             }
