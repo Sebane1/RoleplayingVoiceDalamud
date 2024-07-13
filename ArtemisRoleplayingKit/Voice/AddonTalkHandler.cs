@@ -20,6 +20,8 @@ using Dalamud.Plugin.Services;
 using FFBardMusicPlayer.FFXIV;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using FFXIVClientStructs.FFXIV.Common.Lua;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using Ktisis.Structs.Actor;
 using Lumina.Excel.GeneratedSheets;
 using NAudio.Lame;
@@ -892,6 +894,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false);
+                        if (!previouslyAddedLines.Contains(message + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !Conditions.IsWatchingCutscene));
+                            previouslyAddedLines.Add(message + nameToUse);
+                            if (_npcVoiceHistoryItems.Count > 10) {
+                                _npcVoiceHistoryItems.RemoveAt(0);
+                            }
+                        }
                         if (!_plugin.Config.NpcSpeechGenerationDisabled && !onlySendData) {
                             if (stream.Item1 != null) {
                                 if (_plugin.Config.DebugMode) {
@@ -978,8 +987,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                         for (int i = 0; i < 2; i++) {
                             var stream =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.AlternativeCache : VoiceLinePriority.None);
-                            if (!previouslyAddedLines.Contains(value + nameToUse)) {
-                                _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
+                            if (!previouslyAddedLines.Contains(value + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                                _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine, Conditions.IsBoundByDuty && !Conditions.IsWatchingCutscene));
                                 previouslyAddedLines.Add(value + nameToUse);
                                 if (_npcVoiceHistoryItems.Count > 10) {
                                     _npcVoiceHistoryItems.RemoveAt(0);
@@ -1119,7 +1128,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                 }
                                             }
-                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f, stream.Item3 == "Elevenlabs" ? 0 : (stream.Item3 == "XTTS" ? 0.2f : 0.2f));
+                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f, stream.Item3 == "Elevenlabs" ? 1 : (stream.Item3 == "XTTS" ? 1.2f : 1.2f));
                                     }
                                     break;
                                 } else {
