@@ -977,7 +977,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                         for (int i = 0; i < 2; i++) {
                             var stream =
-                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, foundName ? VoiceLinePriority.AlternativeCache : VoiceLinePriority.None);
+                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.AlternativeCache : VoiceLinePriority.None);
                             if (!previouslyAddedLines.Contains(value + nameToUse)) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine));
                                 previouslyAddedLines.Add(value + nameToUse);
