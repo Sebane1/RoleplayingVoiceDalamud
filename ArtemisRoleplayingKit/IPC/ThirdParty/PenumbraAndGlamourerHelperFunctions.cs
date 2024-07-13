@@ -85,7 +85,6 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 var glamourerDesignList = PenumbraAndGlamourerIpcWrapper.Instance.GetDesignList.Invoke();
                 return glamourerDesignList;
             } catch (Exception e) {
-                Plugin.PluginLog.Warning(e, e.Message);
                 return new Dictionary<Guid, string>();
             }
         }
