@@ -467,7 +467,7 @@ namespace RoleplayingVoice {
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
                                 PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                                 break;
-                            }
+                            }   
                         }
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
