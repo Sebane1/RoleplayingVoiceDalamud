@@ -1119,7 +1119,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                 }
                                             }
-                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f, stream.Item3 == "Elevenlabs" ? 0 : stream.Item3 == "XTTS" ? 0.2 : 0.2f);
+                                        }, !Conditions.IsBoundByDuty ? _plugin.Config.NPCSpeechSpeed : 1.2f, stream.Item3 == "Elevenlabs" ? 0 : (stream.Item3 == "XTTS" ? 0.2f : 0.2f));
                                     }
                                     break;
                                 } else {
