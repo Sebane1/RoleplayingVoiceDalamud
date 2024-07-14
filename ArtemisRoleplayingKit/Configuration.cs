@@ -47,6 +47,7 @@ namespace RoleplayingVoice {
         List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
         private int _playerVoiceEngine;
         private bool _ignoreSpatialAudioForTTS;
+        private bool _allowDialogueQueuingOutsideCutscenes;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -139,6 +140,7 @@ namespace RoleplayingVoice {
         public List<CustomNpcCharacter> CustomNpcCharacters { get => _customNpcCharacters; set => _customNpcCharacters = value; }
         public int PlayerVoiceEngine { get => _playerVoiceEngine; set => _playerVoiceEngine = value; }
         public bool IgnoreSpatialAudioForTTS { get => _ignoreSpatialAudioForTTS; set => _ignoreSpatialAudioForTTS = value; }
+        public bool AllowDialogueQueuingOutsideCutscenes { get => _allowDialogueQueuingOutsideCutscenes; set => _allowDialogueQueuingOutsideCutscenes = value; }
 
         #endregion
 

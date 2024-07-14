@@ -103,6 +103,7 @@ namespace RoleplayingVoice {
         private FileSystemWatcher _fileSystemWatcher;
         private bool _lowPerformanceMode;
         private float _spatialAudioAccuracy;
+        private bool _allowDialogueQueueOutsideCutscenes;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -188,7 +189,8 @@ namespace RoleplayingVoice {
                     PluginReference.NpcPersonalityWindow.LoadNPCCharacters(configuration.CustomNpcCharacters);
                     _voiceEngineComboBox.SelectedIndex = configuration.PlayerVoiceEngine;
                     _ignoreSpatialAudioForTTS = configuration.IgnoreSpatialAudioForTTS;
-
+                    _allowDialogueQueueOutsideCutscenes = configuration.AllowDialogueQueuingOutsideCutscenes;
+                    
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -420,7 +422,7 @@ namespace RoleplayingVoice {
         private static readonly List<string> ValidTextureExtensions = new List<string>(){
           ".png",
         };
-        private async void DrawNPCDialogue() {
+        private void DrawNPCDialogue() {
             if (ImGui.Button("Contribute Your Voice!", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 Process process = new Process();
                 try {
@@ -439,6 +441,7 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
                 ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
+                ImGui.Checkbox("Allow dialogue queuing outside cutscenes", ref _allowDialogueQueueOutsideCutscenes);
                 ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
                 ImGui.Text("NPC Playback Speed");
@@ -451,33 +454,39 @@ namespace RoleplayingVoice {
                     ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count)) {
-                        var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                             item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
-                        if (stream.Length > 0) {
-                            var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
-                            PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
-                        }
+                        Task.Run(async () => {
+                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
+                            if (stream.Length > 0) {
+                                var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                                PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                            }
+                        });
                         break;
                     }
                     if (PluginReference.Config.QualityAssuranceMode) {
                         if (item.CanBeMuted) {
                             ImGui.SameLine();
                             if (ImGui.Button($"Report Double##" + count)) {
-                                var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                                Task.Run(async () => {
+                                    var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
-                                PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                    PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                });
                                 break;
-                            }   
+                            }
                         }
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
-                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                            Task.Run(async () => {
+                                var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
-                            if (stream.Length > 0) {
-                                var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
-                                PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
-                            }
-                            PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                if (stream.Length > 0) {
+                                    var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                                    PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                                }
+                                PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                            });
                             break;
                         }
                     }
@@ -703,6 +712,7 @@ namespace RoleplayingVoice {
             configuration.CustomNpcCharacters = PluginReference.NpcPersonalityWindow.CustomNpcCharacters;
             configuration.PlayerVoiceEngine = _voiceEngineComboBox.SelectedIndex;
             configuration.IgnoreSpatialAudioForTTS = _ignoreSpatialAudioForTTS;
+            configuration.AllowDialogueQueuingOutsideCutscenes = _allowDialogueQueueOutsideCutscenes;
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                     characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
