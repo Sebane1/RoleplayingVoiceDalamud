@@ -453,7 +453,7 @@ namespace RoleplayingVoice {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
                     ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
-                    if (ImGui.Button($"Replay Line##" + count)) {
+                    if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
@@ -467,7 +467,7 @@ namespace RoleplayingVoice {
                     if (PluginReference.Config.QualityAssuranceMode) {
                         if (item.CanBeMuted) {
                             ImGui.SameLine();
-                            if (ImGui.Button($"Report Double##" + count)) {
+                            if (ImGui.Button($"Report Double##" + count++)) {
                                 Task.Run(async () => {
                                     var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
