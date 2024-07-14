@@ -399,7 +399,7 @@ namespace RoleplayingVoice {
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
                 Task.Run(async () => {
-                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType());
+                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(), config.CacheFolder);
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                     _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
