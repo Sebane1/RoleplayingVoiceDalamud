@@ -190,7 +190,7 @@ namespace RoleplayingVoice {
                     _voiceEngineComboBox.SelectedIndex = configuration.PlayerVoiceEngine;
                     _ignoreSpatialAudioForTTS = configuration.IgnoreSpatialAudioForTTS;
                     _allowDialogueQueueOutsideCutscenes = configuration.AllowDialogueQueuingOutsideCutscenes;
-                    
+
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -451,7 +451,7 @@ namespace RoleplayingVoice {
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
-                    ImGui.LabelText("##label" + item.Text, item.Character + ": " + item.OriginalValue);
+                    ImGui.LabelText("##label" + item.Text, $"[{item.GenerationString.Replace("Alternate", "XIVV")}]" + item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
@@ -476,17 +476,19 @@ namespace RoleplayingVoice {
                                 break;
                             }
                         }
+
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
-                            Task.Run(async () => {
+                            PluginReference.RedoLineWindow.OpenReportBox(async delegate (object o, string note) {
                                 var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
-                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
+                                item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                                 if (stream.Length > 0) {
                                     var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
                                     PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                 }
                                 PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                             });
+                            PluginReference.RedoLineWindow.IsOpen = true;
                             break;
                         }
                     }

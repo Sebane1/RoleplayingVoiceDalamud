@@ -105,7 +105,7 @@ namespace RoleplayingVoice {
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
         private CatalogueWindow _catalogueWindow;
-        private RedoLineWIndow _redoLineWindow;
+        private RedoLineWindow _redoLineWindow;
         private GposeWindow _gposeWindow;
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
         private AnimationCatalogue _animationCatalogue;
@@ -292,6 +292,7 @@ namespace RoleplayingVoice {
         public ConcurrentDictionary<string, List<string>> ModelMods { get => _modelMods; set => _modelMods = value; }
         public ConcurrentDictionary<string, List<string>> ModelDependancyMods { get => _modelDependancyMods; set => _modelDependancyMods = value; }
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
+        public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -331,7 +332,7 @@ namespace RoleplayingVoice {
                 _window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
                 _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
-                _redoLineWindow = this.pluginInterface.Create<RedoLineWIndow>();
+                _redoLineWindow = this.pluginInterface.Create<RedoLineWindow>();
                 _gposeWindow = this.pluginInterface.Create<GposeWindow>();
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
                 _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();

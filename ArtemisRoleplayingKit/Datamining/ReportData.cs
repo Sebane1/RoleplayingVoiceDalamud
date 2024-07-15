@@ -8,8 +8,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace RoleplayingVoiceDalamud.Datamining {
     public class ReportData {
@@ -25,8 +24,9 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public byte folder { get; set; }
         public string user { get; set; }
         public ushort TerritoryId { get => territoryId; set => territoryId = value; }
+        public string Note { get; set; }
 
-        public ReportData(string name, string message, IGameObject gameObject, ushort territoryId) {
+        public ReportData(string name, string message, IGameObject gameObject, ushort territoryId, string note) {
             ICharacter character = gameObject as ICharacter;
             if (character != null) {
                 this.territoryId = territoryId;
@@ -38,14 +38,16 @@ namespace RoleplayingVoiceDalamud.Datamining {
                 race = character.Customize[(int)CustomizeIndex.Race];
                 tribe = character.Customize[(int)CustomizeIndex.Tribe];
                 eyes = character.Customize[(int)CustomizeIndex.EyeShape];
+                Note = note;
                 user = "ArtemisRoleplayingKit";
             } else {
                 speaker = name;
                 sentence = message;
+                Note = note;
                 user = "ArtemisRoleplayingKit";
             }
         }
-        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes, ushort territoryId) {
+        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes, ushort territoryId, string note) {
             speaker = name;
             sentence = message;
             npcid = objectId;
@@ -55,18 +57,8 @@ namespace RoleplayingVoiceDalamud.Datamining {
             this.tribe = tribe;
             this.eyes = eyes;
             this.territoryId = territoryId;
+            this.Note = note;
             user = "ArtemisRoleplayingKit";
-        }
-        public async void ReportToXivVoice() {
-            try {
-                using (HttpClient httpClient = new HttpClient()) {
-                    httpClient.BaseAddress = new Uri("https://arcsidian.com/report_to_seb.php");
-                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    var post = await httpClient.PostAsync(httpClient.BaseAddress, new StringContent(JsonConvert.SerializeObject(this)));
-                    if (post.StatusCode != HttpStatusCode.OK) {
-                    }
-                }
-            } catch { }
         }
     }
 }
