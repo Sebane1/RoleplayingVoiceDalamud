@@ -979,16 +979,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         bool foundName = false;
+                        bool isExtra = false;
                         string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName));
                         string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
-                        string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body);
+                        string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra);
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         if (_plugin.Config.DebugMode) {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
                         for (int i = 0; i < 2; i++) {
                             var stream =
-                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : (foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.Alternative : VoiceLinePriority.None));
+                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : (isExtra ? VoiceLinePriority.Elevenlabs : (foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.Alternative : VoiceLinePriority.None)));
                             if (!previouslyAddedLines.Contains(value + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false, true, npcData, redoLine, Conditions.IsBoundByDuty && !IsInACutscene()));
                                 previouslyAddedLines.Add(value + nameToUse);
@@ -1198,10 +1199,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType);
                     string npcData = JsonConvert.SerializeObject(reportData);
+                    bool isExtra = false;
                     var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value,
                     StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender,
-                    PickVoiceBasedOnTraits(nameToUse, gender, race, body), false, voiceModel, npcData, false, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : VoiceLinePriority.None);
+                    PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra), false, voiceModel, npcData, false, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : isExtra ? VoiceLinePriority.Elevenlabs : VoiceLinePriority.None);
                     if (stream.Item1 != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                         WaveStream wavePlayer = GetWavePlayer(name, stream.Item1, reportData);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
@@ -1523,12 +1525,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                 : default;
         }
 
-        public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, int body) {
+        public string PickVoiceBasedOnTraits(string npcName, bool gender, byte race, int body, ref bool isExtra) {
             string[] maleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, false);
             string[] femaleVoices = GetVoicesBasedOnTerritory(_clientState.TerritoryType, true);
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
             foreach (KeyValuePair<string, string> voice in NPCVoiceMapping.GetExtrasVoiceMappings()) {
                 if (npcName.Contains(voice.Key)) {
+                    isExtra = true;
                     return voice.Value;
                 }
             }
