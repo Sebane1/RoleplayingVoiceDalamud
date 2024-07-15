@@ -354,7 +354,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
             try {
                 if (_clientState.IsLoggedIn
-                    && IsInACutscene()) {
+                    && !IsInACutscene() && !Conditions.IsBoundByDuty) {
                     if (pString != IntPtr.Zero &&
                     !Service.ClientState.IsPvPExcludingDen) {
                         //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
@@ -975,7 +975,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
                         string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
                         MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_clientState.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
-                        _currentSpeechObject = currentSpeechObject;
+                        _currentSpeechObject = new MediaGameObject(_clientState.LocalPlayer);
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         bool foundName = false;
