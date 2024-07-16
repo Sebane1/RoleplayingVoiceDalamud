@@ -458,7 +458,7 @@ namespace RoleplayingVoice {
                             var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                             if (stream.Length > 0) {
-                                var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                                var player = stream;
                                 PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                             }
                         });
@@ -483,7 +483,7 @@ namespace RoleplayingVoice {
                                 var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                                 if (stream.Length > 0) {
-                                    var player = PluginReference.AddonTalkHandler.GetWavePlayer(item.Character, stream, null);
+                                    var player = stream;
                                     PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                 }
                                 PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
