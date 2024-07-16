@@ -963,7 +963,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             bool foundName = false;
             return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), name, ref foundName);
         }
-        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool redoLine = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
+        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, 
+            bool lowLatencyMode = false, bool redoLine = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
                     bool gender = false;
@@ -1071,7 +1072,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_blockAudioGenerationCount is 0) {
                                         _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
                                        IsInACutscene() || _plugin.Config.AllowDialogueQueuingOutsideCutscenes, useSmbPitch, pitch, 0,
-                                        IsInACutscene() || lowLatencyMode, delegate {
+                                        IsInACutscene() || lowLatencyMode, delegate(object obj, string value) {
                                             if (_hook != null) {
                                                 try {
                                                     if (animationMemory != null) {
@@ -1083,7 +1084,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
                                                         }
                                                     }
-                                                    if (_state != null) {
+                                                    if (_state != null && value == "OK") {
                                                         if ((_plugin.Config.AutoTextAdvance && !ignoreAutoProgress
                                                     && !_plugin.Config.QualityAssuranceMode)) {
                                                             if (_chatId == chatId) {
