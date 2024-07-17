@@ -187,20 +187,22 @@ namespace RoleplayingVoiceDalamud.Voice {
 
 
         private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
-            if (_clientState.IsLoggedIn) {
-                if (CheckForBannedKeywords(message) || message.TextValue.Contains("friend request")) {
-                    string newMessage = message.TextValue.Contains("friend request") ? "Friend request received." : message.TextValue;
-                    NPCText("Narrator", newMessage.Replace(@"0/", "0 out of ")
-                        .Replace(@"1/", "1 out of ")
-                        .Replace(@"2/", "2 out of ")
-                        .Replace(@"3/", "3 out of ")
-                        .Replace(@"4/", "4 out of ")
-                        .Replace(@"5/", "5 out of ")
-                        .Replace(@"6/", "6 out of ")
-                        .Replace(@"7/", "7 out of ")
-                        .Replace(@"8/", "8 out of ")
-                        .Replace(@"9/", "9 out of ")
-                        .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadQuestObjectives);
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_clientState.IsLoggedIn) {
+                    if (CheckForBannedKeywords(message) || message.TextValue.Contains("friend request")) {
+                        string newMessage = message.TextValue.Contains("friend request") ? "Friend request received." : message.TextValue;
+                        NPCText("Narrator", newMessage.Replace(@"0/", "0 out of ")
+                            .Replace(@"1/", "1 out of ")
+                            .Replace(@"2/", "2 out of ")
+                            .Replace(@"3/", "3 out of ")
+                            .Replace(@"4/", "4 out of ")
+                            .Replace(@"5/", "5 out of ")
+                            .Replace(@"6/", "6 out of ")
+                            .Replace(@"7/", "7 out of ")
+                            .Replace(@"8/", "8 out of ")
+                            .Replace(@"9/", "9 out of ")
+                            .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadQuestObjectives);
+                    }
                 }
             }
         }
@@ -236,9 +238,11 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _filterWasRan;
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
-            if (_clientState.IsLoggedIn) {
-                if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
-                    NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications);
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_clientState.IsLoggedIn) {
+                    if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
+                        NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications);
+                    }
                 }
             }
         }
@@ -249,11 +253,13 @@ namespace RoleplayingVoiceDalamud.Voice {
             return lips;
         }
         private void RedoLineWindow_RedoLineClicked(object sender, string value) {
-            if (!_blockAudioGeneration) {
-                NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, true, true, value, !string.IsNullOrEmpty(value) ? VoiceLinePriority.SendNote : VoiceLinePriority.None);
-                _startedNewDialogue = true;
-                _passthroughTimer.Reset();
-                _redoLineWindow.IsOpen = false;
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (!_blockAudioGeneration) {
+                    NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, true, true, value, !string.IsNullOrEmpty(value) ? VoiceLinePriority.SendNote : VoiceLinePriority.None);
+                    _startedNewDialogue = true;
+                    _passthroughTimer.Reset();
+                    _redoLineWindow.IsOpen = false;
+                }
             }
         }
         private void _clientState_TerritoryChanged(ushort obj) {
@@ -265,85 +271,89 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _chatGui_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
-            string text = message.TextValue;
-            string npcName = sender.TextValue;
-            _lastNPCAnnouncementName = sender.TextValue;
-            Task.Run(delegate () {
-                if (_clientState.IsLoggedIn &&
-                    !_plugin.Config.NpcSpeechGenerationDisabled && Conditions.IsBoundByDuty) {
-                    if (_state == null) {
-                        switch (type) {
-                            case XivChatType.NPCDialogueAnnouncements:
-                                if (_plugin.Config.DebugMode) {
-                                    _plugin.Chat.Print("NPC Announcement detected " + npcName + ": "
-                                        + text);
-                                }
-                                if (!_lastBattleNPCLines.ContainsKey(npcName)) {
-                                    _lastBattleNPCLines[npcName] = "";
-                                }
-                                if (text != _lastBattleNPCLines[npcName] && !IsInACutscene()) {
-                                    _lastBattleNPCLines[npcName] = text;
-                                    Task.Run(() => {
-                                        if (!_knownNPCBossAnnouncers.Contains(npcName) && !_knownNPCAnnouncers.Contains(npcName)) {
-                                            bool gender = false, isRetainer = false;
-                                            byte race = 0;
-                                            int body = 0;
-                                            ICharacter npc = (DiscoverNpc(npcName, text, ref gender, ref race, ref body, ref isRetainer) as ICharacter);
-                                            if (npc != null && npc.Customize[(int)CustomizeIndex.ModelType] is 0) {
-                                                _knownNPCBossAnnouncers.Add(npcName);
-                                            } else {
-                                                _knownNPCAnnouncers.Add(npcName);
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                string text = message.TextValue;
+                string npcName = sender.TextValue;
+                _lastNPCAnnouncementName = sender.TextValue;
+                Task.Run(delegate () {
+                    if (_clientState.IsLoggedIn &&
+                        !_plugin.Config.NpcSpeechGenerationDisabled && Conditions.IsBoundByDuty) {
+                        if (_state == null) {
+                            switch (type) {
+                                case XivChatType.NPCDialogueAnnouncements:
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("NPC Announcement detected " + npcName + ": "
+                                            + text);
+                                    }
+                                    if (!_lastBattleNPCLines.ContainsKey(npcName)) {
+                                        _lastBattleNPCLines[npcName] = "";
+                                    }
+                                    if (text != _lastBattleNPCLines[npcName] && !IsInACutscene()) {
+                                        _lastBattleNPCLines[npcName] = text;
+                                        Task.Run(() => {
+                                            if (!_knownNPCBossAnnouncers.Contains(npcName) && !_knownNPCAnnouncers.Contains(npcName)) {
+                                                bool gender = false, isRetainer = false;
+                                                byte race = 0;
+                                                int body = 0;
+                                                ICharacter npc = (DiscoverNpc(npcName, text, ref gender, ref race, ref body, ref isRetainer) as ICharacter);
+                                                if (npc != null && npc.Customize[(int)CustomizeIndex.ModelType] is 0) {
+                                                    _knownNPCBossAnnouncers.Add(npcName);
+                                                } else {
+                                                    _knownNPCAnnouncers.Add(npcName);
+                                                }
                                             }
-                                        }
-                                        if (!_blockNpcChat) {
-                                            Task.Run(() => {
-                                                Thread.Sleep(50);
-                                                _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(npcName, text));
-                                            });
-                                        } else {
-                                            _blockNpcChat = false;
-                                        }
-                                    });
-                                }
-                                break;
+                                            if (!_blockNpcChat) {
+                                                Task.Run(() => {
+                                                    Thread.Sleep(50);
+                                                    _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(npcName, text));
+                                                });
+                                            } else {
+                                                _blockNpcChat = false;
+                                            }
+                                        });
+                                    }
+                                    break;
+                            }
                         }
                     }
                 }
+                );
             }
-            );
         }
 
         private void Filter_OnCutsceneAudioDetected(object sender, SoundFilter.InterceptedSound e) {
-            if (_clientState != null) {
-                if (_clientState.IsLoggedIn) {
-                    if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
-                        if (e.SoundPath != _lastSoundPath) {
-                            if (e.isBlocking) {
-                                if (_blockAudioGenerationCount < 0) {
-                                    _blockAudioGenerationCount = 0;
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_clientState != null) {
+                    if (_clientState.IsLoggedIn) {
+                        if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
+                            if (e.SoundPath != _lastSoundPath) {
+                                if (e.isBlocking) {
+                                    if (_blockAudioGenerationCount < 0) {
+                                        _blockAudioGenerationCount = 0;
+                                    }
+                                    _blockAudioGenerationCount++;
+                                    _npcDungeonDialogueQueue.Clear();
+                                    _lastSoundPath = e.SoundPath;
+                                    foreach (string name in _knownNPCBossAnnouncers) {
+                                        _plugin.MediaManager.StopAudio(new MediaGameObject(name, new Vector3()));
+                                    }
+                                    Task.Run(() => {
+                                        Thread.Sleep(1000);
+                                        _blockAudioGenerationCount--;
+                                    });
                                 }
-                                _blockAudioGenerationCount++;
-                                _npcDungeonDialogueQueue.Clear();
-                                _lastSoundPath = e.SoundPath;
-                                foreach (string name in _knownNPCBossAnnouncers) {
-                                    _plugin.MediaManager.StopAudio(new MediaGameObject(name, new Vector3()));
+                                _blockAudioGeneration = e.isBlocking;
+                                _lastNPCAnnouncementName = null;
+                                _currentDialoguePaths.Add(e.SoundPath);
+                                _currentDialoguePathsCompleted.Add(false);
+                                if (_plugin.Config.DebugMode) {
+                                    if (_lastNPCAnnouncementName != null) {
+                                        DumpCurrentAudio(_lastNPCAnnouncementName);
+                                    }
+                                    _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
+                                    _plugin.Chat.Print("Dialogue block created by " + e.SoundPath);
+                                    _plugin.Chat.Print("Blocked generation count is " + _blockAudioGenerationCount);
                                 }
-                                Task.Run(() => {
-                                    Thread.Sleep(1000);
-                                    _blockAudioGenerationCount--;
-                                });
-                            }
-                            _blockAudioGeneration = e.isBlocking;
-                            _lastNPCAnnouncementName = null;
-                            _currentDialoguePaths.Add(e.SoundPath);
-                            _currentDialoguePathsCompleted.Add(false);
-                            if (_plugin.Config.DebugMode) {
-                                if (_lastNPCAnnouncementName != null) {
-                                    DumpCurrentAudio(_lastNPCAnnouncementName);
-                                }
-                                _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
-                                _plugin.Chat.Print("Dialogue block created by " + e.SoundPath);
-                                _plugin.Chat.Print("Blocked generation count is " + _blockAudioGenerationCount);
                             }
                         }
                     }
@@ -351,95 +361,97 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
-            try {
-                if (_clientState.IsLoggedIn
-                    && !IsInACutscene() && !Conditions.IsBoundByDuty) {
-                    if (pString != IntPtr.Zero &&
-                    !Service.ClientState.IsPvPExcludingDen) {
-                        //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
-                        if (pActor == null || (ObjectKind)pActor->GetObjectKind() != ObjectKind.Player) {
-                            long currentTime_mSec = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                try {
+                    if (_clientState.IsLoggedIn
+                        && !IsInACutscene() && !Conditions.IsBoundByDuty) {
+                        if (pString != IntPtr.Zero &&
+                        !Service.ClientState.IsPvPExcludingDen) {
+                            //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
+                            if (pActor == null || (ObjectKind)pActor->GetObjectKind() != ObjectKind.Player) {
+                                long currentTime_mSec = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                            SeString speakerName = SeString.Empty;
-                            if (pActor != null && pActor->Name != null) {
-                                var objectId = pActor->GetGameObjectId().ObjectId;
-                                if (NPCVoiceMapping.NpcBubbleRecovery.ContainsKey(objectId)) {
-                                    speakerName = NPCVoiceMapping.NpcBubbleRecovery[objectId];
-                                } else {
-                                    speakerName = pActor->NameString;
-                                }
-                            }
-                            var npcBubbleInformaton = new NPCBubbleInformation(MemoryHelper.ReadSeStringNullTerminated(pString), currentTime_mSec, speakerName);
-                            var extantMatch = _speechBubbleInfo.Find((x) => { return x.IsSameMessageAs(npcBubbleInformaton); });
-                            if (_plugin.Config.DebugMode) {
-                                _plugin.Chat.Print("Bubble detected " + npcBubbleInformaton.SpeakerName.TextValue + ": "
-                                    + npcBubbleInformaton.MessageText.TextValue);
-                            }
-                            if (extantMatch != null) {
-                                extantMatch.TimeLastSeen_mSec = currentTime_mSec;
-                            } else {
-                                _speechBubbleInfo.Add(npcBubbleInformaton);
-                                Task.Run(delegate {
-                                    try {
-                                        FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
-                                        if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
-                                            string nameID =
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Chest].Value.ToString() +
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Head].Value.ToString() +
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Feet].Value.ToString() +
-                                            character->DrawData.EquipmentModelIds[(int)EquipIndex.Earring].Value.ToString() +
-                                            speakerName.TextValue +
-                                            character->BaseId;
-                                            ICharacter characterObject = GetCharacterFromId(character->GameObject.GetGameObjectId().ObjectId);
-                                            string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) ? characterObject.Name.TextValue : nameID;
-                                            if (!_lastBattleNPCLines.ContainsKey(finalName)) {
-                                                _lastBattleNPCLines[finalName] = "";
-                                            }
-                                            if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[finalName]) {
-                                                _lastBattleNPCLines[finalName] = npcBubbleInformaton.MessageText.TextValue;
-                                                if (_blockAudioGenerationCount < 1) {
-                                                    if (characterObject != null && characterObject.Customize[(int)CustomizeIndex.ModelType] != 0) {
-                                                        if (!_knownNPCBossAnnouncers.Contains(finalName)) {
-                                                            _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(finalName, npcBubbleInformaton.MessageText.TextValue));
-                                                        } else {
-                                                            Task.Run(() => {
-                                                                Thread.Sleep(50);
-                                                                _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(finalName, npcBubbleInformaton.MessageText.TextValue));
-                                                            });
-                                                        }
-                                                    } else {
-                                                        NPCText(finalName,
-                                                            npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
-                                                            character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
-                                                            character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
-                                                            character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
-                                                            character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor), NPCVoiceManager.VoiceModel.Speed);
-                                                    }
-                                                    if (_plugin.Config.DebugMode) {
-                                                        _plugin.Chat.Print("Sent audio from NPC bubble.");
-                                                    }
-                                                } else {
-                                                    if (_plugin.Config.DebugMode) {
-                                                        _plugin.Chat.Print("Blocked bubble " + npcBubbleInformaton.SpeakerName.TextValue + ": "
-                                                            + npcBubbleInformaton.MessageText.TextValue);
-                                                    }
-                                                }
-                                                //_blockAudioGenerationCount--;
-                                            }
-                                        }
-                                        bubbleCooldown.Restart();
-                                        _blockAudioGeneration = false;
-                                    } catch {
-                                        NPCText(speakerName.TextValue, npcBubbleInformaton.MessageText.TextValue, true, NPCVoiceManager.VoiceModel.Speed);
+                                SeString speakerName = SeString.Empty;
+                                if (pActor != null && pActor->Name != null) {
+                                    var objectId = pActor->GetGameObjectId().ObjectId;
+                                    if (NPCVoiceMapping.NpcBubbleRecovery.ContainsKey(objectId)) {
+                                        speakerName = NPCVoiceMapping.NpcBubbleRecovery[objectId];
+                                    } else {
+                                        speakerName = pActor->NameString;
                                     }
                                 }
-                                );
+                                var npcBubbleInformaton = new NPCBubbleInformation(MemoryHelper.ReadSeStringNullTerminated(pString), currentTime_mSec, speakerName);
+                                var extantMatch = _speechBubbleInfo.Find((x) => { return x.IsSameMessageAs(npcBubbleInformaton); });
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Bubble detected " + npcBubbleInformaton.SpeakerName.TextValue + ": "
+                                        + npcBubbleInformaton.MessageText.TextValue);
+                                }
+                                if (extantMatch != null) {
+                                    extantMatch.TimeLastSeen_mSec = currentTime_mSec;
+                                } else {
+                                    _speechBubbleInfo.Add(npcBubbleInformaton);
+                                    Task.Run(delegate {
+                                        try {
+                                            FFXIVClientStructs.FFXIV.Client.Game.Character.Character* character = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)pActor;
+                                            if ((ObjectKind)character->GameObject.ObjectKind == ObjectKind.EventNpc || (ObjectKind)character->GameObject.ObjectKind == ObjectKind.BattleNpc) {
+                                                string nameID =
+                                                character->DrawData.EquipmentModelIds[(int)EquipIndex.Chest].Value.ToString() +
+                                                character->DrawData.EquipmentModelIds[(int)EquipIndex.Head].Value.ToString() +
+                                                character->DrawData.EquipmentModelIds[(int)EquipIndex.Feet].Value.ToString() +
+                                                character->DrawData.EquipmentModelIds[(int)EquipIndex.Earring].Value.ToString() +
+                                                speakerName.TextValue +
+                                                character->BaseId;
+                                                ICharacter characterObject = GetCharacterFromId(character->GameObject.GetGameObjectId().ObjectId);
+                                                string finalName = characterObject != null && !string.IsNullOrEmpty(characterObject.Name.TextValue) ? characterObject.Name.TextValue : nameID;
+                                                if (!_lastBattleNPCLines.ContainsKey(finalName)) {
+                                                    _lastBattleNPCLines[finalName] = "";
+                                                }
+                                                if (npcBubbleInformaton.MessageText.TextValue != _lastBattleNPCLines[finalName]) {
+                                                    _lastBattleNPCLines[finalName] = npcBubbleInformaton.MessageText.TextValue;
+                                                    if (_blockAudioGenerationCount < 1) {
+                                                        if (characterObject != null && characterObject.Customize[(int)CustomizeIndex.ModelType] != 0) {
+                                                            if (!_knownNPCBossAnnouncers.Contains(finalName)) {
+                                                                _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(finalName, npcBubbleInformaton.MessageText.TextValue));
+                                                            } else {
+                                                                Task.Run(() => {
+                                                                    Thread.Sleep(50);
+                                                                    _npcDungeonDialogueQueue.Enqueue(new KeyValuePair<string, string>(finalName, npcBubbleInformaton.MessageText.TextValue));
+                                                                });
+                                                            }
+                                                        } else {
+                                                            NPCText(finalName,
+                                                                npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
+                                                                character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
+                                                                character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
+                                                                character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
+                                                                character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor), NPCVoiceManager.VoiceModel.Speed);
+                                                        }
+                                                        if (_plugin.Config.DebugMode) {
+                                                            _plugin.Chat.Print("Sent audio from NPC bubble.");
+                                                        }
+                                                    } else {
+                                                        if (_plugin.Config.DebugMode) {
+                                                            _plugin.Chat.Print("Blocked bubble " + npcBubbleInformaton.SpeakerName.TextValue + ": "
+                                                                + npcBubbleInformaton.MessageText.TextValue);
+                                                        }
+                                                    }
+                                                    //_blockAudioGenerationCount--;
+                                                }
+                                            }
+                                            bubbleCooldown.Restart();
+                                            _blockAudioGeneration = false;
+                                        } catch {
+                                            NPCText(speakerName.TextValue, npcBubbleInformaton.MessageText.TextValue, true, NPCVoiceManager.VoiceModel.Speed);
+                                        }
+                                    }
+                                    );
+                                }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    Plugin.PluginLog.Info(e, e.Message);
                 }
-            } catch (Exception e) {
-                Plugin.PluginLog.Info(e, e.Message);
             }
             return _openChatBubbleHook.Original(pThis, pActor, pString, param3);
         }
@@ -454,133 +466,135 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private void Framework_Update(IFramework framework) {
             if (!disposed)
-                if (_npcDungeonDialogueQueue.Count > 0) {
-                    Task.Run(() => {
-                        while (_npcDungeonDialogueQueue.Count > 0) {
-                            var item = _npcDungeonDialogueQueue.Dequeue();
-                            if (_blockAudioGenerationCount is 0 && !_blockAudioGeneration) {
-                                NPCText(item.Key, item.Value.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, Conditions.IsBoundByDuty);
-                                if (_plugin.Config.DebugMode) {
-                                    _plugin.Chat.Print("Sent audio from NPC chat.");
-                                }
-                            } else {
-                                if (_plugin.Config.DebugMode) {
-                                    _plugin.Chat.Print("Blocked announcement " + item.Key + ": "
-                                        + item.Value);
-                                }
-                            }
-                        }
-                        //_blockAudioGenerationCount--;
-                        _blockAudioGeneration = false;
-                    });
-                }
-            if (pollingTimer.ElapsedMilliseconds > 100) {
-                try {
-                    if (_clientState != null) {
-                        if (_clientState.IsLoggedIn) {
-                            _plugin.Filter.Streaming = !Conditions.IsBoundByDuty && !Conditions.IsInCombat;
-                            if (_plugin.Filter.IsCutsceneDetectionNull()) {
-                                if (!_alreadyAddedEvent) {
-                                    _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
-                                    //_plugin.Filter.OnFilterWasRan += Filter_OnFilterWasRan;
-                                    _alreadyAddedEvent = true;
-                                }
-                            }
-                            if (_gotPlayerDefaultState) {
-                                GetAnimationDefaults();
-                            }
-                            if (!alreadyConfiguredBubbles) {
-                                //	Hook
-                                unsafe {
-                                    IntPtr fpOpenChatBubble = _scanner.ScanText("E8 ?? ?? ?? ?? F6 86 ?? ?? ?? ?? ?? C7 46 ?? ?? ?? ?? ??");
-                                    if (fpOpenChatBubble != IntPtr.Zero) {
-                                        Plugin.PluginLog.Information($"OpenChatBubble function signature found at 0x{fpOpenChatBubble:X}.");
-                                        _openChatBubbleHook = Service.GameInteropProvider.HookFromAddress<NPCSpeechBubble>(fpOpenChatBubble, NPCBubbleTextDetour);
-                                        _openChatBubbleHook?.Enable();
-                                    } else {
-                                        throw new Exception("Unable to find the specified function signature for OpenChatBubble.");
-                                    }
-                                }
-                                alreadyConfiguredBubbles = true;
-                                if (!_plugin.Config.NpcSpeechGenerationDisabled) {
-                                    _plugin.Config.NpcSpeechGenerationDisabled = Service.ClientState.ClientLanguage != ClientLanguage.English;
-                                }
-                            }
-                            _state = GetTalkAddonState();
-                            if (_state == null) {
-                                _state = GetBattleTalkAddonState();
-                            }
-                            Task.Run(delegate {
-                                if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
-                                    _textIsPresent = true;
-                                    if (_state.Text != _currentText) {
-                                        _lastText = _currentText;
-                                        _currentText = _state.Text;
-                                        _redoLineWindow.IsOpen = false;
-                                        if (!_blockAudioGeneration) {
-                                            NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
-                                            _startedNewDialogue = true;
-                                            _passthroughTimer.Reset();
-                                        }
-                                        if (_plugin.Config.DebugMode) {
-                                            DumpCurrentAudio(_state.Speaker);
-                                        }
-                                        if (_currentDialoguePaths.Count > 0) {
-                                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
-                                        }
-                                        _blockAudioGeneration = false;
+                if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                    if (_npcDungeonDialogueQueue.Count > 0) {
+                        Task.Run(() => {
+                            while (_npcDungeonDialogueQueue.Count > 0) {
+                                var item = _npcDungeonDialogueQueue.Dequeue();
+                                if (_blockAudioGenerationCount is 0 && !_blockAudioGeneration) {
+                                    NPCText(item.Key, item.Value.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, Conditions.IsBoundByDuty);
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("Sent audio from NPC chat.");
                                     }
                                 } else {
-                                    if (_currentDialoguePaths.Count > 0) {
-                                        if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] &&
-                                        !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                                            try {
-                                                var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                                if (otherData.Id == 15) {
-                                                    ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
-                                                    WaveStream stream = scdFile.Audio[0].Data.GetStream();
-                                                    var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                                                    _plugin.MediaManager.PlayAudioStream(new DummyObject(),
-                                                        pcmStream, SoundType.NPC, false, false, 1, 0, true, null);
-                                                }
-                                            } catch (Exception e) {
-                                                Plugin.PluginLog.Error(e, e.Message);
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print("Blocked announcement " + item.Key + ": "
+                                            + item.Value);
+                                    }
+                                }
+                            }
+                            //_blockAudioGenerationCount--;
+                            _blockAudioGeneration = false;
+                        });
+                    }
+                    if (pollingTimer.ElapsedMilliseconds > 100) {
+                        try {
+                            if (_clientState != null) {
+                                if (_clientState.IsLoggedIn) {
+                                    _plugin.Filter.Streaming = !Conditions.IsBoundByDuty && !Conditions.IsInCombat;
+                                    if (_plugin.Filter.IsCutsceneDetectionNull()) {
+                                        if (!_alreadyAddedEvent) {
+                                            _plugin.Filter.OnCutsceneAudioDetected += Filter_OnCutsceneAudioDetected;
+                                            //_plugin.Filter.OnFilterWasRan += Filter_OnFilterWasRan;
+                                            _alreadyAddedEvent = true;
+                                        }
+                                    }
+                                    if (_gotPlayerDefaultState) {
+                                        GetAnimationDefaults();
+                                    }
+                                    if (!alreadyConfiguredBubbles) {
+                                        //	Hook
+                                        unsafe {
+                                            IntPtr fpOpenChatBubble = _scanner.ScanText("E8 ?? ?? ?? ?? F6 86 ?? ?? ?? ?? ?? C7 46 ?? ?? ?? ?? ??");
+                                            if (fpOpenChatBubble != IntPtr.Zero) {
+                                                Plugin.PluginLog.Information($"OpenChatBubble function signature found at 0x{fpOpenChatBubble:X}.");
+                                                _openChatBubbleHook = Service.GameInteropProvider.HookFromAddress<NPCSpeechBubble>(fpOpenChatBubble, NPCBubbleTextDetour);
+                                                _openChatBubbleHook?.Enable();
+                                            } else {
+                                                throw new Exception("Unable to find the specified function signature for OpenChatBubble.");
                                             }
                                         }
-                                        if (_currentDialoguePaths.Count > 0) {
-                                            _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                                        alreadyConfiguredBubbles = true;
+                                        if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                                            _plugin.Config.NpcSpeechGenerationDisabled = Service.ClientState.ClientLanguage != ClientLanguage.English;
                                         }
                                     }
-                                    if (_currentSpeechObject != null && _startedNewDialogue) {
-                                        var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                        if (otherData.Id != 15) {
-                                            _namesToRemove.Clear();
-                                            _currentText = "";
-                                            _currentSpeechObject = null;
-                                            _currentDialoguePaths.Clear();
-                                            _currentDialoguePathsCompleted.Clear();
-                                        }
-                                        if (!IsInACutscene() && !_plugin.Config.AllowDialogueQueuingOutsideCutscenes) {
-                                            _plugin.MediaManager.StopAudio(_currentSpeechObject);
-                                            _plugin.MediaManager.CleanSounds();
-                                        }
-                                        _startedNewDialogue = false;
-                                        _redoLineWindow.IsOpen = false;
+                                    _state = GetTalkAddonState();
+                                    if (_state == null) {
+                                        _state = GetBattleTalkAddonState();
                                     }
-                                    _threadSafeObjectTable = _objectTable.ToList();
-                                    if (!Conditions.IsBoundByDuty || IsInACutscene()) {
-                                        _blockAudioGeneration = false;
-                                    }
-                                    _textIsPresent = false;
+                                    Task.Run(delegate {
+                                        if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
+                                            _textIsPresent = true;
+                                            if (_state.Text != _currentText) {
+                                                _lastText = _currentText;
+                                                _currentText = _state.Text;
+                                                _redoLineWindow.IsOpen = false;
+                                                if (!_blockAudioGeneration) {
+                                                    NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
+                                                    _startedNewDialogue = true;
+                                                    _passthroughTimer.Reset();
+                                                }
+                                                if (_plugin.Config.DebugMode) {
+                                                    DumpCurrentAudio(_state.Speaker);
+                                                }
+                                                if (_currentDialoguePaths.Count > 0) {
+                                                    _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                                                }
+                                                _blockAudioGeneration = false;
+                                            }
+                                        } else {
+                                            if (_currentDialoguePaths.Count > 0) {
+                                                if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] &&
+                                                !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                                                    try {
+                                                        var otherData = _clientState.LocalPlayer.OnlineStatus;
+                                                        if (otherData.Id == 15) {
+                                                            ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
+                                                            WaveStream stream = scdFile.Audio[0].Data.GetStream();
+                                                            var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
+                                                            _plugin.MediaManager.PlayAudioStream(new DummyObject(),
+                                                                pcmStream, SoundType.NPC, false, false, 1, 0, true, null);
+                                                        }
+                                                    } catch (Exception e) {
+                                                        Plugin.PluginLog.Error(e, e.Message);
+                                                    }
+                                                }
+                                                if (_currentDialoguePaths.Count > 0) {
+                                                    _currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] = true;
+                                                }
+                                            }
+                                            if (_currentSpeechObject != null && _startedNewDialogue) {
+                                                var otherData = _clientState.LocalPlayer.OnlineStatus;
+                                                if (otherData.Id != 15) {
+                                                    _namesToRemove.Clear();
+                                                    _currentText = "";
+                                                    _currentSpeechObject = null;
+                                                    _currentDialoguePaths.Clear();
+                                                    _currentDialoguePathsCompleted.Clear();
+                                                }
+                                                if (!IsInACutscene() && !_plugin.Config.AllowDialogueQueuingOutsideCutscenes) {
+                                                    _plugin.MediaManager.StopAudio(_currentSpeechObject);
+                                                    _plugin.MediaManager.CleanSounds();
+                                                }
+                                                _startedNewDialogue = false;
+                                                _redoLineWindow.IsOpen = false;
+                                            }
+                                            _threadSafeObjectTable = _objectTable.ToList();
+                                            if (!Conditions.IsBoundByDuty || IsInACutscene()) {
+                                                _blockAudioGeneration = false;
+                                            }
+                                            _textIsPresent = false;
+                                        }
+                                    });
                                 }
-                            });
+                            }
+                        } catch (Exception e) {
+                            Plugin.PluginLog.Info(e, e.Message);
                         }
+                        pollingTimer.Restart();
                     }
-                } catch (Exception e) {
-                    Plugin.PluginLog.Info(e, e.Message);
                 }
-                pollingTimer.Restart();
-            }
         }
 
         private void GetAnimationDefaults() {
@@ -963,7 +977,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             bool foundName = false;
             return StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), name, ref foundName);
         }
-        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel, 
+        private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel,
             bool lowLatencyMode = false, bool redoLine = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
             if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
                 try {
@@ -1072,7 +1086,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_blockAudioGenerationCount is 0) {
                                         _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
                                        IsInACutscene() || _plugin.Config.AllowDialogueQueuingOutsideCutscenes, useSmbPitch, pitch, 0,
-                                        IsInACutscene() || lowLatencyMode, delegate(object obj, string value) {
+                                        IsInACutscene() || lowLatencyMode, delegate (object obj, string value) {
                                             if (_hook != null) {
                                                 try {
                                                     if (animationMemory != null) {
