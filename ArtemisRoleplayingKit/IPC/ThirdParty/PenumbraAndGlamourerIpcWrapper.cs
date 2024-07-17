@@ -67,9 +67,9 @@ public class PenumbraAndGlamourerIpcWrapper {
         _trySetModSettings = new TrySetModSettings(dalamudPluginInterface);
         _redrawObject = new RedrawObject(dalamudPluginInterface);
 
-        //_getDesignList = new GetDesignList(dalamudPluginInterface);
-        //_applyDesign = new ApplyDesign(dalamudPluginInterface);
-        //_setItem = new SetItem(dalamudPluginInterface);
-        //_getStateBase64 = new GetStateBase64(dalamudPluginInterface);
+        _getDesignList = new GetDesignList(dalamudPluginInterface);
+        _applyDesign = new ApplyDesign(dalamudPluginInterface);
+        _setItem = new SetItem(dalamudPluginInterface);
+        _getStateBase64 = new GetStateBase64(dalamudPluginInterface);
     }
 }
