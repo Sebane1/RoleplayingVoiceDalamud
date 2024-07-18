@@ -63,7 +63,7 @@ namespace RoleplayingVoice {
         }
         public override void Draw() {
             ImGui.BeginTable("##Animation Table", 2);
-            ImGui.TableSetupColumn("ICharacter List", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
             ImGui.TableSetupColumn("Custom Animation Mods", ImGuiTableColumnFlags.WidthStretch, 300);
             ImGui.TableHeadersRow();
             ImGui.TableNextRow();

@@ -47,6 +47,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.Xml;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Windows.Forms;
 using VfxEditor.ScdFormat;
 using static Lumina.Data.Parsing.Layer.LayerCommon;
@@ -361,7 +362,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (!_plugin.Config.NpcSpeechGenerationDisabled && !_plugin.Config.IgnoreBubblesFromOverworldNPCs) {
                 try {
                     if (_clientState.IsLoggedIn
                         && !IsInACutscene() && !Conditions.IsBoundByDuty) {
@@ -906,12 +907,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _currentSpeechObject = currentSpeechObject;
                         string backupVoice = voice;
                         Stopwatch downloadTimer = Stopwatch.StartNew();
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
+                        bool foundName = false;
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : voiceLinePriority);
                         if (!previouslyAddedLines.Contains(message + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                            _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
+                            _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                             previouslyAddedLines.Add(message + nameToUse);
                             if (_npcVoiceHistoryItems.Count > 10) {
                                 _npcVoiceHistoryItems.RemoveAt(0);
@@ -990,29 +992,29 @@ namespace RoleplayingVoiceDalamud.Voice {
                         string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
                         MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_clientState.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                         _currentSpeechObject = new MediaGameObject(_clientState.LocalPlayer);
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogueArc(message), npcObject, _clientState.TerritoryType, note);
-                        string npcData = JsonConvert.SerializeObject(reportData);
                         bool foundName = false;
                         bool isExtra = false;
                         bool isTerritorySpecific = false;
-                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName));
+                        string initialCleanedValue = PhoneticLexiconCorrection(ConvertRomanNumberals(message));
+                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(initialCleanedValue, _clientState.LocalPlayer.Name.TextValue, ref foundName));
                         string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
                         string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra, ref isTerritorySpecific);
+                        ReportData reportData = new ReportData(npcName, value, npcObject, _clientState.TerritoryType, note);
+                        string npcData = JsonConvert.SerializeObject(reportData);
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         if (_plugin.Config.DebugMode) {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
                         var conditionsToUseXivV = foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.Alternative : VoiceLinePriority.None;
                         var conditionToUseElevenLabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : conditionsToUseXivV;
-                        var conditionToUseOverride = voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None ? voiceLinePriority : conditionToUseElevenLabs;
+                        var conditionToUseOverride = voiceLinePriority != VoiceLinePriority.None ? voiceLinePriority : conditionToUseElevenLabs;
                         var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionToUseOverride;
                         for (int i = 0; i < 2; i++) {
                             var stream =
-                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
+                            await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
                             false, conditionsForDatamining);
-                            ;
                             if (!previouslyAddedLines.Contains(value + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
-                                _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, nameToUse, gender, backupVoice, false,
+                                _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false,
                                     true, npcData, redoLine, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                                 previouslyAddedLines.Add(value + nameToUse);
                                 if (_npcVoiceHistoryItems.Count > 10) {
@@ -1083,7 +1085,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print("Attempt to play audio stream.");
                                     }
-                                    if (_blockAudioGenerationCount is 0) {
+                                    if (!_blockAudioGeneration) {
                                         _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
                                        IsInACutscene() || _plugin.Config.AllowDialogueQueuingOutsideCutscenes, useSmbPitch, pitch, 0,
                                         IsInACutscene() || lowLatencyMode, delegate (object obj, string value) {
@@ -1227,7 +1229,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     MediaGameObject currentSpeechObject = mediaGameObject;
                     _currentSpeechObject = currentSpeechObject;
                     bool foundName = false;
-                    string value = StripPlayerNameFromNPCDialogue(PhoneticLexiconCorrection(ConvertRomanNumberals(message)), _clientState.LocalPlayer.Name.TextValue, ref foundName);
+                    string initialConvertedString = PhoneticLexiconCorrection(ConvertRomanNumberals(message));
+                    string value = StripPlayerNameFromNPCDialogue(initialConvertedString, _clientState.LocalPlayer.Name.TextValue, ref foundName);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType, note);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     bool isExtra = false;
@@ -1237,8 +1240,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var conditionsForOverride = (voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None) ? voiceLinePriority : conditionsForElevenlabs;
                     var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionsForOverride;
                     var stream =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(value,
-                    StripPlayerNameFromNPCDialogueArc(message), nameToUse, gender, voice
+                    await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice
                     , false, voiceModel, npcData, false, false, conditionsForDatamining);
                     if (stream.Item1 != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                         WaveStream wavePlayer = stream.Item1;
@@ -1473,7 +1475,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
             string lowered = value.ToLower();
             Random random = new Random(GetSimpleHash(value));
-            bool isHigherVoiced = lowered.Contains("way") || body == 4 || (body == 0 && _clientState.TerritoryType == 816)
+            bool isDawntrail = _clientState.TerritoryType == 1187 || _clientState.TerritoryType == 1188 ||
+                    _clientState.TerritoryType == 1189 || _clientState.TerritoryType == 1185;
+            bool isHigherVoiced = lowered.Contains("way") || (body == 4 && !isDawntrail) || (body == 0 && _clientState.TerritoryType == 816)
                 || (body == 0 && _clientState.TerritoryType == 152) || (body == 11005) || (body == 278) || (body == 626) || (body == 11051);
             bool isDeepVoiced = false;
             float pitch = CheckForDefinedPitch(value);
@@ -1582,7 +1586,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (body == 11029) {
                 gender = true;
             }
-            if (npcName.ToLower().Contains("siren")) {
+            if (npcName.ToLower().Contains("siren") || npcName.ToLower().Contains("il ja")) {
                 gender = true;
             }
             switch (race) {
@@ -1594,15 +1598,20 @@ namespace RoleplayingVoiceDalamud.Voice {
                 case 6:
                 case 4:
                 case 7:
-                    return !gender && body != 4 ?
+                    bool isDawntrail = _clientState.TerritoryType == 1187 || _clientState.TerritoryType == 1188 ||
+                                        _clientState.TerritoryType == 1189 || _clientState.TerritoryType == 1185;
+                    return !gender && (body != 4 || isDawntrail) ?
                     PickVoice(npcName, maleVoices) :
                     PickVoice(npcName, femaleVoices);
                 case 8:
                     if (_clientState.TerritoryType == 817) {
                         isTerritorySpecific = true;
+                        return gender ? PickVoice(npcName, femaleViera) : PickVoice(npcName, maleVoices);
+                    } else {
+                        return !gender && body != 4 ?
+                        PickVoice(npcName, maleVoices) : PickVoice(npcName, femaleVoices);
                     }
-                    return gender ? PickVoice(npcName, femaleViera) :
-                    PickVoice(npcName, maleVoices);
+                    break;
             }
             return "";
         }
@@ -1613,7 +1622,52 @@ namespace RoleplayingVoiceDalamud.Voice {
             string[] femaleVoices = new string[] { "Maiden", "Dla", "irhm", "ouncil", "igate" };
             string[] maleThavnair = new string[] { "tm1", "tm2", "tm3", "tm4" };
             string[] femaleViera = new string[] { "Aet", "Cet", "Uet" };
+
+            string[] maleVoiceYokTural = { "DTM1", "DTM2", "DTM3", "DTM4", "DTM5", "DTM6", "DTM7", "DTM8", "DTM9", "DTM10" };
+            string[] femaleVoiceYokTural = { "DTF1", "DTF2" };
+
+            string[] maleVoiceXakTural = { "XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9", "XTM10" };
+            string[] femaleVoiceXakTural = { "XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6", "XTF7" };
+
+            string[] maleVoiceSolutionNine = {
+            "Mciv", "Zin", "udm1", "gm1", "Beggarly", "gnat", "ig1", "thord", "vark",
+            "ckeep", "pide", "motanist", "lator", "sail", "lodier",
+            "SNM1", "SNM2", "XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9", "XTM10"};
+
+            string[] femaleVoiceSolutionNine = {
+               "SNF1","Maiden", "Dla", "irhm", "ouncil", "igate","XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6","XTF7"
+            };
+
+
+            string[] maleVoiceTuliyolal = {
+            "DTM1", "DTM2", "DTM3", "DTM4", "DTM5", "DTM6", "DTM7", "DTM8", "DTM9", "DTM10",
+            "XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9", "XTM10"};
+
+            string[] femaleVoiceTuliyolal = {
+               "DTF1","DTF2", "XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6","XTF7"
+            };
+
             switch (territory) {
+                // Spanish/American - Accents Tuliyolal
+                case 1185:
+                    isTerritorySpecific = true;
+                    return gender ? femaleVoiceTuliyolal : maleVoiceTuliyolal;
+                // Spanish Accents - Yok Tural
+                case 1187:
+                case 1188:
+                case 1189:
+                    isTerritorySpecific = true;
+                    return gender ? femaleVoiceYokTural : maleVoiceYokTural;
+                // Western Accents - Xak Tural
+                case 1186:
+                case 1191:
+                    isTerritorySpecific = true;
+                    return gender ? femaleVoiceXakTural : maleVoiceXakTural;
+                // American/British Accents - Solution Nine
+                case 1190:
+                    isTerritorySpecific = true;
+                    return gender ? femaleVoiceSolutionNine : maleVoiceSolutionNine;
+                // Thavnair Accents
                 case 963:
                 case 957:
                     isTerritorySpecific = true;

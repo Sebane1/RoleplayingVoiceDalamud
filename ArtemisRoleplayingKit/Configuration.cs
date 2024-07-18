@@ -48,6 +48,7 @@ namespace RoleplayingVoice {
         private int _playerVoiceEngine;
         private bool _ignoreSpatialAudioForTTS;
         private bool _allowDialogueQueuingOutsideCutscenes;
+        private bool _ignoreBubblesFromOverworldNPCs;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -141,6 +142,7 @@ namespace RoleplayingVoice {
         public int PlayerVoiceEngine { get => _playerVoiceEngine; set => _playerVoiceEngine = value; }
         public bool IgnoreSpatialAudioForTTS { get => _ignoreSpatialAudioForTTS; set => _ignoreSpatialAudioForTTS = value; }
         public bool AllowDialogueQueuingOutsideCutscenes { get => _allowDialogueQueuingOutsideCutscenes; set => _allowDialogueQueuingOutsideCutscenes = value; }
+        public bool IgnoreBubblesFromOverworldNPCs { get => _ignoreBubblesFromOverworldNPCs; set => _ignoreBubblesFromOverworldNPCs = value; }
 
         #endregion
 

@@ -30,6 +30,7 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Types;
 using static System.Net.WebRequestMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using File = System.IO.File;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -104,6 +105,7 @@ namespace RoleplayingVoice {
         private bool _lowPerformanceMode;
         private float _spatialAudioAccuracy;
         private bool _allowDialogueQueueOutsideCutscenes;
+        private bool _ignoreBubblesFromOverworldNPCs;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -190,6 +192,7 @@ namespace RoleplayingVoice {
                     _voiceEngineComboBox.SelectedIndex = configuration.PlayerVoiceEngine;
                     _ignoreSpatialAudioForTTS = configuration.IgnoreSpatialAudioForTTS;
                     _allowDialogueQueueOutsideCutscenes = configuration.AllowDialogueQueuingOutsideCutscenes;
+                    _ignoreBubblesFromOverworldNPCs = configuration.IgnoreBubblesFromOverworldNPCs;
 
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
@@ -436,14 +439,23 @@ namespace RoleplayingVoice {
             }
             try {
                 ImGui.TextWrapped("NPC speech is currently a work in progress, and will likely slowly until a majority of dialogue is created and cached.");
+                ImGui.BeginTable("##NPC Dialogue Options Table", 2);
+                ImGui.TableSetupColumn("Page 1", ImGuiTableColumnFlags.WidthStretch, 300);
+                ImGui.TableSetupColumn("Page 2", ImGuiTableColumnFlags.WidthStretch, 300);
+                //ImGui.TableHeadersRow();
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
                 ImGui.Checkbox("Turn Off NPC Dialogue", ref _npcSpeechGenerationDisabled);
                 ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
                 ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
                 ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
+                ImGui.TableSetColumnIndex(1);
                 ImGui.Checkbox("Allow dialogue queuing outside cutscenes", ref _allowDialogueQueueOutsideCutscenes);
                 ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
+                ImGui.Checkbox("Ignore bubbles from overworld NPCs", ref _ignoreBubblesFromOverworldNPCs);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
+                ImGui.EndTable();
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
@@ -455,7 +467,7 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
-                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                             if (stream != null) {
                                 if (stream.Length > 0) {
@@ -471,7 +483,7 @@ namespace RoleplayingVoice {
                             ImGui.SameLine();
                             if (ImGui.Button($"Report Double##" + count++)) {
                                 Task.Run(async () => {
-                                    var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                                    var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
                                     PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                                 });
@@ -482,7 +494,7 @@ namespace RoleplayingVoice {
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
                             PluginReference.RedoLineWindow.OpenReportBox(async delegate (object o, string note) {
-                                var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.Character,
+                                var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                                 if (stream != null) {
                                     if (stream.Length > 0) {
@@ -719,6 +731,7 @@ namespace RoleplayingVoice {
             configuration.PlayerVoiceEngine = _voiceEngineComboBox.SelectedIndex;
             configuration.IgnoreSpatialAudioForTTS = _ignoreSpatialAudioForTTS;
             configuration.AllowDialogueQueuingOutsideCutscenes = _allowDialogueQueueOutsideCutscenes;
+            configuration.IgnoreBubblesFromOverworldNPCs = _ignoreBubblesFromOverworldNPCs;
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                     characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -966,7 +979,10 @@ namespace RoleplayingVoice {
                         ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
                     }
                 }
-                if (voiceComboBox != null && _voiceList != null) {
+                string path = Path.Combine(configuration.CacheFolder, "xtts_models\\v2.0.2\\model.pth");
+                bool xttsExists = File.Exists(path);
+                if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
+                    || (voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 0)) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Generative Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
@@ -981,7 +997,7 @@ namespace RoleplayingVoice {
                     RefreshVoices();
                 }
                 if (_voiceEngineComboBox.SelectedIndex == 1) {
-                    if (Environment.GetEnvironmentVariable("Path").Contains("Python")) {
+                    if (xttsExists) {
                         ImGui.TextWrapped($"To add more voices, simply place .wav files of what you want to sound like in the folder the buttons below manage.");
                         if (ImGui.Button("Add More Voices", new Vector2(ImGui.GetWindowSize().X / 2 - 5, 25))) {
                             Process process = new Process();
@@ -1001,17 +1017,7 @@ namespace RoleplayingVoice {
                             }
                         }
                     } else {
-                        ImGui.TextWrapped("Python is required to install locally generated player voice dependancies. Click the button below to download the installer. Make sure you enable path variable support.");
-                        if (ImGui.Button("Download Python Dependancy", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
-                            Process process = new Process();
-                            try {
-                                process.StartInfo.UseShellExecute = true;
-                                process.StartInfo.FileName = @"https://www.python.org/ftp/python/3.10.0/python-3.10.0-amd64.exe";
-                                process.Start();
-                            } catch (Exception e) {
-
-                            }
-                        }
+                        ImGui.TextWrapped("XTTS has not been installed yet. Upon clicking save Artemis will attempt to install C++ builds tools, Python 3.10.0, and finally the XTTS system. You may get several administrative access prompts during the process.");
                     }
                 }
                 if (_voiceEngineComboBox.SelectedIndex == 0) {
