@@ -400,7 +400,8 @@ namespace RoleplayingVoice {
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
                 Task.Run(async () => {
-                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(), config.CacheFolder);
+                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
+                        config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d");
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                     _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);

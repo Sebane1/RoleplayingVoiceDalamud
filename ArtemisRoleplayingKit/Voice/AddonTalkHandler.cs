@@ -1616,7 +1616,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return "";
         }
 
-        public string[] GetVoicesBasedOnTerritory(uint territory, bool gender, ref bool isTerritorySpecific) {
+        public static string[] GetVoicesBasedOnTerritory(uint territory, bool gender, ref bool isTerritorySpecific) {
             string[] maleVoices = new string[] { "Mciv", "Zin", "udm1", "gm1", "Beggarly", "gnat", "ig1", "thord", "vark", "ckeep", "pide", "motanist", "lator", "sail", "lodier" };
             string[] femaleThavnair = new string[] { "tf1", "tf2", "tf3", "tf4" };
             string[] femaleVoices = new string[] { "Maiden", "Dla", "irhm", "ouncil", "igate" };
@@ -1626,8 +1626,14 @@ namespace RoleplayingVoiceDalamud.Voice {
             string[] maleVoiceYokTural = { "DTM1", "DTM2", "DTM3", "DTM4", "DTM5", "DTM6", "DTM7", "DTM8", "DTM9", "DTM10" };
             string[] femaleVoiceYokTural = { "DTF1", "DTF2" };
 
-            string[] maleVoiceXakTural = { "XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9", "XTM10" };
-            string[] femaleVoiceXakTural = { "XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6", "XTF7" };
+            // We messed up and mixed up the solution 9 voice list with the wrong zone. Keeping the same item count prevents needing to regenerate a bunch of lines.
+            string[] maleVoiceXakTural = {"XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9",
+            "XTM10","XTM1", "XTM2", "XTM3", "XTM4", "XTM5",
+            "XTM6", "XTM7", "XTM1", "XTM2", "XTM3", "XTM4", "XTM5", "XTM6", "XTM7", "XTM8", "XTM9", "XTM10" };
+
+            string[] femaleVoiceXakTural = {
+                "XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6", "XTF1", "XTF2", "XTF3", "XTF4", "XTF5", "XTF6", "XTF7"
+            };
 
             string[] maleVoiceSolutionNine = {
             "Mciv", "Zin", "udm1", "gm1", "Beggarly", "gnat", "ig1", "thord", "vark",
@@ -1659,12 +1665,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                     isTerritorySpecific = true;
                     return gender ? femaleVoiceYokTural : maleVoiceYokTural;
                 // Western Accents - Xak Tural
-                case 1186:
+                case 1190:
                 case 1191:
                     isTerritorySpecific = true;
                     return gender ? femaleVoiceXakTural : maleVoiceXakTural;
                 // American/British Accents - Solution Nine
-                case 1190:
+                case 1186:
                     isTerritorySpecific = true;
                     return gender ? femaleVoiceSolutionNine : maleVoiceSolutionNine;
                 // Thavnair Accents
@@ -1677,7 +1683,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
 
         }
-
         private string PickVoice(string name, string[] choices) {
             Random random = new Random(GetSimpleHash(name));
             return choices[random.Next(0, choices.Length)];
