@@ -1094,7 +1094,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     if (animationMemory != null) {
                                                         if (npcObject != null && canDoLipSync) {
                                                             animationMemory.LipsOverride = 0;
-                                                            if (!Conditions.IsBoundByDuty) {
+                                                            if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                                 if (IsInACutscene()) {
                                                                     MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
                                                                 }
@@ -1139,7 +1139,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                                 }
                                                             }
                                                             if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
-                                                                if (!Conditions.IsBoundByDuty) {
+                                                                if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                                     if (IsInACutscene()) {
                                                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
                                                                             ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
@@ -1150,7 +1150,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             }
                                                         } else {
                                                             if (lipWasSynced) {
-                                                                if (!Conditions.IsBoundByDuty) {
+                                                                if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                                     if (IsInACutscene()) {
                                                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
                                                                            ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
@@ -1159,7 +1159,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                                     lipWasSynced = false;
                                                                 }
                                                             } else if (Vector3.Distance(startingPosition, npcObject.Position) > 0.01f) {
-                                                                if (!Conditions.IsBoundByDuty) {
+                                                                if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                                     if (IsInACutscene()) {
                                                                         MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)),
                                                                            initialState, "Animation Mode Override");
