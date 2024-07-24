@@ -55,6 +55,25 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 return playerCharacter.Customize[(int)CustomizeIndex.Race];
             }
         }
+
+        public static int GetGender(ICharacter playerCharacter) {
+            try {
+                CharacterCustomization characterCustomization = null;
+                string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex)).Item2;
+                var bytes = System.Convert.FromBase64String(customizationValue);
+                var version = bytes[0];
+                version = bytes.DecompressToString(out var decompressed);
+                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+                return characterCustomization.Customize.Gender.Value;
+            } catch {
+                if (playerCharacter != null) {
+                    return playerCharacter.Customize[(int)CustomizeIndex.Gender];
+                } else {
+                    return 0;
+                }
+            }
+        }
+
         public static CharacterCustomization GetCustomization(ICharacter playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;

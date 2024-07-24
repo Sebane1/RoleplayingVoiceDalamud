@@ -82,6 +82,7 @@ using Glamourer.Api.Enums;
 using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
 using NAudio.Lame;
+using System.Xml.Linq;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -542,8 +543,8 @@ namespace RoleplayingVoice {
                 _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices, _roleplayingMediaManager_InitializationStatus);
                 if (config.PlayerVoiceEngine == 1) {
                     _roleplayingMediaManager.InitializeXTTS();
-                    _roleplayingMediaManager.BasePath = Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName);
                 }
+                _roleplayingMediaManager.BasePath = Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName);
                 _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
@@ -838,7 +839,7 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
             }
             Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
+            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, delegate {
                 Task.Run(delegate {
                     if (_clientState.LocalPlayer != null) {
                         _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
@@ -908,7 +909,7 @@ namespace RoleplayingVoice {
                                 //        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                 //    });
                                 //}
-                                _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, false, 0);
                                 try {
                                     _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                                 } catch (Exception e) {
@@ -964,7 +965,7 @@ namespace RoleplayingVoice {
                                         //        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                                         //    });
                                         //}
-                                        _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, 0);
+                                        _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopUntilStopped, false, 0);
                                         try {
                                             _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
                                         } catch (Exception e) {
@@ -1185,6 +1186,9 @@ namespace RoleplayingVoice {
                         case XivChatType.CrossParty:
                         case XivChatType.TellIncoming:
                         case XivChatType.TellOutgoing:
+                        case XivChatType.FreeCompany:
+                        case XivChatType.Alliance:
+                        case XivChatType.PvPTeam:
                             ChatText(playerName, message, type);
                             break;
                         case XivChatType.NPCDialogue:
@@ -1283,15 +1287,8 @@ namespace RoleplayingVoice {
                         if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
-                                string value = config.PlayerVoiceEngine == 0 ? await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
-                                type == XivChatType.CustomEmote,
-                                config.PlayerCharacterVolume,
-                                _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync) :
-                                await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
-                                type == XivChatType.CustomEmote,
-                                config.PlayerCharacterVolume,
-                                _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, 0, default, delegate {
+                                string value = await GetPlayerVoice(playerSender, playerMessage, type);
+                                _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, false, 0, default, delegate {
                                     if (_addonTalkHandler != null) {
                                         if (_clientState.LocalPlayer != null) {
                                             _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
@@ -1313,6 +1310,10 @@ namespace RoleplayingVoice {
                     } else {
                         string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(sender)).Split(" ");
                         bool isShoutYell = false;
+                        isShoutYell = type == XivChatType.Shout
+                        || type == XivChatType.Yell || type == XivChatType.Alliance
+                        || type == XivChatType.FreeCompany || type == XivChatType.TellIncoming
+                        || type == XivChatType.PvPTeam || type == XivChatType.NoviceNetwork;
                         if (senderStrings.Length > 2) {
                             string playerSender = senderStrings[0] + " " + senderStrings[2];
                             string playerMessage = message.TextValue;
@@ -1323,13 +1324,13 @@ namespace RoleplayingVoice {
                                     audioFocus = _clientState.LocalPlayer.TargetObject.Name.TextValue == sender
                                         || type == XivChatType.Party
                                         || type == XivChatType.CrossParty || isShoutYell;
-                                    isShoutYell = type == XivChatType.Shout
-                                        || type == XivChatType.Yell;
                                 }
                             } else {
                                 audioFocus = true;
                             }
                             ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
+                            var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _clientState.LocalPlayer.Position);
+                            bool narratePlayer = false;
                             if (config.UsePlayerSync) {
                                 if (GetCombinedWhitelist().Contains(playerSender)) {
                                     Task.Run(async () => {
@@ -1337,8 +1338,8 @@ namespace RoleplayingVoice {
                                         GetSound(playerSender, playerMessage, audioFocus ?
                                         config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                         _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                        bool lipWasSynced = false;
-                                        _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.OtherPlayerTts, 0, default, delegate {
+                                        bool lipWasSynced = false; ;
+                                        _mediaManager.PlayAudio(playerMediaReference, value, SoundType.OtherPlayerTts, (isShoutYell || audioFocus), 0, default, delegate {
                                             Task.Run(delegate {
                                                 _addonTalkHandler.StopLipSync(player);
                                             });
@@ -1357,7 +1358,47 @@ namespace RoleplayingVoice {
                                         });
                                     });
                                     CheckForChatSoundEffectOtherPlayer(sender, player, message);
+                                } else {
+                                    narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
                                 }
+                            } else {
+                                narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
+                            }
+                            if (narratePlayer) {
+                                Task.Run(async () => {
+                                    var list = await _roleplayingMediaManager.GetVoiceListMicrosoftNarrator();
+                                    var genderSortedLists = await _roleplayingMediaManager.GetGenderSortedVoiceListsMicrosoftNarrator();
+                                    Random random = new Random(AudioConversionHelper.GetSimpleHash(playerSender));
+                                    //if (list.Contains("Microsoft Brian Online")) {
+                                    _roleplayingMediaManager.SetVoiceMicrosoftNarrator(
+                                   PenumbraAndGlamourerHelperFunctions.GetGender(player) != 1 ?
+                                   genderSortedLists.Item1[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item1.Length)] :
+                                   genderSortedLists.Item2[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item2.Length)]);
+
+                                    var value = await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
+                                    type == XivChatType.CustomEmote,
+                                    config.PlayerCharacterVolume,
+                                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                                    bool lipWasSynced = false;
+
+                                    _mediaManager.PlayAudio(playerMediaReference, value, SoundType.OtherPlayerTts, (isShoutYell || audioFocus), 0, default, delegate {
+                                        Task.Run(delegate {
+                                            _addonTalkHandler.StopLipSync(player);
+                                        });
+                                    },
+                                    delegate (object sender, StreamVolumeEventArgs e) {
+                                        Task.Run(delegate {
+                                            if (e.MaxSampleValues.Length > 0) {
+                                                if (e.MaxSampleValues[0] > 0.2) {
+                                                    _addonTalkHandler.TriggerLipSync(player, 4);
+                                                    lipWasSynced = true;
+                                                } else {
+                                                    _addonTalkHandler.StopLipSync(player);
+                                                }
+                                            }
+                                        });
+                                    });
+                                });
                             }
                             TwitchChatCheck(message, type, player, playerSender);
                         }
@@ -1366,6 +1407,30 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 Plugin.PluginLog.Warning(e, e.Message);
             }
+        }
+
+        private async Task<string> GetPlayerVoice(string playerSender, string playerMessage, XivChatType type) {
+            switch (config.PlayerVoiceEngine) {
+                case 0:
+                    return await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
+                    type == XivChatType.CustomEmote,
+                    config.PlayerCharacterVolume,
+                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                case 1:
+                    return await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
+                    type == XivChatType.CustomEmote,
+                    config.PlayerCharacterVolume,
+                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync, _window.XttsLanguageComboBox.Contents[config.XTTSLanguage]);
+                case 2:
+                    _roleplayingMediaManager.SetVoiceMicrosoftNarrator(config.Characters[_clientState.LocalPlayer.Name.TextValue]);
+                    return await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
+                    type == XivChatType.CustomEmote,
+                    config.PlayerCharacterVolume,
+                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                default:
+                    return "";
+            }
+
         }
 
         private unsafe string GetWrittenGameState(string playerName, string npcName) {
@@ -1454,7 +1519,7 @@ namespace RoleplayingVoice {
                     value = characterVoicePack.GetMisc(soundTrigger);
                 }
                 if (!string.IsNullOrEmpty(value)) {
-                    _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.ChatSound);
+                    _mediaManager.PlayAudio(new MediaGameObject(player), value, SoundType.ChatSound, false);
                 }
             }
         }
@@ -1469,7 +1534,7 @@ namespace RoleplayingVoice {
                 }
                 string value = index == -1 ? _mainCharacterVoicePack.GetMisc(soundTrigger) : _mainCharacterVoicePack.GetMiscSpecific(soundTrigger, index);
                 if (!string.IsNullOrEmpty(value)) {
-                    _mediaManager.PlayAudio(new MediaGameObject(_clientState.LocalPlayer), value, SoundType.ChatSound);
+                    _mediaManager.PlayAudio(new MediaGameObject(_clientState.LocalPlayer), value, SoundType.ChatSound, false);
                 }
             }
         }
@@ -1491,7 +1556,7 @@ namespace RoleplayingVoice {
                         }
                         string value = _mainCharacterVoicePack.GetMisc(message.TextValue);
                         if (!string.IsNullOrEmpty(value)) {
-                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default, delegate {
+                            _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, delegate {
                                 _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
                             },
                             delegate (object sender, StreamVolumeEventArgs e) {
@@ -1720,7 +1785,7 @@ namespace RoleplayingVoice {
                                         Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
                                     }
                                     Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-                                    _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, 0, default,
+                                    _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default,
                                         Conditions.IsBoundByDuty ?
                                         null
                                     : delegate {
@@ -1827,7 +1892,7 @@ namespace RoleplayingVoice {
                                                     }
                                                 }
                                                 _mediaManager.PlayAudio(new MediaGameObject((IPlayerCharacter)character,
-                                                playerSender, character.Position), value, SoundType.OtherPlayerCombat, 0, default, delegate {
+                                                playerSender, character.Position), value, SoundType.OtherPlayerCombat, false, 0, default, delegate {
                                                     Task.Run(delegate {
                                                         _addonTalkHandler.StopLipSync(player as ICharacter);
                                                     });
@@ -2135,7 +2200,7 @@ namespace RoleplayingVoice {
                             bool isVoicedEmote = false;
                             string value = characterVoicePack.GetMisc("moving");
                             if (!string.IsNullOrEmpty(value)) {
-                                _mediaManager.PlayAudio(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, 0);
+                                _mediaManager.PlayAudio(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, false, 0);
                                 if (isVoicedEmote) {
                                     MuteVoiceCheck(6000);
                                 }
@@ -2166,7 +2231,7 @@ namespace RoleplayingVoice {
                             bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
                         });
                     }
-                    _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, 0);
+                    _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, false, 0);
                 }
             }
         }
@@ -2814,7 +2879,7 @@ namespace RoleplayingVoice {
                                                     TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     bool lipWasSynced = false;
-                                                    _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer,
+                                                    _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer, false,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
                                                          Task.Run(delegate {
                                                              _addonTalkHandler.StopLipSync(instigator);
@@ -2872,7 +2937,7 @@ namespace RoleplayingVoice {
                         TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                         _mediaManager.StopAudio(new MediaGameObject(instigator));
                         bool lipWasSynced = false;
-                        _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote,
+                        _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote, false,
                         _mainCharacterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[_mainCharacterVoicePack.EmoteIndex]) : 0, default, delegate {
                             Task.Run(delegate {
                                 _addonTalkHandler.StopLipSync(instigator);

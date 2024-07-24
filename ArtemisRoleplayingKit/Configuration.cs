@@ -49,6 +49,7 @@ namespace RoleplayingVoice {
         private bool _ignoreSpatialAudioForTTS;
         private bool _allowDialogueQueuingOutsideCutscenes;
         private bool _ignoreBubblesFromOverworldNPCs;
+        private int _xTTSLanguage;
 
         int IPluginConfiguration.Version { get; set; }
 
@@ -143,10 +144,14 @@ namespace RoleplayingVoice {
         public bool IgnoreSpatialAudioForTTS { get => _ignoreSpatialAudioForTTS; set => _ignoreSpatialAudioForTTS = value; }
         public bool AllowDialogueQueuingOutsideCutscenes { get => _allowDialogueQueuingOutsideCutscenes; set => _allowDialogueQueuingOutsideCutscenes = value; }
         public bool IgnoreBubblesFromOverworldNPCs { get => _ignoreBubblesFromOverworldNPCs; set => _ignoreBubblesFromOverworldNPCs = value; }
+        public int XTTSLanguage { get => _xTTSLanguage; set => _xTTSLanguage = value; }
+
+        public bool LocalVoiceForNonWhitelistedPlayers { get => localVoiceForNonWhitelistedPlayers; set => localVoiceForNonWhitelistedPlayers = value; }
 
         #endregion
 
         private readonly IDalamudPluginInterface pluginInterface;
+        private bool localVoiceForNonWhitelistedPlayers;
 
         public Configuration(IDalamudPluginInterface pi) {
             this.pluginInterface = pi;

@@ -36,7 +36,8 @@ namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingMediaManager _manager = null;
-        BetterComboBox _voiceEngineComboBox = new BetterComboBox("Generative Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)" }, 0, 390);
+        BetterComboBox _voiceEngineComboBox = new BetterComboBox("Generative Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator" }, 0, 390);
+        BetterComboBox _xttsLanguageComboBox = new BetterComboBox("Voice Language", new string[] { "en", "es", "fr", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko", "hi" }, 0, 390);
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         BetterComboBox _twitchDefaultPlayback = new BetterComboBox("##twitchDefaultPlayback",
@@ -106,6 +107,7 @@ namespace RoleplayingVoice {
         private float _spatialAudioAccuracy;
         private bool _allowDialogueQueueOutsideCutscenes;
         private bool _ignoreBubblesFromOverworldNPCs;
+        private bool _localVoiceForNonWhitelistedPlayers;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -113,7 +115,7 @@ namespace RoleplayingVoice {
 
         public PluginWindow() : base("Artemis Roleplaying Kit Config") {
             //IsOpen = true;
-            Size = new Vector2(700, 750);
+            Size = new Vector2(700, 800);
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
@@ -193,7 +195,8 @@ namespace RoleplayingVoice {
                     _ignoreSpatialAudioForTTS = configuration.IgnoreSpatialAudioForTTS;
                     _allowDialogueQueueOutsideCutscenes = configuration.AllowDialogueQueuingOutsideCutscenes;
                     _ignoreBubblesFromOverworldNPCs = configuration.IgnoreBubblesFromOverworldNPCs;
-
+                    _xttsLanguageComboBox.SelectedIndex = configuration.XTTSLanguage;
+                    _localVoiceForNonWhitelistedPlayers = configuration.LocalVoiceForNonWhitelistedPlayers;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -265,6 +268,8 @@ namespace RoleplayingVoice {
         }
 
         public Plugin PluginReference { get; internal set; }
+        internal BetterComboBox XttsLanguageComboBox { get => _xttsLanguageComboBox; set => _xttsLanguageComboBox = value; }
+
         public event EventHandler OnMoveFailed;
 
         private void ClientState_Logout() {
@@ -524,6 +529,11 @@ namespace RoleplayingVoice {
             ImGui.Text("Allow Sending/Receiving Server Data");
             ImGui.TextWrapped("(Any players with ARK installed and connected to the same server will hear your custom voice and vice versa if added to eachothers whitelists)");
 
+            ImGui.Checkbox("##voiceAllPlayers", ref _localVoiceForNonWhitelistedPlayers);
+            ImGui.SameLine();
+            ImGui.Text("Voice players not on whitelist");
+            ImGui.TextWrapped("Players who arent whitelisted will be voiced locally.");
+
             string[] whitelist = configuration.Whitelist.ToArray();
             if (whitelist.Length == 0) {
                 whitelist = new string[] { "None" };
@@ -627,7 +637,7 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if ((!isApiKeyValid || string.IsNullOrEmpty(apiKey)) && _aiVoiceActive) {
+            if ((!isApiKeyValid || (string.IsNullOrEmpty(apiKey)) && _aiVoiceActive && configuration.PlayerVoiceEngine == 0)) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -645,7 +655,7 @@ namespace RoleplayingVoice {
                 Task.Run(() => _manager.ApiValidation(apiKey.Trim()));
                 InputValidation();
                 runOnLaunch = false;
-            } else if (string.IsNullOrEmpty(apiKey)) {
+            } else if (string.IsNullOrEmpty(apiKey) && configuration.PlayerVoiceEngine == 0) {
                 if (runOnLaunch) {
                     InputValidation();
                 }
@@ -732,6 +742,8 @@ namespace RoleplayingVoice {
             configuration.IgnoreSpatialAudioForTTS = _ignoreSpatialAudioForTTS;
             configuration.AllowDialogueQueuingOutsideCutscenes = _allowDialogueQueueOutsideCutscenes;
             configuration.IgnoreBubblesFromOverworldNPCs = _ignoreBubblesFromOverworldNPCs;
+            configuration.XTTSLanguage = _xttsLanguageComboBox.SelectedIndex;
+            configuration.LocalVoiceForNonWhitelistedPlayers = _localVoiceForNonWhitelistedPlayers;
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                     characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
@@ -824,16 +836,33 @@ namespace RoleplayingVoice {
                             }
                         }
                         if (_manager != null) {
-                            var newVoiceList = _voiceEngineComboBox.SelectedIndex == 0 ? (await _manager.GetVoiceListElevenlabs()) : await _manager.GetVoiceListXTTS();
+                            var newVoiceList = new string[] { "None" };
+                            switch (_voiceEngineComboBox.SelectedIndex) {
+                                case 0:
+                                    newVoiceList = await _manager.GetVoiceListElevenlabs();
+                                    break;
+                                case 1:
+                                    newVoiceList = await _manager.GetVoiceListXTTS();
+                                    break;
+                                case 2:
+                                    newVoiceList = await _manager.GetVoiceListMicrosoftNarrator();
+                                    break;
+                            }
                             if (newVoiceList != null && newVoiceList.Length > 0) {
                                 _voiceList = newVoiceList;
                                 voiceComboBox.Contents = newVoiceList;
                             }
-                            if (_voiceEngineComboBox.SelectedIndex == 0) {
-                                _manager.SetVoiceElevenlabs(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
-                                _manager.RefreshElevenlabsSubscriptionInfo();
-                            } else {
-                                _manager.SetVoiceXTTS(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                            switch (_voiceEngineComboBox.SelectedIndex) {
+                                case 0:
+                                    _manager.SetVoiceElevenlabs(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    _manager.RefreshElevenlabsSubscriptionInfo();
+                                    break;
+                                case 1:
+                                    _manager.SetVoiceXTTS(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    break;
+                                case 2:
+                                    _manager.SetVoiceMicrosoftNarrator(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    break;
                             }
                             if (_voiceList != null && _voiceList.Length > 0) {
                                 voiceComboBox.Contents = _voiceList;
@@ -958,36 +987,38 @@ namespace RoleplayingVoice {
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 _voiceEngineComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                 _voiceEngineComboBox.Draw();
-                if (_voiceEngineComboBox.SelectedIndex == 0) {
-                    ImGui.Text("Elevenlabs API Key");
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-                    ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
-                    if (string.IsNullOrEmpty(apiKey)) {
-                        if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
-                            Process process = new Process();
-                            try {
-                                process.StartInfo.UseShellExecute = true;
-                                process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
-                                process.Start();
-                            } catch (Exception e) {
+                switch (_voiceEngineComboBox.SelectedIndex) {
+                    case 0:
+                        ImGui.Text("Elevenlabs API Key");
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                        ImGui.InputText("##apiKey", ref apiKey, 2000, ImGuiInputTextFlags.Password);
+                        if (string.IsNullOrEmpty(apiKey)) {
+                            if (ImGui.Button("Elevenlabs API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                                Process process = new Process();
+                                try {
+                                    process.StartInfo.UseShellExecute = true;
+                                    process.StartInfo.FileName = "https://www.elevenlabs.io/?from=partnerthompson2324";
+                                    process.Start();
+                                } catch (Exception e) {
 
+                                }
                             }
                         }
-                    }
-                } else {
-                    if (!_manager.XttsReady) {
-                        ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
-                    }
+                        break;
+                    case 1:
+                        if (!_manager.XttsReady) {
+                            ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
+                        }
+                        break;
                 }
                 string path = Path.Combine(configuration.CacheFolder, "xtts_models\\v2.0.2\\model.pth");
                 bool xttsExists = File.Exists(path);
                 if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
-                    || (voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 0)) {
+                    || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2))) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text("Generative Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
-                        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                     } else {
 
                     }
@@ -998,6 +1029,9 @@ namespace RoleplayingVoice {
                 }
                 if (_voiceEngineComboBox.SelectedIndex == 1) {
                     if (xttsExists) {
+                        ImGui.Text("Language");
+                        _xttsLanguageComboBox.Width = (int)ImGui.GetContentRegionMax().X;
+                        _xttsLanguageComboBox.Draw();
                         ImGui.TextWrapped($"To add more voices, simply place .wav files of what you want to sound like in the folder the buttons below manage.");
                         if (ImGui.Button("Add More Voices", new Vector2(ImGui.GetWindowSize().X / 2 - 5, 25))) {
                             Process process = new Process();
@@ -1020,13 +1054,19 @@ namespace RoleplayingVoice {
                         ImGui.TextWrapped("XTTS has not been installed yet. Upon clicking save Artemis will attempt to install C++ builds tools, Python 3.10.0, and finally the XTTS system. You may get several administrative access prompts during the process.");
                     }
                 }
-                if (_voiceEngineComboBox.SelectedIndex == 0) {
-                    if (_manager != null && _manager.Info != null && isApiKeyValid) {
-                        ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
-                        ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
-                    }
-                } else {
-                    ImGui.TextWrapped($"XTTS is free to use and runs on your own machine. Generation speed is hardware dependant. Requires Python 3.10 or below.");
+                switch (_voiceEngineComboBox.SelectedIndex) {
+                    case 0:
+                        if (_manager != null && _manager.Info != null && isApiKeyValid) {
+                            ImGui.TextWrapped($"You have used {_manager.Info.CharacterCount}/{_manager.Info.CharacterLimit} characters.");
+                            ImGui.TextWrapped($"Once this caps you will either need to upgrade subscription tiers or wait until the next month");
+                        }
+                        break;
+                    case 1:
+                        ImGui.TextWrapped($"XTTS is free to use and runs on your own machine. Generation speed is hardware dependant. Requires Python 3.10 or below.");
+                        break;
+                    case 2:
+                        ImGui.TextWrapped($"Narrator is free to use and runs on your own machine. Uses any Narrator voices you have installed.");
+                        break;
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
               && !isApiKeyValid && _aiVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _aiVoiceActive) {

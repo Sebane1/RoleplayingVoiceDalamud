@@ -678,9 +678,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return null;
             }
         }
-        private static int GetSimpleHash(string s) {
-            return s.Select(a => (int)a).Sum();
-        }
 
         public async void TriggerLipSync(ICharacter character, int lipSyncType) {
             try {
@@ -1480,9 +1477,9 @@ namespace RoleplayingVoiceDalamud.Voice {
             return newValue;
         }
 
-        private float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
+        public float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
             string lowered = value.ToLower();
-            Random random = new Random(GetSimpleHash(value));
+            Random random = new Random(AudioConversionHelper.GetSimpleHash(value));
             bool isDawntrail = _clientState.TerritoryType == 1187 || _clientState.TerritoryType == 1188 ||
                     _clientState.TerritoryType == 1189 || _clientState.TerritoryType == 1185;
             bool isHigherVoiced = lowered.Contains("way") || (body == 4 && !isDawntrail) || (body == 0 && _clientState.TerritoryType == 816)
@@ -1692,7 +1689,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         }
         private string PickVoice(string name, string[] choices) {
-            Random random = new Random(GetSimpleHash(name));
+            Random random = new Random(AudioConversionHelper.GetSimpleHash(name));
             return choices[random.Next(0, choices.Length)];
         }
 
