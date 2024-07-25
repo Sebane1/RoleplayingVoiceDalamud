@@ -491,7 +491,7 @@ namespace RoleplayingVoice {
                             if (ImGui.Button($"Report Double##" + count++)) {
                                 Task.Run(async () => {
                                     var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
-                                     item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, VoiceLinePriority.Ignore)).Item1;
+                                     item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, item.CanBeMuted, VoiceLinePriority.Ignore)).Item1;
                                     PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                                 });
                                 break;

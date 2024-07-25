@@ -164,7 +164,7 @@ namespace RoleplayingVoice {
         private string lastStreamURL;
         private string _currentStreamer;
 
-        private Queue<KeyValuePair<string, string>> _aiMessageQueue = new Queue<KeyValuePair<string, string>>();
+        private Queue<Tuple<string, string, XivChatType>> _aiMessageQueue = new Queue<Tuple<string, string, XivChatType>>();
         private Queue<string> _messageQueue = new Queue<string>();
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
@@ -1189,7 +1189,9 @@ namespace RoleplayingVoice {
                         case XivChatType.FreeCompany:
                         case XivChatType.Alliance:
                         case XivChatType.PvPTeam:
-                            ChatText(playerName, message, type);
+                            if ((type != XivChatType.Shout && type != XivChatType.Yell) || IsResidential()) {
+                                ChatText(playerName, message, type);
+                            }
                             break;
                         case XivChatType.NPCDialogue:
                         case XivChatType.NPCDialogueAnnouncements:
@@ -1216,7 +1218,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void ChatText(string sender, SeString message, XivChatType type) {
+        private void ChatText(string sender, SeString message, XivChatType type, bool isCustomNPC = false) {
             try {
                 if (_clientState.LocalPlayer != null) {
                     if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
@@ -1228,51 +1230,47 @@ namespace RoleplayingVoice {
                             }
                         }
                         //if (!Conditions.IsBoundByDuty) {
-                            if (true) {
-                                Task.Run(async () => {
-                                    try {
-                                        if (_playerCount is 1) {
-                                            foreach (var gameObject in GetNearestObjects()) {
-                                                ICharacter character = gameObject as ICharacter;
-                                                if (character != null) {
-                                                    if (character.ObjectKind == ObjectKind.Companion) {
-                                                        if (!_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
-                                                            CustomNpcCharacter npcData = null;
-                                                            foreach (var customNPC in config.CustomNpcCharacters) {
-                                                                if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
-                                                                    npcData = customNPC;
-                                                                    break;
-                                                                }
-                                                            }
-                                                            if (npcData != null) {
-                                                                _npcConversationManagers[character.Name.TextValue] = new KeyValuePair<CustomNpcCharacter, NPCConversationManager>(npcData,
-                                                                new NPCConversationManager(npcData.NpcName, config.CacheFolder + @"\NPCMemories", this, character));
-                                                            }
+                        if (true) {
+                            Task.Run(async () => {
+                                try {
+                                    if (_playerCount is 1 || type == XivChatType.Party) {
+                                        foreach (var gameObject in GetNearestObjects()) {
+                                            ICharacter character = gameObject as ICharacter;
+                                            if (character != null) {
+                                                if (character.ObjectKind == ObjectKind.Companion) {
+                                                    if (!_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
+                                                        CustomNpcCharacter npcData = null;
+                                                        npcData = GetCustomNPCObject(character);
+                                                        if (npcData != null) {
+                                                            _npcConversationManagers[character.Name.TextValue] = new KeyValuePair<CustomNpcCharacter, NPCConversationManager>(npcData,
+                                                            new NPCConversationManager(npcData.NpcName, config.CacheFolder + @"\NPCMemories", this, character));
                                                         }
-                                                        if (_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
-                                                            string formattedText = message.TextValue;
-                                                            if (type == XivChatType.Say && formattedText.Split('"').Length < 2) {
-                                                                formattedText = @"""" + message + @"""";
-                                                            }
-
-                                                            var npcConversationManager = _npcConversationManagers[character.Name.TextValue];
-                                                            string aiResponse = await npcConversationManager.Value
-                                                            .SendMessage(_clientState.LocalPlayer, character, npcConversationManager.Key.NpcName, npcConversationManager.Key.NPCGreeting,
-                                                            formattedText, GetWrittenGameState(
-                                                                _clientState.LocalPlayer.Name.TextValue.Split(" ")[0], character.Name.TextValue.Split(" ")[0]),
-                                                            npcConversationManager.Key.NpcPersonality);
-
-                                                            _aiMessageQueue.Enqueue(new KeyValuePair<string, string>(npcConversationManager.Key.NpcName, aiResponse));
+                                                    }
+                                                    if (_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
+                                                        string formattedText = message.TextValue;
+                                                        if (type != XivChatType.CustomEmote && formattedText.Split('"').Length < 2) {
+                                                            formattedText = @"""" + message + @"""";
                                                         }
+
+                                                        var npcConversationManager = _npcConversationManagers[character.Name.TextValue];
+                                                        string aiResponse = await npcConversationManager.Value
+                                                        .SendMessage(_clientState.LocalPlayer, character, npcConversationManager.Key.NpcName, npcConversationManager.Key.NPCGreeting,
+                                                        formattedText, GetWrittenGameState(
+                                                            _clientState.LocalPlayer.Name.TextValue.Split(" ")[0], character.Name.TextValue.Split(" ")[0]),
+                                                        npcConversationManager.Key.NpcPersonality);
+
+                                                        _aiMessageQueue.Enqueue(new Tuple<string, string, XivChatType>(npcConversationManager.Key.NpcName, aiResponse, type == XivChatType.Party ? XivChatType.Party : XivChatType.CustomEmote));
+                                                        ChatText(character.Name.TextValue, aiResponse, XivChatType.Say, true);
                                                     }
                                                 }
                                             }
                                         }
-                                    } catch (Exception e) {
-                                        Plugin.PluginLog.Warning(e, e.Message);
                                     }
-                                });
-                            }
+                                } catch (Exception e) {
+                                    Plugin.PluginLog.Warning(e, e.Message);
+                                }
+                            });
+                        }
                         //}
                         string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
                         _clientState.LocalPlayer.Name.TextValue)).Split(" ");
@@ -1287,7 +1285,7 @@ namespace RoleplayingVoice {
                         if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
-                                string value = await GetPlayerVoice(playerSender, playerMessage, type);
+                                string value = await GetPlayerVoice(isCustomNPC ? GetCustomNPCObject(player).NpcName : playerSender, playerMessage, type);
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, false, 0, default, delegate {
                                     if (_addonTalkHandler != null) {
                                         if (_clientState.LocalPlayer != null) {
@@ -1409,6 +1407,14 @@ namespace RoleplayingVoice {
             }
         }
 
+        private CustomNpcCharacter GetCustomNPCObject(ICharacter character) {
+            foreach (var customNPC in config.CustomNpcCharacters) {
+                if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
+                    return customNPC;
+                }
+            }
+            return null;
+        }
         private async Task<string> GetPlayerVoice(string playerSender, string playerMessage, XivChatType type) {
             switch (config.PlayerVoiceEngine) {
                 case 0:
@@ -2359,9 +2365,9 @@ namespace RoleplayingVoice {
                     var message = _aiMessageQueue.Dequeue();
                     _chat.Print(new XivChatEntry() {
                         Message = new SeString(new List<Payload>() {
-                        new TextPayload(" " + message.Value) }),
-                        Name = message.Key,
-                        Type = XivChatType.CustomEmote
+                        new TextPayload(" " + message.Item2) }),
+                        Name = message.Item1,
+                        Type = message.Item3
                     });
                 }
             } catch (Exception e) {
@@ -3448,7 +3454,11 @@ namespace RoleplayingVoice {
         [Command("/cc")]
         [HelpMessage("Chat With Custom NPC")]
         public void ExecuteCommandD(string command, string args) {
-            OpenConfig(command, args);
+            bool handled = false;
+            var name = _clientState.LocalPlayer.Name;
+            var message = new SeString(new TextPayload(args.Replace("cc", "")));
+            _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = 0, Type = XivChatType.Party });
+            //Chat_ChatMessage(XivChatType.Say, 0, ref name, ref message, ref handled);
         }
         public void OpenConfig(string command, string args) {
             if (!disposed) {

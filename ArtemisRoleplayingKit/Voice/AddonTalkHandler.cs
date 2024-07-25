@@ -908,7 +908,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : voiceLinePriority);
                         if (!previouslyAddedLines.Contains(message + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                             previouslyAddedLines.Add(message + nameToUse);
@@ -1009,7 +1009,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         for (int i = 0; i < 2; i++) {
                             var stream =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
-                            false, conditionsForDatamining);
+                            false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
                             if (!previouslyAddedLines.Contains(value + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false,
                                     true, npcData, redoLine, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
@@ -1246,7 +1246,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionsForOverride;
                     var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice
-                    , false, voiceModel, npcData, false, false, conditionsForDatamining);
+                    , false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
                     if (stream.Item1 != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
                         WaveStream wavePlayer = stream.Item1;
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
