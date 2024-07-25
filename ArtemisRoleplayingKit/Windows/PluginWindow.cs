@@ -1225,7 +1225,7 @@ namespace RoleplayingVoice {
             ImGui.Dummy(new Vector2(10));
             ImGui.Text("Spatial Audio Accuracy");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.SliderFloat("##spatialAudioAccuracy", ref _spatialAudioAccuracy, 100, 700);
+            ImGui.SliderFloat("##spatialAudioAccuracy", ref _spatialAudioAccuracy, 10, 700);
             ImGui.TextWrapped("Reduce the accuracy of spatial audio in exchange for possibly better performance. Higher number means less spatial accuracy, so raise this slider until the moment performance improves.");
 
             if (ImGui.Button("Volume Fix (fixes rare instances of muted sound)", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {

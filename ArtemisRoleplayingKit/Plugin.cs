@@ -1227,8 +1227,8 @@ namespace RoleplayingVoice {
                                 Task.Run(() => EmoteReaction(message.TextValue));
                             }
                         }
-                        if (!Conditions.IsBoundByDuty) {
-                            if (type == XivChatType.Say || type == XivChatType.CustomEmote) {
+                        //if (!Conditions.IsBoundByDuty) {
+                            if (true) {
                                 Task.Run(async () => {
                                     try {
                                         if (_playerCount is 1) {
@@ -1273,7 +1273,7 @@ namespace RoleplayingVoice {
                                     }
                                 });
                             }
-                        }
+                        //}
                         string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(
                         _clientState.LocalPlayer.Name.TextValue)).Split(" ");
                         string playerSender = senderStrings.Length == 2 ?
@@ -2388,9 +2388,9 @@ namespace RoleplayingVoice {
                                         Plugin.PluginLog.Debug(character.Name.TextValue + " found!");
                                     }
                                     if (!character.IsDead) {
-                                        if (character.ObjectKind == ObjectKind.Retainer ||
+                                        if (((character.ObjectKind == ObjectKind.Retainer ||
                                             character.ObjectKind == ObjectKind.BattleNpc ||
-                                            character.ObjectKind == ObjectKind.EventNpc ||
+                                            character.ObjectKind == ObjectKind.EventNpc) && config.DebugMode) ||
                                             character.ObjectKind == ObjectKind.Companion ||
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
