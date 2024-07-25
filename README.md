@@ -5,7 +5,8 @@ https://artemisroleplayingkit.carrd.co/
 
 Features:
 - Crowdsourced NPC Dialogue that aims to provide voiceover for all unvoiced text in the MSQ, and side content.
-- Generative voicelines for anything you type via Elevenlabs (after providing your own API key).
+- Generative voicelines for anything you type via Elevenlabs, XTTS, or custom Narrator voices.
+- Voiceover for other players.
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility.
 - Automatic lip syncronization on your character!
 - Automatic twitch playback allows you to hear your favourite DJ's while inside venues without having to think or manually open a web browser. Everything is in the game world!
@@ -71,5 +72,8 @@ https://discord.gg/rtGXwMn7pX
 
 SEO:
 TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback Plugin, FFXIV Voices, XIV Voices, Final Fantasy 14 Voices, Free FFXIV Voice, Free XIV Voice
+'final fantasy'
+'final fantasy'
+'final fantasy'
 'final fantasy'
 'final fantasy'
