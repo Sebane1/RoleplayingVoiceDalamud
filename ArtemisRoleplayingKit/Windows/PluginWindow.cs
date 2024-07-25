@@ -108,6 +108,7 @@ namespace RoleplayingVoice {
         private bool _allowDialogueQueueOutsideCutscenes;
         private bool _ignoreBubblesFromOverworldNPCs;
         private bool _localVoiceForNonWhitelistedPlayers;
+        private bool _narrateUnquotedText;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -197,6 +198,7 @@ namespace RoleplayingVoice {
                     _ignoreBubblesFromOverworldNPCs = configuration.IgnoreBubblesFromOverworldNPCs;
                     _xttsLanguageComboBox.SelectedIndex = configuration.XTTSLanguage;
                     _localVoiceForNonWhitelistedPlayers = configuration.LocalVoiceForNonWhitelistedPlayers;
+                    _narrateUnquotedText = configuration.NarrateUnquotedText;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
@@ -534,6 +536,12 @@ namespace RoleplayingVoice {
             ImGui.Text("Voice players not on whitelist");
             ImGui.TextWrapped("Players who arent whitelisted will be voiced locally.");
 
+            ImGui.Checkbox("##narrateUnquotedText", ref _narrateUnquotedText);
+            ImGui.SameLine();
+            ImGui.Text("Narrate Unquoted RP Text");
+            ImGui.TextWrapped("Text outside of quotes will be read by a narrator.");
+
+
             string[] whitelist = configuration.Whitelist.ToArray();
             if (whitelist.Length == 0) {
                 whitelist = new string[] { "None" };
@@ -621,10 +629,10 @@ namespace RoleplayingVoice {
                             SaveSettings();
                         }
                     }
-                    if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
-                        isApiKeyValid = false;
-                        apiKeyErrorMessage = "API Key is empty! Please check the input.";
-                    }
+                    //if (string.IsNullOrWhiteSpace(apiKey) && _aiVoiceActive) {
+                    //    isApiKeyValid = false;
+                    //    apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                    //}
 
                     SizeYChanged = false;
                     changedSize = null;
@@ -902,6 +910,7 @@ namespace RoleplayingVoice {
                     } catch (Exception ex) { }
                 }
                 _refreshing = false;
+                _manager.ReadUnquotedText = configuration.NarrateUnquotedText;
             });
         }
 

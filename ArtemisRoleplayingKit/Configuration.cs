@@ -147,11 +147,13 @@ namespace RoleplayingVoice {
         public int XTTSLanguage { get => _xTTSLanguage; set => _xTTSLanguage = value; }
 
         public bool LocalVoiceForNonWhitelistedPlayers { get => localVoiceForNonWhitelistedPlayers; set => localVoiceForNonWhitelistedPlayers = value; }
+        internal bool NarrateUnquotedText { get => narrateUnquotedText; set => narrateUnquotedText = value; }
 
         #endregion
 
         private readonly IDalamudPluginInterface pluginInterface;
         private bool localVoiceForNonWhitelistedPlayers;
+        private bool narrateUnquotedText;
 
         public Configuration(IDalamudPluginInterface pi) {
             this.pluginInterface = pi;
