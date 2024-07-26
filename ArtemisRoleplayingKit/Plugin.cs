@@ -3835,7 +3835,7 @@ namespace RoleplayingVoice {
                 } catch {
                     index = 0;
                 }
-                DoAnimation(command[0], index, character);
+                DoAnimation(command[0].Trim(), index, character);
             } else {
                 if (!_animationCatalogue.IsOpen) {
                     var list = CreateEmoteList(_dataManager);
