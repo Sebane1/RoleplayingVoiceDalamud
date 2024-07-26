@@ -127,6 +127,7 @@ namespace RoleplayingVoice {
         private Stopwatch _catalogueOffsetTimer = new Stopwatch();
         private Stopwatch _nativeSoundExpiryTimer = new Stopwatch();
         private Stopwatch _emoteSyncCheck = new Stopwatch();
+        private Stopwatch _queueTimer = new Stopwatch();
 
         private EmoteReaderHooks _emoteReaderHook;
         private Chat _realChat;
@@ -245,6 +246,8 @@ namespace RoleplayingVoice {
         private Guid _catalogueCollectionName;
         private (bool ObjectValid, bool IndividualSet, (Guid Id, string Name) EffectiveCollection) _originalCollection;
         private ITargetManager _targetManager;
+        private bool _objectRecentlyDidEmote;
+        private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -638,6 +641,15 @@ namespace RoleplayingVoice {
                                 if (config != null && _mediaManager != null && _objectTable != null && _gameConfig != null && !disposed) {
                                     CheckVolumeLevels();
                                     CheckForNewRefreshes();
+                                }
+                                break;
+                            case 10:
+                                if (_checkAnimationModsQueue.Count > 0 && !_queueTimer.IsRunning) {
+                                    var item = _checkAnimationModsQueue.Dequeue();
+                                    CheckAnimationMods(item.Item1, item.Item2, item.Item3);
+                                    _queueTimer.Restart();
+                                } else if (_queueTimer.ElapsedMilliseconds > 500) {
+                                    _queueTimer.Reset();
                                 }
                                 performanceLimiter = 0;
                                 break;
@@ -3508,7 +3520,7 @@ namespace RoleplayingVoice {
                             AttemptConnection();
                             break;
                         case "anim":
-                            CheckAnimationMods(splitArgs, args, _clientState.LocalPlayer as ICharacter);
+                            _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _clientState.LocalPlayer as ICharacter));
                             break;
                         case "companionanim":
                             Task.Run(() => {
@@ -3522,7 +3534,8 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                     if (foundCharacter != null) {
-                                        CheckAnimationMods(splitArgs, args, foundCharacter);
+                                        _preOccupiedWithEmoteCommand.Add(foundCharacter.Name.TextValue);
+                                        _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, foundCharacter));
                                         break;
                                     }
                                     Thread.Sleep(1000);
@@ -3967,7 +3980,6 @@ namespace RoleplayingVoice {
                 if (character == _clientState.LocalPlayer) {
                     _messageQueue.Enqueue(emoteModData.Emote);
                     if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
-
                         Thread.Sleep(100);
                         _fastMessageQueue.Enqueue(emoteModData.Emote);
                         _animationModsAlreadyTriggered.Add(emoteModData.FoundModName);
@@ -3977,6 +3989,12 @@ namespace RoleplayingVoice {
                 } else {
                     _mediaManager.StopAudio(_playerObject);
                     Thread.Sleep(1000);
+                }
+                if (_objectRecentlyDidEmote) {
+                    Thread.Sleep(1000);
+                    _objectRecentlyDidEmote = false;
+                } else {
+                    _objectRecentlyDidEmote = true;
                 }
                 ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
                 if (!_didRealEmote) {
