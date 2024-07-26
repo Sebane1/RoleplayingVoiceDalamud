@@ -1260,7 +1260,7 @@ namespace RoleplayingVoice {
                                                         npcConversationManager.Key.NpcPersonality);
 
                                                         _aiMessageQueue.Enqueue(new Tuple<string, string, XivChatType>(npcConversationManager.Key.NpcName, aiResponse, type == XivChatType.Party ? XivChatType.Party : XivChatType.CustomEmote));
-                                                        ChatText(character.Name.TextValue, aiResponse, XivChatType.Say, true);
+                                                        //ChatText(character.Name.TextValue, aiResponse, XivChatType.Say, true);
                                                     }
                                                 }
                                             }

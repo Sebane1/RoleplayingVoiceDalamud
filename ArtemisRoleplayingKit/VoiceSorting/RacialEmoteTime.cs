@@ -275,6 +275,7 @@ namespace RoleplayingVoiceDalamud {
             timeCode.TimeCodes.Add(0.03m);
             list.Add(timeCode);
 
+            //Hrothgat
             timeCode = new TimeCodeData() { Descriptor = 7 + "_Masculine", };
             timeCode.TimeCodes.Add(0.56m);
             timeCode.TimeCodes.Add(0.41m);
@@ -293,7 +294,20 @@ namespace RoleplayingVoiceDalamud {
             list.Add(timeCode);
 
             timeCode = new TimeCodeData() { Descriptor = 7 + "_Feminine", };
-
+            timeCode.TimeCodes.Add(0.56m);
+            timeCode.TimeCodes.Add(0.41m);
+            timeCode.TimeCodes.Add(0.62m);
+            timeCode.TimeCodes.Add(0.98m);
+            timeCode.TimeCodes.Add(6.00m);
+            timeCode.TimeCodes.Add(0.98m);
+            timeCode.TimeCodes.Add(0.90m);
+            timeCode.TimeCodes.Add(0.73m);
+            timeCode.TimeCodes.Add(0.77m);
+            timeCode.TimeCodes.Add(1.26m);
+            timeCode.TimeCodes.Add(0.90m);
+            timeCode.TimeCodes.Add(0.90m);
+            timeCode.TimeCodes.Add(0.59m);
+            timeCode.TimeCodes.Add(0.70m);
             list.Add(timeCode);
 
             timeCode = new TimeCodeData() { Descriptor = 8 + "_Masculine", };
