@@ -72,9 +72,11 @@ namespace RoleplayingVoice {
         private byte[] _nextFrameToLoad;
         private IDalamudTextureWrap _frameToLoad;
         private byte[] _lastLoadedFrame;
+        private Bone _closestBone;
+        private Vector2 _cursorPosition;
 
-        //List<string> _alreadyAddedBoneList = new List<string>();
-        //List<Tuple<string, float>> boneSorting = new List<Tuple<string, float>>();
+        List<string> _alreadyAddedBoneList = new List<string>();
+        List<Tuple<string, float>> boneSorting = new List<Tuple<string, float>>();
         public Plugin Plugin { get => plugin; set => plugin = value; }
 
         public DragAndDropTextureWindow(IDalamudPluginInterface pluginInterface, IDragDropManager dragDropManager, ITextureProvider textureProvider) :
@@ -113,7 +115,7 @@ namespace RoleplayingVoice {
             _textureProcessor.OnStartedProcessing += TextureProcessor_OnStartedProcessing;
             _textureProcessor.OnLaunchedXnormal += TextureProcessor_OnLaunchedXnormal;
             _choiceTypes = new string[] { "Detailed", "Simple", "Dropdown", "Group Is Checkbox" };
-            _bodyNames = new string[] { "Vanilla and Gen2", "BIBO+", "EVE", "Gen3 and T&F3", "SCALES+", "TBSE and HRBODY", "TAIL", "Otopop" };
+            _bodyNames = new string[] { "Vanilla and Gen2", "BIBO+", "Gen3", "TBSE and HRBODY", "TAIL", "Otopop" };
             _bodyNamesSimplified = new string[] { "BIBO+ Based", "Gen3 Based", "TBSE and HRBODY", "Otopop" };
             _genders = new string[] { "Masculine", "Feminine" };
             _races = new string[] { "Midlander", "Highlander", "Elezen", "Miqo'te", "Roegadyn", "Lalafell", "Raen", "Xaela", "Hrothgar", "Viera" };
@@ -193,33 +195,42 @@ namespace RoleplayingVoice {
                                                 var bone = model->Skeleton->GetBone(i, i2);
                                                 var worldPos = bone.GetWorldPos(characterActor, model);
                                                 Vector2 screenPosition = new Vector2();
-                                                plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
-                                                float distance = Vector2.Distance(screenPosition, cursorPosition);
-                                                if (distance < closestDistance) {
-                                                    closestDistance = distance;
-                                                    closestBone = bone;
-                                                }
-                                                if (bone.UniqueId.Contains("0_46")) {
-                                                    aboveNoseYPos = screenPosition.Y;
-                                                    xPos = screenPosition.X;
-                                                }
-                                                if (bone.UniqueId.Contains("0_63")) {
-                                                    aboveNeckYPos = screenPosition.Y;
-                                                }
-                                                if (screenPosition.X > maxWidth) {
-                                                    maxWidth = screenPosition.X;
-                                                }
-                                                if (screenPosition.X < minWidth) {
-                                                    minWidth = screenPosition.X;
-                                                }
+                                                Plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
+                                                    float distance = Vector2.Distance(screenPosition, cursorPosition);
+                                                    _cursorPosition = cursorPosition;
+                                                    if (distance < closestDistance) {
+                                                        closestDistance = distance;
+                                                        closestBone = bone;
+                                                        _closestBone = closestBone;
+                                                    }
+                                                    if (bone.UniqueId.Contains("0_46")) {
+                                                        aboveNoseYPos = screenPosition.Y;
+                                                        xPos = screenPosition.X;
+                                                    }
+                                                    if (bone.UniqueId.Contains("0_33")) {
+                                                        aboveNeckYPos = screenPosition.Y;
+                                                    }
+                                                    if (screenPosition.X > maxWidth) {
+                                                        maxWidth = screenPosition.X;
+                                                    }
+                                                    if (screenPosition.X < minWidth) {
+                                                        minWidth = screenPosition.X;
+                                                    }
+                                                    if (!_alreadyAddedBoneList.Contains(bone.UniqueId)) {
+                                                        _alreadyAddedBoneList.Add(bone.UniqueId);
+                                                        boneSorting.Add(new Tuple<string, float>(bone.UniqueId, screenPosition.Y));
+                                                    }
                                             }
                                         }
                                     }
-                                    maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2;
+                                    maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2f;
                                     if (Vector2.Distance(new(cursorPosition.X, 0), new(xPos, 0)) < maxDistance) {
                                         selectedPlayer = item;
                                         aboveNoseYPosFinal = aboveNoseYPos;
                                         aboveNeckYPosFinal = aboveNeckYPos;
+                                    }
+                                    foreach (var sortedItem in boneSorting.OrderBy(o => o.Item2)) {
+                                        Plugin.Chat.Print(sortedItem.Item1 + " " + sortedItem.Item2);
                                     }
                                 }
                             }
@@ -236,15 +247,16 @@ namespace RoleplayingVoice {
                                 if (selectedPlayer.Value != null) {
                                     selectedPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(selectedPlayer.Value.ObjectIndex).Item3.Id;
                                 }
+                                string debugInfo = (_closestBone != null ? "Closest Bone" + _closestBone.UniqueId : "") + " " + (cursorPosition != null ? cursorPosition.X + " " + cursorPosition.Y : "");
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
                                         selectedPlayer.Value == plugin.ClientState.LocalPlayer) {
-                                        ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
+                                        ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}" + debugInfo);
                                     } else {
-                                        ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character.");
+                                        ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character." + debugInfo);
                                     }
                                 } else {
-                                    ImGui.TextUnformatted($"Dragging onto no character.");
+                                    ImGui.TextUnformatted($"Dragging onto no character." + debugInfo);
                                 }
                             } catch {
                                 ImGui.TextUnformatted($"Dragging texture on unknown:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
@@ -269,8 +281,12 @@ namespace RoleplayingVoice {
                                 _alreadyLoadingFrame = false;
                             });
                         }
-                        textureWrap = _frameToLoad.CreateWrapSharingLowLevelResource();
-                        ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
+                        try {
+                            textureWrap = _frameToLoad.CreateWrapSharingLowLevelResource();
+                            ImGui.Image(textureWrap.ImGuiHandle, new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
+                        } catch {
+
+                        }
                     } else {
                         Flags = _defaultFlags;
                     }
@@ -303,7 +319,7 @@ namespace RoleplayingVoice {
                                         modName = modName.Replace("Mod", "Body");
                                         item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
                                     } else if (fileName.Contains("gen3")) {
-                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 2,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                         _currentCustomization.Customize.TailShape.Value - 1, false);
                                         SortUVTexture(item, file);
@@ -311,7 +327,7 @@ namespace RoleplayingVoice {
                                         modName = modName.Replace("Mod", "Body");
                                         item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
                                     } else if (fileName.Contains("tbse")) {
-                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                        var item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                         _currentCustomization.Customize.TailShape.Value - 1, false);
                                         SortUVTexture(item, file);
@@ -339,7 +355,7 @@ namespace RoleplayingVoice {
                                         switch (bodyDragPart) {
                                             case BodyDragPart.Body:
                                                 if (_currentCustomization.Customize.Race.Value - 1 == 5) {
-                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 7,
+                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
                                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                                     _currentCustomization.Customize.TailShape.Value - 1, false);
                                                     SortUVTexture(item, file);
@@ -347,7 +363,7 @@ namespace RoleplayingVoice {
                                                     modName = modName.Replace("Mod", "Body");
                                                     item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
                                                 } else if (_currentCustomization.Customize.Gender.Value == 0) {
-                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
+                                                    item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
                                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                                     _currentCustomization.Customize.TailShape.Value - 1, false);
                                                     SortUVTexture(item, file);

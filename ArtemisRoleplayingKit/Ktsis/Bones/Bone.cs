@@ -49,18 +49,18 @@ namespace Ktisis.Structs.Bones {
         public unsafe Vector3 GetWorldPos(Actor.Actor* actor, ActorModel* model, ActorModel* parent = null) {
             var pos = model->Position + GetOffset(actor, model);
 
-            var translate = Vector3.Transform(Transform.Translation.ToVector3() * model->Scale, model->Rotation);
+			var translate = Vector3.Transform(Transform.Translation.ToVector3() * model->Scale, model->Rotation);
 
-            var scale = model->Height;
-            if (parent != null)
-                scale *= parent->Height;
+			var scale = model->Height;
+			if (parent != null)
+				scale *= parent->Height;
+			
+			if (model->Attach.Count == 1 && model->Attach.Type == 4) {
+				var boneAttach = model->Attach.BoneAttach;
+				if (boneAttach != null) scale *= boneAttach->Scale;
+			}
 
-            if (model->Attach.Count == 1 && model->Attach.Type == 4) {
-                var boneAttach = model->Attach.BoneAttach;
-                if (boneAttach != null) scale *= boneAttach->Scale;
-            }
-
-            return pos + translate * scale;
+			return pos + translate * scale;
         }
 
         private unsafe Vector3 GetOffset(Actor.Actor* actor, ActorModel* model) => CustomOffset.CalculateWorldOffset(actor, model, this);

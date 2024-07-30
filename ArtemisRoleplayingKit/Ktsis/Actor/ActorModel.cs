@@ -13,33 +13,33 @@ namespace Ktisis.Structs.Actor {
 	public struct ActorModel {
 		[FieldOffset(0)] public Object Object;
 
-		[FieldOffset(0x050)] public hkQsTransformf Transform;
-		[FieldOffset(0x050)] public Vector3 Position;
-		[FieldOffset(0x060)] public Quaternion Rotation;
-		[FieldOffset(0x070)] public Vector3 Scale;
+        [FieldOffset(0x050)] public hkQsTransformf Transform;
+        [FieldOffset(0x050)] public Vector3 Position;
+        [FieldOffset(0x060)] public Quaternion Rotation;
+        [FieldOffset(0x070)] public Vector3 Scale;
 
-		[FieldOffset(0x88)] public byte Flags;
+        [FieldOffset(0x88)] public byte Flags;
 
-		[FieldOffset(0x0A0)] public unsafe Skeleton* Skeleton;
-		
-		[FieldOffset(0x0D0)] public Attach Attach;
-		
-		[FieldOffset(0x148)] public unsafe Breasts* Bust;
-		
-		[FieldOffset(0x274)] public float Height;
+        [FieldOffset(0x0A0)] public unsafe Skeleton* Skeleton;
 
-		[FieldOffset(0x370)] public nint Sklb;
+        [FieldOffset(0x0D0)] public Attach Attach;
 
-		[FieldOffset(0x8F0)] public Customize Customize;
+        [FieldOffset(0x148)] public unsafe Breasts* Bust;
 
-		[FieldOffset(0x8F4)] public unsafe fixed uint DemiEquip[5];
-		[FieldOffset(0x910)] public unsafe fixed uint HumanEquip[10];
-		
-		[FieldOffset(0x2B0)] public float WeatherWetness;  // Set to 1.0f when raining and not covered or umbrella'd
-		[FieldOffset(0x2B4)] public float SwimmingWetness; // Set to 1.0f when in water
-		[FieldOffset(0x2B8)] public float WetnessDepth;    // Set to ~character height in GPose and higher values when swimming or diving.
+        [FieldOffset(0x2A4)] public float Height;
 
-		private unsafe CharacterBase* AsCharacter() {
+        [FieldOffset(0x370)] public nint Sklb;
+
+        [FieldOffset(0x9D0)] public Customize Customize;
+
+        [FieldOffset(0x9D8)] public unsafe fixed ulong DemiEquip[5];
+        [FieldOffset(0x9F0)] public unsafe fixed ulong HumanEquip[11];
+
+        [FieldOffset(0x2E0)] public float WeatherWetness;  // Set to 1.0f when raining and not covered or umbrella'd
+        [FieldOffset(0x2E4)] public float SwimmingWetness; // Set to 1.0f when in water
+        [FieldOffset(0x2E8)] public float WetnessDepth;    // Set to ~character height in GPose and higher values when swimming or diving.
+
+        private unsafe CharacterBase* AsCharacter() {
 			fixed (ActorModel* self = &this)
 				return (CharacterBase*)self;
 		}

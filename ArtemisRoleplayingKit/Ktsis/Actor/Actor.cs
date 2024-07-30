@@ -11,24 +11,24 @@ using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 namespace Ktisis.Structs.Actor {
 	[StructLayout(LayoutKind.Explicit, Size = 0x84A)]
 	public struct Actor {
-		[FieldOffset(0)] public GameObject GameObject;
+        [FieldOffset(0)] public GameObject GameObject;
 
-		[FieldOffset(0x88)] public byte ObjectID;
+        [FieldOffset(0x88)] public byte ObjectID;
 
-		[FieldOffset(0x100)] public unsafe ActorModel* Model;
-		[FieldOffset(0x114)] public RenderMode RenderMode;
-		[FieldOffset(0x1AC)] public uint ModelId;
+        [FieldOffset(0x100)] public unsafe ActorModel* Model;
+        [FieldOffset(0x114)] public RenderMode RenderMode;
+        [FieldOffset(0x1AC)] public uint ModelId;
 
-		[FieldOffset(0x6F8)] public ActorDrawData DrawData;
+        [FieldOffset(0x708)] public ActorDrawData DrawData;
 
-		[FieldOffset(0x89E)] public bool IsHatHidden;
+        [FieldOffset(0x8D6)] public bool IsHatHidden;
 
-		public const int GazeOffset = 0xCB0;
-		[FieldOffset(GazeOffset + 0x10)] public ActorGaze Gaze;
-		
-		[FieldOffset(0x1B2C)] public float Transparency;
+        public const int GazeOffset = 0xD00;
+        [FieldOffset(GazeOffset + 0x10)] public ActorGaze Gaze;
 
-		public unsafe string? GetName() {
+        [FieldOffset(0x21C8)] public float Transparency;
+
+        public unsafe string? GetName() {
 			fixed (byte* ptr = GameObject.Name)
 				return ptr == null ? null : Marshal.PtrToStringUTF8((IntPtr)ptr);
 		}
