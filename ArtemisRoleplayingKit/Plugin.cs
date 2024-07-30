@@ -83,6 +83,7 @@ using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
 using NAudio.Lame;
 using System.Xml.Linq;
+using System.Numerics;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -165,7 +166,7 @@ namespace RoleplayingVoice {
         private string lastStreamURL;
         private string _currentStreamer;
 
-        private Queue<Tuple<string, string, XivChatType>> _aiMessageQueue = new Queue<Tuple<string, string, XivChatType>>();
+        private Queue<Tuple<ICharacter, string, XivChatType>> _aiMessageQueue = new Queue<Tuple<ICharacter, string, XivChatType>>();
         private Queue<string> _messageQueue = new Queue<string>();
         private Queue<string> _fastMessageQueue = new Queue<string>();
         private Stopwatch _messageTimer = new Stopwatch();
@@ -1252,7 +1253,7 @@ namespace RoleplayingVoice {
                                                 if (character.ObjectKind == ObjectKind.Companion) {
                                                     if (!_npcConversationManagers.ContainsKey(character.Name.TextValue)) {
                                                         CustomNpcCharacter npcData = null;
-                                                        npcData = GetCustomNPCObject(character);
+                                                        npcData = GetCustomNPCObject(character, true);
                                                         if (npcData != null) {
                                                             _npcConversationManagers[character.Name.TextValue] = new KeyValuePair<CustomNpcCharacter, NPCConversationManager>(npcData,
                                                             new NPCConversationManager(npcData.NpcName, config.CacheFolder + @"\NPCMemories", this, character));
@@ -1271,7 +1272,7 @@ namespace RoleplayingVoice {
                                                             _clientState.LocalPlayer.Name.TextValue.Split(" ")[0], character.Name.TextValue.Split(" ")[0]),
                                                         npcConversationManager.Key.NpcPersonality);
 
-                                                        _aiMessageQueue.Enqueue(new Tuple<string, string, XivChatType>(npcConversationManager.Key.NpcName, aiResponse, type == XivChatType.Party ? XivChatType.Party : XivChatType.CustomEmote));
+                                                        _aiMessageQueue.Enqueue(new Tuple<ICharacter, string, XivChatType>(character, aiResponse, type == XivChatType.Party ? XivChatType.Party : XivChatType.CustomEmote));
                                                         //ChatText(character.Name.TextValue, aiResponse, XivChatType.Say, true);
                                                     }
                                                 }
@@ -1297,7 +1298,7 @@ namespace RoleplayingVoice {
                         if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
-                                string value = await GetPlayerVoice(isCustomNPC ? GetCustomNPCObject(player).NpcName : playerSender, playerMessage, type);
+                                string value = await GetPlayerVoice(playerSender, playerMessage, type);
                                 _mediaManager.PlayAudio(_playerObject, value, SoundType.MainPlayerTts, false, 0, default, delegate {
                                     if (_addonTalkHandler != null) {
                                         if (_clientState.LocalPlayer != null) {
@@ -1324,8 +1325,8 @@ namespace RoleplayingVoice {
                         || type == XivChatType.Yell || type == XivChatType.Alliance
                         || type == XivChatType.FreeCompany || type == XivChatType.TellIncoming
                         || type == XivChatType.PvPTeam || type == XivChatType.NoviceNetwork;
-                        if (senderStrings.Length > 2) {
-                            string playerSender = senderStrings[0] + " " + senderStrings[2];
+                        if (senderStrings.Length > 0) {
+                            string playerSender = senderStrings[0] + (senderStrings.Length > 2 ? " " + senderStrings[2] : "");
                             string playerMessage = message.TextValue;
                             bool audioFocus = false;
                             if (_clientState.LocalPlayer.TargetObject != null) {
@@ -1338,14 +1339,14 @@ namespace RoleplayingVoice {
                             } else {
                                 audioFocus = true;
                             }
-                            ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(x.Name.TextValue) == playerSender);
+                            ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(GetCustomNPCObject(x as ICharacter).NpcName) == playerSender);
                             var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _clientState.LocalPlayer.Position);
                             bool narratePlayer = false;
                             if (config.UsePlayerSync) {
                                 if (GetCombinedWhitelist().Contains(playerSender)) {
                                     Task.Run(async () => {
                                         string value = await _roleplayingMediaManager.
-                                        GetSound(playerSender, playerMessage, audioFocus ?
+                                        GetSound(GetCustomNPCObject(player).NpcName, playerMessage, audioFocus ?
                                         config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
                                         _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
                                         bool lipWasSynced = false; ;
@@ -1419,10 +1420,15 @@ namespace RoleplayingVoice {
             }
         }
 
-        private CustomNpcCharacter GetCustomNPCObject(ICharacter character) {
-            foreach (var customNPC in config.CustomNpcCharacters) {
-                if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
-                    return customNPC;
+        private CustomNpcCharacter GetCustomNPCObject(ICharacter character, bool returnNullIfNoFind = false) {
+            if (character != null) {
+                foreach (var customNPC in config.CustomNpcCharacters) {
+                    if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
+                        return customNPC;
+                    }
+                }
+                if (!returnNullIfNoFind) {
+                    return new CustomNpcCharacter() { NpcName = character.Name.TextValue };
                 }
             }
             return null;
@@ -2378,7 +2384,7 @@ namespace RoleplayingVoice {
                     _chat.Print(new XivChatEntry() {
                         Message = new SeString(new List<Payload>() {
                         new TextPayload(" " + message.Item2) }),
-                        Name = message.Item1,
+                        Name = GetCustomNPCObject(message.Item1).NpcName,
                         Type = message.Item3
                     });
                 }

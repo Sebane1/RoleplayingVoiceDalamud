@@ -361,7 +361,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3) {
+        unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3, int attachmentPointID) {
             if (!_plugin.Config.NpcSpeechGenerationDisabled && !_plugin.Config.IgnoreBubblesFromOverworldNPCs) {
                 try {
                     if (_clientState.IsLoggedIn
@@ -454,7 +454,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Plugin.PluginLog.Info(e, e.Message);
                 }
             }
-            return _openChatBubbleHook.Original(pThis, pActor, pString, param3);
+            return _openChatBubbleHook.Original(pThis, pActor, pString, param3, attachmentPointID);
         }
         private ICharacter GetCharacterFromId(uint id) {
             foreach (Dalamud.Game.ClientState.Objects.Types.IGameObject gameObject in _threadSafeObjectTable) {
@@ -1714,7 +1714,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
 
 
-        private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3);
+        private unsafe delegate IntPtr NPCSpeechBubble(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3, int attachmentPointID);
     }
 }
 public class UserAnimationOverride {
