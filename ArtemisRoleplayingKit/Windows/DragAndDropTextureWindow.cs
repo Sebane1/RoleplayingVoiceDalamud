@@ -116,9 +116,9 @@ namespace RoleplayingVoice {
             _textureProcessor.OnLaunchedXnormal += TextureProcessor_OnLaunchedXnormal;
             _choiceTypes = new string[] { "Detailed", "Simple", "Dropdown", "Group Is Checkbox" };
             _bodyNames = new string[] { "Vanilla and Gen2", "BIBO+", "Gen3", "TBSE and HRBODY", "TAIL", "Otopop" };
-            _bodyNamesSimplified = new string[] { "BIBO+ Based", "Gen3 Based", "TBSE and HRBODY", "Otopop" };
+            _bodyNamesSimplified = new string[] { "BIBO+", "Gen3", "TBSE and HRBODY", "Otopop" };
             _genders = new string[] { "Masculine", "Feminine" };
-            _races = new string[] { "Midlander", "Highlander", "Elezen", "Miqo'te", "Roegadyn", "Lalafell", "Raen", "Xaela", "Hrothgar", "Viera" };
+            _races = new string[] { "Midlander", "Highlander", "Elezen", "Miqo'te", "Roegadyn", "Lalafell", "Raen", "Xaela", "Helions", "The Lost", "Viera" };
             _subRaces = new string[] { "Midlander", "Highlander", "Wildwood", "Duskwight", "Seeker", "Keeper", "Sea Wolf", "Hellsguard",
         "Plainsfolk", "Dunesfolk", "Raen", "Xaela", "Helions", "The Lost", "Rava", "Veena" };
             _faceTypes = new string[] { "Face 1", "Face 2", "Face 3", "Face 4", "Face 5", "Face 6", "Face 7", "Face 8", "Face 9" };
@@ -318,7 +318,7 @@ namespace RoleplayingVoice {
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Body");
                                         item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
-                                    } else if (fileName.Contains("gen3")) {
+                                    } else if (fileName.Contains("gen3") || fileName.Contains("eve")) {
                                         var item = AddBody(_currentCustomization.Customize.Gender.Value, 2,
                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                         _currentCustomization.Customize.TailShape.Value - 1, false);
@@ -382,7 +382,7 @@ namespace RoleplayingVoice {
                                                             item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
                                                             break;
                                                         case BodyUVType.Gen3:
-                                                            item = AddBody(_currentCustomization.Customize.Gender.Value, 3,
+                                                            item = AddBody(_currentCustomization.Customize.Gender.Value, 2,
                                                             RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                                             _currentCustomization.Customize.TailShape.Value - 1, false);
                                                             SortUVTexture(item, file);
