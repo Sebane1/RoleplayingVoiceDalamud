@@ -42,6 +42,7 @@ using LooseTextureCompilerCore;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using static FFXIVLooseTextureCompiler.ImageProcessing.ImageManipulation;
+using LooseTextureCompilerCore.Racial;
 
 namespace RoleplayingVoice {
     internal class DragAndDropTextureWindow : Window {
@@ -61,8 +62,6 @@ namespace RoleplayingVoice {
         private string[] _bodyNames;
         private string[] _bodyNamesSimplified;
         private string[] _genders;
-        private string[] _races;
-        private string[] _subRaces;
         private string[] _faceTypes;
         private string[] _faceParts;
         private string[] _faceScales;
@@ -118,9 +117,6 @@ namespace RoleplayingVoice {
             _bodyNames = new string[] { "Vanilla and Gen2", "BIBO+", "Gen3", "TBSE and HRBODY", "TAIL", "Otopop" };
             _bodyNamesSimplified = new string[] { "BIBO+", "Gen3", "TBSE and HRBODY", "Otopop" };
             _genders = new string[] { "Masculine", "Feminine" };
-            _races = new string[] { "Midlander", "Highlander", "Elezen", "Miqo'te", "Roegadyn", "Lalafell", "Raen", "Xaela", "Helions", "The Lost", "Viera" };
-            _subRaces = new string[] { "Midlander", "Highlander", "Wildwood", "Duskwight", "Seeker", "Keeper", "Sea Wolf", "Hellsguard",
-        "Plainsfolk", "Dunesfolk", "Raen", "Xaela", "Helions", "The Lost", "Rava", "Veena" };
             _faceTypes = new string[] { "Face 1", "Face 2", "Face 3", "Face 4", "Face 5", "Face 6", "Face 7", "Face 8", "Face 9" };
             _faceParts = new string[] { "Face", "Eyebrows", "Eyes", "Ears", "Face Paint", "Hair", "Face B", "Etc B" };
             _faceScales = new string[] { "Vanilla Scales", "Scaleless Vanilla", "Scaleless Varied" };
@@ -173,11 +169,13 @@ namespace RoleplayingVoice {
                             }
                             float aboveNoseYPosFinal = 0;
                             float aboveNeckYPosFinal = 0;
+                            float aboveEyesYPosFinal = 0;
                             Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
                             foreach (var item in _objects) {
                                 unsafe {
                                     float closestDistance = float.MaxValue;
                                     Bone closestBone = null;
+                                    float aboveEyesYPos = 0;
                                     float aboveNoseYPos = 0;
                                     float aboveNeckYPos = 0;
                                     float xPos = 0;
@@ -196,53 +194,64 @@ namespace RoleplayingVoice {
                                                 var worldPos = bone.GetWorldPos(characterActor, model);
                                                 Vector2 screenPosition = new Vector2();
                                                 Plugin.GameGui.WorldToScreen(worldPos, out screenPosition);
-                                                    float distance = Vector2.Distance(screenPosition, cursorPosition);
-                                                    _cursorPosition = cursorPosition;
-                                                    if (distance < closestDistance) {
-                                                        closestDistance = distance;
-                                                        closestBone = bone;
-                                                        _closestBone = closestBone;
-                                                    }
-                                                    if (bone.UniqueId.Contains("0_46")) {
-                                                        aboveNoseYPos = screenPosition.Y;
-                                                        xPos = screenPosition.X;
-                                                    }
-                                                    if (bone.UniqueId.Contains("0_33")) {
-                                                        aboveNeckYPos = screenPosition.Y;
-                                                    }
-                                                    if (screenPosition.X > maxWidth) {
-                                                        maxWidth = screenPosition.X;
-                                                    }
-                                                    if (screenPosition.X < minWidth) {
-                                                        minWidth = screenPosition.X;
-                                                    }
-                                                    if (!_alreadyAddedBoneList.Contains(bone.UniqueId)) {
-                                                        _alreadyAddedBoneList.Add(bone.UniqueId);
-                                                        boneSorting.Add(new Tuple<string, float>(bone.UniqueId, screenPosition.Y));
-                                                    }
+                                                float distance = Vector2.Distance(screenPosition, cursorPosition);
+                                                _cursorPosition = cursorPosition;
+                                                if (distance < closestDistance) {
+                                                    closestDistance = distance;
+                                                    closestBone = bone;
+                                                    _closestBone = closestBone;
+                                                }
+                                                if (bone.UniqueId.Contains("1_41")) {
+                                                    aboveEyesYPos = screenPosition.Y;
+                                                    xPos = screenPosition.X;
+                                                }
+                                                if (bone.UniqueId.Contains("0_46") || bone.UniqueId.Contains("1_40")) {
+                                                    aboveNoseYPos = screenPosition.Y;
+                                                    xPos = screenPosition.X;
+                                                }
+                                                if (bone.UniqueId.Contains("0_33")) {
+                                                    aboveNeckYPos = screenPosition.Y;
+                                                }
+                                                if (screenPosition.X > maxWidth) {
+                                                    maxWidth = screenPosition.X;
+                                                }
+                                                if (screenPosition.X < minWidth) {
+                                                    minWidth = screenPosition.X;
+                                                }
+                                                //if (!_alreadyAddedBoneList.Contains(bone.UniqueId)) {
+                                                //    _alreadyAddedBoneList.Add(bone.UniqueId);
+                                                //    boneSorting.Add(new Tuple<string, float>(bone.UniqueId, screenPosition.Y));
+                                                //}
                                             }
                                         }
                                     }
                                     maxDistance = Vector2.Distance(new Vector2(minWidth, 0), new Vector2(maxWidth, 0)) / 2f;
                                     if (Vector2.Distance(new(cursorPosition.X, 0), new(xPos, 0)) < maxDistance) {
                                         selectedPlayer = item;
+                                        aboveEyesYPosFinal = aboveEyesYPos;
                                         aboveNoseYPosFinal = aboveNoseYPos;
                                         aboveNeckYPosFinal = aboveNeckYPos;
                                     }
-                                    foreach (var sortedItem in boneSorting.OrderBy(o => o.Item2)) {
-                                        Plugin.Chat.Print(sortedItem.Item1 + " " + sortedItem.Item2);
-                                    }
+                                    //foreach (var sortedItem in boneSorting.OrderBy(o => o.Item2)) {
+                                    //    Plugin.Chat.Print(sortedItem.Item1 + " " + sortedItem.Item2);
+                                    //}
                                 }
                             }
                             try {
-                                if (cursorPosition.Y < aboveNeckYPosFinal) {
-                                    if (cursorPosition.Y < aboveNoseYPosFinal) {
-                                        bodyDragPart = BodyDragPart.Eyes;
-                                    } else {
-                                        bodyDragPart = BodyDragPart.Face;
-                                    }
+                                if (cursorPosition.Y < aboveEyesYPosFinal) {
+                                    bodyDragPart = BodyDragPart.EyebrowsAndLashes;
                                 } else {
-                                    bodyDragPart = BodyDragPart.Body;
+                                    if (cursorPosition.Y < aboveNeckYPosFinal) {
+
+                                        if (cursorPosition.Y < aboveNoseYPosFinal) {
+                                            bodyDragPart = BodyDragPart.Eyes;
+                                        } else {
+                                            bodyDragPart = BodyDragPart.Face;
+                                        }
+
+                                    } else {
+                                        bodyDragPart = BodyDragPart.Body;
+                                    }
                                 }
                                 if (selectedPlayer.Value != null) {
                                     selectedPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(selectedPlayer.Value.ObjectIndex).Item3.Id;
@@ -251,9 +260,9 @@ namespace RoleplayingVoice {
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
                                         selectedPlayer.Value == plugin.ClientState.LocalPlayer) {
-                                        ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}" + debugInfo);
+                                        ImGui.TextUnformatted($"Dragging texture onto {selectedPlayer.Key.Split(' ')[0]}'s {bodyDragPart.ToString()}:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))} " + debugInfo);
                                     } else {
-                                        ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character." + debugInfo);
+                                        ImGui.TextUnformatted(selectedPlayer.Key.Split(' ')[0] + " has the same collection as your main character.\r\nPlease give them a unique collection in Penumbra, or drag onto your main character. " + debugInfo);
                                     }
                                 } else {
                                     ImGui.TextUnformatted($"Dragging onto no character." + debugInfo);
@@ -334,6 +343,22 @@ namespace RoleplayingVoice {
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Body");
                                         item.OmniExportMode = File.Exists(_xNormalPath) && Path.Exists(_textureProcessor.BasePath) && holdingModifier;
+                                    } else if (fileName.Contains("eyebrow") || fileName.Contains("lash")) {
+                                        var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 1, 0,
+                                         _currentCustomization.Customize.Gender.Value,
+                                         RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                         _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                        item.Normal = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Eyebrows");
+                                    } else if (fileName.Contains("eye")) {
+                                        var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
+                                        _currentCustomization.Customize.Gender.Value,
+                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                        _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                        item.Base = file;
+                                        textureSets.Add(item);
+                                        modName = modName.Replace("Mod", "Eyes");
                                     } else if (fileName.Contains("face") || fileName.Contains("makeup")) {
                                         var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 0, 0,
                                         _currentCustomization.Customize.Gender.Value,
@@ -342,14 +367,6 @@ namespace RoleplayingVoice {
                                         SortUVTexture(item, file);
                                         textureSets.Add(item);
                                         modName = modName.Replace("Mod", "Face");
-                                    } else if (fileName.Contains("eye")) {
-                                        var item = AddFace(_currentCustomization.Customize.Face.Value - 1, 2, 0,
-                                        _currentCustomization.Customize.Gender.Value,
-                                        RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
-                                        _currentCustomization.Customize.Clan.Value - 1, 0, false);
-                                        item.Normal = file;
-                                        textureSets.Add(item);
-                                        modName = modName.Replace("Mod", "Eyes");
                                     } else {
                                         TextureSet item = null;
                                         switch (bodyDragPart) {
@@ -419,6 +436,15 @@ namespace RoleplayingVoice {
                                                 item.Normal = file;
                                                 textureSets.Add(item);
                                                 modName = modName.Replace("Mod", "Eyes");
+                                                break;
+                                            case BodyDragPart.EyebrowsAndLashes:
+                                                item = AddFace(_currentCustomization.Customize.Face.Value - 1, 1, 0,
+                                                _currentCustomization.Customize.Gender.Value,
+                                                RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
+                                                _currentCustomization.Customize.Clan.Value - 1, 0, false);
+                                                item.Normal = file;
+                                                textureSets.Add(item);
+                                                modName = modName.Replace("Mod", "Eyebrows");
                                                 break;
                                         }
                                     }
@@ -490,7 +516,7 @@ namespace RoleplayingVoice {
             TextureSet textureSet = new TextureSet();
             textureSet.TextureSetName = _bodyNames[baseBody] + (_bodyNames[baseBody].ToLower().Contains("tail") ? " " +
                 (tail + 1) : "") + ", " + (race == 5 ? "Unisex" : _genders[gender])
-                + ", " + _races[race];
+                + ", " + RaceInfo.Races[race];
             AddBodyPaths(textureSet, gender, baseBody, race, tail, uniqueAuRa);
             return textureSet;
         }
@@ -499,7 +525,7 @@ namespace RoleplayingVoice {
             TextureSet textureSet = new TextureSet();
             textureSet.TextureSetName = _faceParts[facePart] + (facePart == 4 ? " "
                 + (faceExtra + 1) : "") + ", " + (facePart != 4 ? _genders[gender] : "Unisex")
-                + ", " + (facePart != 4 ? _subRaces[subRace] : "Multi Race") + ", "
+                + ", " + (facePart != 4 ? RaceInfo.SubRaces[subRace] : "Multi Race") + ", "
                 + (facePart != 4 ? _faceTypes[faceType] : "Multi Face");
             switch (facePart) {
                 default:
@@ -538,7 +564,7 @@ namespace RoleplayingVoice {
 
         private void AddHairPaths(TextureSet textureSet, int gender, int facePart, int faceExtra, int race, int subrace) {
             textureSet.TextureSetName = _faceParts[facePart] + " " + (faceExtra + 1)
-                + ", " + _genders[gender] + ", " + _races[race];
+                + ", " + _genders[gender] + ", " + RaceInfo.Races[race];
 
             textureSet.InternalNormalPath = RacePaths.GetHairTexturePath(1, faceExtra,
                 gender, race, subrace);
@@ -548,14 +574,7 @@ namespace RoleplayingVoice {
         }
 
         private void AddEyePaths(TextureSet textureSet, int subrace, int faceType, int gender, int auraScales, bool asym) {
-            textureSet.InternalBasePath = RacePaths.GetFaceTexturePath(1, gender, subrace,
-            2, faceType, auraScales, asym);
-
-            textureSet.InternalNormalPath = RacePaths.GetFaceTexturePath(2, gender, subrace,
-            2, faceType, auraScales, asym);
-
-            textureSet.InternalMultiPath = RacePaths.GetFaceTexturePath(3, gender, subrace,
-            2, faceType, auraScales, asym);
+            RaceEyePaths.GetEyeTextureSet(subrace, gender == 1, textureSet);
         }
 
         private void AddFacePaths(TextureSet textureSet, int subrace, int facePart, int faceType, int gender, int auraScales, bool asym) {
@@ -615,7 +634,7 @@ namespace RoleplayingVoice {
                 PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, path, 100, name);
                 var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collection, path, name, true);
                 foreach (var group in settings.Item2.Value.Item3) {
-                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModSetting.Invoke(collection, path, name, group.Key, "Enable");
+                    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModSetting.Invoke(collection, path, group.Key, "Enable", name);
                 }
                 Thread.Sleep(300);
                 PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.Value.ObjectIndex, Penumbra.Api.Enums.RedrawType.Redraw);
@@ -642,6 +661,7 @@ namespace RoleplayingVoiceDalamud {
         Unknown,
         Eyes,
         Face,
-        Body
+        Body,
+        EyebrowsAndLashes
     }
 }
