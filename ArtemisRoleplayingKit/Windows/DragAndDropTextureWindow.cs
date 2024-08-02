@@ -383,7 +383,7 @@ namespace RoleplayingVoice {
                                         TextureSet item = null;
                                         switch (bodyDragPart) {
                                             case BodyDragPart.Body:
-                                                if (_currentCustomization.Customize.Race.Value - 1 == 5) {
+                                                if (_currentCustomization.Customize.Race.Value - 1 == 3) {
                                                     item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
                                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                                     _currentCustomization.Customize.TailShape.Value - 1, false);
