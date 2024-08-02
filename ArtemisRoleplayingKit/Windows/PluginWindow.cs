@@ -37,7 +37,7 @@ namespace RoleplayingVoice {
         private Configuration configuration;
         RoleplayingMediaManager _manager = null;
         BetterComboBox _voiceEngineComboBox = new BetterComboBox("Generative Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator" }, 0, 390);
-        BetterComboBox _xttsLanguageComboBox = new BetterComboBox("Voice Language", new string[] { "en", "es", "fr", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko", "hi" }, 0, 390);
+        BetterComboBox _xttsLanguageComboBox = new BetterComboBox("Voice Language", new string[] { "en", "es", "fr", "de", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko", "hi" }, 0, 390);
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
         BetterComboBox _twitchDefaultPlayback = new BetterComboBox("##twitchDefaultPlayback",

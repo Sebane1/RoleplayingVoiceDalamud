@@ -542,7 +542,9 @@ namespace RoleplayingVoice {
                     break;
             }
             textureSet.IgnoreMultiGeneration = true;
-            textureSet.BackupTexturePaths = null;
+            if (facePart == 0) {
+                BackupTexturePaths.AddFaceBackupPaths(gender, subRace, faceExtra, textureSet);
+            }
             return textureSet;
         }
         private void AddBodyPaths(TextureSet textureSet, int gender, int baseBody, int race, int tail, bool uniqueAuRa = false) {
