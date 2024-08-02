@@ -132,6 +132,17 @@ namespace RoleplayingVoice {
             _exportStatus = "Compiling Assets For Mod";
             plugin.Chat.Print("[Artemis Roleplaying Kit] " + _exportStatus);
         }
+        // to get the currently active display's bounding rectangle
+        public System.Drawing.Rectangle GetCurrentDisplaySize() {
+            return Screen.FromPoint(Cursor.Position).Bounds;
+        }
+        public System.Drawing.Point GetCurrentCursorPosition() {
+            System.Drawing.Rectangle displayDimensions = GetCurrentDisplaySize();
+            Point cursorPos = Cursor.Position;
+            int cursorRelativeToDisplayX = cursorPos.X - displayDimensions.X;
+            int cursorRelativeToDisplayY = cursorPos.Y - displayDimensions.Y;
+            return new Point(cursorRelativeToDisplayX, cursorRelativeToDisplayY);
+        }
 
         public override void Draw() {
             if (IsOpen) {
@@ -170,7 +181,8 @@ namespace RoleplayingVoice {
                             float aboveNoseYPosFinal = 0;
                             float aboveNeckYPosFinal = 0;
                             float aboveEyesYPosFinal = 0;
-                            Vector2 cursorPosition = new Vector2(Cursor.Position.X, Cursor.Position.Y);
+                            var cursorPoint = GetCurrentCursorPosition();
+                            Vector2 cursorPosition = new Vector2(cursorPoint.X, cursorPoint.Y);
                             foreach (var item in _objects) {
                                 unsafe {
                                     float closestDistance = float.MaxValue;
