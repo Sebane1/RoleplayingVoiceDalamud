@@ -1033,12 +1033,12 @@ namespace RoleplayingVoice {
                         if (_catalogueModsToEnable.Count > 0) {
                             var item = _catalogueModsToEnable.Dequeue();
                             if (item != null) {
-                                PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
-                                Thread.Sleep(300);
+                                //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
+                                //Thread.Sleep(300);
                                 PenumbraAndGlamourerHelperFunctions.SetClothingMod(item, _modelMods.Keys, _catalogueCollectionName);
                                 Thread.Sleep(100);
                                 _currentClothingChangedItems = new List<object>();
-                                _currentClothingChangedItems.AddRange(PenumbraAndGlamourerIpcWrapper.Instance.GetChangedItemsForCollection.Invoke(_catalogueCollectionName).Values);
+                                _currentClothingChangedItems.AddRange(PenumbraAndGlamourerHelperFunctions.GetChangedItemsForMod(item, _modelMods.Keys).Values);
                                 PenumbraAndGlamourerHelperFunctions.SetDependancies(item, _modelMods.Keys, _catalogueCollectionName);
                                 Thread.Sleep(100);
                                 PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
@@ -1081,7 +1081,7 @@ namespace RoleplayingVoice {
                         _chat?.Print("Done Catalog");
                         _catalogueTimer.Reset();
                         RefreshData();
-                        PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
+                        //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                         _catalogueWindow.ScanCatalogue();
                         PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
                     }
@@ -1101,7 +1101,7 @@ namespace RoleplayingVoice {
                             if (!File.Exists(path)) {
                                 Thread.Sleep(500);
                                 try {
-                                    NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
+                                    //NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
                                 } catch { }
                                 TakeScreenshot(item, path);
                             }
@@ -2494,29 +2494,31 @@ namespace RoleplayingVoice {
         }
         public Dictionary<string, ICharacter> GetLocalCharacters(bool incognito) {
             var _objects = new Dictionary<string, ICharacter>();
-            _objects.Add(incognito ? "Player Character" :
-            _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as ICharacter);
-            bool oneMinionOnly = false;
-            foreach (var item in GetNearestObjects()) {
-                ICharacter character = item as ICharacter;
-                if (character != null) {
-                    if (character.ObjectKind == ObjectKind.Companion) {
-                        if (!oneMinionOnly) {
-                            string name = "";
-                            foreach (var customNPC in config.CustomNpcCharacters) {
-                                if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
-                                    name = customNPC.NpcName;
+            if (_clientState.LocalPlayer != null) {
+                _objects.Add(incognito ? "Player Character" :
+                _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as ICharacter);
+                bool oneMinionOnly = false;
+                foreach (var item in GetNearestObjects()) {
+                    ICharacter character = item as ICharacter;
+                    if (character != null) {
+                        if (character.ObjectKind == ObjectKind.Companion) {
+                            if (!oneMinionOnly) {
+                                string name = "";
+                                foreach (var customNPC in config.CustomNpcCharacters) {
+                                    if (character.Name.TextValue.ToLower().Contains(customNPC.MinionToReplace.ToLower())) {
+                                        name = customNPC.NpcName;
+                                    }
                                 }
+                                if (!string.IsNullOrEmpty(name)) {
+                                    _objects.Add(name, character);
+                                }
+                                oneMinionOnly = true;
                             }
-                            if (!string.IsNullOrEmpty(name)) {
-                                _objects.Add(name, character);
-                            }
-                            oneMinionOnly = true;
-                        }
-                    } else if (character.ObjectKind == ObjectKind.EventNpc) {
-                        if (!string.IsNullOrEmpty(character.Name.TextValue)) {
-                            if (!_objects.ContainsKey(character.Name.TextValue)) {
-                                _objects.Add(character.Name.TextValue, character);
+                        } else if (character.ObjectKind == ObjectKind.EventNpc) {
+                            if (!string.IsNullOrEmpty(character.Name.TextValue)) {
+                                if (!_objects.ContainsKey(character.Name.TextValue)) {
+                                    _objects.Add(character.Name.TextValue, character);
+                                }
                             }
                         }
                     }
@@ -3671,12 +3673,12 @@ namespace RoleplayingVoice {
                                         StartCatalogingItems();
                                         break;
                                     case "clean":
-                                        PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
+                                       // PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                                         break;
                                     case "stop":
                                         _catalogueMods = false;
                                         _chat.Print("Stopping cataloguing.");
-                                        PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
+                                        //PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
                                         break;
                                 }
 

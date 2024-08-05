@@ -28,11 +28,14 @@ public class PenumbraAndGlamourerIpcWrapper {
     public GetChangedItemsForCollection GetChangedItemsForCollection { get => _getChangedItemsForCollection; set => _getChangedItemsForCollection = value; }
     public GetModDirectory GetModDirectory { get => _getModDirectory; set => _getModDirectory = value; }
     public RedrawObject RedrawObject { get => _redrawObject; set => _redrawObject = value; }
+    public GetChangedItems GetChangedItemsForMod { get => _getChangedItemsForMod; set => _getChangedItemsForMod = value; }
+
     private GetCollection _getCollection;
     private SetCollection _setCollection;
     private GetCollectionForObject _getCollectionForObject;
     private SetCollectionForObject _setCollectionForObject;
     private GetChangedItemsForCollection _getChangedItemsForCollection;
+    private GetChangedItems _getChangedItemsForMod;
     private GetModList _getModList;
     private AddMod _addMod;
     private ReloadMod _reloadMod;
@@ -56,6 +59,7 @@ public class PenumbraAndGlamourerIpcWrapper {
         _getCollectionForObject = new GetCollectionForObject(dalamudPluginInterface);
         _setCollectionForObject = new SetCollectionForObject(dalamudPluginInterface);
         _getChangedItemsForCollection = new GetChangedItemsForCollection(dalamudPluginInterface);
+        _getChangedItemsForMod = new GetChangedItems(dalamudPluginInterface);
         _getModList = new GetModList(dalamudPluginInterface);
         _addMod = new AddMod(dalamudPluginInterface);
         _reloadMod = new ReloadMod(dalamudPluginInterface);

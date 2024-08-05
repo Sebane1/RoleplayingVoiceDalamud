@@ -1,5 +1,6 @@
 ﻿using Glamourer.Api.Enums;
 using RoleplayingVoice;
+using RoleplayingVoiceDalamud.Glamourer;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,8 +21,8 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             EquipObject.Name = strings[0];
             int offset = 0;
             try {
-                EquipObject.Type = ParseEnum<ApiEquipSlot>(strings[1]);
-                EquipObject.ItemId = new IdObject() { Id = int.Parse(strings[2]) };
+                EquipObject.Type = ParseEnum<FullEquipType>(strings[1]);
+                EquipObject.ItemId = new IdObject() { Id = ulong.Parse(strings[2]) };
             } catch (Exception e) {
                Plugin.PluginLog.Warning(e, e.Message);
             }

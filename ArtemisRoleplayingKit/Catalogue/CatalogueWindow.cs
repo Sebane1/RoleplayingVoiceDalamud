@@ -64,7 +64,7 @@ namespace RoleplayingVoice {
 
         public override void Draw() {
             ImGui.BeginTable("##Catalogue Table", 2);
-            ImGui.TableSetupColumn("ICharacter List", ImGuiTableColumnFlags.WidthFixed, 200);
+            ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
             ImGui.TableSetupColumn("Catalogued Outfit Mods", ImGuiTableColumnFlags.WidthStretch, 300);
             ImGui.TableHeadersRow();
             ImGui.TableNextRow();

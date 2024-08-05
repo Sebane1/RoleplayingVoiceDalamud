@@ -2,6 +2,7 @@
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Logging;
 using Dalamud.Plugin.Services;
+using Glamourer.Api.Enums;
 using Glamourer.Utility;
 using Newtonsoft.Json;
 using Penumbra.Api.Enums;
@@ -25,23 +26,43 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             SetClothingMod(item.Name, modelMods, collection, false);
             SetDependancies(item.Name, modelMods, collection, false);
             PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(objectIndex, RedrawType.Redraw);
-            CharacterCustomization characterCustomization = null;
-            string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(objectIndex)).Item2;
-            var bytes = System.Convert.FromBase64String(customizationValue);
-            var version = bytes[0];
-            version = bytes.DecompressToString(out var decompressed);
-            characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
             SetEquipment(item, objectIndex);
             Plugin.BlockDataRefreshes = false;
         }
 
         public static bool SetEquipment(EquipObject equipItem, int objectIndex) {
             bool changed = false;
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, equipItem.Type, (ulong)equipItem.ItemId.Id, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, FullEquipTypeToApiEquipSlot(equipItem.Type), equipItem.ItemId.Id, 0);
             changed = true;
             Plugin.PluginLog.Verbose("Completed sending IPC to glamourer");
             return changed;
         }
+
+        public static ApiEquipSlot FullEquipTypeToApiEquipSlot(FullEquipType fullEquipType) {
+            switch (fullEquipType) {
+                case FullEquipType.Unknown:
+                    return ApiEquipSlot.Unknown;
+                case FullEquipType.Head:
+                    return ApiEquipSlot.Head;
+                case FullEquipType.Body:
+                    return ApiEquipSlot.Body;
+                case FullEquipType.Hands:
+                    return ApiEquipSlot.Hands;
+                case FullEquipType.Legs:
+                    return ApiEquipSlot.Legs;
+                case FullEquipType.Feet:
+                    return ApiEquipSlot.Feet;
+                case FullEquipType.Ears:
+                    return ApiEquipSlot.Ears;
+                case FullEquipType.Wrists:
+                    return ApiEquipSlot.Wrists;
+                case FullEquipType.Finger:
+                    return ApiEquipSlot.RFinger;
+                default:
+                    return ApiEquipSlot.Unknown;
+            }
+        }
+
         public static int GetRace(ICharacter playerCharacter) {
             try {
                 CharacterCustomization characterCustomization = null;
@@ -136,6 +157,16 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                     }
                 }
             }
+        }
+        public static Dictionary<string, object> GetChangedItemsForMod(string modelMod, ICollection<string> modelMods) {
+            Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            int lowestPriority = 10;
+            foreach (string modName in modelMods) {
+                if (modName.ToLower().Contains(modelMod.ToLower())) {
+                    return PenumbraAndGlamourerIpcWrapper.Instance.GetChangedItemsForMod.Invoke("", modName);
+                }
+            }
+            return new Dictionary<string, object>();
         }
         public static void SetBodyDependancies(Guid collection, ICollection<string> modelDependancies) {
             int lowestPriority = 10;
