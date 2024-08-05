@@ -1515,7 +1515,7 @@ namespace RoleplayingVoice {
                 int index = GetNumberFromString(soundTrigger);
                 CharacterVoicePack characterVoicePack = null;
                 if (!_characterVoicePacks.ContainsKey(playerSender)) {
-                    characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                    characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
                 } else {
                     characterVoicePack = _characterVoicePacks[playerSender];
                 }
@@ -1531,6 +1531,9 @@ namespace RoleplayingVoice {
                     if (Path.Exists(clipPath)) {
                         RemoveFiles(clipPath);
                     }
+                    if (_characterVoicePacks.ContainsKey(playerSender)) {
+                        _characterVoicePacks.Remove(playerSender);
+                    }
                     isDownloadingZip = true;
                     _maxDownloadLengthTimer.Restart();
                     await Task.Run(async () => {
@@ -1539,7 +1542,11 @@ namespace RoleplayingVoice {
                     });
                 }
                 if (string.IsNullOrEmpty(value)) {
-                    characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                    if (!_characterVoicePacks.ContainsKey(playerSender)) {
+                        characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
+                    } else {
+                        characterVoicePack = _characterVoicePacks[playerSender];
+                    }
                     value = characterVoicePack.GetMisc(soundTrigger);
                 }
                 if (!string.IsNullOrEmpty(value)) {
@@ -2717,6 +2724,9 @@ namespace RoleplayingVoice {
                     if (Directory.Exists(clipPath)) {
                         try {
                             RemoveFiles(clipPath);
+                            if (_characterVoicePacks.ContainsKey(senderName)) {
+                                _characterVoicePacks.Remove(senderName);
+                            }
                         } catch (Exception e) {
                             Plugin.PluginLog?.Warning(e, e.Message);
                         }
@@ -2880,6 +2890,9 @@ namespace RoleplayingVoice {
                                         if (!Path.Exists(clipPath) || !(await CheckEmoteExistsInDirectory(clipPath, GetEmoteName(emoteId)))) {
                                             if (Path.Exists(clipPath)) {
                                                 RemoveFiles(clipPath);
+                                            }
+                                            if (_characterVoicePacks.ContainsKey(playerSender)) {
+                                                _characterVoicePacks.Remove(playerSender);
                                             }
                                             isDownloadingZip = true;
                                             _maxDownloadLengthTimer.Restart();
