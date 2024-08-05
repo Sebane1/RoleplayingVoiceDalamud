@@ -431,8 +431,8 @@ namespace RoleplayingVoice {
             try {
                 try {
                     new PenumbraAndGlamourerIpcWrapper(pluginInterface);
-                    //Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
-                    //Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                    Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                    Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
                     Plugin.PluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
                 } catch (Exception e) {
