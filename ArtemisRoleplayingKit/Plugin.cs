@@ -3698,21 +3698,11 @@ namespace RoleplayingVoice {
         }
 
         public void StartCatalogingItems() {
-            //_catalogueCollectionName = "ArtemisRoleplayingKitCatalogue";
             _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
             _catalogueCollectionName = _originalCollection.Item3.Id;
-
-            //PenumbraAndGlamourerIPCWrapper.Instance.CreateNamedTemporaryCollection.Invoke(_catalogueCollectionName);
-
-            //PenumbraAndGlamourerIPCWrapper.Instance.AssignTemporaryCollection.Invoke(_catalogueCollectionName, 0, true);
-
-            //PenumbraAndGlamourerIPCWrapper.Instance.SetCollectionForObject.Invoke(0, _catalogueCollectionName, true, true);
-
             Directory.CreateDirectory(_catalogueWindow.CataloguePath);
-
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
             _chat?.Print("Creating Thumbnails For New Clothing Mods");
-            //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
             _catalogueMods = true;
             _modelModList = new List<string>();
             _modelModList.AddRange(_modelMods.Keys);
