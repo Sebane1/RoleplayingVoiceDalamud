@@ -3712,7 +3712,7 @@ namespace RoleplayingVoice {
 
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
             _chat?.Print("Creating Thumbnails For New Clothing Mods");
-            PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
+            //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
             _catalogueMods = true;
             _modelModList = new List<string>();
             _modelModList.AddRange(_modelMods.Keys);
