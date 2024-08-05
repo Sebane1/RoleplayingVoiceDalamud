@@ -1682,23 +1682,25 @@ namespace RoleplayingVoice {
             Task.Run(delegate {
                 try {
                     foreach (GameObject gameObject in _objectTable) {
-                        string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                        if (!string.IsNullOrEmpty(cleanedName)) {
-                            if (gameObjectPositions.ContainsKey(cleanedName)) {
-                                var positionData = gameObjectPositions[cleanedName];
-                                if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                                    positionData.LastRotation != gameObject.Rotation) {
-                                    if (!positionData.IsMoving) {
-                                        ObjectIsMoving(cleanedName, gameObject);
-                                        positionData.IsMoving = true;
+                        if (gameObject.ObjectKind == ObjectKind.Player) {
+                            string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                            if (!string.IsNullOrEmpty(cleanedName)) {
+                                if (gameObjectPositions.ContainsKey(cleanedName)) {
+                                    var positionData = gameObjectPositions[cleanedName];
+                                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                                        positionData.LastRotation != gameObject.Rotation) {
+                                        if (!positionData.IsMoving) {
+                                            ObjectIsMoving(cleanedName, gameObject);
+                                            positionData.IsMoving = true;
+                                        }
+                                    } else {
+                                        positionData.IsMoving = false;
                                     }
+                                    positionData.LastPosition = gameObject.Position;
+                                    positionData.LastRotation = gameObject.Rotation;
                                 } else {
-                                    positionData.IsMoving = false;
+                                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                                 }
-                                positionData.LastPosition = gameObject.Position;
-                                positionData.LastRotation = gameObject.Rotation;
-                            } else {
-                                gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
                             }
                         }
                     }
@@ -3673,7 +3675,7 @@ namespace RoleplayingVoice {
                                         StartCatalogingItems();
                                         break;
                                     case "clean":
-                                       // PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
+                                        // PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                                         break;
                                     case "stop":
                                         _catalogueMods = false;
