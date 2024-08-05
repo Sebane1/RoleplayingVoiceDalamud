@@ -38,28 +38,43 @@ namespace RoleplayingVoiceDalamud {
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
 
-        public CharacterVoicePack(string directory, IDataManager dataManager, ClientLanguage clientLanguage) {
+        public CharacterVoicePack(string directory, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
-            Task.Run(() => {
+            if (asyncSort) {
+                Task.Run(() => {
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                        foreach (string file in Directory.EnumerateFiles(directory)) {
+                            SortFile(file);
+                        }
+                    }
+                });
+            } else {
                 if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
                     foreach (string file in Directory.EnumerateFiles(directory)) {
                         SortFile(file);
                     }
                 }
-            });
-
+            }
         }
-        public CharacterVoicePack(List<string> files, IDataManager dataManager, ClientLanguage clientLanguage) {
+        public CharacterVoicePack(List<string> files, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
-            Task.Run(() => {
+            if (asyncSort) {
+                Task.Run(() => {
+                    if (files != null) {
+                        foreach (string file in files) {
+                            SortFile(file);
+                        }
+                    }
+                });
+            } else {
                 if (files != null) {
                     foreach (string file in files) {
                         SortFile(file);
                     }
                 }
-            });
+            }
         }
 
         public string GetNameInClientLanguage(ClientLanguage clientLanguage, string name) {
@@ -270,7 +285,7 @@ namespace RoleplayingVoiceDalamud {
                 foreach (string name in _misc.Keys) {
                     string alternate = name.Remove(name.Length - 1);
                     if (((final.Contains(name) && name.Length > 5 || final.EndsWith(name))
-                        || (_clientLanguage == ClientLanguage.Japanese && final.Contains(alternate))) 
+                        || (_clientLanguage == ClientLanguage.Japanese && final.Contains(alternate)))
                         && (!InLanguageBlacklist(name) || allowEmotes)) {
                         return _misc[name][GetRandom(0, _misc[name].Count)];
                     }
@@ -281,10 +296,12 @@ namespace RoleplayingVoiceDalamud {
         public string GetMisc(string value, int delay, bool allowEmotes = false) {
             if (value != null) {
                 string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
-                string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
-                foreach (string name in _misc.Keys) {
-                    if ((final.Contains(name) && name.Length > 5 || final.EndsWith(name)) && (!InLanguageBlacklist(name) || allowEmotes)) {
-                        return _misc[name][GetRandom(0, _misc[name].Count, delay)];
+                string final = (!string.IsNullOrWhiteSpace(strippedName) ? strippedName : value).ToLower();
+                if (!string.IsNullOrEmpty(final)) {
+                    foreach (string name in _misc.Keys) {
+                        if ((final.Contains(name) && name.Length > 5 || final.EndsWith(name)) && (!InLanguageBlacklist(name) || allowEmotes)) {
+                            return _misc[name][GetRandom(0, _misc[name].Count, delay)];
+                        }
                     }
                 }
             }

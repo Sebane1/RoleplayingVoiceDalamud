@@ -663,7 +663,7 @@ namespace RoleplayingVoice {
                 Task.Run(() => _manager.ApiValidation(apiKey.Trim()));
                 InputValidation();
                 runOnLaunch = false;
-            } else if (string.IsNullOrEmpty(apiKey) && configuration.PlayerVoiceEngine == 0) {
+            } else if (string.IsNullOrEmpty(apiKey) && configuration.PlayerVoiceEngine == 0 && configuration.AiVoiceActive) {
                 if (runOnLaunch) {
                     InputValidation();
                 }

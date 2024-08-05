@@ -1514,10 +1514,10 @@ namespace RoleplayingVoice {
                 string playerSender = sender;
                 int index = GetNumberFromString(soundTrigger);
                 CharacterVoicePack characterVoicePack = null;
-                if (!_characterVoicePacks.ContainsKey(clipPath)) {
-                    characterVoicePack = _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                if (!_characterVoicePacks.ContainsKey(playerSender)) {
+                    characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
                 } else {
-                    characterVoicePack = _characterVoicePacks[clipPath];
+                    characterVoicePack = _characterVoicePacks[playerSender];
                 }
                 string value = index == -1 ? characterVoicePack.GetMisc(soundTrigger) : characterVoicePack.GetMiscSpecific(soundTrigger, index);
                 try {
@@ -1892,10 +1892,10 @@ namespace RoleplayingVoice {
                                     }
                                     if (Path.Exists(clipPath) && !isDownloadingZip) {
                                         CharacterVoicePack characterVoicePack = null;
-                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat || !_characterVoicePacks.ContainsKey(clipPath)) {
-                                            characterVoicePack = _characterVoicePacks[clipPath] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                                        if (!_characterVoicePacks.ContainsKey(playerSender)) {
+                                            characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
                                         } else {
-                                            characterVoicePack = _characterVoicePacks[clipPath];
+                                            characterVoicePack = _characterVoicePacks[playerSender];
                                         }
                                         string value = "";
                                         if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
@@ -2220,7 +2220,7 @@ namespace RoleplayingVoice {
                             }
                         }
                         if (Directory.Exists(path)) {
-                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
                             bool isVoicedEmote = false;
                             string value = characterVoicePack.GetMisc("moving");
                             if (!string.IsNullOrEmpty(value)) {
@@ -2895,7 +2895,12 @@ namespace RoleplayingVoice {
                                                 Thread.Sleep(100);
                                             }
                                             if (Directory.Exists(path)) {
-                                                CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                                                CharacterVoicePack characterVoicePack = null;
+                                                if (!_characterVoicePacks.ContainsKey(playerSender)) {
+                                                    characterVoicePack = _characterVoicePacks[playerSender] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
+                                                } else {
+                                                    characterVoicePack = _characterVoicePacks[playerSender];
+                                                }
                                                 bool isVoicedEmote = false;
                                                 string value = GetEmotePath(characterVoicePack, emoteId, (int)copyTimer.Elapsed.TotalSeconds, out isVoicedEmote);
                                                 if (!string.IsNullOrEmpty(value)) {
