@@ -243,7 +243,7 @@ namespace RoleplayingVoice {
         Queue<EquipObject> _glamourerScreenshotQueue = new Queue<EquipObject>();
         private bool _equipmentFound;
         private EquipObject _currentClothingItem;
-        private List<object> _currentClothingChangedItems;
+        private List<EquipObject> _currentClothingChangedItems;
         private Guid _catalogueCollectionName;
         private (bool ObjectValid, bool IndividualSet, (Guid Id, string Name) EffectiveCollection) _originalCollection;
         private ITargetManager _targetManager;
@@ -1031,17 +1031,48 @@ namespace RoleplayingVoice {
                             }
                         }
                         if (_catalogueModsToEnable.Count > 0) {
-                            var item = _catalogueModsToEnable.Dequeue();
-                            if (item != null) {
+                            var catalogueMod = _catalogueModsToEnable.Dequeue();
+                            if (catalogueMod != null) {
                                 //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
                                 //Thread.Sleep(300);
-                                PenumbraAndGlamourerHelperFunctions.SetClothingMod(item, _modelMods.Keys, _catalogueCollectionName);
-                                Thread.Sleep(100);
-                                _currentClothingChangedItems = new List<object>();
-                                _currentClothingChangedItems.AddRange(PenumbraAndGlamourerHelperFunctions.GetChangedItemsForMod(item, _modelMods.Keys).Values);
-                                PenumbraAndGlamourerHelperFunctions.SetDependancies(item, _modelMods.Keys, _catalogueCollectionName);
-                                Thread.Sleep(100);
-                                PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
+                                _currentClothingChangedItems = new List<EquipObject>();
+                                var clothingChangedItems = new List<object>();
+                                var items = PenumbraAndGlamourerHelperFunctions.GetChangedItemsForMod(catalogueMod, _modelMods.Keys).Values;
+                                foreach (var changedItem in items) {
+                                    try {
+                                        string equipItemJson = JsonConvert.SerializeObject(changedItem,
+                                    new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
+                                        if (equipItemJson.Length > 200) {
+                                            var equipObject = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                                            switch (equipObject.ItemId.Id) {
+                                                case 9292:
+                                                case 9293:
+                                                case 9294:
+                                                case 9295:
+                                                case 10032:
+                                                case 10033:
+                                                case 10034:
+                                                case 10035:
+                                                case 10036:
+                                                case 13775:
+                                                case 0:
+                                                    break;
+                                                default:
+                                                    _currentClothingChangedItems.Add(equipObject);
+                                                    break;
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        Plugin.PluginLog.Debug(e, e.Message);
+                                    }
+                                }
+                                if (_currentClothingChangedItems.Count > 0) {
+                                    PenumbraAndGlamourerHelperFunctions.SetClothingMod(catalogueMod, _modelMods.Keys, _catalogueCollectionName);
+                                    Thread.Sleep(100);
+                                    PenumbraAndGlamourerHelperFunctions.SetDependancies(catalogueMod, _modelMods.Keys, _catalogueCollectionName);
+                                    Thread.Sleep(100);
+                                    PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
+                                }
                             }
                         }
                         Thread.Sleep(4000);
@@ -1049,17 +1080,14 @@ namespace RoleplayingVoice {
                         while (!disposed && _currentChangedItemIndex <
                         _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
                             try {
-                                string equipItemJson = JsonConvert.SerializeObject(_currentClothingChangedItems[_currentChangedItemIndex],
-                                new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
-                                if (equipItemJson.Length > 200) {
-                                    _currentClothingItem = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
-                                    CleanEquipment(_clientState.LocalPlayer.ObjectIndex);
-                                    _glamourerScreenshotQueue.Enqueue(_currentClothingItem);
-                                    _catalogueScreenShotTaken = false;
-                                    while (!_catalogueScreenShotTaken) {
-                                        Thread.Sleep(100);
-                                    }
+                                _currentClothingItem = _currentClothingChangedItems[_currentChangedItemIndex];
+                                CleanEquipment(_clientState.LocalPlayer.ObjectIndex);
+                                _glamourerScreenshotQueue.Enqueue(_currentClothingItem);
+                                _catalogueScreenShotTaken = false;
+                                while (!_catalogueScreenShotTaken) {
+                                    Thread.Sleep(100);
                                 }
+
                             } catch (Exception e) {
                                 Plugin.PluginLog.Debug(e, e.Message);
                             }

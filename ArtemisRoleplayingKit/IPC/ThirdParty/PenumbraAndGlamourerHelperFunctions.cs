@@ -142,22 +142,27 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 return modelType is not 0 && modelType < 5;
             }
         }
-        public static void SetClothingMod(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = true) {
+        public static void SetClothingMod(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = false) {
             Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
-            int lowestPriority = 10;
+            int highestPriority = 10;
             foreach (string modName in modelMods) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
                     PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
                     PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 11);
                 } else {
-                    if (disableOtherMods) {
-                        var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    } else {
+                    //if (disableOtherMods) {
+                    //    var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
+                    //} else {
+                    var values = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collection, modName);
+                    int priority = values.Item2.Value.Item2;
+                    if (CheckIfValidToChange(modName, modelMods)) {
                         PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
                     }
+                    // }
                 }
             }
         }
+
         public static Dictionary<string, object> GetChangedItemsForMod(string modelMod, ICollection<string> modelMods) {
             Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
             int lowestPriority = 10;
@@ -169,11 +174,11 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             return new Dictionary<string, object>();
         }
         public static void SetBodyDependancies(Guid collection, ICollection<string> modelDependancies) {
-            int lowestPriority = 10;
-            foreach (string modName in modelDependancies) {
-                var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
-                PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
-            }
+            //int lowestPriority = 10;
+            //foreach (string modName in modelDependancies) {
+            //    var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
+            //    PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
+            //}
         }
         public static void SetDependancies(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = true) {
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
@@ -187,14 +192,45 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                     if (FindStringMatch(modelMod, modName)) {
                         var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
                         PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 10);
-                    } else if (disableOtherMods) {
+                    } /*else if (disableOtherMods) {
                         var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    } else {
+                    } */else if (CheckIfValidToChange(modName, modelMods)) {
                         PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
                     }
                 }
             }
         }
+
+        public static bool CheckIfValidToChange(string mod, ICollection<string> modelMods) {
+            var items = GetChangedItemsForMod(mod, modelMods).Values;
+            foreach (var changedItem in items) {
+                try {
+                    string equipItemJson = JsonConvert.SerializeObject(changedItem,
+                new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, PreserveReferencesHandling = PreserveReferencesHandling.Objects });
+                    if (equipItemJson.Length > 200) {
+                        var equipObject = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
+                        switch (equipObject.ItemId.Id) {
+                            case 9292:
+                            case 9293:
+                            case 9294:
+                            case 9295:
+                            case 10032:
+                            case 10033:
+                            case 10034:
+                            case 10035:
+                            case 10036:
+                            case 13775:
+                            case 0:
+                                return false;
+                        }
+                    }
+                } catch (Exception e) {
+                    Plugin.PluginLog.Debug(e, e.Message);
+                }
+            }
+            return true;
+        }
+
         public static bool FindStringMatch(string sourceMod, string comparisonMod) {
             string[] strings = sourceMod.Split(' ');
             foreach (string value in strings) {

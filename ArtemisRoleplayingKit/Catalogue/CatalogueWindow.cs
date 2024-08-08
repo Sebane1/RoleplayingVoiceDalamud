@@ -91,10 +91,10 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                 }
                 ImGui.Dummy(new Vector2(1, 1));
-                if (ImGui.Button("Reset Mod Selections", new Vector2(200, 30))) {
-                    PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _plugin.ModelMods.Keys, _plugin.ModelDependancyMods.Keys);
-                }
-                ImGui.SameLine();
+                //if (ImGui.Button("Reset Mod Selections", new Vector2(200, 30))) {
+                //    PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _plugin.ModelMods.Keys, _plugin.ModelDependancyMods.Keys);
+                //}
+                //ImGui.SameLine();
                 if (ImGui.Button("Scan And Catalogue Mods", new Vector2(200, 30))) {
                     _plugin.StartCatalogingItems();
                     IsOpen = false;

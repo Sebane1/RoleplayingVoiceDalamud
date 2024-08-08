@@ -66,10 +66,12 @@ public class PenumbraAndGlamourerIpcWrapper {
         _getCurrentModSettings = new GetCurrentModSettings(dalamudPluginInterface);
         _getAvailableModSettings = new GetAvailableModSettings(dalamudPluginInterface);
         _trySetMod = new TrySetMod(dalamudPluginInterface);
+        _getCurrentModSettings = new GetCurrentModSettings(dalamudPluginInterface);
         _trySetModPriority = new TrySetModPriority(dalamudPluginInterface);
         _trySetModSetting = new TrySetModSetting(dalamudPluginInterface);
         _trySetModSettings = new TrySetModSettings(dalamudPluginInterface);
         _redrawObject = new RedrawObject(dalamudPluginInterface);
+        
 
         _getDesignList = new GetDesignList(dalamudPluginInterface);
         _applyDesign = new ApplyDesign(dalamudPluginInterface);
