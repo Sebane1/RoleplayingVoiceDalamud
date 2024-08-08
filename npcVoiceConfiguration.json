@@ -313,14 +313,18 @@
       "Gentle Villager"
     ],
     "Yaana": [
-      "Haughty Lass"
+      "Haughty Lass",
+      "Black Cat"
     ],
     "Honey B.Lovely": [
       "Darling Damsel"
     ],
     "Brute Bomber": [
       "Hulking Bruiser"
-    ]
+    ],
+    "Gabbro": [
+      "Genial Gentleman",
+    ],
   },
   "ExtrasVoiceList": [
     {
