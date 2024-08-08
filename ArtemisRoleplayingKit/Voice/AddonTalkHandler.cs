@@ -1002,7 +1002,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (_plugin.Config.DebugMode) {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
-                        var conditionsToUseXivV = foundName || Conditions.IsBoundByDuty ? VoiceLinePriority.Alternative : VoiceLinePriority.None;
+                        var conditionsToUseXivV = VoiceLinePriority.None;
                         var conditionToUseElevenLabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : conditionsToUseXivV;
                         var conditionToUseOverride = voiceLinePriority != VoiceLinePriority.None ? voiceLinePriority : conditionToUseElevenLabs;
                         var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionToUseOverride;
