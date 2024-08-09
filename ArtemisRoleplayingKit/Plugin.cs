@@ -84,6 +84,7 @@ using Dalamud.Game.ClientState.Objects;
 using NAudio.Lame;
 using System.Xml.Linq;
 using System.Numerics;
+using RoleplayingVoiceDalamud.GameObjects;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -2276,7 +2277,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void SendingMovement(string playerName, GameObject gameObject) {
+        private void SendingMovement(string playerName, IGameObject gameObject) {
             if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                 string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
@@ -2284,7 +2285,6 @@ namespace RoleplayingVoice {
                 if (_mainCharacterVoicePack == null) {
                     _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                 }
-                bool isVoicedEmote = false;
                 string value = _mainCharacterVoicePack.GetMisc("moving");
                 if (!string.IsNullOrEmpty(value)) {
                     if (config.UsePlayerSync) {
@@ -2294,6 +2294,7 @@ namespace RoleplayingVoice {
                     }
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, false, 0);
                 }
+                MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
             }
         }
         #endregion
@@ -2636,6 +2637,7 @@ namespace RoleplayingVoice {
                             }
                             combinedSoundList = await GetCombinedSoundList(penumbraSoundPacks);
                             IpcSystem?.InvokeOnVoicePackChanged();
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                         } catch (Exception e) {
                             Plugin.PluginLog.Error(e.Message);
                         }
@@ -2651,7 +2653,6 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog.Error(e.Message);
                         }
                     } else {
-                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                     }
                 }
             }

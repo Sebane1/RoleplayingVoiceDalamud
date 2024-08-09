@@ -278,13 +278,13 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        public string GetMisc(string value, bool allowEmotes = false) {
+        public string GetMisc(string value, bool allowEmotes = false, bool ignoreMinimuminNameLength = false) {
             if (value != null) {
                 string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
                     string alternate = name.Remove(name.Length - 1);
-                    if (((final.Contains(name) && name.Length > 5 || final.EndsWith(name))
+                    if (((final.Contains(name) && (name.Length > 5 || ignoreMinimuminNameLength) || final.EndsWith(name))
                         || (_clientLanguage == ClientLanguage.Japanese && final.Contains(alternate)))
                         && (!InLanguageBlacklist(name) || allowEmotes)) {
                         return _misc[name][GetRandom(0, _misc[name].Count)];

@@ -142,29 +142,27 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                 return modelType is not 0 && modelType < 5;
             }
         }
-        public static void SetClothingMod(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = false) {
-            Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+        public static void SetClothingMod(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = true) {
+            Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\" (Set Clothing Mod).");
             int highestPriority = 10;
             foreach (string modName in modelMods) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
                     PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
                     PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 11);
                 } else {
-                    //if (disableOtherMods) {
-                    //    var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    //} else {
-                    var values = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collection, modName);
-                    int priority = values.Item2.Value.Item2;
                     if (CheckIfValidToChange(modName, modelMods)) {
-                        PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
+                        if (disableOtherMods) {
+                            var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
+                        } else {
+                            PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
+                        }
                     }
-                    // }
                 }
             }
         }
 
         public static Dictionary<string, object> GetChangedItemsForMod(string modelMod, ICollection<string> modelMods) {
-            Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\".");
+            Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + modelMod + "\" (Getting Changed Items).");
             int lowestPriority = 10;
             foreach (string modName in modelMods) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
@@ -182,7 +180,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
         }
         public static void SetDependancies(string modelMod, ICollection<string> modelMods, Guid collection, bool disableOtherMods = true) {
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
-            Plugin.PluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\".");
+            Plugin.PluginLog.Debug("Attempting to find mod dependancies that contain \"" + modelMod + "\" (Set Dependancies).");
             int lowestPriority = 10;
             foreach (string modName in modelMods) {
                 if (modName.ToLower().Contains(modelMod.ToLower())) {
@@ -192,9 +190,9 @@ namespace RoleplayingVoiceDalamud.Catalogue {
                     if (FindStringMatch(modelMod, modName)) {
                         var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, true);
                         PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 10);
-                    } /*else if (disableOtherMods) {
+                    } else if (disableOtherMods && CheckIfValidToChange(modName, modelMods)) {
                         var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, modName, false);
-                    } */else if (CheckIfValidToChange(modName, modelMods)) {
+                    } else if (CheckIfValidToChange(modName, modelMods)) {
                         PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection, modName, 5);
                     }
                 }
@@ -251,7 +249,9 @@ namespace RoleplayingVoiceDalamud.Catalogue {
             }
             Dictionary<string, bool> alreadyDisabled = new Dictionary<string, bool>();
             foreach (string modName in modelMods) {
-                var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, "", false, modName);
+                if (CheckIfValidToChange(modName, modelMods)) {
+                    var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection, "", false, modName);
+                }
             }
             SetBodyDependancies(collection, modelDepandacies);
         }

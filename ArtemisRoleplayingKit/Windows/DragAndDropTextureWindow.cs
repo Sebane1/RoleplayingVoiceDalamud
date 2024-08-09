@@ -211,7 +211,6 @@ namespace RoleplayingVoice {
                                                 if (distance < closestDistance) {
                                                     closestDistance = distance;
                                                     closestBone = bone;
-                                                    _closestBone = closestBone;
                                                 }
                                                 if (bone.UniqueId.Contains("1_41")) {
                                                     aboveEyesYPos = screenPosition.Y;
@@ -243,6 +242,7 @@ namespace RoleplayingVoice {
                                         aboveEyesYPosFinal = aboveEyesYPos;
                                         aboveNoseYPosFinal = aboveNoseYPos;
                                         aboveNeckYPosFinal = aboveNeckYPos;
+                                        _closestBone = closestBone;
                                     }
                                     //foreach (var sortedItem in boneSorting.OrderBy(o => o.Item2)) {
                                     //    Plugin.Chat.Print(sortedItem.Item1 + " " + sortedItem.Item2);
@@ -268,7 +268,7 @@ namespace RoleplayingVoice {
                                 if (selectedPlayer.Value != null) {
                                     selectedPlayerCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(selectedPlayer.Value.ObjectIndex).Item3.Id;
                                 }
-                                string debugInfo = (_closestBone != null ? "Closest Bone" + _closestBone.UniqueId : "") + " " + (cursorPosition != null ? cursorPosition.X + " " + cursorPosition.Y : "");
+                                string debugInfo = (_closestBone != null ? "Closest Bone" + _closestBone.HkaBone.Name.String : "") + " " + (cursorPosition != null ? cursorPosition.X + " " + cursorPosition.Y : "");
                                 if (selectedPlayer.Value != null) {
                                     if (selectedPlayerCollection != mainPlayerCollection ||
                                         selectedPlayer.Value == plugin.ClientState.LocalPlayer) {
