@@ -588,19 +588,19 @@ namespace RoleplayingVoice {
         }
 
         private void AddEyePaths(TextureSet textureSet, int subrace, int faceType, int gender, int auraScales, bool asym) {
-            RaceEyePaths.GetEyeTextureSet(subrace, gender == 1, textureSet);
+            RaceEyePaths.GetEyeTextureSet(subrace,faceType, gender == 1, textureSet);
         }
 
         private void AddFacePaths(TextureSet textureSet, int subrace, int facePart, int faceType, int gender, int auraScales, bool asym) {
             if (facePart != 1) {
-                textureSet.InternalBasePath = RacePaths.GetFaceTexturePath(0, gender, subrace,
+                textureSet.InternalBasePath = RacePaths.GetFacePath(0, gender, subrace,
                     facePart, faceType, auraScales, asym);
             }
 
-            textureSet.InternalNormalPath = RacePaths.GetFaceTexturePath(1, gender, subrace,
+            textureSet.InternalNormalPath = RacePaths.GetFacePath(1, gender, subrace,
             facePart, faceType, auraScales, asym);
 
-            textureSet.InternalMaskPath = RacePaths.GetFaceTexturePath(2, gender, subrace,
+            textureSet.InternalMaskPath = RacePaths.GetFacePath(2, gender, subrace,
             facePart, faceType, auraScales, asym);
 
             if (facePart == 0) {

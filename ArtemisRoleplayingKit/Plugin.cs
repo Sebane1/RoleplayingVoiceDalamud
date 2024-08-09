@@ -2269,6 +2269,7 @@ namespace RoleplayingVoice {
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
                             }
+                            MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, characterVoicePack, _roleplayingMediaManager, _mediaManager);
                         }
                     }
                 }
