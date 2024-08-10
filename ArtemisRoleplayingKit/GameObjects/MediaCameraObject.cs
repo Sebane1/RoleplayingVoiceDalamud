@@ -18,9 +18,9 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        unsafe public float Rotation {
+        unsafe public Vector3 Rotation {
             get {
-                return _camera->CameraBase.SceneCamera.Object.Rotation.EulerAngles.Y;
+                return _camera->CameraBase.SceneCamera.Object.Rotation.EulerAngles;
             }
         }
 
@@ -42,5 +42,7 @@ namespace RoleplayingVoiceDalamud {
                 return "";
             }
         }
+
+        bool IMediaGameObject.Invalid => false;
     }
 }

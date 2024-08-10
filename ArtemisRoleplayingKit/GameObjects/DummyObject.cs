@@ -16,12 +16,14 @@ namespace RoleplayingVoiceDalamud {
 
         public Vector3 Position => new Vector3();
 
-        public float Rotation => 0;
+        public Vector3 Rotation => new Vector3();
 
         public Vector3 Forward => new Vector3();
 
         public Vector3 Top => new Vector3();
 
         public string FocusedPlayerObject => "";
+
+        bool IMediaGameObject.Invalid => false;
     }
 }

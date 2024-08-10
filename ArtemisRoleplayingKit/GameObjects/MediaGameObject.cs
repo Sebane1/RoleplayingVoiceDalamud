@@ -34,12 +34,12 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        float IMediaGameObject.Rotation {
+        Vector3 IMediaGameObject.Rotation {
             get {
                 try {
-                    return _gameObjectPointer != null ? _gameObjectPointer->Rotation : 0;
+                    return new Vector3(0, _gameObjectPointer != null ? _gameObjectPointer->Rotation : 0, 0);
                 } catch {
-                    return 0;
+                    return new Vector3(0, 0, 0);
                 }
             }
         }
@@ -74,6 +74,8 @@ namespace RoleplayingVoiceDalamud {
         }
 
         public Dalamud.Game.ClientState.Objects.Types.IGameObject GameObject { get => _gameObject; set => _gameObject = value; }
+
+        bool IMediaGameObject.Invalid => false;
 
         public MediaGameObject(Dalamud.Game.ClientState.Objects.Types.IGameObject gameObject) {
             if (gameObject != null) {

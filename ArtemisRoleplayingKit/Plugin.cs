@@ -598,11 +598,11 @@ namespace RoleplayingVoice {
                     if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized) {
                         pollingTimer.Restart();
                         CheckIfDied();
+                        if (!Conditions.IsBoundByDuty) {
+                            CheckForMovingObjects();
+                        }
                         switch (performanceLimiter++) {
                             case 0:
-                                if (!Conditions.IsBoundByDuty) {
-                                    CheckForMovingObjects();
-                                }
                                 break;
                             case 1:
                                 if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
@@ -1717,7 +1717,7 @@ namespace RoleplayingVoice {
                                 if (gameObjectPositions.ContainsKey(cleanedName)) {
                                     var positionData = gameObjectPositions[cleanedName];
                                     if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                                        positionData.LastRotation != gameObject.Rotation) {
+                                        positionData.LastRotation.Y != gameObject.Rotation) {
                                         if (!positionData.IsMoving) {
                                             ObjectIsMoving(cleanedName, gameObject);
                                             positionData.IsMoving = true;
@@ -1726,11 +1726,17 @@ namespace RoleplayingVoice {
                                         positionData.IsMoving = false;
                                     }
                                     positionData.LastPosition = gameObject.Position;
-                                    positionData.LastRotation = gameObject.Rotation;
+                                    positionData.LastRotation = new Vector3(0, gameObject.Rotation, 0);
                                 } else {
-                                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, gameObject.Rotation, false);
+                                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, new Vector3(0, gameObject.Rotation, 0), false);
+                                }
+                                if (cleanedName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
+                                    MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
+                                } else {
+                                    CheckOtherPlayerBoneMovement(cleanedName, gameObject);
                                 }
                             }
+
                         }
                     }
                 } catch (Exception e) {
@@ -2277,6 +2283,38 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog?.Warning(e, e.Message);
             }
         }
+        private async void CheckOtherPlayerBoneMovement(string playerSender, GameObject gameObject) {
+            string path = config.CacheFolder + @"\VoicePack\Others";
+            try {
+                Directory.CreateDirectory(path);
+            } catch {
+                _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+            }
+            string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
+            string clipPath = path + @"\" + hash;
+            try {
+                if (config.UsePlayerSync) {
+                    if (GetCombinedWhitelist().Contains(playerSender)) {
+                        if (!isDownloadingZip) {
+                            if (!Path.Exists(clipPath)) {
+                                isDownloadingZip = true;
+                                _maxDownloadLengthTimer.Restart();
+                                await Task.Run(async () => {
+                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                    isDownloadingZip = false;
+                                });
+                            }
+                        }
+                        if (Directory.Exists(path)) {
+                            CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
+                            MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, characterVoicePack, _roleplayingMediaManager, _mediaManager);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, e.Message);
+            }
+        }
 
         private void SendingMovement(string playerName, IGameObject gameObject) {
             if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
@@ -2295,7 +2333,6 @@ namespace RoleplayingVoice {
                     }
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, false, 0);
                 }
-                MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
             }
         }
         #endregion
