@@ -1234,7 +1234,7 @@ namespace RoleplayingVoice {
                         case XivChatType.Alliance:
                         case XivChatType.PvPTeam:
                             if ((type != XivChatType.Shout && type != XivChatType.Yell) || IsResidential()) {
-                                ChatText(playerName, message, type);
+                                ChatText(playerName, message, type, timestamp);
                             }
                             break;
                         case XivChatType.NPCDialogue:
@@ -1262,7 +1262,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void ChatText(string sender, SeString message, XivChatType type, bool isCustomNPC = false) {
+        private void ChatText(string sender, SeString message, XivChatType type, int timeStamp, bool isCustomNPC = false) {
             try {
                 if (_clientState.LocalPlayer != null) {
                     if (sender.Contains(_clientState.LocalPlayer.Name.TextValue)) {
@@ -1277,7 +1277,7 @@ namespace RoleplayingVoice {
                         if (true) {
                             Task.Run(async () => {
                                 try {
-                                    if (_playerCount is 1 || type == XivChatType.Party) {
+                                    if (_playerCount is 1 || (type == XivChatType.Party && timeStamp == -1)) {
                                         foreach (var gameObject in GetNearestObjects()) {
                                             ICharacter character = gameObject as ICharacter;
                                             if (character != null) {
@@ -3566,7 +3566,7 @@ namespace RoleplayingVoice {
             bool handled = false;
             var name = _clientState.LocalPlayer.Name;
             var message = new SeString(new TextPayload(args.Replace("cc", "")));
-            _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = 0, Type = XivChatType.Party });
+            _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
             //Chat_ChatMessage(XivChatType.Say, 0, ref name, ref message, ref handled);
         }
         public void OpenConfig(string command, string args) {
