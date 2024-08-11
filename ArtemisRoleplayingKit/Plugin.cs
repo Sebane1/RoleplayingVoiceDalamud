@@ -85,6 +85,8 @@ using NAudio.Lame;
 using System.Xml.Linq;
 using System.Numerics;
 using RoleplayingVoiceDalamud.GameObjects;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Common.Lua;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -3844,7 +3846,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        public void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
+        public unsafe void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
             foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
                 if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
                     if ((
@@ -3863,15 +3865,25 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.Housing) {
                                             if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
                                                 if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
-                                                    _toast.ShowNormal(character.Name.TextValue + " follows your command!");
-                                                    if (becomesPreOccupied) {
-                                                        _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
-                                                        if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                                            _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                    if (AgentEmote.Instance()->CanUseEmote((ushort)emoteItem.RowId)) {
+                                                        _toast.ShowNormal(character.Name.TextValue + " follows your command!");
+                                                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                                        if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteItem.RowId);
+                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                        Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
+                                                        if (becomesPreOccupied) {
+                                                            _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                            if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                                _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                            }
+                                                        } else {
+                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
+                                                                (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                                         }
                                                     } else {
-                                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
-                                                            (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        _toast.ShowError(character.Name.TextValue + " you have not unlocked this emote yet.");
                                                     }
                                                 } else {
                                                     _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
