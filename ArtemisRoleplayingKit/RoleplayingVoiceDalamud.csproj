@@ -40,14 +40,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Concentus" Version="1.1.7" />
-		<PackageReference Include="Concentus.OggFile" Version="1.0.4" />
 		<PackageReference Include="DalamudPackager" Version="2.1.13" />
-		<PackageReference Include="Glamourer.Api" Version="2.1.0" />
+		<PackageReference Include="Glamourer.Api" Version="2.2.0" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
-		<PackageReference Include="Penumbra.Api" Version="5.2.0" />
+		<PackageReference Include="Penumbra.Api" Version="5.3.0" />
 		<PackageReference Include="Penumbra.String" Version="1.0.4" />
 	</ItemGroup>
 

@@ -800,8 +800,8 @@ namespace RoleplayingVoice {
             ImGui.EndChild();
         }
 
-        public async void RefreshVoices() {
-            _ = Task.Run(async delegate () {
+        public void RefreshVoices() {
+            Task.Run(async delegate () {
                 _refreshing = true;
                 try {
                     if (clientState.LocalPlayer != null) {
@@ -902,15 +902,23 @@ namespace RoleplayingVoice {
                         }
                     }
                 } catch (Exception ex) {
-
+                    Plugin.PluginLog.Warning(ex, ex.Message);
                 }
                 if (PluginInterface != null) {
                     try {
                         PluginReference.RefreshData(false, true);
-                    } catch (Exception ex) { }
+                    } catch (Exception ex) {
+                        Plugin.PluginLog.Warning(ex, ex.Message);
+                    }
                 }
-                _refreshing = false;
-                _manager.ReadUnquotedText = configuration.NarrateUnquotedText;
+                try {
+                    _refreshing = false;
+                    if (_manager != null && configuration != null) {
+                        _manager.ReadUnquotedText = configuration.NarrateUnquotedText;
+                    }
+                } catch (Exception ex) {
+                    Plugin.PluginLog.Warning(ex, ex.Message);
+                }
             });
         }
 

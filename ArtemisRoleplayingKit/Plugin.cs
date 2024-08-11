@@ -252,6 +252,7 @@ namespace RoleplayingVoice {
         private ITargetManager _targetManager;
         private bool _objectRecentlyDidEmote;
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
+        private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -557,7 +558,7 @@ namespace RoleplayingVoice {
                 _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
                 _window.Manager = _roleplayingMediaManager;
             }
-            _window.RefreshVoices();
+            _window?.RefreshVoices();
         }
         private void _roleplayingMediaManager_InitializationStatus(object sender, string e) {
             try {
@@ -3254,14 +3255,15 @@ namespace RoleplayingVoice {
                 int mdlFilesFound = 0;
                 for (int i = 0; i < option.Files.Count; i++) {
                     var item = option.Files.ElementAt(i);
-                    ulong modelId = GetModelID(item.Key);
+                    //ulong modelId = GetModelID(item.Key);
                     if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
                         && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
-                        && modelId != 279 && modelId != 9903) {
+                       /* && modelId != 279 && modelId != 9903*/) {
                         mdlFilesFound++;
-                    } else if (modelId == 279 && modelId == 9903 && !directory.ToLower().Contains("ivcs")) {
+                    } else if (/*modelId == 279 && modelId == 9903 &&*/ !directory.ToLower().Contains("ivcs")) {
                         _modelDependancyMods[modName] = null;
                     }
+                    Thread.Sleep(10);
                 }
                 if (mdlFilesFound > 0) {
                     _modelMods[modName] = null;
@@ -3276,6 +3278,7 @@ namespace RoleplayingVoice {
                 if (value.StartsWith("e") || value.StartsWith("a")) {
                     try {
                         newValue = ulong.Parse(value.Replace("e", "").Replace("a", "").TrimStart('0'));
+                        break;
                     } catch {
                     }
                 }
@@ -3296,16 +3299,16 @@ namespace RoleplayingVoice {
             PenumbraAndGlamourerIpcWrapper.Instance.ApplyDesign.Invoke(design, character.ObjectIndex);
         }
         public void CleanEquipment(int objectIndex) {
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Head, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Ears, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Neck, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Body, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Legs, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Hands, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.LFinger, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.RFinger, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Feet, 0, 0);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Wrists, 0, 0);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Head, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Ears, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Neck, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Body, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Legs, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Hands, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.LFinger, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.RFinger, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Feet, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Wrists, 0, null);
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
@@ -3540,8 +3543,8 @@ namespace RoleplayingVoice {
             this.windowSystem.Draw();
         }
         private void UiBuilder_OpenConfigUi() {
-            _window.RefreshVoices();
-            _window.Toggle();
+            _window?.RefreshVoices();
+            _window?.Toggle();
         }
         #endregion
         #region Chat Commands
@@ -3934,42 +3937,45 @@ namespace RoleplayingVoice {
             }
         }
         public void CheckAnimationMods(string[] splitArgs, string args, ICharacter character, bool willOpen = true) {
-            if (splitArgs.Length > 1) {
-                string[] command = null;
-                command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
-                int index = 0;
-                try {
-                    if (command.Length > 1) {
-                        index = int.Parse(command[1]);
+            Task.Run(() => {
+                if (splitArgs.Length > 1) {
+                    string[] command = null;
+                    command = args.Replace(splitArgs[0] + " ", null).ToLower().Trim().Split("emote:");
+                    int index = 0;
+                    try {
+                        if (command.Length > 1) {
+                            index = int.Parse(command[1]);
+                        }
+                    } catch {
+                        index = 0;
                     }
-                } catch {
-                    index = 0;
-                }
-                DoAnimation(command[0].Trim(), index, character);
-            } else {
-                if (!_animationCatalogue.IsOpen) {
-                    var list = CreateEmoteList(_dataManager);
-                    var newList = new List<string>();
-                    foreach (string key in _animationMods.Keys) {
-                        foreach (string emote in _animationMods[key].Value) {
-                            string[] strings = emote.Split("/");
-                            string option = strings[strings.Length - 1];
-                            if (list.ContainsKey(option)) {
-                                if (!newList.Contains(key)) {
-                                    newList.Add(key);
+                    DoAnimation(command[0].Trim(), index, character);
+                } else {
+                    if (!_animationCatalogue.IsOpen) {
+                        var list = CreateEmoteList(_dataManager);
+                        var newList = new List<string>();
+                        foreach (string key in _animationMods.Keys) {
+                            foreach (string emote in _animationMods[key].Value) {
+                                string[] strings = emote.Split("/");
+                                string option = strings[strings.Length - 1];
+                                if (list.ContainsKey(option)) {
+                                    if (!newList.Contains(key)) {
+                                        newList.Add(key);
+                                        _animationCatalogue.AddNewItem(key);
+                                    }
                                 }
                             }
                         }
+                        newList.Sort();
+                        _animationCatalogue.AddNewList(newList);
+                        if (willOpen) {
+                            _animationCatalogue.IsOpen = true;
+                        }
+                    } else {
+                        _animationCatalogue.IsOpen = false;
                     }
-                    newList.Sort();
-                    _animationCatalogue.AddNewList(newList);
-                    if (willOpen) {
-                        _animationCatalogue.IsOpen = true;
-                    }
-                } else {
-                    _animationCatalogue.IsOpen = false;
                 }
-            }
+            });
         }
 
         public void DoAnimation(string animationName, int index, ICharacter targetObject) {
@@ -4149,62 +4155,65 @@ namespace RoleplayingVoice {
         }
 
         private IReadOnlyDictionary<string, IReadOnlyList<Emote>> CreateEmoteList(IDataManager gameData) {
-            var sheet = gameData.GetExcelSheet<Emote>()!;
-            var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();
+            if (_emoteList == null) {
+                var sheet = gameData.GetExcelSheet<Emote>()!;
+                var storage = new ConcurrentDictionary<string, ConcurrentBag<Emote>>();
 
-            void AddEmote(string? key, Emote emote) {
-                if (string.IsNullOrEmpty(key))
-                    return;
+                void AddEmote(string? key, Emote emote) {
+                    if (string.IsNullOrEmpty(key))
+                        return;
 
-                key = key.ToLowerInvariant();
-                if (storage.TryGetValue(key, out var emotes))
-                    emotes.Add(emote);
-                else
-                    storage[key] = new ConcurrentBag<Emote> { emote };
-            }
-
-            var options = new ParallelOptions {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
-            };
-            var seenTmbs = new ConcurrentDictionary<string, TmbFile>();
-
-            void ProcessEmote(Emote emote) {
-                var emoteTmbs = new HashSet<string>(8);
-                var tmbs = new Queue<string>(8);
-
-                foreach (var timeline in emote.ActionTimeline.Where(t => t.Row != 0 && t.Value != null).Select(t => t.Value!)) {
-                    var key = timeline.Key.ToDalamudString().TextValue;
-                    AddEmote(Path.GetFileName(key) + ".pap", emote);
+                    key = key.ToLowerInvariant();
+                    if (storage.TryGetValue(key, out var emotes))
+                        emotes.Add(emote);
+                    else
+                        storage[key] = new ConcurrentBag<Emote> { emote };
                 }
 
-                while (tmbs.TryDequeue(out var tmbPath)) {
-                    if (!emoteTmbs.Add(tmbPath))
-                        continue;
-                    AddEmote(Path.GetFileName(tmbPath), emote);
+                var options = new ParallelOptions {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                };
+                var seenTmbs = new ConcurrentDictionary<string, TmbFile>();
+
+                void ProcessEmote(Emote emote) {
+                    var emoteTmbs = new HashSet<string>(8);
+                    var tmbs = new Queue<string>(8);
+
+                    foreach (var timeline in emote.ActionTimeline.Where(t => t.Row != 0 && t.Value != null).Select(t => t.Value!)) {
+                        var key = timeline.Key.ToDalamudString().TextValue;
+                        AddEmote(Path.GetFileName(key) + ".pap", emote);
+                    }
+
+                    while (tmbs.TryDequeue(out var tmbPath)) {
+                        if (!emoteTmbs.Add(tmbPath))
+                            continue;
+                        AddEmote(Path.GetFileName(tmbPath), emote);
+                    }
                 }
+
+                Parallel.ForEach(sheet.Where(n => n.Name.RawData.Length > 0), options, ProcessEmote);
+
+                var sit = sheet.GetRow(50)!;
+                AddEmote("s_pose01_loop.pap", sit);
+                AddEmote("s_pose02_loop.pap", sit);
+                AddEmote("s_pose03_loop.pap", sit);
+                AddEmote("s_pose04_loop.pap", sit);
+                AddEmote("s_pose05_loop.pap", sit);
+
+                var sitOnGround = sheet.GetRow(52)!;
+                AddEmote("j_pose01_loop.pap", sitOnGround);
+                AddEmote("j_pose02_loop.pap", sitOnGround);
+                AddEmote("j_pose03_loop.pap", sitOnGround);
+                AddEmote("j_pose04_loop.pap", sitOnGround);
+
+                var doze = sheet.GetRow(13)!;
+                AddEmote("l_pose01_loop.pap", doze);
+                AddEmote("l_pose02_loop.pap", doze);
+                AddEmote("l_pose03_loop.pap", doze);
+
+                _emoteList = storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
             }
-
-            Parallel.ForEach(sheet.Where(n => n.Name.RawData.Length > 0), options, ProcessEmote);
-
-            var sit = sheet.GetRow(50)!;
-            AddEmote("s_pose01_loop.pap", sit);
-            AddEmote("s_pose02_loop.pap", sit);
-            AddEmote("s_pose03_loop.pap", sit);
-            AddEmote("s_pose04_loop.pap", sit);
-            AddEmote("s_pose05_loop.pap", sit);
-
-            var sitOnGround = sheet.GetRow(52)!;
-            AddEmote("j_pose01_loop.pap", sitOnGround);
-            AddEmote("j_pose02_loop.pap", sitOnGround);
-            AddEmote("j_pose03_loop.pap", sitOnGround);
-            AddEmote("j_pose04_loop.pap", sitOnGround);
-
-            var doze = sheet.GetRow(13)!;
-            AddEmote("l_pose01_loop.pap", doze);
-            AddEmote("l_pose02_loop.pap", doze);
-            AddEmote("l_pose03_loop.pap", doze);
-
-            return storage.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Emote>)kvp.Value.Distinct().ToArray());
+            return _emoteList;
         }
 
         #endregion

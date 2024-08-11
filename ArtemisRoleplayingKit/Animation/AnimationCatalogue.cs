@@ -33,6 +33,10 @@ namespace RoleplayingVoice {
         public void AddNewList(List<string> list) {
             _animationPages.Clear();
             foreach (var item in list) {
+                AddNewItem(item);
+            }
+        }
+        public void AddNewItem(string item) {
                 if (!string.IsNullOrEmpty(item)) {
                     string preparedString = CategoryCleaner(item);
                     if (!string.IsNullOrEmpty(preparedString)) {
@@ -47,7 +51,6 @@ namespace RoleplayingVoice {
                         }
                     }
                 }
-            }
         }
 
         public void AddItem(string category, string item) {
@@ -154,7 +157,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } else {
-                ImGui.Text("No valid animation mods detected!");
+                ImGui.Text("No valid animation mods detected, or still loading!");
             }
         }
     }

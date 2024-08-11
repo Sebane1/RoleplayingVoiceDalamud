@@ -5,8 +5,6 @@ using Anamnesis.GameData;
 using Anamnesis.GameData.Excel;
 using Anamnesis.Memory;
 using Anamnesis.Services;
-using Concentus.Oggfile;
-using Concentus.Structs;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
@@ -836,34 +834,6 @@ namespace RoleplayingVoiceDalamud.Voice {
 
                 }
             }
-        }
-        public static RawSourceWaveStream DecodeOggOpusToPCM(Stream stream) {
-            // Read the Opus file
-            // Initialize the decoder
-            OpusDecoder decoder = new OpusDecoder(48000, 1); // Assuming a sample rate of 48000 Hz and mono audio
-            OpusOggReadStream oggStream = new OpusOggReadStream(decoder, stream);
-
-            // Buffer for storing the decoded samples
-            List<float> pcmSamples = new List<float>();
-
-            // Read and decode the entire file
-            while (oggStream.HasNextPacket) {
-                short[] packet = oggStream.DecodeNextPacket();
-                if (packet != null) {
-                    foreach (var sample in packet) {
-                        pcmSamples.Add(sample / 32768f); // Convert to float and normalize
-                    }
-                }
-            }
-
-            var waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(48000, 1);
-            var memoryStream = new MemoryStream();
-            var writer = new BinaryWriter(stream);
-            foreach (var sample in pcmSamples.ToArray()) {
-                writer.Write(sample);
-            }
-            memoryStream.Position = 0;
-            return new RawSourceWaveStream(stream, waveFormat);
         }
 
         public string FeoUlRetainerCleanup(string npcName, string message) {
