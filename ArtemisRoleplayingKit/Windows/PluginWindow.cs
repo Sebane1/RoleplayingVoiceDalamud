@@ -763,9 +763,9 @@ namespace RoleplayingVoice {
                 }
             }
             configuration.Save();
-            PluginInterface.SavePluginConfig(configuration);
             save = false;
             RefreshVoices();
+            PluginInterface.SavePluginConfig(configuration);
         }
         private Vector2? GetSizeChange(float requiredY, float availableY, int Lines, Vector2? initial) {
             // Height

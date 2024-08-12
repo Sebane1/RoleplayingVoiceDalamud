@@ -34,21 +34,17 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                                 var worldPos = bone.GetWorldPos(characterActor, model);
                                 var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
                                 float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
-                                float rotationDistance = Vector3.Distance(new Vector3(0, movingObject.LastRotation.Y, 0), new Vector3(0, rotation.Y, 0));
-                                if (rotationDistance > 30f) {
+                                float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
+                                if (distance > 2f || rotationDistance > 2f) {
                                     if (!movingObject.IsMoving) {
                                         string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
                                         if (!string.IsNullOrEmpty(value)) {
                                             var boneObject = new MediaBoneObject(bone, characterActor, model);
-                                            mediaManager.PlayAudio(boneObject, value, SoundType.LoopWhileMoving, false, 0);
+                                            mediaManager.PlayAudio(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
+                                                movingObject.IsMoving = false;
+                                            });
+                                            movingObject.IsMoving = true;
                                         }
-                                        movingObject.IsMoving = true;
-                                    }
-                                } else {
-                                    if (movingObject.IsMoving) {
-                                        movingObject.IsMoving = false;
-                                        //var boneObject = new MediaBoneObject(bone, characterActor, model);
-                                        //mediaManager.StopAudio(boneObject);
                                     }
                                 }
                                 movingObject.LastPosition = worldPos;
