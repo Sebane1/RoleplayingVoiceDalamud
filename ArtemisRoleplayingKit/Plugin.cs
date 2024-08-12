@@ -1569,7 +1569,10 @@ namespace RoleplayingVoice {
                     isDownloadingZip = true;
                     _maxDownloadLengthTimer.Restart();
                     await Task.Run(async () => {
-                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                        try {
+                            string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                        } catch { 
+                        }
                         isDownloadingZip = false;
                     });
                 }
@@ -1682,7 +1685,9 @@ namespace RoleplayingVoice {
                     _timeSinceLastEmoteDone.Restart();
                     _lastEmoteTriggered = emoteId;
                 } else {
-                    Task.Run(() => ReceivingEmote(instigator, emoteId));
+                    Task.Run(() => {
+                        ReceivingEmote(instigator, emoteId);
+                    });
                     if (_timeSinceLastEmoteDone.ElapsedMilliseconds < 400 && _timeSinceLastEmoteDone.IsRunning && _timeSinceLastEmoteDone.ElapsedMilliseconds > 20) {
                         if (instigator != null) {
                             if (Vector3.Distance(instigator.Position, _clientState.LocalPlayer.Position) < 3) {
@@ -1932,7 +1937,9 @@ namespace RoleplayingVoice {
                                             isDownloadingZip = true;
                                             _maxDownloadLengthTimer.Restart();
                                             Task.Run(async () => {
-                                                string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                try {
+                                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                } catch { }
                                                 isDownloadingZip = false;
                                             });
                                         }
@@ -2261,7 +2268,9 @@ namespace RoleplayingVoice {
                                 isDownloadingZip = true;
                                 _maxDownloadLengthTimer.Restart();
                                 await Task.Run(async () => {
-                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                    try {
+                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                    } catch { }
                                     isDownloadingZip = false;
                                 });
                             }
@@ -2303,7 +2312,11 @@ namespace RoleplayingVoice {
                                 isDownloadingZip = true;
                                 _maxDownloadLengthTimer.Restart();
                                 await Task.Run(async () => {
-                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                    try {
+                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                    } catch {
+
+                                    }
                                     isDownloadingZip = false;
                                 });
                             }
@@ -2971,7 +2984,9 @@ namespace RoleplayingVoice {
                                             isDownloadingZip = true;
                                             _maxDownloadLengthTimer.Restart();
                                             await Task.Run(async () => {
-                                                string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                try {
+                                                    string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                                                } catch { }
                                                 isDownloadingZip = false;
                                             });
                                         }

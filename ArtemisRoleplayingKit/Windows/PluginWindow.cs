@@ -690,7 +690,7 @@ namespace RoleplayingVoice {
             if (e.ValidationSuceeded && !apiKeyValidated) {
                 apiKeyErrorMessage = string.Empty;
                 isApiKeyValid = true;
-            } else if (!e.ValidationSuceeded && !apiKeyValidated) {
+            } else if (!e.ValidationSuceeded && !apiKeyValidated && !configuration.AiVoiceActive && configuration.PlayerVoiceEngine == 0) {
                 apiKeyErrorMessage = "Invalid API Key! Please check the input.";
                 isApiKeyValid = false;
             }
