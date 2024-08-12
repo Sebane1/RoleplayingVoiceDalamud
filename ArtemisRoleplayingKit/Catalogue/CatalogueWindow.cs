@@ -132,10 +132,12 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < Math.Ceiling(category.VariantImages.Count / 7f); y++) {
                         for (int x = 0; x < 7; x++) {
                             if (index < category.VariantImages.Count) {
-                                if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].GetWrapOrDefault().ImGuiHandle, new Vector2(100, 100))) {
-                                    PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject,
-                                        Guid.Empty, _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
-                                }
+                                try {
+                                    if (ImGui.ImageButton(categories[_currentCategory].VariantImages[index].GetWrapOrDefault().ImGuiHandle, new Vector2(100, 100))) {
+                                        PenumbraAndGlamourerHelperFunctions.WearOutfit(category.CatalogueItems[category.SelectedIndex].Variants[index].EquipObject,
+                                            Guid.Empty, _characterList.ElementAt(_currentSelection).Value.ObjectIndex, _plugin.ModelMods.Keys);
+                                    }
+                                } catch { }
                                 index++;
                                 if (x < 6 && index < categories[_currentCategory].VariantImages.Count) {
                                     ImGui.SameLine();

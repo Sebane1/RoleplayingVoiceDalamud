@@ -259,6 +259,7 @@ namespace RoleplayingVoice {
         public RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public ISigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
+
         internal Filter Filter {
             get {
                 if (_filter == null) {
@@ -1571,7 +1572,7 @@ namespace RoleplayingVoice {
                     await Task.Run(async () => {
                         try {
                             string value = await _roleplayingMediaManager.GetZip(playerSender, path);
-                        } catch { 
+                        } catch {
                         }
                         isDownloadingZip = false;
                     });
@@ -3310,20 +3311,22 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog.Warning(e, e.Message);
             }
         }
+
         public void ApplyByGuid(Guid design, ICharacter? character) {
             PenumbraAndGlamourerIpcWrapper.Instance.ApplyDesign.Invoke(design, character.ObjectIndex);
         }
+
         public void CleanEquipment(int objectIndex) {
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Head, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Ears, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Neck, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Body, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Legs, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Hands, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.LFinger, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.RFinger, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Feet, 0, null);
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Wrists, 0, null);
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Head, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Ears, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Neck, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Body, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Legs, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Hands, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.LFinger, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.RFinger, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Feet, 0, new List<byte>());
+            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, ApiEquipSlot.Wrists, 0, new List<byte>());
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
@@ -4249,6 +4252,7 @@ namespace RoleplayingVoice {
             if (!disposing) return;
             try {
                 disposed = true;
+                _mediaManager.Invalidated = true;
                 config.Save();
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;
                 IpcSystem.Dispose();
