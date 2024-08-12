@@ -32,7 +32,7 @@ namespace RoleplayingVoiceDalamud.Catalogue {
 
         public static bool SetEquipment(EquipObject equipItem, int objectIndex) {
             bool changed = false;
-            PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, FullEquipTypeToApiEquipSlot(equipItem.Type), equipItem.ItemId.Id, null);
+            var result = PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, FullEquipTypeToApiEquipSlot(equipItem.Type), equipItem.ItemId.Id, new List<byte>());
             changed = true;
             Plugin.PluginLog.Verbose("Completed sending IPC to glamourer");
             return changed;

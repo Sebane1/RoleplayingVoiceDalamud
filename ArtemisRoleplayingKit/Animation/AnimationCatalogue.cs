@@ -131,9 +131,12 @@ namespace RoleplayingVoice {
                     for (int y = 0; y < maxItemsPerPage; y++) {
                         if (index < _animationPages[_currentCategory].AnimationItems.Count) {
                             selectionIndex = _animationPages[_currentCategory].PageNumber * maxItemsPerPage + index;
-                            string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
-                            if (ImGui.Button(animation)) {
-                                Plugin.DoAnimation(animation.ToLower(), 0, _characterList.ElementAt(_currentSelection).Value);
+                            if (selectionIndex < _animationPages[_currentCategory].AnimationItems.Count) {
+                                string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
+
+                                if (ImGui.Button(animation)) {
+                                    Plugin.DoAnimation(animation.ToLower(), 0, _characterList.ElementAt(_currentSelection).Value);
+                                }
                             }
                             index++;
                         } else {

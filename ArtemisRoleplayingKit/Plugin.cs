@@ -3976,7 +3976,7 @@ namespace RoleplayingVoice {
                                 if (list.ContainsKey(option)) {
                                     if (!newList.Contains(key)) {
                                         newList.Add(key);
-                                        _animationCatalogue.AddNewItem(key);
+                                        //_animationCatalogue.AddNewItem(key);
                                     }
                                 }
                             }
