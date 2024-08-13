@@ -2544,7 +2544,7 @@ namespace RoleplayingVoice {
                                         unsafe {
                                             var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
                                             if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.ActionTimeline[0].Value.RowId);
+                                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.RowId);
                                                 _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
                                                 Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                             }
@@ -3232,59 +3232,55 @@ namespace RoleplayingVoice {
         }
 
         public void ExtractPapFiles(Option option, string directory, bool skipScd) {
-            Task.Run(() => {
-                string modName = Path.GetFileName(directory);
-                int papFilesFound = 0;
-                for (int i = 0; i < option.Files.Count; i++) {
-                    var item = option.Files.ElementAt(i);
-                    if (item.Key.EndsWith(".pap")) {
-                        string[] strings = item.Key.Split("/");
-                        string value = strings[strings.Length - 1];
-                        if (!_animationMods.ContainsKey(modName)) {
-                            _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
-                        }
-                        if (!_animationMods[modName].Value.Contains(value)) {
-                            _animationMods[modName].Value.Add(value);
-                        }
-                        papFilesFound++;
-                        if (!_papSorting.ContainsKey(value)) {
-                            try {
-                                _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipScd) });
+            string modName = Path.GetFileName(directory);
+            int papFilesFound = 0;
+            for (int i = 0; i < option.Files.Count; i++) {
+                var item = option.Files.ElementAt(i);
+                if (item.Key.EndsWith(".pap")) {
+                    string[] strings = item.Key.Split("/");
+                    string value = strings[strings.Length - 1];
+                    if (!_animationMods.ContainsKey(modName)) {
+                        _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
+                    }
+                    if (!_animationMods[modName].Value.Contains(value)) {
+                        _animationMods[modName].Value.Add(value);
+                    }
+                    papFilesFound++;
+                    if (!_papSorting.ContainsKey(value)) {
+                        try {
+                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipScd) });
 
-                                if (config.DebugMode) {
-                                    Plugin.PluginLog?.Verbose("Found: " + item.Value);
-                                }
-                            } catch {
-                                Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                            if (config.DebugMode) {
+                                Plugin.PluginLog?.Verbose("Found: " + item.Value);
                             }
-                        } else {
-                            _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipScd));
+                        } catch {
+                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                         }
+                    } else {
+                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipScd));
                     }
                 }
-            });
+            }
         }
 
         public void ExtractMdlFiles(Option option, string directory, bool skipFile) {
-            Task.Run(() => {
-                string modName = Path.GetFileName(directory);
-                int mdlFilesFound = 0;
-                for (int i = 0; i < option.Files.Count; i++) {
-                    var item = option.Files.ElementAt(i);
-                    //ulong modelId = GetModelID(item.Key);
-                    if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
-                        && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
-                       /* && modelId != 279 && modelId != 9903*/) {
-                        mdlFilesFound++;
-                    } else if (/*modelId == 279 && modelId == 9903 &&*/ !directory.ToLower().Contains("ivcs")) {
-                        _modelDependancyMods[modName] = null;
-                    }
-                    Thread.Sleep(10);
+            string modName = Path.GetFileName(directory);
+            int mdlFilesFound = 0;
+            for (int i = 0; i < option.Files.Count; i++) {
+                var item = option.Files.ElementAt(i);
+                //ulong modelId = GetModelID(item.Key);
+                if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
+                    && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
+                   /* && modelId != 279 && modelId != 9903*/) {
+                    mdlFilesFound++;
+                } else if (/*modelId == 279 && modelId == 9903 &&*/ !directory.ToLower().Contains("ivcs")) {
+                    _modelDependancyMods[modName] = null;
                 }
-                if (mdlFilesFound > 0) {
-                    _modelMods[modName] = null;
-                }
-            });
+                Thread.Sleep(10);
+            }
+            if (mdlFilesFound > 0) {
+                _modelMods[modName] = null;
+            }
         }
 
         public ulong GetModelID(string model) {
