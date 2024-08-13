@@ -3231,7 +3231,7 @@ namespace RoleplayingVoice {
             });
         }
 
-        public void ExtractPapFiles(Option option, string directory, bool skipScd) {
+        public void ExtractPapFiles(Option option, string directory, bool skipPap) {
             string modName = Path.GetFileName(directory);
             int papFilesFound = 0;
             for (int i = 0; i < option.Files.Count; i++) {
@@ -3248,7 +3248,7 @@ namespace RoleplayingVoice {
                     papFilesFound++;
                     if (!_papSorting.ContainsKey(value)) {
                         try {
-                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipScd) });
+                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipPap) });
 
                             if (config.DebugMode) {
                                 Plugin.PluginLog?.Verbose("Found: " + item.Value);
@@ -3257,9 +3257,50 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
                         }
                     } else {
-                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipScd));
+                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipPap));
                     }
                 }
+            }
+        }
+
+        public void ExtractModFiles(Option option, string directory, bool skipPap) {
+            string modName = Path.GetFileName(directory);
+            int papFilesFound = 0;
+            int mdlFilesFound = 0;
+            for (int i = 0; i < option.Files.Count; i++) {
+                var item = option.Files.ElementAt(i);
+                if (item.Key.EndsWith(".pap")) {
+                    string[] strings = item.Key.Split("/");
+                    string value = strings[strings.Length - 1];
+                    if (!_animationMods.ContainsKey(modName)) {
+                        _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
+                    }
+                    if (!_animationMods[modName].Value.Contains(value)) {
+                        _animationMods[modName].Value.Add(value);
+                    }
+                    papFilesFound++;
+                    if (!_papSorting.ContainsKey(value)) {
+                        try {
+                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipPap) });
+                            if (config.DebugMode) {
+                                Plugin.PluginLog?.Verbose("Found: " + item.Value);
+                            }
+                        } catch {
+                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                        }
+                    } else {
+                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipPap));
+                    }
+                }
+                if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
+                    && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))) {
+                    mdlFilesFound++;
+                } else if (!directory.ToLower().Contains("ivcs")) {
+                    _modelDependancyMods[modName] = null;
+                }
+            }
+            if (mdlFilesFound > 0) {
+                _modelMods[modName] = null;
             }
         }
 
@@ -3268,15 +3309,12 @@ namespace RoleplayingVoice {
             int mdlFilesFound = 0;
             for (int i = 0; i < option.Files.Count; i++) {
                 var item = option.Files.ElementAt(i);
-                //ulong modelId = GetModelID(item.Key);
                 if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
-                    && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))
-                   /* && modelId != 279 && modelId != 9903*/) {
+                    && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))) {
                     mdlFilesFound++;
-                } else if (/*modelId == 279 && modelId == 9903 &&*/ !directory.ToLower().Contains("ivcs")) {
+                } else if (!directory.ToLower().Contains("ivcs")) {
                     _modelDependancyMods[modName] = null;
                 }
-                Thread.Sleep(10);
             }
             if (mdlFilesFound > 0) {
                 _modelMods[modName] = null;
@@ -3390,18 +3428,12 @@ namespace RoleplayingVoice {
                                 if (!_alreadyScannedMods.ContainsKey(modName)) {
                                     _alreadyScannedMods[modName] = true;
                                     if (option != null) {
-                                        ExtractPapFiles(option, directory, true);
-                                        if (!skipModelData) {
-                                            ExtractMdlFiles(option, directory, true);
-                                        }
+                                        ExtractModFiles(option, directory, true);
                                     }
                                     foreach (Group group in groups) {
                                         if (group != null) {
                                             foreach (Option groupOption in group.Options) {
-                                                ExtractPapFiles(groupOption, directory, true);
-                                                if (!skipModelData) {
-                                                    ExtractMdlFiles(groupOption, directory, true);
-                                                }
+                                                ExtractModFiles(option, directory, true);
                                             }
                                         }
                                     }
