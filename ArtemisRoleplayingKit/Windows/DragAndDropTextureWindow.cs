@@ -313,6 +313,8 @@ namespace RoleplayingVoice {
                     }
 
                     if (_dragDropManager.CreateImGuiTarget("TextureDragDrop", out var files, out _)) {
+                        string modPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                        _textureProcessor.BasePath = modPath + @"\LooseTextureCompilerDLC";
                         List<TextureSet> textureSets = new List<TextureSet>();
                         if (selectedPlayer.Value != null && selectedPlayerCollection != mainPlayerCollection ||
                             selectedPlayer.Value == plugin.ClientState.LocalPlayer) {

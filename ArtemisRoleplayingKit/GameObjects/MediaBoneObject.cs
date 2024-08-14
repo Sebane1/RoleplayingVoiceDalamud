@@ -25,7 +25,11 @@ namespace RoleplayingVoiceDalamud.GameObjects {
         Vector3 IMediaGameObject.Position {
             get {
                 try {
-                    return _bone.GetWorldPos(_actor, _actorModel);
+                    if (_actor != null && _actorModel != null && _bone != null) {
+                        return _bone.GetWorldPos(_actor, _actorModel);
+                    } else {
+                        return Vector3.Zero;
+                    }
                 } catch {
                     _invalid = true;
                     return Vector3.Zero;
@@ -35,7 +39,11 @@ namespace RoleplayingVoiceDalamud.GameObjects {
         Vector3 IMediaGameObject.Rotation {
             get {
                 try {
-                    return Q2E(_bone.Transform.Rotation);
+                    if (_bone != null) {
+                        return Q2E(_bone.Transform.Rotation);
+                    } else {
+                        return Vector3.Zero;
+                    }
                 } catch {
                     _invalid = true;
                     return Vector3.Zero;
