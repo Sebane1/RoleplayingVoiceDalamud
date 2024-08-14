@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System;
 using FFXIVClientStructs.FFXIV.Common.Lua;
+using RoleplayingVoice;
 
 namespace RoleplayingVoiceDalamud.GameObjects {
     public class MediaBoneManager {
@@ -26,29 +27,33 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                             var skeleton = pos->Skeleton;
                             for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
                                 var bone = model->Skeleton->GetBone(i, i2);
-                                if (!_lastBonePositions[character.Name.TextValue].ContainsKey(bone.HkaBone.Name.String)) {
-                                    _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String] = new MovingObject(new Vector3(), new Vector3(), false);
-                                }
-                                var movingObject = _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String];
+                                if (bone.HkaBone.Name.String != null) {
+                                    if (!_lastBonePositions[character.Name.TextValue].ContainsKey(bone.HkaBone.Name.String)) {
+                                        _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String] = new MovingObject(new Vector3(), new Vector3(), false);
+                                    }
+                                    var movingObject = _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String];
 
-                                var worldPos = bone.GetWorldPos(characterActor, model);
-                                var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
-                                float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
-                                float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
-                                if (distance > 2f || rotationDistance > 2f) {
-                                    if (!movingObject.IsMoving) {
-                                        string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
-                                        if (!string.IsNullOrEmpty(value)) {
-                                            var boneObject = new MediaBoneObject(bone, characterActor, model);
-                                            mediaManager.PlayAudio(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
-                                                movingObject.IsMoving = false;
-                                            });
-                                            movingObject.IsMoving = true;
+                                    var worldPos = bone.GetWorldPos(characterActor, model);
+                                    var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
+                                    float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
+                                    float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
+                                    if (distance > 2f || rotationDistance > 2f) {
+                                        if (!movingObject.IsMoving) {
+                                            string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
+                                            if (!string.IsNullOrEmpty(value)) {
+                                                var boneObject = new MediaBoneObject(bone, characterActor, model);
+                                                Plugin.PluginLog.Verbose(bone.HkaBone.Name.String + " playing sound.");
+                                                mediaManager.PlayAudio(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
+                                                    movingObject.IsMoving = false;
+                                                    Plugin.PluginLog.Verbose(bone.HkaBone.Name.String + " stopping sound.");
+                                                });
+                                                movingObject.IsMoving = true;
+                                            }
                                         }
                                     }
+                                    movingObject.LastPosition = worldPos;
+                                    movingObject.LastRotation = rotation;
                                 }
-                                movingObject.LastPosition = worldPos;
-                                movingObject.LastRotation = rotation;
                             }
                         }
                     }
