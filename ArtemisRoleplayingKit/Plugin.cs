@@ -3267,36 +3267,50 @@ namespace RoleplayingVoice {
             string modName = Path.GetFileName(directory);
             int papFilesFound = 0;
             int mdlFilesFound = 0;
+
             for (int i = 0; i < option.Files.Count; i++) {
                 var item = option.Files.ElementAt(i);
-                if (item.Key.EndsWith(".pap")) {
-                    string[] strings = item.Key.Split("/");
-                    string value = strings[strings.Length - 1];
-                    if (!_animationMods.ContainsKey(modName)) {
-                        _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
-                    }
-                    if (!_animationMods[modName].Value.Contains(value)) {
-                        _animationMods[modName].Value.Add(value);
-                    }
-                    papFilesFound++;
-                    if (!_papSorting.ContainsKey(value)) {
-                        try {
-                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipPap) });
-                            if (config.DebugMode) {
-                                Plugin.PluginLog?.Verbose("Found: " + item.Value);
-                            }
-                        } catch {
-                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                try {
+                    if (!string.IsNullOrEmpty(item.Key)) {
+                        if (config.DebugMode) {
+                            Plugin.PluginLog?.Verbose("Reading: " + item.Key);
                         }
-                    } else {
-                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipPap));
+                        if (item.Key.Trim().EndsWith(".pap")) {
+                            string[] strings = item.Key.Split("/");
+                            string value = strings[strings.Length - 1];
+                            if (!_animationMods.ContainsKey(modName)) {
+                                _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
+                            }
+                            if (!_animationMods[modName].Value.Contains(value)) {
+                                _animationMods[modName].Value.Add(value);
+                            }
+                            papFilesFound++;
+                            if (!_papSorting.ContainsKey(value)) {
+                                try {
+                                    _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>() { new Tuple<string, string, bool>(directory, modName, !skipPap) });
+                                    if (config.DebugMode) {
+                                        Plugin.PluginLog?.Verbose("Found: " + item.Value);
+                                    }
+                                } catch {
+                                    Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + item.Key + " already exists, ignoring.");
+                                }
+                            } else {
+                                _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipPap));
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    PluginLog.Warning(e, e.Message);
                 }
-                if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
-                    && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))) {
-                    mdlFilesFound++;
-                } else if (!directory.ToLower().Contains("ivcs")) {
-                    _modelDependancyMods[modName] = null;
+                try {
+                    if (item.Key.Contains(".mdl") && (item.Key.Contains("equipment") || item.Key.Contains("accessor")
+                        && !directory.ToLower().Contains("hrothgar & viera") && !directory.ToLower().Contains("megapack") && !directory.ToLower().Contains("ivcs"))) {
+                        mdlFilesFound++;
+                    } else if (!directory.ToLower().Contains("ivcs")) {
+                        _modelDependancyMods[modName] = null;
+                    }
+                } catch (Exception e) {
+                    PluginLog.Warning(e, e.Message);
                 }
             }
             if (mdlFilesFound > 0) {
@@ -3411,29 +3425,40 @@ namespace RoleplayingVoice {
                                 if (config.DebugMode) {
                                     Plugin.PluginLog?.Verbose("Examining: " + directory);
                                 }
+                                string modName = Path.GetFileName(directory);
                                 Option option = null;
                                 List<Group> groups = new List<Group>();
-                                string modName = Path.GetFileName(directory);
+                                if (directory.Contains("GREAT ASSET")) {
+                                    object test = new object();
+                                }
                                 if (Directory.Exists(directory)) {
                                     foreach (string file in Directory.EnumerateFiles(directory)) {
                                         if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
                                             if (file.EndsWith("default_mod.json")) {
-                                                option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
+                                                try {
+                                                    option = JsonConvert.DeserializeObject<Option>(File.ReadAllText(file));
+                                                } catch {
+
+                                                }
                                             } else {
-                                                groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
+                                                try {
+                                                    groups.Add(JsonConvert.DeserializeObject<Group>(File.ReadAllText(file)));
+                                                } catch {
+
+                                                }
                                             }
                                         }
                                     }
                                 }
                                 if (!_alreadyScannedMods.ContainsKey(modName)) {
-                                    _alreadyScannedMods[modName] = true;
+                                _alreadyScannedMods[modName] = true;
                                     if (option != null) {
                                         ExtractModFiles(option, directory, true);
                                     }
                                     foreach (Group group in groups) {
                                         if (group != null) {
                                             foreach (Option groupOption in group.Options) {
-                                                ExtractModFiles(option, directory, true);
+                                                ExtractModFiles(groupOption, directory, true);
                                             }
                                         }
                                     }
@@ -4035,63 +4060,65 @@ namespace RoleplayingVoice {
                 if (config.DebugMode) {
                     Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
                 }
-                for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
-                    foreach (var modName in _animationMods.Keys) {
-                        if (modName.ToLower().Contains(commandArguments)) {
-                            if (collection.Item3.Name != "None") {
-                                var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, modName, true);
-                                _mediaManager.StopAudio(_playerObject);
-                                if (config.DebugMode) {
-                                    Plugin.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
-                                }
-                                var animationItems = _animationMods[modName];
-                                foreach (var foundAnimation in animationItems.Value) {
-                                    bool foundEmote = false;
-                                    if (_papSorting.ContainsKey(foundAnimation)) {
-                                        var sortedList = _papSorting[foundAnimation];
-                                        foreach (var mod in sortedList) {
-                                            if (mod.Item2.ToLower().Contains(modName.ToLower().Trim())) {
-                                                _mediaManager.CleanNonStreamingSounds();
-                                                if (!foundEmote) {
-                                                    if (list.ContainsKey(foundAnimation)) {
-                                                        foreach (var value in list[foundAnimation]) {
-                                                            try {
-                                                                string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
-                                                                if (!string.IsNullOrEmpty(name)) {
-                                                                    if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
-                                                                        emoteData.Add(new
-                                                                        EmoteModData(
-                                                                        name,
-                                                                        value.RowId,
-                                                                        value.ActionTimeline[0].Value.RowId,
-                                                                        modName));
-                                                                        deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
-                                                                    }
-                                                                    foundEmote = true;
-                                                                    break;
+                _mediaManager?.CleanNonStreamingSounds();
+                // for (int i = 0; i < 20 && emoteData.Count == 0; i++) {
+                foreach (var modName in _animationMods.Keys) {
+                    if (modName.ToLower().Contains(commandArguments)) {
+                        if (collection.Item3.Name != "None") {
+                            var result = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, modName, true);
+                            var result2 = PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection.Item3.Id, modName, 10);
+                            _mediaManager.StopAudio(_playerObject);
+                            if (config.DebugMode) {
+                                Plugin.PluginLog.Debug(modName + " was attempted to be enabled. The result was " + result + ".");
+                            }
+                            var animationItems = _animationMods[modName];
+                            foreach (var foundAnimation in animationItems.Value) {
+                                bool foundEmote = false;
+                                if (_papSorting.ContainsKey(foundAnimation)) {
+                                    var sortedList = _papSorting[foundAnimation];
+                                    foreach (var mod in sortedList) {
+                                        if (mod.Item2.ToLower().Contains(modName.ToLower().Trim())) {
+                                            if (!foundEmote) {
+                                                if (list.ContainsKey(foundAnimation)) {
+                                                    foreach (var value in list[foundAnimation]) {
+                                                        try {
+                                                            string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                            if (!string.IsNullOrEmpty(name)) {
+                                                                if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
+                                                                    emoteData.Add(new
+                                                                    EmoteModData(
+                                                                    name,
+                                                                    value.RowId,
+                                                                    value.ActionTimeline[0].Value.RowId,
+                                                                    modName));
+                                                                    deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
                                                                 }
-                                                            } catch {
+                                                                foundEmote = true;
+                                                                break;
                                                             }
+                                                        } catch {
                                                         }
                                                     }
                                                 }
-                                            } else {
-                                                // Thread.Sleep(100);
-                                                var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, mod.Item2, false);
-                                                if (config.DebugMode) {
-                                                    Plugin.PluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
-                                                }
+                                            }
+                                        } else {
+                                            // Thread.Sleep(100);
+                                            var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, mod.Item2, false);
+                                            var ipcResult2 = PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection.Item3.Id, mod.Item2, -10);
+                                            if (config.DebugMode) {
+                                                Plugin.PluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
                                             }
                                         }
                                     }
                                 }
-                                break;
-                            } else {
-                                _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
                             }
+                            break;
+                        } else {
+                            _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
                         }
                     }
                 }
+                //}
                 if (emoteData.Count > 0) {
                     if (emoteData.Count == 1) {
                         TriggerCharacterEmote(emoteData[0], targetObject);
