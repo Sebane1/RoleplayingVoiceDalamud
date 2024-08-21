@@ -1,11 +1,10 @@
-Artemis Roleplaying Kit can voice every NPC Dialogue and Player Dialogue, and change any character combat sound. Among many other Roleplaying Quality of life features!
+Artemis Roleplaying Kit can voice Player Dialogue, and change any character combat sound. Among many other Roleplaying Quality of life features!
 
 Want a full overview? Check out the the plugin website!
 https://artemisroleplayingkit.carrd.co/
 
 Features:
-- Crowdsourced NPC Dialogue that aims to provide voiceover for all unvoiced text in the MSQ, and side content.
-- Reading for anything you type via Elevenlabs (API key needed), XTTS, or custom Narrator voices.
+- Reading for anything you type via Elevenlabs (User provided API key needed), XTTS, or custom Narrator voices.
 - Voiceover for other players.
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility.
 - Automatic lip syncronization on your character!
