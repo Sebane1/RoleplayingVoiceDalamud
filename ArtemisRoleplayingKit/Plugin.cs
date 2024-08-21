@@ -2756,7 +2756,7 @@ namespace RoleplayingVoice {
                         try {
                             Directory.CreateDirectory(stagingPath);
                         } catch {
-                            _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                            _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
                         }
                         if (Directory.Exists(stagingPath)) {
                             foreach (string file in Directory.EnumerateFiles(stagingPath)) {
@@ -3667,8 +3667,6 @@ namespace RoleplayingVoice {
                              "record (Converts spoken speech to in game chat)\r\n" +
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
                              "textadvance (Toggles automatic text advancement when community provided dialogue finishes)\r\n" +
-                             "npcvoice (Toggles crowdsourced NPC dialogue for unvoiced cutscenes)\r\n" +
-                             "arrvoice (Toggles whether ARR voice acting will be replaced by new voices)\r\n" +
                              "clearsound (Stops all currently playing sounds, and clears out the sound cache for other players)");
                             break;
                         case "on":
@@ -3788,12 +3786,12 @@ namespace RoleplayingVoice {
                             }
                             config.Save();
                             break;
-                        case "npcvoice":
+                        case "accessibilitymode":
                             config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
                             if (config.NpcSpeechEnabled) {
-                                _chat?.Print("Npc Voice Enabled");
+                                _chat?.Print("Accessibility Mode Enabled");
                             } else {
-                                _chat?.Print("Npc Voice Disabled");
+                                _chat?.Print("Accessibility Mode Disabled");
                             }
                             config.Save();
                             break;
