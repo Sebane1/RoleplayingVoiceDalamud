@@ -186,7 +186,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
 
         private void _toast_QuestToast(ref SeString message, ref Dalamud.Game.Gui.Toast.QuestToastOptions options, ref bool isHandled) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_plugin.Config.NpcSpeechEnabled) {
                 if (_clientState.IsLoggedIn) {
                     if (CheckForBannedKeywords(message) || message.TextValue.Contains("friend request")) {
                         string newMessage = message.TextValue.Contains("friend request") ? "Friend request received." : message.TextValue;
@@ -238,7 +238,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private Dictionary<string, string> _knownNpcs;
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_plugin.Config.NpcSpeechEnabled) {
                 if (_clientState.IsLoggedIn) {
                     if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
                         NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications);
@@ -253,7 +253,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return lips;
         }
         private void RedoLineWindow_RedoLineClicked(object sender, string value) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_plugin.Config.NpcSpeechEnabled) {
                 if (!_blockAudioGeneration) {
                     NPCText(_state.Speaker, _state.Text.TrimStart('.'), true, NPCVoiceManager.VoiceModel.Speed, true, true, value, !string.IsNullOrEmpty(value) ? VoiceLinePriority.SendNote : VoiceLinePriority.None);
                     _startedNewDialogue = true;
@@ -271,13 +271,13 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void _chatGui_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_plugin.Config.NpcSpeechEnabled) {
                 string text = message.TextValue;
                 string npcName = sender.TextValue;
                 _lastNPCAnnouncementName = sender.TextValue;
                 Task.Run(delegate () {
                     if (_clientState.IsLoggedIn &&
-                        !_plugin.Config.NpcSpeechGenerationDisabled && Conditions.IsBoundByDuty) {
+                        _plugin.Config.NpcSpeechEnabled && Conditions.IsBoundByDuty) {
                         if (_state == null) {
                             switch (type) {
                                 case XivChatType.NPCDialogueAnnouncements:
@@ -322,7 +322,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         private void Filter_OnCutsceneAudioDetected(object sender, SoundFilter.InterceptedSound e) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+            if (_plugin.Config.NpcSpeechEnabled) {
                 if (_clientState != null) {
                     if (_clientState.IsLoggedIn) {
                         if (!_currentDialoguePaths.Contains(e.SoundPath) || Conditions.IsBoundByDuty) {
@@ -361,7 +361,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
         unsafe private IntPtr NPCBubbleTextDetour(IntPtr pThis, FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject* pActor, IntPtr pString, bool param3, int attachmentPointID) {
-            if (!_plugin.Config.NpcSpeechGenerationDisabled && !_plugin.Config.IgnoreBubblesFromOverworldNPCs) {
+            if (_plugin.Config.NpcSpeechEnabled && !_plugin.Config.IgnoreBubblesFromOverworldNPCs) {
                 try {
                     if (_clientState.IsLoggedIn
                         && !IsInACutscene() && !Conditions.IsBoundByDuty) {
@@ -466,7 +466,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private void Framework_Update(IFramework framework) {
             if (!disposed)
-                if (!_plugin.Config.NpcSpeechGenerationDisabled) {
+                if (_plugin.Config.NpcSpeechEnabled) {
                     if (_npcDungeonDialogueQueue.Count > 0) {
                         Task.Run(() => {
                             while (_npcDungeonDialogueQueue.Count > 0) {
@@ -515,8 +515,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }
                                         }
                                         alreadyConfiguredBubbles = true;
-                                        if (!_plugin.Config.NpcSpeechGenerationDisabled) {
-                                            _plugin.Config.NpcSpeechGenerationDisabled = Service.ClientState.ClientLanguage != ClientLanguage.English;
+                                        if (_plugin.Config.NpcSpeechEnabled) {
+                                            _plugin.Config.NpcSpeechEnabled = Service.ClientState.ClientLanguage != ClientLanguage.English;
                                         }
                                     }
                                     _state = GetTalkAddonState();
@@ -546,7 +546,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         } else {
                                             if (_currentDialoguePaths.Count > 0) {
                                                 if (!_currentDialoguePathsCompleted[_currentDialoguePathsCompleted.Count - 1] &&
-                                                !_blockAudioGeneration && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                                                !_blockAudioGeneration && _plugin.Config.NpcSpeechEnabled) {
                                                     try {
                                                         var otherData = _clientState.LocalPlayer.OnlineStatus;
                                                         if (otherData.Id == 15) {
@@ -879,15 +879,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : voiceLinePriority);
-                        if (!previouslyAddedLines.Contains(message + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), _plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        if (!previouslyAddedLines.Contains(message + nameToUse) && _plugin.Config.NpcSpeechEnabled) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                             previouslyAddedLines.Add(message + nameToUse);
                             if (_npcVoiceHistoryItems.Count > 10) {
                                 _npcVoiceHistoryItems.RemoveAt(0);
                             }
                         }
-                        if (!_plugin.Config.NpcSpeechGenerationDisabled && !onlySendData) {
+                        if (_plugin.Config.NpcSpeechEnabled && !onlySendData) {
                             if (stream.Item1 != null) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
@@ -976,12 +976,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                         var conditionsToUseXivV = VoiceLinePriority.None;
                         var conditionToUseElevenLabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : conditionsToUseXivV;
                         var conditionToUseOverride = voiceLinePriority != VoiceLinePriority.None ? voiceLinePriority : conditionToUseElevenLabs;
-                        var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionToUseOverride;
+                        var conditionsForDatamining = !_plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionToUseOverride;
                         for (int i = 0; i < 2; i++) {
                             var stream =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
                             false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
-                            if (!previouslyAddedLines.Contains(value + nameToUse) && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            if (!previouslyAddedLines.Contains(value + nameToUse) && _plugin.Config.NpcSpeechEnabled) {
                                 _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false,
                                     true, npcData, redoLine, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                                 previouslyAddedLines.Add(value + nameToUse);
@@ -989,7 +989,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _npcVoiceHistoryItems.RemoveAt(0);
                                 }
                             }
-                            if (stream.Item1 != null && stream.Item1.Length > 50 && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                            if (stream.Item1 != null && stream.Item1.Length > 50 && _plugin.Config.NpcSpeechEnabled) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
@@ -1152,7 +1152,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream was null! trying again. " + downloadTimer.Elapsed.ToString());
                                 }
-                                if (_plugin.Config.NpcSpeechGenerationDisabled) {
+                                if (_plugin.Config.NpcSpeechEnabled) {
                                     break;
                                 }
                             }
@@ -1214,11 +1214,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string voice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra, ref isTerritorySpecific);
                     var conditionsForElevenlabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : VoiceLinePriority.None;
                     var conditionsForOverride = (voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None) ? voiceLinePriority : conditionsForElevenlabs;
-                    var conditionsForDatamining = _plugin.Config.NpcSpeechGenerationDisabled ? VoiceLinePriority.Datamining : conditionsForOverride;
+                    var conditionsForDatamining = _plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionsForOverride;
                     var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice
                     , false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
-                    if (stream.Item1 != null && !_plugin.Config.NpcSpeechGenerationDisabled) {
+                    if (stream.Item1 != null && _plugin.Config.NpcSpeechEnabled) {
                         WaveStream wavePlayer = stream.Item1;
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = stream.Item2 ? CheckForDefinedPitch(nameToUse) :

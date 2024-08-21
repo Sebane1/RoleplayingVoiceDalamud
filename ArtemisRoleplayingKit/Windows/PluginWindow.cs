@@ -93,7 +93,7 @@ namespace RoleplayingVoice {
         private bool _readLocationAndToastNotifications;
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
-        private bool _npcSpeechGenerationDisabled;
+        private bool _npcSpeechGenerationEnabled;
         private bool _npcAutoTextAdvance;
         private bool _replaceVoicedARRCutscenes;
         private bool _refreshing;
@@ -176,7 +176,7 @@ namespace RoleplayingVoice {
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
-                    _npcSpeechGenerationDisabled = configuration.NpcSpeechGenerationDisabled;
+                    _npcSpeechGenerationEnabled = configuration.NpcSpeechEnabled;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -315,12 +315,12 @@ namespace RoleplayingVoice {
                         DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
-                    //if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English) {
-                    //    if (ImGui.BeginTabItem("NPC Dialogue")) {
-                    //        DrawNPCDialogue();
-                    //        ImGui.EndTabItem();
-                    //    }
-                    //}
+                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && configuration.NpcSpeechEnabled) {
+                        if (ImGui.BeginTabItem("NPC Dialogue")) {
+                            DrawNPCDialogue();
+                            ImGui.EndTabItem();
+                        }
+                    }
                     if (ImGui.BeginTabItem("Custom NPC")) {
                         PluginReference.NpcPersonalityWindow.Draw();
                         ImGui.EndTabItem();
@@ -391,6 +391,8 @@ namespace RoleplayingVoice {
                     ImGui.TextUnformatted($"Dragging texture for import:\n\t{string.Join("\n\t", m.Files.Select(Path.GetFileName))}");
                     return true;
                 });
+                ImGui.TextWrapped("Enables accessibility reading for users with low vision or other accessibility needs.");
+                ImGui.Checkbox("Enable Accessibility Reader", ref _npcSpeechGenerationEnabled);
                 if (ImGui.Button("Open Custom Photo Frames Folder", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                     string path = Path.Combine(PluginReference.Config.CacheFolder, @"PhotoFrames\");
                     ProcessStartInfo ProcessInfo;
@@ -452,7 +454,6 @@ namespace RoleplayingVoice {
                 //ImGui.TableHeadersRow();
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                ImGui.Checkbox("Turn Off NPC Dialogue", ref _npcSpeechGenerationDisabled);
                 ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
                 ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
@@ -731,7 +732,7 @@ namespace RoleplayingVoice {
             configuration.StreamPath = _streamPath;
             configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
             configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
-            configuration.NpcSpeechGenerationDisabled = _npcSpeechGenerationDisabled;
+            configuration.NpcSpeechEnabled = _npcSpeechGenerationEnabled;
             configuration.AutoTextAdvance = _npcAutoTextAdvance;
             configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
             configuration.AudioOutputType = _audioOutputType.SelectedIndex;

@@ -27,7 +27,7 @@ namespace RoleplayingVoice {
         private bool ignoreWhitelist = true;
         private bool performEmotesBasedOnWrittenText;
         private bool seperateSCDModsFromNativeSoundSystem;
-        private bool _npcSpeechGenerationDisabled;
+        private bool _npcSpeechEnabled;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
         private bool _autoTextAdvance = true;
@@ -117,7 +117,7 @@ namespace RoleplayingVoice {
         public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
-        public bool NpcSpeechGenerationDisabled { get => _npcSpeechGenerationDisabled; set => _npcSpeechGenerationDisabled = value; }
+        public bool NpcSpeechEnabled { get => _npcSpeechEnabled; set => _npcSpeechEnabled = value; }
         public float NpcVolume {
             get => _npcVolume; set {
                 _npcVolume = value;

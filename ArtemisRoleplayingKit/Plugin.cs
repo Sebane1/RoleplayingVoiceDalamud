@@ -466,8 +466,7 @@ namespace RoleplayingVoice {
                 _clientState.CfPop += _clientState_CfPop;
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 _catalogueWindow.Plugin = this;
-                if (_clientState.IsLoggedIn && !config.NpcSpeechGenerationDisabled) {
-                    _chat?.Print("Artemis Roleplaying Kit is now using Crowdsourced NPC Dialogue! If you wish to opt out, visit the plugin settings.");
+                if (_clientState.IsLoggedIn && config.NpcSpeechEnabled) {
                     _gposeWindow.Initialize();
                 }
                 RefreshData();
@@ -3790,11 +3789,11 @@ namespace RoleplayingVoice {
                             config.Save();
                             break;
                         case "npcvoice":
-                            config.NpcSpeechGenerationDisabled = !config.NpcSpeechGenerationDisabled;
-                            if (config.NpcSpeechGenerationDisabled) {
-                                _chat?.Print("Npc Voice Disabled");
-                            } else {
+                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
+                            if (config.NpcSpeechEnabled) {
                                 _chat?.Print("Npc Voice Enabled");
+                            } else {
+                                _chat?.Print("Npc Voice Disabled");
                             }
                             config.Save();
                             break;
