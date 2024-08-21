@@ -5,7 +5,7 @@ https://artemisroleplayingkit.carrd.co/
 
 Features:
 - Crowdsourced NPC Dialogue that aims to provide voiceover for all unvoiced text in the MSQ, and side content.
-- Reading for anything you type via Elevenlabs, XTTS, or custom Narrator voices.
+- Reading for anything you type via Elevenlabs (API key needed), XTTS, or custom Narrator voices.
 - Voiceover for other players.
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility.
 - Automatic lip syncronization on your character!
