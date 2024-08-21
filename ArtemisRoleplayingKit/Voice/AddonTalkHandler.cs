@@ -147,7 +147,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             noSound.CopyTo(memoryStream);
             memoryStream.Position = 0;
             using (StreamReader reader = new StreamReader(memoryStream)) {
-                //_knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
+                _knownNpcs = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader.ReadToEnd());
             }
             _memoryService = new MemoryService();
             _settingService = new SettingsService();
@@ -235,6 +235,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             674,719,778,746,810,824,677,720,779,758,811,825,845,846,847,922,858,848,885,923, 992,995,997,1092,1071,1095,1140,1168
         };
         private bool _filterWasRan;
+        private Dictionary<string, string> _knownNpcs;
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (!_plugin.Config.NpcSpeechGenerationDisabled) {

@@ -315,12 +315,12 @@ namespace RoleplayingVoice {
                         DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
-                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English) {
-                        if (ImGui.BeginTabItem("NPC Dialogue")) {
-                            DrawNPCDialogue();
-                            ImGui.EndTabItem();
-                        }
-                    }
+                    //if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English) {
+                    //    if (ImGui.BeginTabItem("NPC Dialogue")) {
+                    //        DrawNPCDialogue();
+                    //        ImGui.EndTabItem();
+                    //    }
+                    //}
                     if (ImGui.BeginTabItem("Custom NPC")) {
                         PluginReference.NpcPersonalityWindow.Draw();
                         ImGui.EndTabItem();
