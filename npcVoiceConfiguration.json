@@ -231,7 +231,7 @@
     "Pepoane": "Poane"
   },  
   "CharacterToCacheType": {
-    "Cid": 1,
+    "Cid": 0,
     "Papalymo": 1,
     "Biggs": 1,
     "Wedge": 1,
@@ -242,6 +242,8 @@
     "Tataru": 0,
     "Gaius van Baelsar": 1,
     "Mablu": 0,
+    "2B": 1,
+    "9S": 1,
     "Chocobokeep": 0,
     "Skywatcher": 0,
     "Ilberd": 1,
