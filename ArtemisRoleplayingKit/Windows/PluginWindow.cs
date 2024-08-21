@@ -445,8 +445,7 @@ namespace RoleplayingVoice {
                 }
             }
             try {
-                ImGui.TextWrapped("NPC speech is currently a work in progress, and will likely slowly until a majority of dialogue is created and cached.");
-                ImGui.BeginTable("##NPC Dialogue Options Table", 2);
+                 ImGui.BeginTable("##NPC Dialogue Options Table", 2);
                 ImGui.TableSetupColumn("Page 1", ImGuiTableColumnFlags.WidthStretch, 300);
                 ImGui.TableSetupColumn("Page 2", ImGuiTableColumnFlags.WidthStretch, 300);
                 //ImGui.TableHeadersRow();
