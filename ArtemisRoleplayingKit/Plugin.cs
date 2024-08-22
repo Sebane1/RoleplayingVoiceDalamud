@@ -3666,7 +3666,8 @@ namespace RoleplayingVoice {
                              "rtmp [rtmp url] (tunes into a raw RTMP stream locally)\r\n" +
                              "record (Converts spoken speech to in game chat)\r\n" +
                              "recordrp (Converts spoken speech to in game chat, but adds roleplaying quotes)\r\n" +
-                             "textadvance (Toggles automatic text advancement when community provided dialogue finishes)\r\n" +
+                             "accessibilitymode (Toggles accessibility mode)\r\n" +
+                             "textadvance (Toggles automatic text advancement when accessibility mode finishes)\r\n" +
                              "clearsound (Stops all currently playing sounds, and clears out the sound cache for other players)");
                             break;
                         case "on":
@@ -3788,11 +3789,13 @@ namespace RoleplayingVoice {
                             break;
                         case "accessibilitymode":
                             config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
+                            
                             if (config.NpcSpeechEnabled) {
                                 _chat?.Print("Accessibility Mode Enabled");
                             } else {
                                 _chat?.Print("Accessibility Mode Disabled");
                             }
+                            _window.NpcSpeechEnabled = config.NpcSpeechEnabled;
                             config.Save();
                             break;
                         case "arrvoice":

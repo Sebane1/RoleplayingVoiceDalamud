@@ -271,6 +271,7 @@ namespace RoleplayingVoice {
 
         public Plugin PluginReference { get; internal set; }
         internal BetterComboBox XttsLanguageComboBox { get => _xttsLanguageComboBox; set => _xttsLanguageComboBox = value; }
+        public bool NpcSpeechEnabled { get => _npcSpeechEnabled; set => _npcSpeechEnabled = value; }
 
         public event EventHandler OnMoveFailed;
 
