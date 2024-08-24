@@ -61,7 +61,7 @@ namespace RoleplayingVoice {
 
         private bool isServerIPValid = false;
         private bool isApiKeyValid = false;
-        private bool _aiVoiceActive = false;
+        private bool _customTTSVoiceActive = false;
         private bool apiKeyValidated = false;
         private bool SizeYChanged = false;
         private bool runOnLaunch = true;
@@ -94,6 +94,7 @@ namespace RoleplayingVoice {
         private bool _performEmotesBasedOnWrittenText;
         private bool _moveSCDBasedModsToPerformanceSlider;
         private bool _npcSpeechEnabled;
+        private bool _defaultValueSet;
         private bool _npcAutoTextAdvance;
         private bool _replaceVoicedARRCutscenes;
         private bool _refreshing;
@@ -163,7 +164,7 @@ namespace RoleplayingVoice {
                     _audioOutputType = new BetterComboBox("##audioOutputMethod", Enum.GetNames(typeof(AudioOutputType)).ToArray(), 0, 200);
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = !string.IsNullOrEmpty(configuration.ApiKey) ? configuration.ApiKey : "";
-                    _aiVoiceActive = configuration.AiVoiceActive;
+                    _customTTSVoiceActive = configuration.AiVoiceActive;
                     _characterVoicePackActive = configuration.VoicePackIsActive;
                     _playerCharacterVolume = configuration.PlayerCharacterVolume;
                     _otherCharacterVolume = configuration.OtherCharacterVolume;
@@ -180,6 +181,7 @@ namespace RoleplayingVoice {
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _npcSpeechEnabled = configuration.NpcSpeechEnabled;
                     configuration.NpcSpeechEnabled = _npcSpeechEnabled;
+                    _defaultValueSet = _npcSpeechEnabled;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -303,8 +305,11 @@ namespace RoleplayingVoice {
             } else {
                 characterVoicePack = "None";
             }
-            if (_aiVoiceActive) {
+            if (_customTTSVoiceActive) {
                 RefreshVoices();
+            }
+            if (_defaultValueSet) {
+                configuration.NpcSpeechEnabled = _npcSpeechEnabled;
             }
         }
         public override void Draw() {
@@ -470,7 +475,7 @@ namespace RoleplayingVoice {
 
                 }
             }
-            ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publically display, stream, advertise, or perform this feature. You may share privately with friends. " +
+            ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publicly display, stream, advertise, or perform this feature. You may share privately with friends. " +
                 "We will no longer acknowledge or talk about this feature on discord, please use Quality Assurance mode for reporting issues.");
             try {
                 ImGui.BeginTable("##NPC Dialogue Options Table", 2);
@@ -671,7 +676,7 @@ namespace RoleplayingVoice {
             if (!isServerIPValid) {
                 ErrorMessage(serverIPErrorMessage);
             }
-            if ((!isApiKeyValid || (string.IsNullOrEmpty(apiKey)) && _aiVoiceActive && configuration.PlayerVoiceEngine == 0)) {
+            if ((!isApiKeyValid || (string.IsNullOrEmpty(apiKey)) && _customTTSVoiceActive && configuration.PlayerVoiceEngine == 0)) {
                 ErrorMessage(apiKeyErrorMessage);
             }
             if (managerNull) {
@@ -732,7 +737,7 @@ namespace RoleplayingVoice {
                 }
                 configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
             }
-            if (_aiVoiceActive && !string.IsNullOrEmpty(apiKey)) {
+            if (_customTTSVoiceActive && !string.IsNullOrEmpty(apiKey)) {
                 configuration.ApiKey = apiKey;
                 _manager.SetAPI(apiKey);
             }
@@ -746,7 +751,7 @@ namespace RoleplayingVoice {
             configuration.LoopingSFXVolume = _loopingSFXVolume;
             configuration.LivestreamVolume = _livestreamVolume;
             configuration.NpcVolume = _npcVolume;
-            configuration.AiVoiceActive = _aiVoiceActive;
+            configuration.AiVoiceActive = _customTTSVoiceActive;
             configuration.VoicePackIsActive = _characterVoicePackActive;
             configuration.UseAggressiveSplicing = _aggressiveCaching;
             configuration.CacheFolder = cacheFolder;
@@ -1022,10 +1027,10 @@ namespace RoleplayingVoice {
             //    if (ImGui.BeginTabItem("Player Speech")) {
             ImGui.Dummy(new Vector2(0, 10));
             ImGui.LabelText("##GCVSLabel", "Generative Character Voice ");
-            ImGui.Checkbox("##characterVoiceActive", ref _aiVoiceActive);
+            ImGui.Checkbox("##characterVoiceActive", ref _customTTSVoiceActive);
             ImGui.SameLine();
             ImGui.Text("Generative Voice Enabled");
-            if (clientState.LocalPlayer != null && _aiVoiceActive) {
+            if (clientState.LocalPlayer != null && _customTTSVoiceActive) {
                 ImGui.Text("Generative Voice Engine");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 _voiceEngineComboBox.Width = (int)ImGui.GetContentRegionMax().X;
@@ -1112,20 +1117,20 @@ namespace RoleplayingVoice {
                         break;
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
-              && !isApiKeyValid && _aiVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _aiVoiceActive) {
+              && !isApiKeyValid && _customTTSVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _customTTSVoiceActive) {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
-            } else if (!clientState.IsLoggedIn && isApiKeyValid && _aiVoiceActive) {
+            } else if (!clientState.IsLoggedIn && isApiKeyValid && _customTTSVoiceActive) {
                 voiceComboBox.Contents[0] = "Not logged in";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");
                     voiceComboBox.Draw();
                 }
             }
-            if (_aiVoiceActive) {
+            if (_customTTSVoiceActive) {
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.Checkbox("##aggressiveCachingActive", ref _aggressiveCaching);
                 ImGui.SameLine();

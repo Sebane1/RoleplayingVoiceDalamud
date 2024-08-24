@@ -6,44 +6,58 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System;
-using System.Diagnostics;
-using System.Windows.Forms;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace RoleplayingVoiceDalamud {
     public static class StreamDetection {
         static bool initialized = false;
+        private static bool _screenCaptureDetected = false;
+
         public static bool RecordingSoftwareIsActive {
             get {
                 if (!initialized) {
                     Task.Run(delegate {
-                        InterceptKeys.Main();
+                        try {
+                            Screenshots.Main();
+                        } catch {
+
+                        }
+                    });
+                    Task.Run(delegate {
+                        while (true) {
+                            bool screenCaptureDetected = false;
+                            var processes = Process.GetProcesses();
+                            foreach (var item in processes) {
+                                string filename = item.ProcessName.ToLower();
+                                string title = item.MainWindowTitle.ToLower();
+                                if (filename.Contains("obs") || filename.Contains("gyazowin") || filename.Contains("gyazoreplay") ||
+                                    filename.Contains("xsplit") || filename.Contains("snippingtool") || filename.Contains("sharex") || filename.Contains("snagit")
+                                    || filename.Contains("fireshot") || filename.Contains("tinytake") || filename.Contains("screenpresso") || filename.Contains("screenshot")
+                                    || filename.Contains("grab") || filename.Contains("loom") || filename.Contains("greenshot") || filename.Contains("nimbus")
+                                    || filename.Contains("monosnap") || filename.Contains("skitch") || filename.Contains("lightshot")
+                                    || filename.Contains("droplr") || filename.Contains("nimbus") || filename.Contains("picpick") || title.Contains("/ x")) {
+                                    screenCaptureDetected = true;
+                                }
+                            }
+                            _screenCaptureDetected = screenCaptureDetected;
+                            Thread.Sleep(1000);
+                        }
                     });
                     initialized = true;
                 }
-                if (InterceptKeys.PrintScreenHeld) {
+                if (Screenshots.PrintScreenHeld) {
                     Task.Run(delegate {
                         Thread.Sleep(5000);
-                        InterceptKeys.PrintScreenHeld = false;
+                        Screenshots.PrintScreenHeld = false;
                     });
                     return true;
                 }
-
-                foreach (var item in Process.GetProcesses()) {
-                    string filename = item.ProcessName.ToLower();
-                    if (filename.Contains("obs") || filename.Contains("gyazowin") || filename.Contains("gyazoreplay") ||
-                        filename.Contains("xsplit") || filename.Contains("snippingtool")) {
-                        return true;
-                    }
-                }
-                return false;
+                return _screenCaptureDetected;
             }
         }
     }
 
-    public static class InterceptKeys {
+    public static class Screenshots {
         private const int WH_KEYBOARD_LL = 13;
         private const int WM_KEYDOWN = 0x0100;
         private static LowLevelKeyboardProc _proc = HookCallback;
