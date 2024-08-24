@@ -470,7 +470,8 @@ namespace RoleplayingVoice {
 
                 }
             }
-            ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publically display, stream, advertise, or perform this feature. You may share privately with friends.");
+            ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publically display, stream, advertise, or perform this feature. You may share privately with friends. " +
+                "We will no longer acknowledge or talk about this feature on discord, please use Quality Assurance mode for reporting issues.");
             try {
                 ImGui.BeginTable("##NPC Dialogue Options Table", 2);
                 ImGui.TableSetupColumn("Page 1", ImGuiTableColumnFlags.WidthStretch, 300);
