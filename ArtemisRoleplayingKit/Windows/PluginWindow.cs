@@ -180,8 +180,7 @@ namespace RoleplayingVoice {
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _npcSpeechEnabled = configuration.NpcSpeechEnabled;
-                    configuration.NpcSpeechEnabled = _npcSpeechEnabled;
-                    _defaultValueSet = _npcSpeechEnabled;
+                    _defaultValueSet = true;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -308,9 +307,6 @@ namespace RoleplayingVoice {
             if (_customTTSVoiceActive) {
                 RefreshVoices();
             }
-            if (_defaultValueSet) {
-                configuration.NpcSpeechEnabled = _npcSpeechEnabled;
-            }
         }
         public override void Draw() {
             if (clientState.LocalPlayer != null) {
@@ -321,6 +317,9 @@ namespace RoleplayingVoice {
             _streamDetectionActive = StreamDetection.RecordingSoftwareIsActive;
             if (clientState.IsLoggedIn) {
                 fileDialogManager.Draw();
+                if (_defaultValueSet) {
+                    configuration.NpcSpeechEnabled = _npcSpeechEnabled;
+                }
                 if (ImGui.BeginTabBar("ConfigTabs")) {
                     if (ImGui.BeginTabItem("Player Voice")) {
                         DrawGeneral();
@@ -399,7 +398,7 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##debugMode", ref _debugMode);
             ImGui.SameLine();
             ImGui.Text("A bunch of debug information will be posted in chat. Only useful for developers.");
-            if (!_streamDetectionActive) {
+            if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && !_streamDetectionActive) {
                 ImGui.Checkbox("##accessibilityreader", ref _npcSpeechEnabled);
                 ImGui.SameLine();
                 ImGui.Text("Enables accessibility dialogue for NPCs");

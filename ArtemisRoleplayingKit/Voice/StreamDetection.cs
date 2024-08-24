@@ -37,10 +37,12 @@ namespace RoleplayingVoiceDalamud {
                                     || filename.Contains("monosnap") || filename.Contains("skitch") || filename.Contains("lightshot")
                                     || filename.Contains("droplr") || filename.Contains("nimbus") || filename.Contains("picpick") || title.Contains("/ x")) {
                                     screenCaptureDetected = true;
+                                    break;
                                 }
                             }
+                            processes = null;
                             _screenCaptureDetected = screenCaptureDetected;
-                            Thread.Sleep(1000);
+                            Thread.Sleep(100);
                         }
                     });
                     initialized = true;

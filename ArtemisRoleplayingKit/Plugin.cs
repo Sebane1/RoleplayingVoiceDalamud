@@ -466,7 +466,7 @@ namespace RoleplayingVoice {
                 _clientState.CfPop += _clientState_CfPop;
                 _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 _catalogueWindow.Plugin = this;
-                if (_clientState.IsLoggedIn && config.NpcSpeechEnabled) {
+                if (_clientState.IsLoggedIn) {
                     _gposeWindow.Initialize();
                 }
                 RefreshData();
