@@ -879,7 +879,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), _plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, 
+                        voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), !_plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
                         if (!previouslyAddedLines.Contains(message + nameToUse) && _plugin.Config.NpcSpeechEnabled) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
                             previouslyAddedLines.Add(message + nameToUse);
@@ -974,7 +975,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _plugin.Chat.Print("Get audio from server. Sending " + value);
                         }
                         var conditionsToUseXivV = VoiceLinePriority.None;
-                        var conditionToUseElevenLabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : conditionsToUseXivV;
+                        var conditionToUseElevenLabs = isExtra || isTerritorySpecific ? VoiceLinePriority.ETTS : conditionsToUseXivV;
                         var conditionToUseOverride = voiceLinePriority != VoiceLinePriority.None ? voiceLinePriority : conditionToUseElevenLabs;
                         var conditionsForDatamining = !_plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionToUseOverride;
                         for (int i = 0; i < 2; i++) {
@@ -1212,12 +1213,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     bool isExtra = false;
                     bool isTerritorySpecific = false;
                     string voice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra, ref isTerritorySpecific);
-                    var conditionsForElevenlabs = isExtra || isTerritorySpecific ? VoiceLinePriority.Elevenlabs : VoiceLinePriority.None;
-                    var conditionsForOverride = (voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None) ? voiceLinePriority : conditionsForElevenlabs;
+                    var conditionsForETTS = isExtra || isTerritorySpecific ? VoiceLinePriority.ETTS : VoiceLinePriority.None;
+                    var conditionsForOverride = (voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None) ? voiceLinePriority : conditionsForETTS;
                     var conditionsForDatamining = _plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionsForOverride;
                     var stream =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice
-                    , false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
+                    await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
                     if (stream.Item1 != null && _plugin.Config.NpcSpeechEnabled) {
                         WaveStream wavePlayer = stream.Item1;
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);

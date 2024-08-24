@@ -4,6 +4,7 @@ using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
 using RoleplayingMediaCore.AudioRecycler;
 using RoleplayingVoiceCore;
+using RoleplayingVoiceDalamud;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -117,7 +118,12 @@ namespace RoleplayingVoice {
         public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
-        public bool NpcSpeechEnabled { get => _npcSpeechEnabled; set => _npcSpeechEnabled = value; }
+        public bool NpcSpeechEnabled {
+            get {
+                return _npcSpeechEnabled && !StreamDetection.RecordingSoftwareIsActive;
+            }
+            set => _npcSpeechEnabled = value;
+        }
         public float NpcVolume {
             get => _npcVolume; set {
                 _npcVolume = value;

@@ -3788,8 +3788,7 @@ namespace RoleplayingVoice {
                             config.Save();
                             break;
                         case "accessibilitymode":
-                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
-                            
+                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;                          
                             if (config.NpcSpeechEnabled) {
                                 _chat?.Print("Accessibility Mode Enabled");
                             } else {

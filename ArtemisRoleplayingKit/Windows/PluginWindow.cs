@@ -109,6 +109,8 @@ namespace RoleplayingVoice {
         private bool _ignoreBubblesFromOverworldNPCs;
         private bool _localVoiceForNonWhitelistedPlayers;
         private bool _narrateUnquotedText;
+        private Vector2? _lastWindowPosition;
+        private bool _streamDetectionActive;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -177,6 +179,7 @@ namespace RoleplayingVoice {
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _npcSpeechEnabled = configuration.NpcSpeechEnabled;
+                    configuration.NpcSpeechEnabled = _npcSpeechEnabled;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -305,6 +308,12 @@ namespace RoleplayingVoice {
             }
         }
         public override void Draw() {
+            if (clientState.LocalPlayer != null) {
+                this.WindowName = clientState.LocalPlayer.Name + "'s Config";
+            } else {
+                this.WindowName = "No User Present";
+            }
+            _streamDetectionActive = StreamDetection.RecordingSoftwareIsActive;
             if (clientState.IsLoggedIn) {
                 fileDialogManager.Draw();
                 if (ImGui.BeginTabBar("ConfigTabs")) {
@@ -385,6 +394,11 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##debugMode", ref _debugMode);
             ImGui.SameLine();
             ImGui.Text("A bunch of debug information will be posted in chat. Only useful for developers.");
+            if (!_streamDetectionActive) {
+                ImGui.Checkbox("##accessibilityreader", ref _npcSpeechEnabled);
+                ImGui.SameLine();
+                ImGui.Text("Enables accessibility dialogue for NPCs");
+            }
             ImGui.Dummy(new Vector2(0, 10));
             try {
                 ImGui.TextWrapped("You can now add custom photo frames! You can access these while the game UI is hidden in Gpose!");
@@ -445,8 +459,20 @@ namespace RoleplayingVoice {
 
                 }
             }
+            if (ImGui.Button("Learn how text to speech voices are made.", new Vector2(ImGui.GetWindowSize().X - 10, 20))) {
+                Process process = new Process();
+                try {
+                    // true is the default, but it is important not to set it to false
+                    process.StartInfo.UseShellExecute = true;
+                    process.StartInfo.FileName = "https://docs.google.com/document/d/1hQrFjk5dKKTaXqhiS3HGJDZJ6rjMb4vFAwwT8E-hEUc/edit?usp=sharing";
+                    process.Start();
+                } catch (Exception e) {
+
+                }
+            }
+            ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publically display, stream, advertise, or perform this feature. You may share privately with friends.");
             try {
-                 ImGui.BeginTable("##NPC Dialogue Options Table", 2);
+                ImGui.BeginTable("##NPC Dialogue Options Table", 2);
                 ImGui.TableSetupColumn("Page 1", ImGuiTableColumnFlags.WidthStretch, 300);
                 ImGui.TableSetupColumn("Page 2", ImGuiTableColumnFlags.WidthStretch, 300);
                 //ImGui.TableHeadersRow();
@@ -455,10 +481,10 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
                 ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
-                ImGui.Checkbox("Auto Advance Text When NPC Speech Finishes (Numpad 0)", ref _npcAutoTextAdvance);
+                ImGui.Checkbox("Auto Advance Text (Numpad 0)", ref _npcAutoTextAdvance);
                 ImGui.TableSetColumnIndex(1);
                 ImGui.Checkbox("Allow dialogue queuing outside cutscenes", ref _allowDialogueQueueOutsideCutscenes);
-                ImGui.Checkbox("Replace A Realm Reborn Voice Acting", ref _replaceVoicedARRCutscenes);
+                ImGui.Checkbox("Use the same voices for A Realm Reborn", ref _replaceVoicedARRCutscenes);
                 ImGui.Checkbox("Ignore bubbles from overworld NPCs", ref _ignoreBubblesFromOverworldNPCs);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
                 ImGui.EndTable();
@@ -1177,21 +1203,21 @@ namespace RoleplayingVoice {
                 }
                 ImGui.TextWrapped("(Simply name .mp3 files after the emote or battle action they should be tied to.)");
             }
-            ImGui.Dummy(new Vector2(0, 10));
-            ImGui.TextWrapped("Artemis Roleplaying Kit relies on donations to continue development. Please consider tossing a dollar if you enjoy using the plugin.");
-            if (ImGui.Button("Donate", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
-                Process process = new Process();
-                try {
-                    // true is the default, but it is important not to set it to false
-                    process.StartInfo.UseShellExecute = true;
-                    process.StartInfo.FileName = "https://ko-fi.com/sebastina";
-                    process.Start();
-                } catch (Exception e) {
+            if (!_streamDetectionActive) {
+                ImGui.Dummy(new Vector2(0, 10));
+                ImGui.TextWrapped("Artemis Roleplaying Kit relies on donations to continue development. Please consider tossing a dollar if you enjoy using the plugin.");
+                if (ImGui.Button("Donate", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
+                    Process process = new Process();
+                    try {
+                        // true is the default, but it is important not to set it to false
+                        process.StartInfo.UseShellExecute = true;
+                        process.StartInfo.FileName = "https://ko-fi.com/sebastina";
+                        process.Start();
+                    } catch (Exception e) {
 
+                    }
                 }
             }
-            //    }
-            //}
         }
 
         private void DrawVolume() {
