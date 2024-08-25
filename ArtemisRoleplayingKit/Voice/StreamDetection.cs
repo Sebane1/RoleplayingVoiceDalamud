@@ -12,6 +12,8 @@ namespace RoleplayingVoiceDalamud {
     public static class StreamDetection {
         static bool initialized = false;
         private static bool _screenCaptureDetected = false;
+        private static bool _socialPlatformDetected = false;
+        private static Process _lastScreenClippingHost;
 
         public static bool RecordingSoftwareIsActive {
             get {
@@ -25,24 +27,43 @@ namespace RoleplayingVoiceDalamud {
                     });
                     Task.Run(delegate {
                         while (true) {
-                            bool screenCaptureDetected = false;
                             var processes = Process.GetProcesses();
-                            foreach (var item in processes) {
-                                string filename = item.ProcessName.ToLower();
-                                string title = item.MainWindowTitle.ToLower();
-                                if (filename.Contains("obs") || filename.Contains("gyazowin") || filename.Contains("gyazoreplay") ||
-                                    filename.Contains("xsplit") || filename.Contains("snippingtool") || filename.Contains("sharex") || filename.Contains("snagit")
-                                    || filename.Contains("fireshot") || filename.Contains("tinytake") || filename.Contains("screenpresso") || filename.Contains("screenshot")
-                                    || filename.Contains("grab") || filename.Contains("loom") || filename.Contains("greenshot") || filename.Contains("nimbus")
-                                    || filename.Contains("monosnap") || filename.Contains("skitch") || filename.Contains("lightshot") || filename.Contains("screensketch")
-                                    || filename.Contains("droplr") || filename.Contains("nimbus") || filename.Contains("picpick") || title.Contains("/ x")) {
-                                    screenCaptureDetected = true;
+                            Process process = null;
+                            string[] screenCapturingProcess = new string[] { "obs" , "gyazowin", "gyazoreplay", "xsplit", "snippingtool", "sharex", "snagit",
+                            "fireshot", "tinytake","screenpresso","screenshot","grab","loom","greenshot","nimbus","monosnap","skitch","lightshot","screensketch"
+                            ,"screenclippinghost","droplr","nimbus","picpick"};
+                            foreach (string item in screenCapturingProcess) {
+                                if (CheckForProcess(item, out process)) {
                                     break;
                                 }
                             }
                             processes = null;
-                            _screenCaptureDetected = screenCaptureDetected;
-                            Thread.Sleep(100);
+                            if (process != null) {
+                                _screenCaptureDetected = true;
+                                process.WaitForExit();
+                                _screenCaptureDetected = false;
+                            } else {
+                                Thread.Sleep(100);
+                            }
+                        }
+                    });
+                    Task.Run(delegate {
+                        while (true) {
+                            var processes = Process.GetProcesses();
+                            Process process = null;
+                            bool socialPlatformEnabled = false;
+                            if (process == null) {
+                                foreach (var item in processes) {
+                                    string filename = item.ProcessName.ToLower();
+                                    string title = item.MainWindowTitle.ToLower();
+                                    if (title.Contains("/ x")) {
+                                        socialPlatformEnabled = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            _socialPlatformDetected = socialPlatformEnabled;
+                            Thread.Sleep(1000);
                         }
                     });
                     initialized = true;
@@ -54,8 +75,30 @@ namespace RoleplayingVoiceDalamud {
                     });
                     return true;
                 }
-                return _screenCaptureDetected;
+
+                if (_lastScreenClippingHost == null) {
+                    Task.Run(() => {
+                        var screenClippingHost = Process.GetProcessesByName("screenclippinghost");
+                        if (screenClippingHost.Length > 0) {
+                            _lastScreenClippingHost = screenClippingHost[0];
+                            _lastScreenClippingHost.WaitForExit();
+                            _screenCaptureDetected = false;
+                            _lastScreenClippingHost = null;
+                        }
+                    });
+                }
+
+                return _screenCaptureDetected || _socialPlatformDetected;
             }
+        }
+        public static bool CheckForProcess(string processName, out Process process) {
+            var screenClippingHost = Process.GetProcessesByName(processName);
+            if (screenClippingHost.Length > 0) {
+                process = screenClippingHost[0];
+                return true;
+            }
+            process = null;
+            return false;
         }
     }
 

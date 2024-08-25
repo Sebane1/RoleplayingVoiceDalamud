@@ -4,6 +4,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using ImGuiNET;
+using RoleplayingVoiceDalamud;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
 using System.Collections.Generic;
@@ -37,20 +38,20 @@ namespace RoleplayingVoice {
             }
         }
         public void AddNewItem(string item) {
-                if (!string.IsNullOrEmpty(item)) {
-                    string preparedString = CategoryCleaner(item);
-                    if (!string.IsNullOrEmpty(preparedString)) {
-                        string category = "All";
+            if (!string.IsNullOrEmpty(item)) {
+                string preparedString = CategoryCleaner(item);
+                if (!string.IsNullOrEmpty(preparedString)) {
+                    string category = "All";
+                    AddItem(category, item);
+                    if (preparedString.StartsWith("*")) {
+                        category = preparedString.Split("*")[1].Replace(" ", "");
                         AddItem(category, item);
-                        if (preparedString.StartsWith("*")) {
-                            category = preparedString.Split("*")[1].Replace(" ", "");
-                            AddItem(category, item);
-                        } else {
-                            category = "Other";
-                            AddItem(category, item);
-                        }
+                    } else {
+                        category = "Other";
+                        AddItem(category, item);
                     }
                 }
+            }
         }
 
         public void AddItem(string category, string item) {
@@ -78,10 +79,7 @@ namespace RoleplayingVoice {
         }
 
         private void DrawObjectList() {
-            if (ImGui.Button("Toggle Incognito", new Vector2(ImGui.GetColumnWidth(), 30))) {
-                incognito = !incognito;
-            }
-            _characterList = Plugin.GetLocalCharacters(incognito);
+            _characterList = Plugin.GetLocalCharacters(StreamDetection.RecordingSoftwareIsActive);
             ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
             ImGui.ListBox("##NPCEditing", ref _currentSelection, _characterList.Keys.ToArray(), _characterList.Count, 29);
         }

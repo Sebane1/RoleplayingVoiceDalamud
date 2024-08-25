@@ -36,7 +36,7 @@ namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingMediaManager _manager = null;
-        BetterComboBox _voiceEngineComboBox = new BetterComboBox("Generative Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator" }, 0, 390);
+        BetterComboBox _voiceEngineComboBox = new BetterComboBox("TTS Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator" }, 0, 390);
         BetterComboBox _xttsLanguageComboBox = new BetterComboBox("Voice Language", new string[] { "en", "es", "fr", "de", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko", "hi" }, 0, 390);
         BetterComboBox voiceComboBox;
         BetterComboBox voicePackComboBox;
@@ -123,7 +123,7 @@ namespace RoleplayingVoice {
             initialSize = Size;
             SizeCondition = ImGuiCond.Always;
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.AlwaysAutoResize;
-            voiceComboBox = new BetterComboBox("Generative Voice List", _voiceList, 0, 390);
+            voiceComboBox = new BetterComboBox("TTS Voice List", _voiceList, 0, 390);
             voicePackComboBox = new BetterComboBox("Voice Pack List", _voicePackList, 0, 235);
             _voiceEngineComboBox.OnSelectedIndexChanged += VoiceEngineComboBox_OnSelectedIndexChanged;
             voiceComboBox.OnSelectedIndexChanged += VoiceComboBox_OnSelectedIndexChanged;
@@ -496,7 +496,7 @@ namespace RoleplayingVoice {
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
-                ImGui.Text("Previously Played Lines:");
+                ImGui.Text(clientState.LocalPlayer.Name + "'s Experienced History:");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
@@ -1025,12 +1025,12 @@ namespace RoleplayingVoice {
             //if (ImGui.BeginTabBar("Player Config Tabs")) {
             //    if (ImGui.BeginTabItem("Player Speech")) {
             ImGui.Dummy(new Vector2(0, 10));
-            ImGui.LabelText("##GCVSLabel", "Generative Character Voice ");
+            ImGui.LabelText("##GCVSLabel","TTS Character Voice ");
             ImGui.Checkbox("##characterVoiceActive", ref _customTTSVoiceActive);
             ImGui.SameLine();
-            ImGui.Text("Generative Voice Enabled");
+            ImGui.Text("TTS Voice Enabled");
             if (clientState.LocalPlayer != null && _customTTSVoiceActive) {
-                ImGui.Text("Generative Voice Engine");
+                ImGui.Text("TTS Voice Engine");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 _voiceEngineComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                 _voiceEngineComboBox.Draw();
@@ -1063,7 +1063,7 @@ namespace RoleplayingVoice {
                 if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
                     || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2))) {
                     if (_voiceList.Length > 0) {
-                        ImGui.Text("Generative Voice");
+                        ImGui.Text(       clientState.LocalPlayer.Name +"'s TTS Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
                     } else {
