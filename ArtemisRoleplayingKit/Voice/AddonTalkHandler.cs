@@ -879,7 +879,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         var stream =
-                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false, 
+                        await _plugin.NpcVoiceManager.GetCharacterAudio(message, message, message, nameToUse, gender, backupVoice, false,
                         voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), !_plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
                         if (!previouslyAddedLines.Contains(message + nameToUse) && _plugin.Config.NpcSpeechEnabled) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, Conditions.IsBoundByDuty && !IsInACutscene(), stream.Item3));
@@ -1215,7 +1215,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     string voice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra, ref isTerritorySpecific);
                     var conditionsForETTS = isExtra || isTerritorySpecific ? VoiceLinePriority.ETTS : VoiceLinePriority.None;
                     var conditionsForOverride = (voiceLinePriority != RoleplayingVoiceCore.VoiceLinePriority.None) ? voiceLinePriority : conditionsForETTS;
-                    var conditionsForDatamining = _plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionsForOverride;
+                    var conditionsForDatamining = !_plugin.Config.NpcSpeechEnabled ? VoiceLinePriority.Datamining : conditionsForOverride;
                     var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
                     if (stream.Item1 != null && _plugin.Config.NpcSpeechEnabled) {

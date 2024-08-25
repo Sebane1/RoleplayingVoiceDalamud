@@ -34,7 +34,7 @@ namespace RoleplayingVoiceDalamud {
                                     filename.Contains("xsplit") || filename.Contains("snippingtool") || filename.Contains("sharex") || filename.Contains("snagit")
                                     || filename.Contains("fireshot") || filename.Contains("tinytake") || filename.Contains("screenpresso") || filename.Contains("screenshot")
                                     || filename.Contains("grab") || filename.Contains("loom") || filename.Contains("greenshot") || filename.Contains("nimbus")
-                                    || filename.Contains("monosnap") || filename.Contains("skitch") || filename.Contains("lightshot")
+                                    || filename.Contains("monosnap") || filename.Contains("skitch") || filename.Contains("lightshot") || filename.Contains("screensketch")
                                     || filename.Contains("droplr") || filename.Contains("nimbus") || filename.Contains("picpick") || title.Contains("/ x")) {
                                     screenCaptureDetected = true;
                                     break;
