@@ -39,6 +39,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -893,7 +894,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = stream.Item1;
+                                WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream.Item1);
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -994,7 +995,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = stream.Item1;
+                                WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream.Item1);
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -1219,7 +1220,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var stream =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, (Conditions.IsBoundByDuty && !IsInACutscene()), conditionsForDatamining);
                     if (stream.Item1 != null && _plugin.Config.NpcSpeechEnabled) {
-                        WaveStream wavePlayer = stream.Item1;
+                        WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream.Item1);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = stream.Item2 ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);

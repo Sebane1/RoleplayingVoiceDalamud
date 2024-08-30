@@ -43,7 +43,7 @@ namespace RoleplayingVoiceDalamud {
                                 process.WaitForExit();
                                 _screenCaptureDetected = false;
                             } else {
-                                Thread.Sleep(100);
+                                Thread.Sleep(300);
                             }
                         }
                     });

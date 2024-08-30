@@ -508,7 +508,7 @@ namespace RoleplayingVoice {
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                             if (stream != null) {
                                 if (stream.Length > 0) {
-                                    var player = stream;
+                                    var player = PluginReference.NpcVoiceManager.StreamToFoundationReader(stream);
                                     PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                 }
                             }
@@ -535,7 +535,7 @@ namespace RoleplayingVoice {
                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                                 if (stream != null) {
                                     if (stream.Length > 0) {
-                                        var player = stream;
+                                        var player = PluginReference.NpcVoiceManager.StreamToFoundationReader(stream);
                                         PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                     }
                                 }
