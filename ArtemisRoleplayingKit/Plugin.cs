@@ -95,12 +95,12 @@ namespace RoleplayingVoice {
         private readonly IDalamudPluginInterface pluginInterface;
         private readonly IChatGui _chat;
         private readonly IClientState _clientState;
-        private IObjectTable _objectTable;
         private IDataManager _dataManager;
         private IToastGui _toast;
         private IGameConfig _gameConfig;
         private ISigScanner _sigScanner;
         private IGameInteropProvider _interopProvider;
+        private IObjectTable _objectTableThreadUnsafe;
         private IFramework _framework;
 
         private readonly PluginCommandManager<Plugin> commandManager;
@@ -253,6 +253,7 @@ namespace RoleplayingVoice {
         private bool _objectRecentlyDidEmote;
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
+        private GameObject[] _objectTable;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -291,7 +292,6 @@ namespace RoleplayingVoice {
         internal AnimationCatalogue AnimationCatalogue { get => _animationCatalogue; set => _animationCatalogue = value; }
         public IpcSystem IpcSystem { get => _ipcSystem; set => _ipcSystem = value; }
         internal NPCPersonalityWindow NpcPersonalityWindow { get => _npcPersonalityWindow; set => _npcPersonalityWindow = value; }
-        public IObjectTable ObjectTable { get => _objectTable; set => _objectTable = value; }
 
         public IClientState ClientState => _clientState;
 
@@ -304,6 +304,7 @@ namespace RoleplayingVoice {
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
         public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
+        public GameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -406,7 +407,7 @@ namespace RoleplayingVoice {
                 _gameConfig = gameConfig;
                 _sigScanner = scanner;
                 _interopProvider = interopProvider;
-                _objectTable = objectTable;
+                _objectTableThreadUnsafe = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
@@ -414,7 +415,7 @@ namespace RoleplayingVoice {
                     _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
                         config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d");
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTableThreadUnsafe, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
                     _gameGui = gameGui;
                     _dragDrop = dragDrop;
@@ -451,7 +452,7 @@ namespace RoleplayingVoice {
                 _window.RequestingReconnect += Window_RequestingReconnect;
                 _window.OnMoveFailed += Window_OnMoveFailed;
                 config.OnConfigurationChanged += Config_OnConfigurationChanged;
-                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTable);
+                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTableThreadUnsafe);
                 _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();
@@ -592,6 +593,7 @@ namespace RoleplayingVoice {
         private void framework_Update(IFramework framework) {
             try {
                 if (!disposed) {
+                    _objectTable = _objectTableThreadUnsafe.ToArray();
                     if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
                         InitializeEverything();
                         _hasBeenInitialized = true;
@@ -1372,17 +1374,69 @@ namespace RoleplayingVoice {
                             } else {
                                 audioFocus = true;
                             }
-                            ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => RemoveSpecialSymbols(GetCustomNPCObject(x as ICharacter).NpcName) == playerSender);
-                            var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _clientState.LocalPlayer.Position);
-                            bool narratePlayer = false;
-                            if (config.UsePlayerSync) {
-                                if (GetCombinedWhitelist().Contains(playerSender)) {
+                            if (_objectTable != null) {
+                                ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => {
+                                    var npcObject = GetCustomNPCObject(x as ICharacter);
+                                    if (npcObject != null) {
+                                        return RemoveSpecialSymbols(npcObject.NpcName) == playerSender;
+                                    }
+                                    if (x != null) {
+                                        return RemoveSpecialSymbols(x.Name.TextValue) == playerSender;
+                                    }
+                                    return false;
+                                });
+                                var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _clientState.LocalPlayer.Position);
+                                bool narratePlayer = false;
+                                if (config.UsePlayerSync) {
+                                    if (GetCombinedWhitelist().Contains(playerSender)) {
+                                        Task.Run(async () => {
+                                            string value = await _roleplayingMediaManager.
+                                            GetSound(GetCustomNPCObject(player).NpcName, playerMessage, audioFocus ?
+                                            config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
+                                            _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
+                                            bool lipWasSynced = false; ;
+                                            _mediaManager.PlayAudio(playerMediaReference, value, SoundType.OtherPlayerTts, (isShoutYell || audioFocus), 0, default, delegate {
+                                                Task.Run(delegate {
+                                                    _addonTalkHandler.StopLipSync(player);
+                                                });
+                                            },
+                                            delegate (object sender, StreamVolumeEventArgs e) {
+                                                Task.Run(delegate {
+                                                    if (e.MaxSampleValues.Length > 0) {
+                                                        if (e.MaxSampleValues[0] > 0.2) {
+                                                            _addonTalkHandler.TriggerLipSync(player, 2);
+                                                            lipWasSynced = true;
+                                                        } else {
+                                                            _addonTalkHandler.StopLipSync(player);
+                                                        }
+                                                    }
+                                                });
+                                            });
+                                        });
+                                        CheckForChatSoundEffectOtherPlayer(sender, player, message);
+                                    } else {
+                                        narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
+                                    }
+                                } else {
+                                    narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
+                                }
+                                if (narratePlayer) {
                                     Task.Run(async () => {
-                                        string value = await _roleplayingMediaManager.
-                                        GetSound(GetCustomNPCObject(player).NpcName, playerMessage, audioFocus ?
-                                        config.OtherCharacterVolume : config.UnfocusedCharacterVolume,
-                                        _clientState.LocalPlayer.Position, isShoutYell, @"\Incoming\");
-                                        bool lipWasSynced = false; ;
+                                        var list = await _roleplayingMediaManager.GetVoiceListMicrosoftNarrator();
+                                        var genderSortedLists = await _roleplayingMediaManager.GetGenderSortedVoiceListsMicrosoftNarrator();
+                                        Random random = new Random(AudioConversionHelper.GetSimpleHash(playerSender));
+                                        //if (list.Contains("Microsoft Brian Online")) {
+                                        _roleplayingMediaManager.SetVoiceMicrosoftNarrator(
+                                       PenumbraAndGlamourerHelperFunctions.GetGender(player) != 1 ?
+                                       genderSortedLists.Item1[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item1.Length)] :
+                                       genderSortedLists.Item2[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item2.Length)]);
+
+                                        var value = await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
+                                        type == XivChatType.CustomEmote,
+                                        config.PlayerCharacterVolume,
+                                        _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                                        bool lipWasSynced = false;
+
                                         _mediaManager.PlayAudio(playerMediaReference, value, SoundType.OtherPlayerTts, (isShoutYell || audioFocus), 0, default, delegate {
                                             Task.Run(delegate {
                                                 _addonTalkHandler.StopLipSync(player);
@@ -1401,50 +1455,9 @@ namespace RoleplayingVoice {
                                             });
                                         });
                                     });
-                                    CheckForChatSoundEffectOtherPlayer(sender, player, message);
-                                } else {
-                                    narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
                                 }
-                            } else {
-                                narratePlayer = config.LocalVoiceForNonWhitelistedPlayers;
+                                TwitchChatCheck(message, type, player, playerSender);
                             }
-                            if (narratePlayer) {
-                                Task.Run(async () => {
-                                    var list = await _roleplayingMediaManager.GetVoiceListMicrosoftNarrator();
-                                    var genderSortedLists = await _roleplayingMediaManager.GetGenderSortedVoiceListsMicrosoftNarrator();
-                                    Random random = new Random(AudioConversionHelper.GetSimpleHash(playerSender));
-                                    //if (list.Contains("Microsoft Brian Online")) {
-                                    _roleplayingMediaManager.SetVoiceMicrosoftNarrator(
-                                   PenumbraAndGlamourerHelperFunctions.GetGender(player) != 1 ?
-                                   genderSortedLists.Item1[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item1.Length)] :
-                                   genderSortedLists.Item2[random.Next(list.Contains("Microsoft Brian Online") ? 1 : 0, genderSortedLists.Item2.Length)]);
-
-                                    var value = await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
-                                    type == XivChatType.CustomEmote,
-                                    config.PlayerCharacterVolume,
-                                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
-                                    bool lipWasSynced = false;
-
-                                    _mediaManager.PlayAudio(playerMediaReference, value, SoundType.OtherPlayerTts, (isShoutYell || audioFocus), 0, default, delegate {
-                                        Task.Run(delegate {
-                                            _addonTalkHandler.StopLipSync(player);
-                                        });
-                                    },
-                                    delegate (object sender, StreamVolumeEventArgs e) {
-                                        Task.Run(delegate {
-                                            if (e.MaxSampleValues.Length > 0) {
-                                                if (e.MaxSampleValues[0] > 0.2) {
-                                                    _addonTalkHandler.TriggerLipSync(player, 2);
-                                                    lipWasSynced = true;
-                                                } else {
-                                                    _addonTalkHandler.StopLipSync(player);
-                                                }
-                                            }
-                                        });
-                                    });
-                                });
-                            }
-                            TwitchChatCheck(message, type, player, playerSender);
                         }
                     }
                 }
@@ -1455,9 +1468,11 @@ namespace RoleplayingVoice {
 
         private CustomNpcCharacter GetCustomNPCObject(ICharacter character, bool returnNullIfNoFind = false) {
             if (character != null) {
-                foreach (var customNPC in config.CustomNpcCharacters) {
-                    if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
-                        return customNPC;
+                if (config.CustomNpcCharacters != null) {
+                    foreach (var customNPC in config.CustomNpcCharacters) {
+                        if (!string.IsNullOrEmpty(customNPC.MinionToReplace) && character.Name.TextValue.Contains(customNPC.MinionToReplace)) {
+                            return customNPC;
+                        }
                     }
                 }
                 if (!returnNullIfNoFind) {
