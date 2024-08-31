@@ -303,6 +303,7 @@ namespace RoleplayingVoice {
         public ConcurrentDictionary<string, List<string>> ModelDependancyMods { get => _modelDependancyMods; set => _modelDependancyMods = value; }
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
+        public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
         #endregion
         #region Plugin Initiialization
         public Plugin(

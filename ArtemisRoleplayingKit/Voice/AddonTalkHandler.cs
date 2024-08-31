@@ -581,7 +581,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 _startedNewDialogue = false;
                                                 _redoLineWindow.IsOpen = false;
                                             }
-                                            _threadSafeObjectTable = _objectTable.ToList();
+                                            //lock (_threadSafeObjectTable) {
+                                                _threadSafeObjectTable = _objectTable.ToList();
+                                                _threadSafeObjectTable.Sort((x, y) => {
+                                                    return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
+                                                });
+                                            //}
                                             if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                 _blockAudioGeneration = false;
                                             }
@@ -1275,8 +1280,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Servingway",
                     "Estate"
                 };
-            if (npcName == "???" || npcName == "Narrator") {
-                List<string> npcNames = new List<string>(){
+            lock (_threadSafeObjectTable) {
+                if (npcName == "???" || npcName == "Narrator") {
+                    List<string> npcNames = new List<string>(){
                     "Minfillia",
                     "Yugiri",
                     "Moenbryda",
@@ -1294,60 +1300,61 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Pipin",
                     "Beq Lugg"
                 };
-                foreach (var item in _objectTable) {
-                    if (!npcNames.Contains(item.Name.TextValue) && !string.IsNullOrEmpty(item.Name.TextValue)) {
-                        ICharacter character = item as ICharacter;
-                        if (character != null && character != _clientState.LocalPlayer) {
-                            if (character.Customize[(byte)CustomizeIndex.ModelType] > 0) {
-                                if (item.ObjectKind == ObjectKind.EventNpc && !item.Name.TextValue.Contains("Estate")) {
-                                    if (!npcNames.Contains(item.Name.TextValue)) {
-                                        npcNames.Add(item.Name.TextValue);
+                    foreach (var item in _threadSafeObjectTable) {
+                        if (!npcNames.Contains(item.Name.TextValue) && !string.IsNullOrEmpty(item.Name.TextValue)) {
+                            ICharacter character = item as ICharacter;
+                            if (character != null && character != _clientState.LocalPlayer) {
+                                if (character.Customize[(byte)CustomizeIndex.ModelType] > 0) {
+                                    if (item.ObjectKind == ObjectKind.EventNpc && !item.Name.TextValue.Contains("Estate")) {
+                                        if (!npcNames.Contains(item.Name.TextValue)) {
+                                            npcNames.Add(item.Name.TextValue);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                foreach (var item in _namesToRemove) {
-                    npcNames.Remove(item);
-                }
-                foreach (var item in npcBlacklist) {
-                    npcNames.Remove(item);
-                }
-                foreach (var name in npcNames) {
-                    foreach (var item in _objectTable) {
-                        if (item.Name.TextValue.Contains(name) && !string.IsNullOrEmpty(item.Name.TextValue)) {
-                            ICharacter character = item as ICharacter;
-                            if (character != null && character != _clientState.LocalPlayer) {
-                                gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
-                                race = character.Customize[(int)CustomizeIndex.Race];
-                                body = character.Customize[(int)CustomizeIndex.ModelType];
-                                isRetainer = character.ObjectKind == ObjectKind.Retainer;
-                                if (body == 0) {
-                                    var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address);
-                                    body = gameObject->CharacterData.ModelSkeletonId;
+                    foreach (var item in _namesToRemove) {
+                        npcNames.Remove(item);
+                    }
+                    foreach (var item in npcBlacklist) {
+                        npcNames.Remove(item);
+                    }
+                    foreach (var name in npcNames) {
+                        foreach (var item in _threadSafeObjectTable) {
+                            if (item.Name.TextValue.Contains(name) && !string.IsNullOrEmpty(item.Name.TextValue)) {
+                                ICharacter character = item as ICharacter;
+                                if (character != null && character != _clientState.LocalPlayer) {
+                                    gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
+                                    race = character.Customize[(int)CustomizeIndex.Race];
+                                    body = character.Customize[(int)CustomizeIndex.ModelType];
+                                    isRetainer = character.ObjectKind == ObjectKind.Retainer;
+                                    if (body == 0) {
+                                        var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address);
+                                        body = gameObject->CharacterData.ModelSkeletonId;
+                                    }
+                                    if (_plugin.Config.DebugMode) {
+                                        _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
+                                    }
+                                    return character;
                                 }
-                                if (_plugin.Config.DebugMode) {
-                                    _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
-                                }
-                                return character;
+                                return item;
                             }
-                            return item;
                         }
                     }
-                }
-            } else {
-                foreach (var item in _objectTable) {
-                    if (item.Name.TextValue == npcName) {
-                        _namesToRemove.Add(npcName);
-                        return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
-                    }
-                }
-                foreach (var item in _objectTable) {
-                    if (item != _clientState.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
-                        if (item.ObjectKind == ObjectKind.EventNpc) {
+                } else {
+                    foreach (var item in _threadSafeObjectTable) {
+                        if (item.Name.TextValue == npcName) {
                             _namesToRemove.Add(npcName);
                             return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
+                        }
+                    }
+                    foreach (var item in _threadSafeObjectTable) {
+                        if (item != _clientState.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
+                            if (item.ObjectKind == ObjectKind.EventNpc) {
+                                _namesToRemove.Add(npcName);
+                                return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
+                            }
                         }
                     }
                 }
