@@ -190,6 +190,7 @@ namespace RoleplayingVoice {
                     _npcPlaybackSpeed = configuration.NPCSpeechSpeed;
                     _ignoreRetainerSpeech = configuration.DontVoiceRetainers;
                     _debugMode = configuration.DebugMode;
+                    RoleplayingMediaManager.DebugMode = _debugMode;
                     _tuneIntoTwitchStreamPrompt = configuration.TuneIntoTwitchStreamPrompt;
                     _readQuestObjectives = configuration.ReadQuestObjectives;
                     _readLocationAndToastNotifications = configuration.ReadLocationsAndToastNotifications;
@@ -771,6 +772,7 @@ namespace RoleplayingVoice {
             configuration.DontVoiceRetainers = _ignoreRetainerSpeech;
             configuration.TuneIntoTwitchStreamPrompt = _tuneIntoTwitchStreamPrompt;
             configuration.DebugMode = _debugMode;
+            RoleplayingMediaManager.DebugMode = _debugMode;
             configuration.ReadQuestObjectives = _readQuestObjectives;
             configuration.ReadLocationsAndToastNotifications = _readLocationAndToastNotifications;
             configuration.LowPerformanceMode = _lowPerformanceMode;
