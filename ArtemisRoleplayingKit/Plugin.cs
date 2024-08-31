@@ -1327,10 +1327,11 @@ namespace RoleplayingVoice {
                             (senderStrings[0] + " " + senderStrings[2]);
                         string playerMessage = message.TextValue;
                         ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
+                        PluginLog.Verbose("Found " + player.Name.TextValue + " for speech detection.");
                         if (config.TwitchStreamTriggersIfShouter && !Conditions.IsBoundByDuty) {
                             TwitchChatCheck(message, type, player, playerSender);
                         }
-                        if (config.AiVoiceActive && !string.IsNullOrEmpty(config.ApiKey)) {
+                        if (config.AiVoiceActive) {
                             bool lipWasSynced = true;
                             Task.Run(async () => {
                                 string value = await GetPlayerVoice(playerSender, playerMessage, type);
@@ -1375,14 +1376,18 @@ namespace RoleplayingVoice {
                                 audioFocus = true;
                             }
                             if (_objectTable != null) {
+                                PluginLog.Verbose("Object table was found");
                                 ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => {
                                     var npcObject = GetCustomNPCObject(x as ICharacter);
                                     if (npcObject != null) {
+                                        PluginLog.Verbose("Object for speech was found #1.");
                                         return RemoveSpecialSymbols(npcObject.NpcName) == playerSender;
                                     }
                                     if (x != null) {
+                                        PluginLog.Verbose("Object for speech was found #2.");
                                         return RemoveSpecialSymbols(x.Name.TextValue) == playerSender;
                                     }
+                                    PluginLog.Verbose("No object for speech was found.");
                                     return false;
                                 });
                                 var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _clientState.LocalPlayer.Position);

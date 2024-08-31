@@ -697,7 +697,7 @@ namespace RoleplayingVoice {
                 if (runOnLaunch) {
                     InputValidation();
                 }
-                apiKeyErrorMessage = "API Key is empty! Please check the input.";
+                //apiKeyErrorMessage = "API Key is empty! Please check the input.";
                 runOnLaunch = false;
             }
         }
