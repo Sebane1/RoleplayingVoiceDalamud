@@ -12,6 +12,7 @@ namespace RoleplayingVoiceDalamud {
     public static class StreamDetection {
         static bool initialized = false;
         private static bool _screenCaptureDetected = false;
+        private static Process _lastProcess;
         private static bool _socialPlatformDetected = false;
         private static Process _lastScreenClippingHost;
 
@@ -29,7 +30,7 @@ namespace RoleplayingVoiceDalamud {
                         while (true) {
                             var processes = Process.GetProcesses();
                             Process process = null;
-                            string[] screenCapturingProcess = new string[] { "obs" , "gyazowin", "gyazoreplay", "xsplit", "snippingtool", "sharex", "snagit",
+                            string[] screenCapturingProcess = new string[] { "obs" ,"obs64", "gyazowin", "gyazoreplay", "xsplit", "snippingtool", "sharex", "snagit",
                             "fireshot", "tinytake","screenpresso","screenshot","grab","loom","greenshot","nimbus","monosnap","skitch","lightshot","screensketch"
                             ,"screenclippinghost","droplr","nimbus","picpick"};
                             foreach (string item in screenCapturingProcess) {
@@ -40,6 +41,7 @@ namespace RoleplayingVoiceDalamud {
                             processes = null;
                             if (process != null) {
                                 _screenCaptureDetected = true;
+                                _lastProcess = process;
                                 process.WaitForExit();
                                 _screenCaptureDetected = false;
                             } else {
@@ -91,10 +93,13 @@ namespace RoleplayingVoiceDalamud {
                 return _screenCaptureDetected || _socialPlatformDetected;
             }
         }
+
+        public static Process LastProcess { get => _lastProcess; set => _lastProcess = value; }
+
         public static bool CheckForProcess(string processName, out Process process) {
-            var screenClippingHost = Process.GetProcessesByName(processName);
-            if (screenClippingHost.Length > 0) {
-                process = screenClippingHost[0];
+            var foundProcesses = Process.GetProcessesByName(processName);
+            if (foundProcesses.Length > 0) {
+                process = foundProcesses[0];
                 return true;
             }
             process = null;

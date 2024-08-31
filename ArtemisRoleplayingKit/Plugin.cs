@@ -550,14 +550,14 @@ namespace RoleplayingVoice {
         public void InitialzeManager() {
             if (_roleplayingMediaManager == null) {
                 _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices, _roleplayingMediaManager_InitializationStatus);
-                if (config.PlayerVoiceEngine == 1) {
-                    _roleplayingMediaManager.InitializeXTTS();
-                }
                 _roleplayingMediaManager.BasePath = Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName);
                 _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
                 _window.Manager = _roleplayingMediaManager;
+                if (config.PlayerVoiceEngine == 1) {
+                    _roleplayingMediaManager.InitializeXTTS();
+                }
             }
             _window?.RefreshVoices();
         }
@@ -3451,7 +3451,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                                 if (!_alreadyScannedMods.ContainsKey(modName)) {
-                                _alreadyScannedMods[modName] = true;
+                                    _alreadyScannedMods[modName] = true;
                                     if (option != null) {
                                         ExtractModFiles(option, directory, true);
                                     }
@@ -3789,11 +3789,15 @@ namespace RoleplayingVoice {
                             config.Save();
                             break;
                         case "accessibilitymode":
-                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;                          
-                            if (config.NpcSpeechEnabled) {
-                                _chat?.Print("Accessibility Mode Enabled");
+                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
+                            if (StreamDetection.RecordingSoftwareIsActive) {
+                                _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is intefering with accessibility mode.");
                             } else {
-                                _chat?.Print("Accessibility Mode Disabled");
+                                if (config.NpcSpeechEnabled) {
+                                    _chat?.Print("Accessibility Mode Enabled");
+                                } else {
+                                    _chat?.Print("Accessibility Mode Disabled");
+                                }
                             }
                             _window.NpcSpeechEnabled = config.NpcSpeechEnabled;
                             config.Save();

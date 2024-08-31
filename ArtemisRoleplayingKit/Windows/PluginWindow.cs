@@ -1053,8 +1053,10 @@ namespace RoleplayingVoice {
                         }
                         break;
                     case 1:
-                        if (!_manager.XttsReady) {
-                            ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
+                        if (_manager != null) {
+                            if (!_manager.XttsReady) {
+                                ImGui.Text("XTTS is still getting ready. If this is a first time setup, please wait for initial setup to complete. (May take roughly 30 minutes the first time)");
+                            }
                         }
                         break;
                 }
