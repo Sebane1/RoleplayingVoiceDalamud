@@ -305,6 +305,7 @@ namespace RoleplayingVoice {
         public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
         public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
         public GameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
+        public static bool Disposed { get; internal set; }
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -4334,9 +4335,9 @@ namespace RoleplayingVoice {
         #endregion
         #region IDisposable Support
         protected virtual void Dispose(bool disposing) {
-            if (!disposing) return;
             try {
                 disposed = true;
+                Disposed = true;
                 _mediaManager.Invalidated = true;
                 config.Save();
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;

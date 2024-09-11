@@ -51,7 +51,7 @@ namespace RoleplayingVoice {
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override async void Draw() {
-            if (IsOpen && !Conditions.IsInBetweenAreas) {
+            if (IsOpen && !Conditions.IsInBetweenAreas && !Plugin.Disposed) {
                 Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
                 SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size, MinimumSize = new Vector2(360, 480) };
                 if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
