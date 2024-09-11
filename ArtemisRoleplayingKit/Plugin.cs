@@ -2860,6 +2860,7 @@ namespace RoleplayingVoice {
             if (config.DebugMode) {
                 _chat?.Print("Territory is " + e);
             }
+            _videoWindow.IsOpen = false;
             CleanSounds();
             if (_recentCFPop > 0) {
                 _recentCFPop++;
@@ -2898,47 +2899,55 @@ namespace RoleplayingVoice {
             RefreshData();
         }
         public void CleanSounds() {
-            _mountingOccured = false;
-            string othersPath = config.CacheFolder + @"\VoicePack\Others";
-            string incomingPath = config.CacheFolder + @"\Incoming\";
-            if (_mediaManager != null) {
-                _mediaManager.CleanSounds();
-            }
-            ResetTwitchValues();
-            temporaryWhitelist.Clear();
-            if (Directory.Exists(othersPath)) {
-                try {
-                    Directory.Delete(othersPath, true);
-                } catch (Exception e) {
-                    Plugin.PluginLog?.Warning(e, e.Message);
+            Task.Run(async () => {
+                _mountingOccured = false;
+                string othersPath = config.CacheFolder + @"\VoicePack\Others";
+                string incomingPath = config.CacheFolder + @"\Incoming\";
+                if (_mediaManager != null) {
+                    _mediaManager.CleanSounds();
                 }
-            }
-            if (Directory.Exists(incomingPath)) {
-                try {
-                    Directory.Delete(incomingPath, true);
-                } catch (Exception e) {
-                    Plugin.PluginLog?.Warning(e, e.Message);
+                ResetTwitchValues();
+                temporaryWhitelist.Clear();
+                if (Directory.Exists(othersPath)) {
+                    try {
+                        Directory.Delete(othersPath, true);
+                    } catch (Exception e) {
+                        Plugin.PluginLog?.Warning(e, e.Message);
+                    }
                 }
-            }
-            CleanupEmoteWatchList();
+                if (Directory.Exists(incomingPath)) {
+                    try {
+                        Directory.Delete(incomingPath, true);
+                    } catch (Exception e) {
+                        Plugin.PluginLog?.Warning(e, e.Message);
+                    }
+                }
+                CleanupEmoteWatchList();
+            });
         }
         public void ResetTwitchValues() {
-            _lastStreamObject = null;
-            _streamURLs = null;
-            if (streamWasPlaying) {
-                streamWasPlaying = false;
-                _videoWindow.IsOpen = false;
-                try {
-                    _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
-                } catch (Exception e) {
-                    Plugin.PluginLog?.Warning(e, e.Message);
+            Task.Run(async () => {
+                Thread.Sleep(1000);
+                while (Conditions.IsInBetweenAreas) {
+                    Thread.Sleep(500);
                 }
-            }
-            potentialStream = "";
-            lastStreamURL = "";
-            _currentStreamer = "";
-            _streamSetCooldown.Stop();
-            _streamSetCooldown.Reset();
+                _lastStreamObject = null;
+                _streamURLs = null;
+                if (streamWasPlaying) {
+                    streamWasPlaying = false;
+                    _videoWindow.IsOpen = false;
+                    try {
+                        _gameConfig.Set(SystemConfigOption.IsSndBgm, false);
+                    } catch (Exception e) {
+                        Plugin.PluginLog?.Warning(e, e.Message);
+                    }
+                }
+                potentialStream = "";
+                lastStreamURL = "";
+                _currentStreamer = "";
+                _streamSetCooldown.Stop();
+                _streamSetCooldown.Reset();
+            });
         }
         #endregion
         #region Connection Attempts
@@ -3617,8 +3626,7 @@ namespace RoleplayingVoice {
                         if ((int)_videoWindow.FeedType < _streamURLs.Length) {
                             if (_lastStreamObject != null) {
                                 try {
-                                    _mediaManager.ChangeStream(_lastStreamObject,
-                                         _streamURLs[(int)_videoWindow.FeedType], _videoWindow.Size.Value.X);
+                                    _mediaManager.ChangeStream(_lastStreamObject, _streamURLs[(int)_videoWindow.FeedType], _videoWindow.Size.Value.X);
                                 } catch (Exception e) {
                                     Plugin.PluginLog?.Warning(e, e.Message);
                                 }
@@ -3669,8 +3677,8 @@ namespace RoleplayingVoice {
                 if (splitArgs.Length > 0) {
                     switch (splitArgs[0].ToLower()) {
                         case "help":
-                            _chat?.Print("on (Enable AI Voice)\r\n" +
-                             "off (Disable AI Voice)\r\n" +
+                            _chat?.Print("on (Enable Player TTS Voice)\r\n" +
+                             "off (Disable Player TTS Voice)\r\n" +
                              "video (toggle twitch stream video)\r\n" +
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
@@ -3783,11 +3791,9 @@ namespace RoleplayingVoice {
                             }
                             break;
                         case "endlisten":
-                            if (!IsResidential()) {
-                                _mediaManager.StopStream();
-                                ResetTwitchValues();
-                                potentialStream = "";
-                            }
+                            _mediaManager.StopStream();
+                            ResetTwitchValues();
+                            potentialStream = "";
                             break;
                         case "record":
                             _chat?.Print("Speech To Text Started");
@@ -3811,7 +3817,7 @@ namespace RoleplayingVoice {
                         case "accessibilitymode":
                             config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
                             if (StreamDetection.RecordingSoftwareIsActive) {
-                                _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is intefering with accessibility mode.");
+                                _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is interfering with accessibility mode.");
                             } else {
                                 if (config.NpcSpeechEnabled) {
                                     _chat?.Print("Accessibility Mode Enabled");

@@ -36,7 +36,7 @@ namespace RoleplayingVoice {
         private int _audioOutputType = 0;
         private bool _qualityAssuranceMode;
         private float _npcSpeechSpeed = 1;
-        private int _defaultTwitchOpen;
+        private int _defaultTwitchOpen = 1;
         private bool _twitchStreamTriggersIfShouter;
         private bool _dontVoiceRetainers;
         private bool _tuneIntoTwitchStreamPrompt = true;

@@ -3,6 +3,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using ImGuiNET;
 using ImGuiScene;
@@ -50,7 +51,7 @@ namespace RoleplayingVoice {
         public MediaManager MediaManager { get => _mediaManager; set => _mediaManager = value; }
 
         public override async void Draw() {
-            if (IsOpen) {
+            if (IsOpen && !Conditions.IsInBetweenAreas) {
                 Size = new Vector2(ImGui.GetWindowSize().X, ImGui.GetWindowSize().X * 0.5625f);
                 SizeConstraints = new WindowSizeConstraints() { MaximumSize = ImGui.GetMainViewport().Size, MinimumSize = new Vector2(360, 480) };
                 if (_mediaManager != null && _mediaManager.LastFrame != null && _mediaManager.LastFrame.Length > 0) {
@@ -58,10 +59,11 @@ namespace RoleplayingVoice {
                         if (!taskAlreadyRunning) {
                             _ = Task.Run(async () => {
                                 taskAlreadyRunning = true;
-                                ReadOnlyMemory<byte> bytes = null;
+                                ReadOnlyMemory<byte> bytes = new byte[0];
                                 lock (_mediaManager.LastFrame) {
                                     bytes = _mediaManager.LastFrame;
                                 }
+
                                 if (bytes.Length > 0) {
                                     if (_lastLoadedFrame != _mediaManager.LastFrame) {
                                         _frameToLoad = await _textureProvider.CreateFromImageAsync(bytes);

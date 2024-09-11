@@ -30,9 +30,10 @@ namespace RoleplayingVoiceDalamud {
                         while (true) {
                             var processes = Process.GetProcesses();
                             Process process = null;
-                            string[] screenCapturingProcess = new string[] { "obs" ,"obs64", "gyazowin", "gyazoreplay", "xsplit", "snippingtool", "sharex", "snagit",
-                            "fireshot", "tinytake","screenpresso","screenshot","grab","loom","greenshot","nimbus","monosnap","skitch","lightshot","screensketch"
-                            ,"screenclippinghost","droplr","nimbus","picpick"};
+                            string[] screenCapturingProcess = new string[] { 
+                            "obs" ,"obs64", "gyazowin", "gyazoreplay", "xsplit", "snippingtool", "sharex", "snagit",
+                            "fireshot", "tinytake","screenpresso","screenshot","grab","loom","greenshot","nimbus",
+                            "monosnap","skitch","lightshot","screensketch","screenclippinghost","droplr","nimbus","picpick"};
                             foreach (string item in screenCapturingProcess) {
                                 if (CheckForProcess(item, out process)) {
                                     break;

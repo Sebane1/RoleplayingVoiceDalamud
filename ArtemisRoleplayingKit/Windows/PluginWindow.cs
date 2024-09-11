@@ -330,7 +330,7 @@ namespace RoleplayingVoice {
                         DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
-                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && configuration.NpcSpeechEnabled) {
+                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && !_streamDetectionActive) {
                         if (ImGui.BeginTabItem("Accessibility Dialogue")) {
                             DrawNPCDialogue();
                             ImGui.EndTabItem();
@@ -399,11 +399,6 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##debugMode", ref _debugMode);
             ImGui.SameLine();
             ImGui.Text("A bunch of debug information will be posted in chat. Only useful for developers.");
-            if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && !_streamDetectionActive) {
-                ImGui.Checkbox("##accessibilityreader", ref _npcSpeechEnabled);
-                ImGui.SameLine();
-                ImGui.Text("Enables accessibility dialogue for NPCs");
-            }
             ImGui.Dummy(new Vector2(0, 10));
             try {
                 ImGui.TextWrapped("You can now add custom photo frames! You can access these while the game UI is hidden in Gpose!");
@@ -484,6 +479,7 @@ namespace RoleplayingVoice {
                 //ImGui.TableHeadersRow();
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
+                ImGui.Checkbox("Enable Accessibility Reader", ref _npcSpeechEnabled);
                 ImGui.Checkbox("Ignore Retainer Speech", ref _ignoreRetainerSpeech);
                 ImGui.Checkbox("Read Quest Objectives", ref _readQuestObjectives);
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
@@ -1027,7 +1023,7 @@ namespace RoleplayingVoice {
             //if (ImGui.BeginTabBar("Player Config Tabs")) {
             //    if (ImGui.BeginTabItem("Player Speech")) {
             ImGui.Dummy(new Vector2(0, 10));
-            ImGui.LabelText("##GCVSLabel","TTS Character Voice ");
+            ImGui.LabelText("##GCVSLabel", "TTS Character Voice ");
             ImGui.Checkbox("##characterVoiceActive", ref _customTTSVoiceActive);
             ImGui.SameLine();
             ImGui.Text("TTS Voice Enabled");
@@ -1067,7 +1063,7 @@ namespace RoleplayingVoice {
                 if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
                     || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2))) {
                     if (_voiceList.Length > 0) {
-                        ImGui.Text(       clientState.LocalPlayer.Name +"'s TTS Voice");
+                        ImGui.Text(clientState.LocalPlayer.Name + "'s TTS Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
                     } else {
