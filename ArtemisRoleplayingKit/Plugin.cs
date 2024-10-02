@@ -2824,31 +2824,35 @@ namespace RoleplayingVoice {
                 if (_redrawCooldown.IsRunning) {
                     objectsRedrawn++;
                 }
-                string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
-                string path = config.CacheFolder + @"\VoicePack\Others";
-                string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-                string clipPath = path + @"\" + hash;
-                if (GetCombinedWhitelist().Contains(senderName) &&
-                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                    if (Directory.Exists(clipPath)) {
-                        try {
-                            RemoveFiles(clipPath);
-                            if (_characterVoicePacks.ContainsKey(senderName)) {
-                                _characterVoicePacks.Remove(senderName);
+                try {
+                    string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+                    string path = config.CacheFolder + @"\VoicePack\Others";
+                    string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+                    string clipPath = path + @"\" + hash;
+                    if (GetCombinedWhitelist().Contains(senderName) &&
+                        !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                        if (Directory.Exists(clipPath)) {
+                            try {
+                                RemoveFiles(clipPath);
+                                if (_characterVoicePacks.ContainsKey(senderName)) {
+                                    _characterVoicePacks.Remove(senderName);
+                                }
+                            } catch (Exception e) {
+                                Plugin.PluginLog?.Warning(e, e.Message);
                             }
-                        } catch (Exception e) {
-                            Plugin.PluginLog?.Warning(e, e.Message);
                         }
+                    } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                        !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                        temporaryWhitelistQueue.Enqueue(senderName);
+                    } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                        RefreshData();
                     }
-                } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                    !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                    temporaryWhitelistQueue.Enqueue(senderName);
-                } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                    RefreshData();
-                }
-                if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
-                    _wasDoingFakeEmote = false;
+                    if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                        _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                        _wasDoingFakeEmote = false;
+                    }
+                } catch (Exception e) {
+                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
         }
