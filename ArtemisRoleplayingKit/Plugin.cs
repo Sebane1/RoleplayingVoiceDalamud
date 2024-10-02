@@ -2817,12 +2817,14 @@ namespace RoleplayingVoice {
         }
         private void gameObjectRedrawn(nint arg1, int arg2) {
             if (!disposed) {
-                if (!_redrawCooldown.IsRunning) {
-                    _redrawCooldown.Start();
-                    redrawObjectCount = _objectTable.Count<GameObject>();
-                }
-                if (_redrawCooldown.IsRunning) {
-                    objectsRedrawn++;
+                if (_objectTable != null) {
+                    if (!_redrawCooldown.IsRunning) {
+                        _redrawCooldown.Start();
+                        redrawObjectCount = _objectTable.Count<GameObject>();
+                    }
+                    if (_redrawCooldown.IsRunning) {
+                        objectsRedrawn++;
+                    }
                 }
                 try {
                     string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
