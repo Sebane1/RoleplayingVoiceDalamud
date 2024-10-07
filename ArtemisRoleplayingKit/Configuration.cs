@@ -120,7 +120,7 @@ namespace RoleplayingVoice {
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
         public bool NpcSpeechEnabled {
             get {
-                return _npcSpeechEnabled && !StreamDetection.RecordingSoftwareIsActive;
+                return _npcSpeechEnabled;
             }
             set => _npcSpeechEnabled = value;
         }

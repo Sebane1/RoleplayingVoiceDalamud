@@ -180,7 +180,6 @@ namespace RoleplayingVoice {
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
                     _npcSpeechEnabled = configuration.NpcSpeechEnabled;
-                    _defaultValueSet = true;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -318,9 +317,6 @@ namespace RoleplayingVoice {
             _streamDetectionActive = StreamDetection.RecordingSoftwareIsActive;
             if (clientState.IsLoggedIn) {
                 fileDialogManager.Draw();
-                if (_defaultValueSet) {
-                    configuration.NpcSpeechEnabled = _npcSpeechEnabled;
-                }
                 if (ImGui.BeginTabBar("ConfigTabs")) {
                     if (ImGui.BeginTabItem("Player Voice")) {
                         DrawGeneral();
