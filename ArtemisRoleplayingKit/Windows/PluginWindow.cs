@@ -815,7 +815,7 @@ namespace RoleplayingVoice {
             float textHeight = changedH - initialH;
             int textLines = (int)(textHeight / ImGui.GetTextLineHeight());
 
-            // Check height and increase if necessarry
+            // Check height and increase if necessary
             if (availableY - requiredY * textLines < 1 && !SizeYChanged) {
                 SizeYChanged = true;
                 changedSize = GetSizeChange(requiredY, availableY, textLines, initialSize);
