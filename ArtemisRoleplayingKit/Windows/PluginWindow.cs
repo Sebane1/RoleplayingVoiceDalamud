@@ -710,10 +710,12 @@ namespace RoleplayingVoice {
         }
 
         private void _manager_OnApiValidationComplete(object sender, ValidationResult e) {
+            // We want to this reset the error message to reset any old messages
+            apiKeyErrorMessage = "";
             if (e.ValidationSuceeded && !apiKeyValidated) {
-                apiKeyErrorMessage = string.Empty;
+                apiKeyErrorMessage = "";
                 isApiKeyValid = true;
-            } else if (!e.ValidationSuceeded && !apiKeyValidated && !configuration.AiVoiceActive && configuration.PlayerVoiceEngine == 0) {
+            } else if (!e.ValidationSuceeded && !apiKeyValidated && configuration.AiVoiceActive && configuration.PlayerVoiceEngine == 0) {
                 apiKeyErrorMessage = "Invalid API Key! Please check the input.";
                 isApiKeyValid = false;
             }
