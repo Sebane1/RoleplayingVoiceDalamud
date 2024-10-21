@@ -385,7 +385,7 @@ namespace RoleplayingVoice {
                                         TextureSet item = null;
                                         switch (bodyDragPart) {
                                             case BodyDragPart.Body:
-                                                if (_currentCustomization.Customize.Race.Value - 1 == 3) {
+                                                if (_currentCustomization.Customize.Race.Value - 1 == 2) {
                                                     item = AddBody(_currentCustomization.Customize.Gender.Value, 5,
                                                     RaceInfo.SubRaceToMainRace(_currentCustomization.Customize.Clan.Value - 1),
                                                     _currentCustomization.Customize.TailShape.Value - 1, false);
@@ -590,7 +590,7 @@ namespace RoleplayingVoice {
         }
 
         private void AddEyePaths(TextureSet textureSet, int subrace, int faceType, int gender, int auraScales, bool asym) {
-            RaceEyePaths.GetEyeTextureSet(subrace,faceType, gender == 1, textureSet);
+            RaceEyePaths.GetEyeTextureSet(subrace, faceType, gender == 1, textureSet);
         }
 
         private void AddFacePaths(TextureSet textureSet, int subrace, int facePart, int faceType, int gender, int auraScales, bool asym) {
@@ -633,13 +633,13 @@ namespace RoleplayingVoice {
                 string metaFilePath = Path.Combine(path, "meta.json");
                 foreach (TextureSet item in exportTextureSets) {
                     if (item.OmniExportMode) {
-                        UniversalTextureSetCreator.ConfigureOmniConfiguration(item);
+                        UniversalTextureSetCreator.ConfigureTextureSet(item);
                     }
                     textureSets.Add(item);
                 }
                 Directory.CreateDirectory(path);
                 _textureProcessor.CleanGeneratedAssets(path);
-                await _textureProcessor.Export(textureSets, new Dictionary<string, int>(), path, 3, false, false, File.Exists(_xNormalPath) && finalize, _xNormalPath);
+                _textureProcessor.Export(textureSets, new Dictionary<string, int>(), path, 3, false, false, File.Exists(_xNormalPath) && finalize, _xNormalPath);
                 ExportJson(jsonFilepath);
                 ExportMeta(metaFilePath, name);
                 Thread.Sleep(100);
