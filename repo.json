@@ -16,8 +16,8 @@
       "Character"
     ],
     "InternalName": "RoleplayingVoiceDalamud",
-    "AssemblyVersion": "0.5.2.2",
-    "TestingAssemblyVersion": "0.5.2.2",
+    "AssemblyVersion": "0.5.2.3",
+    "TestingAssemblyVersion": "0.5.2.3",
     "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 10,
@@ -25,9 +25,9 @@
     "IsTestingExclusive": "False",
     "DownloadCount": 0,
     "LastUpdate": 0,
-    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.2/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.2/RoleplayingVoiceDalamud.zip",
-    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.2/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkInstall": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.3/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkTesting": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.3/RoleplayingVoiceDalamud.zip",
+    "DownloadLinkUpdate": "https://github.com/Sebane1/RoleplayingVoiceDalamud/releases/download/0.5.2.3/RoleplayingVoiceDalamud.zip",
     "IconUrl": "https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/icon.png"
   }
 ]
