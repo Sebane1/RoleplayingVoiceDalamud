@@ -326,7 +326,7 @@ namespace RoleplayingVoice {
                         DrawPlayerSync();
                         ImGui.EndTabItem();
                     }
-                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English && !_streamDetectionActive) {
+                    if (PluginReference.ClientState.ClientLanguage == ClientLanguage.English) {
                         if (ImGui.BeginTabItem("Accessibility Dialogue")) {
                             DrawNPCDialogue();
                             ImGui.EndTabItem();
