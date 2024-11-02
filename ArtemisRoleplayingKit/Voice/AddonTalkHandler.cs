@@ -105,12 +105,16 @@ namespace RoleplayingVoiceDalamud.Voice {
         private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
 
         public List<ActionTimeline> LipSyncTypes { get; private set; }
+
+        private Dictionary<string, byte> _voiceList;
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
         private readonly Queue<NPCBubbleInformation> _speechBubbleInfoQueue = new();
         private readonly List<NPCBubbleInformation> _gameChatInfo = new();
         public ConditionalWeakTable<ActorMemory, UserAnimationOverride> UserAnimationOverrides { get; private set; } = new();
         public bool TextIsPresent { get => _textIsPresent; set => _textIsPresent = value; }
         public List<NPCVoiceHistoryItem> NpcVoiceHistoryItems { get => _npcVoiceHistoryItems; set => _npcVoiceHistoryItems = value; }
+        public Dictionary<string, byte> VoiceList { get => _voiceList; set => _voiceList = value; }
+
         List<string> previouslyAddedLines = new List<string>();
         private bool _gotPlayerDefaultState;
         private ushort _defaultBaseOverride;
@@ -172,6 +176,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _gposeService.Initialize();
 
                 LipSyncTypes = GenerateLipList().ToList();
+                _voiceList = GenerateVoiceList();
                 _animationService.Initialize();
                 _animationService.Start();
                 _memoryService.Start();
@@ -252,6 +257,17 @@ namespace RoleplayingVoiceDalamud.Voice {
             // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
             IEnumerable<ActionTimeline> lips = GameDataService.ActionTimelines.Where(x => x.AnimationId == 0 || (x.Key?.StartsWith("speak/") ?? false));
             return lips;
+        }
+
+        private Dictionary<string, byte> GenerateVoiceList() {
+            Dictionary<string, byte> items = new Dictionary<string, byte>();
+            foreach (var item in GameDataService.CharacterMakeTypes) {
+                int value = 1;
+                foreach (var voice in item.Voices) {
+                    items.Add(item.Tribe + " " + item.Gender + " " + value++ + " (" + voice + ")", voice);
+                }
+            }
+            return items;
         }
         private void RedoLineWindow_RedoLineClicked(object sender, string value) {
             if (_plugin.Config.NpcSpeechEnabled) {
@@ -582,10 +598,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 _redoLineWindow.IsOpen = false;
                                             }
                                             //lock (_threadSafeObjectTable) {
-                                                _threadSafeObjectTable = _objectTable.ToList();
-                                                _threadSafeObjectTable.Sort((x, y) => {
-                                                    return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
-                                                });
+                                            _threadSafeObjectTable = _objectTable.ToList();
+                                            _threadSafeObjectTable.Sort((x, y) => {
+                                                return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
+                                            });
                                             //}
                                             if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                 _blockAudioGeneration = false;
@@ -698,6 +714,27 @@ namespace RoleplayingVoiceDalamud.Voice {
                 });
             } catch {
 
+            }
+        }
+
+        public async void SetVanillaVoice(ICharacter character, byte voice) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(character.Address);
+                actorMemory.Voice = voice;
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.Voice)), voice, "Voice");
+            } catch (Exception e) {
+                Plugin.PluginLog.Error(e, e.Message);
+            }
+        }
+        public async void SetVanillaVoice(nint address, byte voice) {
+            try {
+                var actorMemory = new ActorMemory();
+                actorMemory.SetAddress(address);
+                actorMemory.Voice = voice;
+                MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.Voice)), voice, "Voice");
+            } catch (Exception e) {
+                Plugin.PluginLog.Error(e, e.Message);
             }
         }
 

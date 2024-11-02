@@ -80,6 +80,8 @@ namespace RoleplayingVoice {
         public bool AiVoiceActive { get; set; }
         public bool VoicePackIsActive { get; set; }
 
+        public int VoiceReplacementType { get; set; }
+
         public CharacterVoices CharacterVoices { get; set; }
 
         public Dictionary<string, string> Characters { get; set; }
@@ -154,12 +156,14 @@ namespace RoleplayingVoice {
 
         public bool LocalVoiceForNonWhitelistedPlayers { get => localVoiceForNonWhitelistedPlayers; set => localVoiceForNonWhitelistedPlayers = value; }
         internal bool NarrateUnquotedText { get => narrateUnquotedText; set => narrateUnquotedText = value; }
+        public int ChosenVanillaReplacement { get => _chosenVanillaReplacement; set => _chosenVanillaReplacement = value; }
 
         #endregion
 
         private readonly IDalamudPluginInterface pluginInterface;
         private bool localVoiceForNonWhitelistedPlayers;
         private bool narrateUnquotedText;
+        private int _chosenVanillaReplacement;
 
         public Configuration(IDalamudPluginInterface pi) {
             this.pluginInterface = pi;

@@ -87,6 +87,8 @@ using System.Numerics;
 using RoleplayingVoiceDalamud.GameObjects;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Common.Lua;
+//using Anamnesis.GameData.Excel;
+//using Lumina.Excel.GeneratedSheets2;
 #endregion
 namespace RoleplayingVoice {
     public class Plugin : IDalamudPlugin {
@@ -749,8 +751,7 @@ namespace RoleplayingVoice {
                                                                 });
                                                                 Task.Run(async () => {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
-
-                                                                    if (emoteId > 0) {
+                                                                    if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
                                                                         OnEmote(item as ICharacter, emoteId);
                                                                     }
                                                                 });
@@ -777,7 +778,7 @@ namespace RoleplayingVoice {
                                                             Plugin.PluginLog?.Verbose("Checking minion from" + playerSender);
                                                             Plugin.PluginLog?.Verbose("Getting Minion Emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
-                                                            if (animation > 0) {
+                                                            if (animation > 0 && animation != ushort.MaxValue - 1) {
                                                                 Plugin.PluginLog?.Verbose("Applying Minion Emote.");
                                                                 if (animation == ushort.MaxValue) {
                                                                     animation = 0;
@@ -802,7 +803,7 @@ namespace RoleplayingVoice {
                                                                 }
                                                                 Task.Run(async () => {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
-                                                                    if (emoteId > 0) {
+                                                                    if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
                                                                         OnEmote(item as ICharacter, emoteId);
                                                                     }
                                                                 });
@@ -818,7 +819,7 @@ namespace RoleplayingVoice {
                                                     Plugin.PluginLog?.Warning(e, e.Message);
                                                 }
                                             });
-                                            _emoteWatchList[playerSender] = task;
+                                            _emoteWatchList[playerSender + " pet"] = task;
                                         }
                                     }
                                 }
@@ -836,7 +837,7 @@ namespace RoleplayingVoice {
         }
 
         private void CheckIfDied() {
-            if (config.VoicePackIsActive) {
+            if (config.VoicePackIsActive && config.VoiceReplacementType == 0) {
                 Task.Run(delegate {
                     if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
                         if (_mainCharacterVoicePack == null) {
@@ -2718,7 +2719,7 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog.Error(e.Message);
                         }
                     });
-                    if (!config.VoicePackIsActive) {
+                    if (!config.VoicePackIsActive && config.VoiceReplacementType == 0) {
                         try {
                             if (Filter != null) {
                                 Filter.Muted = false;
@@ -2729,6 +2730,9 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog.Error(e.Message);
                         }
                     } else {
+                        if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
+                            SendNetworkedVoice();
+                        }
                     }
                 }
             }
@@ -2820,17 +2824,22 @@ namespace RoleplayingVoice {
                 if (_objectTable != null) {
                     if (!_redrawCooldown.IsRunning) {
                         _redrawCooldown.Start();
-                        redrawObjectCount = _objectTable.Count<GameObject>();
+                        redrawObjectCount = _objectTable.Count<IGameObject>();
                     }
                     if (_redrawCooldown.IsRunning) {
                         objectsRedrawn++;
                     }
                 }
                 try {
-                    string senderName = CleanSenderName(_objectTable[arg2].Name.TextValue);
+                    ICharacter character = _objectTable[arg2] as ICharacter;
+                    string senderName = CleanSenderName(character.Name.TextValue);
                     string path = config.CacheFolder + @"\VoicePack\Others";
                     string hash = RoleplayingMediaManager.Shai1Hash(senderName);
                     string clipPath = path + @"\" + hash;
+                    if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                         !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                        temporaryWhitelistQueue.Enqueue(senderName);
+                    }
                     if (GetCombinedWhitelist().Contains(senderName) &&
                         !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
                         if (Directory.Exists(clipPath)) {
@@ -2843,9 +2852,7 @@ namespace RoleplayingVoice {
                                 Plugin.PluginLog?.Warning(e, e.Message);
                             }
                         }
-                    } else if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                        !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                        temporaryWhitelistQueue.Enqueue(senderName);
+                        SetNetworkedVoice(senderName, character);
                     } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
                         RefreshData();
                     }
@@ -2857,6 +2864,18 @@ namespace RoleplayingVoice {
                     Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
+        }
+
+        private void SetNetworkedVoice(string senderName, ICharacter character) {
+            Task.Run(async () => {
+                if (config.UsePlayerSync) {
+                    Thread.Sleep(2000);
+                    var value = await _roleplayingMediaManager.GetShort(senderName + "vanilla voice" + _clientState.TerritoryType);
+                    if (value != ushort.MaxValue - 1) {
+                        AddonTalkHandler.SetVanillaVoice(character, (byte)value);
+                    }
+                }
+            });
         }
 
         private void _clientState_LeavePvP() {
@@ -2872,6 +2891,16 @@ namespace RoleplayingVoice {
             if (_recentCFPop > 0) {
                 _recentCFPop++;
             }
+            Task.Run(async () => {
+                Thread.Sleep(5000);
+                while (_clientState.LocalPlayer == null) {
+                    Thread.Sleep(1000);
+                }
+                if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
+                    Thread.Sleep(5000);
+                    SendNetworkedVoice();
+                }
+            });
             if (config.UsePlayerSync) {
                 Task.Run(async () => {
                     if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
@@ -2881,6 +2910,27 @@ namespace RoleplayingVoice {
                 });
             }
         }
+
+        private void SendNetworkedVoice() {
+            Task.Run(async () => {
+                while (AddonTalkHandler != null) {
+                    Thread.Sleep(1000);
+                }
+                while (AddonTalkHandler.VoiceList != null) {
+                    Thread.Sleep(1000);
+                }
+                while (AddonTalkHandler.VoiceList.Count == 0) {
+                    Thread.Sleep(1000);
+                }
+                var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
+                AddonTalkHandler.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
+                if (config.UsePlayerSync) {
+                    string senderName = CleanSenderName(_clientState.LocalPlayer.Name.TextValue);
+                    await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
+                }
+            });
+        }
+
         private void CleanupEmoteWatchList() {
             foreach (var item in _emoteWatchList.Values) {
                 try {
@@ -3010,6 +3060,7 @@ namespace RoleplayingVoice {
                         try {
                             if (config.UsePlayerSync) {
                                 if (GetCombinedWhitelist().Contains(playerSender)) {
+                                    SetNetworkedVoice(playerSender, instigator);
                                     if (!isDownloadingZip) {
                                         if (!Path.Exists(clipPath) || !(await CheckEmoteExistsInDirectory(clipPath, GetEmoteName(emoteId)))) {
                                             if (Path.Exists(clipPath)) {
@@ -3540,7 +3591,7 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog?.Warning("Error 404, penumbra not found.");
             }
             if (config != null) {
-                if (config.CharacterVoicePacks != null) {
+                if (config.CharacterVoicePacks != null && config.VoiceReplacementType == 0) {
                     if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
                         string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
                         if (!string.IsNullOrEmpty(voice)) {
