@@ -2400,7 +2400,8 @@ namespace RoleplayingVoice {
                                     _nativeAudioStream.CopyTo(diskCopy);
                                 } catch (Exception e) {
                                     _nativeAudioStream.Position = 0;
-                                    diskCopy = new FileStream(Path.Combine(config.CacheFolder, @"\temp\tempSound.temp"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+                                    Directory.CreateDirectory(Path.Combine(config.CacheFolder, @"temp\"));
+                                    diskCopy = new FileStream(Path.Combine(config.CacheFolder, @"temp\tempSound.temp"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
                                 }
                             }
                             _nativeAudioStream.Position = 0;
@@ -2829,41 +2830,41 @@ namespace RoleplayingVoice {
                     if (_redrawCooldown.IsRunning) {
                         objectsRedrawn++;
                     }
-                }
-                try {
-                    if (_objectTable.Length > 0 && arg2 < _objectTable.Length && arg2 > -1) {
-                        ICharacter character = _objectTable[arg2] as ICharacter;
-                        string senderName = CleanSenderName(character.Name.TextValue);
-                        string path = config.CacheFolder + @"\VoicePack\Others";
-                        string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-                        string clipPath = path + @"\" + hash;
-                        if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                             !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                            temporaryWhitelistQueue.Enqueue(senderName);
-                        }
-                        if (GetCombinedWhitelist().Contains(senderName) &&
-                            !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                            if (Directory.Exists(clipPath)) {
-                                try {
-                                    RemoveFiles(clipPath);
-                                    if (_characterVoicePacks.ContainsKey(senderName)) {
-                                        _characterVoicePacks.Remove(senderName);
-                                    }
-                                } catch (Exception e) {
-                                    Plugin.PluginLog?.Warning(e, e.Message);
-                                }
+                    try {
+                        if (_objectTable.Length > 0 && arg2 < _objectTable.Length && arg2 > -1) {
+                            ICharacter character = _objectTable[arg2] as ICharacter;
+                            string senderName = CleanSenderName(character.Name.TextValue);
+                            string path = config.CacheFolder + @"\VoicePack\Others";
+                            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+                            string clipPath = path + @"\" + hash;
+                            if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                                 !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                temporaryWhitelistQueue.Enqueue(senderName);
                             }
-                            SetNetworkedVoice(senderName, character);
-                        } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                            RefreshData();
+                            if (GetCombinedWhitelist().Contains(senderName) &&
+                                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                if (Directory.Exists(clipPath)) {
+                                    try {
+                                        RemoveFiles(clipPath);
+                                        if (_characterVoicePacks.ContainsKey(senderName)) {
+                                            _characterVoicePacks.Remove(senderName);
+                                        }
+                                    } catch (Exception e) {
+                                        Plugin.PluginLog?.Warning(e, e.Message);
+                                    }
+                                }
+                                SetNetworkedVoice(senderName, character);
+                            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                RefreshData();
+                            }
+                            if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                                _wasDoingFakeEmote = false;
+                            }
                         }
-                        if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                            _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
-                            _wasDoingFakeEmote = false;
-                        }
+                    } catch (Exception e) {
+                        Plugin.PluginLog?.Warning(e, e.Message);
                     }
-                } catch (Exception e) {
-                    Plugin.PluginLog?.Warning(e, e.Message);
                 }
             }
         }
