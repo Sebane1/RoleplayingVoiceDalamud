@@ -2831,34 +2831,38 @@ namespace RoleplayingVoice {
                     }
                 }
                 try {
-                    ICharacter character = _objectTable[arg2] as ICharacter;
-                    string senderName = CleanSenderName(character.Name.TextValue);
-                    string path = config.CacheFolder + @"\VoicePack\Others";
-                    string hash = RoleplayingMediaManager.Shai1Hash(senderName);
-                    string clipPath = path + @"\" + hash;
-                    if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
-                         !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                        temporaryWhitelistQueue.Enqueue(senderName);
-                    }
-                    if (GetCombinedWhitelist().Contains(senderName) &&
-                        !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                        if (Directory.Exists(clipPath)) {
-                            try {
-                                RemoveFiles(clipPath);
-                                if (_characterVoicePacks.ContainsKey(senderName)) {
-                                    _characterVoicePacks.Remove(senderName);
+                    if (_objectTable.Length > 0) {
+                        if (arg2 < _objectTable.Length) {
+                            ICharacter character = _objectTable[arg2] as ICharacter;
+                            string senderName = CleanSenderName(character.Name.TextValue);
+                            string path = config.CacheFolder + @"\VoicePack\Others";
+                            string hash = RoleplayingMediaManager.Shai1Hash(senderName);
+                            string clipPath = path + @"\" + hash;
+                            if (!temporaryWhitelist.Contains(senderName) && config.IgnoreWhitelist &&
+                                 !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                temporaryWhitelistQueue.Enqueue(senderName);
+                            }
+                            if (GetCombinedWhitelist().Contains(senderName) &&
+                                !_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                if (Directory.Exists(clipPath)) {
+                                    try {
+                                        RemoveFiles(clipPath);
+                                        if (_characterVoicePacks.ContainsKey(senderName)) {
+                                            _characterVoicePacks.Remove(senderName);
+                                        }
+                                    } catch (Exception e) {
+                                        Plugin.PluginLog?.Warning(e, e.Message);
+                                    }
                                 }
-                            } catch (Exception e) {
-                                Plugin.PluginLog?.Warning(e, e.Message);
+                                SetNetworkedVoice(senderName, character);
+                            } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                RefreshData();
+                            }
+                            if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
+                                _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                                _wasDoingFakeEmote = false;
                             }
                         }
-                        SetNetworkedVoice(senderName, character);
-                    } else if (_clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                        RefreshData();
-                    }
-                    if (_wasDoingFakeEmote && _clientState.LocalPlayer.Name.TextValue.Contains(senderName)) {
-                        _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
-                        _wasDoingFakeEmote = false;
                     }
                 } catch (Exception e) {
                     Plugin.PluginLog?.Warning(e, e.Message);
