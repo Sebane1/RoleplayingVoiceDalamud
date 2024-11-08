@@ -2399,9 +2399,12 @@ namespace RoleplayingVoice {
                                     _nativeAudioStream.Position = 0;
                                     _nativeAudioStream.CopyTo(diskCopy);
                                 } catch (Exception e) {
+                                    PluginLog.Warning(e, e.Message);
+                                    PluginLog.Warning("Attempting disk write instead of using memory.");
                                     _nativeAudioStream.Position = 0;
                                     Directory.CreateDirectory(Path.Combine(config.CacheFolder, @"temp\"));
                                     diskCopy = new FileStream(Path.Combine(config.CacheFolder, @"temp\tempSound.temp"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+                                    _nativeAudioStream.CopyTo(diskCopy);
                                 }
                             }
                             _nativeAudioStream.Position = 0;
