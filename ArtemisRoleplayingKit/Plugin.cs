@@ -603,7 +603,7 @@ namespace RoleplayingVoice {
                             _objectTable = _objectTableThreadUnsafe.ToArray();
                         }
                     } else {
-                            _objectTable = _objectTableThreadUnsafe.ToArray();
+                        _objectTable = _objectTableThreadUnsafe.ToArray();
                     }
                     if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
                         InitializeEverything();
@@ -615,11 +615,11 @@ namespace RoleplayingVoice {
                     if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized) {
                         pollingTimer.Restart();
                         CheckIfDied();
-                        if (!Conditions.IsBoundByDuty) {
-                            CheckForMovingObjects();
-                        }
                         switch (performanceLimiter++) {
                             case 0:
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                    CheckForMovingObjects();
+                                }
                                 break;
                             case 1:
                                 if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
@@ -643,12 +643,12 @@ namespace RoleplayingVoice {
                                 break;
                             case 6:
                                 if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                    CheckForGPose();
+                                    //CheckForGPose();
                                 }
                                 break;
                             case 7:
                                 if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                    //CheckForCustomEmoteTriggers();
+                                    CheckForCustomEmoteTriggers();
                                 }
                                 break;
                             case 8:
@@ -758,10 +758,10 @@ namespace RoleplayingVoice {
                                                                     }
                                                                 });
                                                                 //Task.Run(async () => {
-                                                                    ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
-                                                                    if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
-                                                                        OnEmote(item as ICharacter, emoteId);
-                                                                    }
+                                                                ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
+                                                                if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
+                                                                    OnEmote(item as ICharacter, emoteId);
+                                                                }
                                                                 ////});
                                                                 Thread.Sleep(3000);
                                                             }
@@ -810,10 +810,10 @@ namespace RoleplayingVoice {
                                                                     }
                                                                 }
                                                                 //Task.Run(async () => {
-                                                                    ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
-                                                                    if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
-                                                                        OnEmote(item as ICharacter, emoteId);
-                                                                    }
+                                                                ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
+                                                                if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
+                                                                    OnEmote(item as ICharacter, emoteId);
+                                                                }
                                                                 //});
                                                                 Thread.Sleep(3000);
                                                             }
