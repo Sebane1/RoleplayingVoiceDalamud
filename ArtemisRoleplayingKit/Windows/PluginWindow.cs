@@ -514,7 +514,7 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     ImGui.InputText("Server Host ##customDialogueRelayServer", ref _dialogueServerIp, 255);
                 }
-                ImGui.Text(clientState.LocalPlayer.Name + "'s Experienced History:");
+                ImGui.Text(clientState.LocalPlayer != null ?  clientState.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
@@ -962,12 +962,14 @@ namespace RoleplayingVoice {
                             }
                         }
                         if (configuration.VoicePackIsActive) {
-                            if (configuration.VoiceReplacementType == 0) {
-                                PluginReference.AddonTalkHandler.SetVanillaVoice(clientState.LocalPlayer, 0);
-                            }
-                            if (configuration.VoiceReplacementType == 1) {
-                                var voiceItem = PluginReference.AddonTalkHandler.VoiceList.ElementAt(configuration.ChosenVanillaReplacement);
-                                PluginReference.AddonTalkHandler.SetVanillaVoice(clientState.LocalPlayer, voiceItem.Value);
+                            if (PluginReference != null && PluginReference.AddonTalkHandler != null) {
+                                if (configuration.VoiceReplacementType == 0) {
+                                    PluginReference.AddonTalkHandler?.SetVanillaVoice(clientState.LocalPlayer, 0);
+                                }
+                                if (configuration.VoiceReplacementType == 1) {
+                                    var voiceItem = PluginReference.AddonTalkHandler.VoiceList.ElementAt(configuration.ChosenVanillaReplacement);
+                                    PluginReference.AddonTalkHandler?.SetVanillaVoice(clientState.LocalPlayer, voiceItem.Value);
+                                }
                             }
                         }
                     }

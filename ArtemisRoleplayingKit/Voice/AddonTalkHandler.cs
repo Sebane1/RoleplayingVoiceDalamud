@@ -504,7 +504,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             _blockAudioGeneration = false;
                         });
                     }
-                    if (pollingTimer.ElapsedMilliseconds > 100) {
+                    if (pollingTimer.ElapsedMilliseconds > 200) {
                         try {
                             if (_clientState != null) {
                                 if (_clientState.IsLoggedIn) {
@@ -540,6 +540,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_state == null) {
                                         _state = GetBattleTalkAddonState();
                                     }
+                                    _threadSafeObjectTable = _objectTable.ToList();
+                                    _threadSafeObjectTable.Sort((x, y) => {
+                                        return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
+                                    });
                                     Task.Run(delegate {
                                         if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
                                             _textIsPresent = true;
@@ -597,12 +601,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 _startedNewDialogue = false;
                                                 _redoLineWindow.IsOpen = false;
                                             }
-                                            //lock (_threadSafeObjectTable) {
-                                            _threadSafeObjectTable = _objectTable.ToList();
-                                            _threadSafeObjectTable.Sort((x, y) => {
-                                                return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
-                                            });
-                                            //}
                                             if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                                 _blockAudioGeneration = false;
                                             }

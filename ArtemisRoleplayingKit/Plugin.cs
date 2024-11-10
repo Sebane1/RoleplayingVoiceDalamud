@@ -2830,17 +2830,17 @@ namespace RoleplayingVoice {
         }
         private void gameObjectRedrawn(nint arg1, int arg2) {
             if (!disposed) {
-                if (_objectTable != null) {
+                if (_objectTableThreadUnsafe != null) {
                     if (!_redrawCooldown.IsRunning) {
                         _redrawCooldown.Start();
-                        redrawObjectCount = _objectTable.Count<IGameObject>();
+                        redrawObjectCount = _objectTableThreadUnsafe.Count<IGameObject>();
                     }
                     if (_redrawCooldown.IsRunning) {
                         objectsRedrawn++;
                     }
                     try {
-                        if (_objectTable.Length > 0 && arg2 < _objectTable.Length && arg2 > -1) {
-                            ICharacter character = _objectTable[arg2] as ICharacter;
+                        if (_objectTableThreadUnsafe.Length > 0 && arg2 < _objectTableThreadUnsafe.Length && arg2 > -1) {
+                            ICharacter character = _objectTableThreadUnsafe[arg2] as ICharacter;
                             if (character != null) {
                                 string senderName = CleanSenderName(character.Name.TextValue);
                                 string path = config.CacheFolder + @"\VoicePack\Others";
@@ -2884,7 +2884,7 @@ namespace RoleplayingVoice {
                 if (config.UsePlayerSync) {
                     Thread.Sleep(2000);
                     var value = await _roleplayingMediaManager.GetShort(senderName + "vanilla voice" + _clientState.TerritoryType);
-                    if (value != ushort.MaxValue - 1) {
+                    if (value != ushort.MaxValue - 1 && character != null) {
                         AddonTalkHandler.SetVanillaVoice(character, (byte)value);
                     }
                 }
