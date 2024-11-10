@@ -2333,18 +2333,18 @@ namespace RoleplayingVoice {
                 if (config.UsePlayerSync) {
                     if (GetCombinedWhitelist().Contains(playerSender)) {
                         if (!isDownloadingZip) {
-                            if (!Path.Exists(clipPath)) {
-                                isDownloadingZip = true;
-                                _maxDownloadLengthTimer.Restart();
-                                await Task.Run(async () => {
-                                    try {
-                                        string value = await _roleplayingMediaManager.GetZip(playerSender, path);
-                                    } catch {
+                            //if (!Path.Exists(clipPath)) {
+                            //    isDownloadingZip = true;
+                            //    _maxDownloadLengthTimer.Restart();
+                            //    await Task.Run(async () => {
+                            //        try {
+                            //            string value = await _roleplayingMediaManager.GetZip(playerSender, path);
+                            //        } catch {
 
-                                    }
-                                    isDownloadingZip = false;
-                                });
-                            }
+                            //        }
+                            //        isDownloadingZip = false;
+                            //    });
+                            //}
                         }
                         if (Directory.Exists(path)) {
                             CharacterVoicePack characterVoicePack = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage, false);
@@ -2367,11 +2367,11 @@ namespace RoleplayingVoice {
                 }
                 string value = _mainCharacterVoicePack.GetMisc("moving");
                 if (!string.IsNullOrEmpty(value)) {
-                    if (config.UsePlayerSync) {
-                        Task.Run(async () => {
-                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
-                        });
-                    }
+                    //if (config.UsePlayerSync) {
+                    //    Task.Run(async () => {
+                    //        bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                    //    });
+                    //}
                     _mediaManager.PlayAudio(_playerObject, value, SoundType.LoopWhileMoving, false, 0);
                 }
             }
