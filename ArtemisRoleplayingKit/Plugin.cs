@@ -256,6 +256,7 @@ namespace RoleplayingVoice {
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
         private GameObject[] _objectTable;
+        private bool _checkingMovementInProgress;
 
         public string Name => "Artemis Roleplaying Kit";
 
@@ -1749,42 +1750,46 @@ namespace RoleplayingVoice {
             });
         }
         private void CheckForMovingObjects() {
-            Task.Run(delegate {
-                try {
-                    foreach (GameObject gameObject in _objectTable) {
-                        if (gameObject.ObjectKind == ObjectKind.Player) {
-                            string cleanedName = CleanSenderName(gameObject.Name.TextValue);
-                            if (!string.IsNullOrEmpty(cleanedName)) {
-                                if (gameObjectPositions.ContainsKey(cleanedName)) {
-                                    var positionData = gameObjectPositions[cleanedName];
-                                    if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
-                                        positionData.LastRotation.Y != gameObject.Rotation) {
-                                        if (!positionData.IsMoving) {
-                                            ObjectIsMoving(cleanedName, gameObject);
-                                            positionData.IsMoving = true;
+            if (!_checkingMovementInProgress) {
+                Task.Run(delegate {
+                    _checkingMovementInProgress = true;
+                    try {
+                        foreach (GameObject gameObject in _objectTable) {
+                            if (gameObject.ObjectKind == ObjectKind.Player) {
+                                string cleanedName = CleanSenderName(gameObject.Name.TextValue);
+                                if (!string.IsNullOrEmpty(cleanedName)) {
+                                    if (gameObjectPositions.ContainsKey(cleanedName)) {
+                                        var positionData = gameObjectPositions[cleanedName];
+                                        if (Vector3.Distance(positionData.LastPosition, gameObject.Position) > 0.01f ||
+                                            positionData.LastRotation.Y != gameObject.Rotation) {
+                                            if (!positionData.IsMoving) {
+                                                ObjectIsMoving(cleanedName, gameObject);
+                                                positionData.IsMoving = true;
+                                            }
+                                        } else {
+                                            positionData.IsMoving = false;
                                         }
+                                        positionData.LastPosition = gameObject.Position;
+                                        positionData.LastRotation = new Vector3(0, gameObject.Rotation, 0);
                                     } else {
-                                        positionData.IsMoving = false;
+                                        gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, new Vector3(0, gameObject.Rotation, 0), false);
                                     }
-                                    positionData.LastPosition = gameObject.Position;
-                                    positionData.LastRotation = new Vector3(0, gameObject.Rotation, 0);
-                                } else {
-                                    gameObjectPositions[cleanedName] = new MovingObject(gameObject.Position, new Vector3(0, gameObject.Rotation, 0), false);
+                                    if (cleanedName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
+                                        MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
+                                    } else {
+                                        CheckOtherPlayerBoneMovement(cleanedName, gameObject);
+                                    }
                                 }
-                                if (cleanedName == CleanSenderName(_clientState.LocalPlayer.Name.TextValue)) {
-                                    MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
-                                } else {
-                                    CheckOtherPlayerBoneMovement(cleanedName, gameObject);
-                                }
-                            }
 
+                            }
                         }
+                    } catch (Exception e) {
+                        Plugin.PluginLog?.Warning(e, e.Message);
                     }
-                } catch (Exception e) {
-                    Plugin.PluginLog?.Warning(e, e.Message);
+                    _checkingMovementInProgress = false;
                 }
-            }
             );
+            }
         }
         #region Audio Volume
         private void CheckVolumeLevels() {
@@ -2320,7 +2325,7 @@ namespace RoleplayingVoice {
                             } else {
                                 _mediaManager.StopAudio(new MediaGameObject(gameObject));
                             }
-                            MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, characterVoicePack, _roleplayingMediaManager, _mediaManager);
+                            //MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, characterVoicePack, _roleplayingMediaManager, _mediaManager);
                         }
                     }
                 }
