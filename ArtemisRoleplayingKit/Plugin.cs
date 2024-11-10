@@ -734,7 +734,7 @@ namespace RoleplayingVoice {
                                                             Plugin.PluginLog?.Verbose("Checking " + playerSender);
                                                             Plugin.PluginLog?.Verbose("Getting emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
-                                                            if (animation > 0) {
+                                                            if (animation > 0 && animation != ushort.MaxValue - 1) {
                                                                 Plugin.PluginLog?.Verbose("Applying Emote.");
                                                                 if (animation == ushort.MaxValue) {
                                                                     animation = 0;
@@ -841,18 +841,20 @@ namespace RoleplayingVoice {
         private void CheckIfDied() {
             if (config.VoicePackIsActive && config.VoiceReplacementType == 0) {
                 Task.Run(delegate {
-                    if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
-                        if (_mainCharacterVoicePack == null) {
-                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                    if (_clientState.LocalPlayer != null) {
+                        if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
+                            if (_mainCharacterVoicePack == null) {
+                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                            }
+                            PlayVoiceLine(_mainCharacterVoicePack.GetDeath());
+                            _playerDied = true;
+                        } else if (_clientState.LocalPlayer.CurrentHp > 0 && _playerDied) {
+                            if (_mainCharacterVoicePack == null) {
+                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                            }
+                            PlayVoiceLine(_mainCharacterVoicePack.GetRevive());
+                            _playerDied = false;
                         }
-                        PlayVoiceLine(_mainCharacterVoicePack.GetDeath());
-                        _playerDied = true;
-                    } else if (_clientState.LocalPlayer.CurrentHp > 0 && _playerDied) {
-                        if (_mainCharacterVoicePack == null) {
-                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                        }
-                        PlayVoiceLine(_mainCharacterVoicePack.GetRevive());
-                        _playerDied = false;
                     }
                 });
             }
