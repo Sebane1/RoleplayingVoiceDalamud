@@ -751,12 +751,12 @@ namespace RoleplayingVoice {
                                                                         }
                                                                     }
                                                                 });
-                                                                Task.Run(async () => {
+                                                                //Task.Run(async () => {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "emoteId");
                                                                     if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
                                                                         OnEmote(item as ICharacter, emoteId);
                                                                     }
-                                                                });
+                                                                ////});
                                                                 Thread.Sleep(3000);
                                                             }
                                                         } else {
@@ -803,12 +803,12 @@ namespace RoleplayingVoice {
                                                                         });
                                                                     }
                                                                 }
-                                                                Task.Run(async () => {
+                                                                //Task.Run(async () => {
                                                                     ushort emoteId = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmoteId");
                                                                     if (emoteId > 0 && emoteId != ushort.MaxValue - 1) {
                                                                         OnEmote(item as ICharacter, emoteId);
                                                                     }
-                                                                });
+                                                                //});
                                                                 Thread.Sleep(3000);
                                                             }
                                                         } else {
