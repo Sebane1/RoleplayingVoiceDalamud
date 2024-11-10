@@ -598,7 +598,9 @@ namespace RoleplayingVoice {
         private void framework_Update(IFramework framework) {
             try {
                 if (!disposed) {
-                    _objectTable = _objectTableThreadUnsafe.ToArray();
+                    lock (_objectTable) {
+                        _objectTable = _objectTableThreadUnsafe.ToArray();
+                    }
                     if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
                         InitializeEverything();
                         _hasBeenInitialized = true;
@@ -711,10 +713,10 @@ namespace RoleplayingVoice {
             }
         }
 
-        private async void CheckForCustomEmoteTriggers() {
-            await Task.Run(delegate {
+        private void CheckForCustomEmoteTriggers() {
+            Task.Run(delegate {
                 if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
-                    if (_emoteSyncCheck.ElapsedMilliseconds > 5000) {
+                    if (_emoteSyncCheck.ElapsedMilliseconds > 10000) {
                         _emoteSyncCheck.Restart();
                         try {
                             foreach (Dalamud.Game.ClientState.Objects.Types.IGameObject item in _objectTable) {
