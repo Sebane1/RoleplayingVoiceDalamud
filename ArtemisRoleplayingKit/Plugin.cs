@@ -598,8 +598,12 @@ namespace RoleplayingVoice {
         private void framework_Update(IFramework framework) {
             try {
                 if (!disposed) {
-                    lock (_objectTable) {
-                        _objectTable = _objectTableThreadUnsafe.ToArray();
+                    if (_objectTable != null) {
+                        lock (_objectTable) {
+                            _objectTable = _objectTableThreadUnsafe.ToArray();
+                        }
+                    } else {
+                            _objectTable = _objectTableThreadUnsafe.ToArray();
                     }
                     if (!_hasBeenInitialized && _clientState.LocalPlayer != null) {
                         InitializeEverything();
@@ -644,7 +648,7 @@ namespace RoleplayingVoice {
                                 break;
                             case 7:
                                 if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                    CheckForCustomEmoteTriggers();
+                                    //CheckForCustomEmoteTriggers();
                                 }
                                 break;
                             case 8:
