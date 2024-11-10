@@ -3153,11 +3153,11 @@ namespace RoleplayingVoice {
             }
         }
         private void SendingEmote(ICharacter instigator, ushort emoteId) {
-            Task.Run(delegate {
-                if (config.CharacterVoicePacks.ContainsKey(instigator.Name.TextValue)) {
-                    _voice = config.CharacterVoicePacks[instigator.Name.TextValue];
-                    _voicePackPath = config.CacheFolder + @"\VoicePack\" + _voice;
-                    _voicePackStaging = config.CacheFolder + @"\Staging\" + instigator.Name.TextValue;
+            if (config.CharacterVoicePacks.ContainsKey(instigator.Name.TextValue)) {
+                _voice = config.CharacterVoicePacks[instigator.Name.TextValue];
+                _voicePackPath = config.CacheFolder + @"\VoicePack\" + _voice;
+                _voicePackStaging = config.CacheFolder + @"\Staging\" + instigator.Name.TextValue;
+                Task.Run(delegate {
                     if (_mainCharacterVoicePack == null) {
                         _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                     }
@@ -3207,9 +3207,9 @@ namespace RoleplayingVoice {
                             bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, _voicePackStaging);
                         });
                     }
-                }
-                _didRealEmote = true;
-            });
+                    _didRealEmote = true;
+                });
+            }
         }
         private string GetEmoteName(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);

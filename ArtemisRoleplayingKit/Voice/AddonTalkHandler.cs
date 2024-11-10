@@ -999,7 +999,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     int body = 0;
                     bool isRetainer = false;
                     Dalamud.Game.ClientState.Objects.Types.IGameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body, ref isRetainer);
-                    if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
+                    if (!isRetainer || (_plugin != null && !_plugin.Config.DontVoiceRetainers)) {
                         string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
                         MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_clientState.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                         _currentSpeechObject = currentSpeechObject;
