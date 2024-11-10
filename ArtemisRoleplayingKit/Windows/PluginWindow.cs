@@ -114,6 +114,8 @@ namespace RoleplayingVoice {
         private bool _narrateUnquotedText;
         private Vector2? _lastWindowPosition;
         private bool _streamDetectionActive;
+        private string _dialogueServerIp = "";
+        private bool _useCustomDialogueRelayServer;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -222,6 +224,7 @@ namespace RoleplayingVoice {
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     _voicePackTypeBox.SelectedIndex = configuration.VoiceReplacementType;
                     _voiceToSwap.SelectedIndex = configuration.ChosenVanillaReplacement;
+                    _dialogueServerIp = configuration.CustomDialogueRelayServerIp;
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
                         if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                             characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
@@ -498,7 +501,7 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("Read Location And Toast Notifications", ref _readLocationAndToastNotifications);
                 ImGui.Checkbox("Auto Advance Text (Numpad 0)", ref _npcAutoTextAdvance);
                 ImGui.TableSetColumnIndex(1);
-                ImGui.Checkbox("Allow dialogue queuing outside cutscenes", ref _allowDialogueQueueOutsideCutscenes);
+                //ImGui.Checkbox("Allow dialogue queuing outside cutscenes", ref _allowDialogueQueueOutsideCutscenes);
                 ImGui.Checkbox("Use the same voices for A Realm Reborn", ref _replaceVoicedARRCutscenes);
                 ImGui.Checkbox("Ignore bubbles from overworld NPCs", ref _ignoreBubblesFromOverworldNPCs);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
@@ -506,6 +509,11 @@ namespace RoleplayingVoice {
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
+                ImGui.Checkbox("Use Relay Server", ref _useCustomDialogueRelayServer);
+                if (_useCustomDialogueRelayServer) {
+                    ImGui.SameLine();
+                    ImGui.InputText("Server Host ##customDialogueRelayServer", ref _dialogueServerIp, 255);
+                }
                 ImGui.Text(clientState.LocalPlayer.Name + "'s Experienced History:");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
@@ -514,7 +522,8 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
-                            var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
+                            MemoryStream stream = new MemoryStream();
+                            var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream,item.Text, item.OriginalValue, item.RawValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                             if (stream != null) {
                                 if (stream.Length > 0) {
@@ -530,9 +539,11 @@ namespace RoleplayingVoice {
                             ImGui.SameLine();
                             if (ImGui.Button($"Report Double##" + count++)) {
                                 Task.Run(async () => {
-                                    var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
+                                    MemoryStream stream = new MemoryStream();
+                                    var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream, item.Text, item.OriginalValue, item.RawValue, item.Character,
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, item.CanBeMuted, VoiceLinePriority.Ignore)).Item1;
                                     PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                    stream.Dispose();
                                 });
                                 break;
                             }
@@ -541,7 +552,8 @@ namespace RoleplayingVoice {
                         ImGui.SameLine();
                         if (ImGui.Button($"Report Line##" + count++)) {
                             PluginReference.RedoLineWindow.OpenReportBox(async delegate (object o, string note) {
-                                var stream = (await PluginReference.NpcVoiceManager.GetCharacterAudio(item.Text, item.OriginalValue, item.RawValue, item.Character,
+                                MemoryStream stream = new MemoryStream();
+                                var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream, item.Text, item.OriginalValue, item.RawValue, item.Character,
                                 item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, true)).Item1;
                                 if (stream != null) {
                                     if (stream.Length > 0) {
@@ -549,6 +561,7 @@ namespace RoleplayingVoice {
                                         PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                     }
                                 }
+                                stream.Dispose();
                                 PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
                             });
                             PluginReference.RedoLineWindow.IsOpen = true;
@@ -797,6 +810,9 @@ namespace RoleplayingVoice {
             configuration.LocalVoiceForNonWhitelistedPlayers = _localVoiceForNonWhitelistedPlayers;
             configuration.VoiceReplacementType = _voicePackTypeBox.SelectedIndex;
             configuration.ChosenVanillaReplacement = _voiceToSwap.SelectedIndex;
+            configuration.CustomDialogueRelayServerIp = _dialogueServerIp;
+            configuration.UseCustomDialogueRelayServer = _useCustomDialogueRelayServer;
+
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {
                     characterVoicePack = _voicePackList[voicePackComboBox.SelectedIndex];
