@@ -961,17 +961,6 @@ namespace RoleplayingVoice {
                                 }
                             }
                         }
-                        if (configuration.VoicePackIsActive) {
-                            if (PluginReference != null && PluginReference.AddonTalkHandler != null) {
-                                if (configuration.VoiceReplacementType == 0) {
-                                    PluginReference.AddonTalkHandler?.SetVanillaVoice(clientState.LocalPlayer, 0);
-                                }
-                                if (configuration.VoiceReplacementType == 1) {
-                                    var voiceItem = PluginReference.AddonTalkHandler.VoiceList.ElementAt(configuration.ChosenVanillaReplacement);
-                                    PluginReference.AddonTalkHandler?.SetVanillaVoice(clientState.LocalPlayer, voiceItem.Value);
-                                }
-                            }
-                        }
                     }
                 } catch (Exception ex) {
                     Plugin.PluginLog.Warning(ex, ex.Message);

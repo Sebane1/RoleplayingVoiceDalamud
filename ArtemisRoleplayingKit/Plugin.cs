@@ -147,7 +147,7 @@ namespace RoleplayingVoice {
 
         public EventHandler OnMuteTimerOver;
 
-        Dictionary<string, MovingObject> gameObjectPositions = new Dictionary<string, MovingObject>();
+        ConcurrentDictionary<string, MovingObject> gameObjectPositions = new ConcurrentDictionary<string, MovingObject>();
         Queue<string> temporaryWhitelistQueue = new Queue<string>();
         List<string> temporaryWhitelist = new List<string>();
         private List<string> combinedSoundList;
@@ -2735,10 +2735,9 @@ namespace RoleplayingVoice {
                         } catch (Exception e) {
                             Plugin.PluginLog.Error(e.Message);
                         }
-                    } else {
-                        if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
-                            SendNetworkedVoice();
-                        }
+                    }
+                    if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
+                        SendNetworkedVoice();
                     }
                     if (_npcVoiceManager != null && config != null) {
                         _npcVoiceManager.UseCustomRelayServer = config.UseCustomDialogueRelayServer;
@@ -2935,11 +2934,21 @@ namespace RoleplayingVoice {
                 while (AddonTalkHandler.VoiceList.Count == 0) {
                     Thread.Sleep(1000);
                 }
-                var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
-                AddonTalkHandler.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
-                if (config.UsePlayerSync) {
-                    string senderName = CleanSenderName(_clientState.LocalPlayer.Name.TextValue);
-                    await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
+                if (config.VoicePackIsActive) {
+                    var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
+                    if (AddonTalkHandler != null) {
+                        if (config.VoiceReplacementType == 0) {
+                            AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, 0);
+                        }
+                        if (config.VoiceReplacementType == 1) {
+                            AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
+                        }
+                    }
+                    AddonTalkHandler.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
+                    if (config.UsePlayerSync) {
+                        string senderName = CleanSenderName(_clientState.LocalPlayer.Name.TextValue);
+                        await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
+                    }
                 }
             });
         }
