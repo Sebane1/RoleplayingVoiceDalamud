@@ -35,14 +35,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                     _speakerList = JsonConvert.DeserializeObject<Dictionary<string, ReportData>>(json);
                     _npcBubbleRecovery.Clear();
                     foreach (var item in _speakerList) {
-                        _npcBubbleRecovery.Add(item.Value.npcid, item.Key);
+                        try {
+                            _npcBubbleRecovery.Add(item.Value.npcid, item.Key);
+                        } catch {
+
+                        }
                     }
                     alreadyLoaded = true;
                 }
-                if (_timeSinceLastUpdate == null) {
-                    _timeSinceLastUpdate = new Stopwatch();
-                }
-                _timeSinceLastUpdate.Restart();
                 return true;
             } catch (Exception ex) {
                 if (_npcVoiceConfiguration == null) {
@@ -50,6 +50,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
                 return false;
             }
+            if (_timeSinceLastUpdate == null) {
+                _timeSinceLastUpdate = new Stopwatch();
+            }
+            _timeSinceLastUpdate.Restart();
         }
         public static string CheckForNameVariant(string name, int variantDiscriminator) {
             Dictionary<int, Dictionary<string, string>> voiceVariants = new Dictionary<int, Dictionary<string, string>>();

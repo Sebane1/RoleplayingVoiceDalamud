@@ -29,7 +29,9 @@ public class EventNpc : ExcelRow, INpcBase
 		set => FavoritesService.SetFavorite(this, value);
 	}
 
-	public override void PopulateData(RowParser parser, Lumina.GameData gameData, Language language)
+    public uint RowId => throw new System.NotImplementedException();
+
+    public override void PopulateData(RowParser parser, Lumina.GameData gameData, Language language)
 	{
 		base.PopulateData(parser, gameData, language);
 
