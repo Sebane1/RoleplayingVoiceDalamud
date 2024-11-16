@@ -47,8 +47,8 @@ public class ActorMemory : ActorBasicMemory
     [Bind(0x0670, BindFlags.Pointer)] public ActorMemory? Mount { get; set; }
     [Bind(0x0678)] public ushort MountId { get; set; }
     [Bind(0x06D8, BindFlags.Pointer)] public ActorMemory? Companion { get; set; }
-    [Bind(0x06F8)] public WeaponMemory? MainHand { get; set; }
-    [Bind(0x0768)] public WeaponMemory? OffHand { get; set; }
+    //[Bind(0x06F8)] public WeaponMemory? MainHand { get; set; }
+    //[Bind(0x0768)] public WeaponMemory? OffHand { get; set; }
     [Bind(0x0848)] public ActorEquipmentMemory? Equipment { get; set; }
     [Bind(0x0898)] public ActorCustomizeMemory? Customize { get; set; }
     [Bind(0x08B6, BindFlags.ActorRefresh)] public bool HatHidden { get; set; }

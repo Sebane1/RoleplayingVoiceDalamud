@@ -147,10 +147,10 @@ public class AnimationService : ServiceBase<AnimationService>
 	{
 		if (animationId != null && memory.Animation!.BaseOverride != animationId)
 		{
-			if (animationId < GameDataService.ActionTimelines.RowCount)
-			{
-				memory.Animation!.BaseOverride = (ushort)animationId;
-			}
+			////if (animationId < GameDataService.ActionTimelines.RowCount)
+			////{
+			////	memory.Animation!.BaseOverride = (ushort)animationId;
+			////}
 		}
 
 		// Always set the input before the mode

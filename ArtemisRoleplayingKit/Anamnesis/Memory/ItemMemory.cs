@@ -23,17 +23,17 @@ public class ItemMemory : MemoryBase, IEquipmentItemMemory
 		//this.Dye = 0;
 	}
 
-	public void Equip(IItem item)
-	{
-		this.Base = item.ModelBase;
-		this.Variant = (byte)item.ModelVariant;
-	}
+	//public void Equip(IItem item)
+	//{
+	//	this.Base = item.ModelBase;
+	//	this.Variant = (byte)item.ModelVariant;
+	//}
 
-	public bool Is(IItem? item)
-	{
-		if (item == null)
-			return false;
+	//public bool Is(IItem? item)
+	//{
+	//	if (item == null)
+	//		return false;
 
-		return this.Base == item.ModelBase && this.Variant == item.ModelVariant;
-	}
+	//	return this.Base == item.ModelBase && this.Variant == item.ModelVariant;
+	//}
 }

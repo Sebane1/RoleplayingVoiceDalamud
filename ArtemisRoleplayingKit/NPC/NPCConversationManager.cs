@@ -3,7 +3,7 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using RoleplayingSpeechDalamud;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Catalogue;
@@ -68,7 +68,7 @@ namespace RoleplayingVoiceDalamud.NPC {
                 $"{pronounSingular} breast size is {breastSize}. {pronounSingularAlternate} has " +
                 $"{GetHairColour(customization.Customize.HairColor.Value)} hair colour and " +
                 $"{GetLipColour(customization.Customize.LipColor.Value)} lip colour. " +
-                $"{GetPlayerExperience(player.Level, player.ClassJob.GameData.NameEnglish, pronounSingularAlternate)}." +
+                $"{GetPlayerExperience(player.Level, player.ClassJob.Value.NameEnglish.ToString(), pronounSingularAlternate)}." +
                 chatSummaries;
         }
         private string GetSkinTone(int value) {
@@ -238,17 +238,17 @@ namespace RoleplayingVoiceDalamud.NPC {
                 }
             }
             foreach (var item in emotes) {
-                if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if ((emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing ") ||
-                        emoteString.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing"))
-                        || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()) && item.Name.RawString.Length > 3)) {
-                        _plugin.DoEmote("/" + item.Name.RawString.ToLower(), _aiCharacter, false);
+                if (!string.IsNullOrWhiteSpace(item.Name.ToString())) {
+                    if ((emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + " ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "s ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ed ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ing ") ||
+                        emoteString.ToLower().EndsWith(" " + item.Name.ToString().ToLower()) ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "s") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ed") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ing"))
+                        || (emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower()) && item.Name.ToString().Length > 3)) {
+                        _plugin.DoEmote("/" + item.Name.ToString().ToLower(), _aiCharacter, false);
                         break;
                     }
                 }

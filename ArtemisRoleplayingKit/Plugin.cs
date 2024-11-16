@@ -44,7 +44,6 @@ using VfxEditor.TmbFormat;
 using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
 using Dalamud.Plugin.Ipc;
-using Emote = Lumina.Excel.GeneratedSheets.Emote;
 using Glamourer.Utility;
 using System.Windows.Forms;
 using RoleplayingVoiceDalamud.Glamourer;
@@ -60,7 +59,6 @@ using RoleplayingVoiceDalamud.Services;
 using NAudio.Wave.SampleProviders;
 using FFXIVClientStructs.FFXIV.Client.System.Timer;
 using NAudio.MediaFoundation;
-using Lumina.Excel.GeneratedSheets;
 using RoleplayingVoiceDalamud.Animation;
 using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -87,6 +85,7 @@ using System.Numerics;
 using RoleplayingVoiceDalamud.GameObjects;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Common.Lua;
+using Lumina.Excel.Sheets;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
@@ -468,7 +467,7 @@ namespace RoleplayingVoice {
                 Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
                 _chat.ChatMessage += Chat_ChatMessage;
                 _clientState.Login += _clientState_Login;
-                _clientState.Logout += _clientState_Logout;
+                _clientState.Logout += _clientState_Logout; ;
                 _clientState.TerritoryChanged += _clientState_TerritoryChanged;
                 _clientState.LeavePvP += _clientState_LeavePvP;
                 _clientState.CfPop += _clientState_CfPop;
@@ -483,12 +482,11 @@ namespace RoleplayingVoice {
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
         }
-
         private void Plugin_Event() {
             _penumbraReady = true;
         }
 
-        private void _clientState_CfPop(Lumina.Excel.GeneratedSheets.ContentFinderCondition obj) {
+        private void _clientState_CfPop(Lumina.Excel.Sheets.ContentFinderCondition obj) {
             _recentCFPop = 1;
         }
         #endregion Plugin Initiialization
@@ -991,7 +989,7 @@ namespace RoleplayingVoice {
                                     var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address;
                                     var mountId = characterReference->Mount.MountId;
                                     var mount = DataManager.GetExcelSheet<Mount>(ClientLanguage.English).GetRow(mountId);
-                                    string value = _mainCharacterVoicePack.GetMisc(mount.Singular.RawString);
+                                    string value = _mainCharacterVoicePack.GetMisc(mount.Singular.ToString());
                                     if (!string.IsNullOrEmpty(value)) {
                                         //if (config.UsePlayerSync) {
                                         //    Task.Run(async () => {
@@ -1525,9 +1523,10 @@ namespace RoleplayingVoice {
 
         private unsafe string GetWrittenGameState(string playerName, string npcName) {
             string locationValue = HousingManager.Instance()->IsInside() ? "inside a house" : "outside";
-            string value = $"{playerName} and npc are currently {locationValue}. The current zone is "
-                + DataManager.GetExcelSheet<TerritoryType>().GetRow(_clientState.TerritoryType).PlaceName.Value.Name.RawString +
-                ". The date and time is " + DateTime.Now.ToString("MM/dd/yyyy h:mm tt") + ".";
+            string value = "";
+            //string value = $"{playerName} and npc are currently {locationValue}. The current zone is "
+            //    + DataManager.GetExcelSheet<TerritoryType>().GetRow(_clientState.TerritoryType).PlaceName.Value.Name.ToString() +
+            //    ". The date and time is " + DateTime.Now.ToString("MM/dd/yyyy h:mm tt") + ".";
             return value;
         }
 
@@ -1883,7 +1882,7 @@ namespace RoleplayingVoice {
                             }
                             performanceTimer.Restart();
                             if (!message.TextValue.Contains("cancel")) {
-                                if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
                                     LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
                                         playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
                                 } else {
@@ -1990,7 +1989,7 @@ namespace RoleplayingVoice {
                                             characterVoicePack = _characterVoicePacks[playerSender];
                                         }
                                         string value = "";
-                                        if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.GameData.Abbreviation)) {
+                                        if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
                                             OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
                                         } else {
                                             PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
@@ -2132,7 +2131,7 @@ namespace RoleplayingVoice {
         }
 
         private int GetMinAttackCounts() {
-            switch (_clientState.LocalPlayer.ClassJob.GameData.Abbreviation.RawString.ToLower()) {
+            switch (_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString().ToLower()) {
                 case "mch":
                     return 9;
                 case "mnk":
@@ -2525,9 +2524,9 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 Plugin.PluginLog?.Warning(e, e.Message);
             }
-            if (_lastEmoteAnimationUsed != null) {
+            if (!string.IsNullOrEmpty(_lastEmoteAnimationUsed.Name.ToString())) {
                 Emote value = _lastEmoteAnimationUsed;
-                _lastEmoteAnimationUsed = null;
+                _lastEmoteAnimationUsed = new Emote();
                 if (!Conditions.IsWatchingCutscene) {
                     _isAlreadyRunningEmote = true;
                     Task.Run(() => {
@@ -2578,8 +2577,8 @@ namespace RoleplayingVoice {
                                 if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                                     if (config.DebugMode) {
                                         _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                        _chat.Print("Emote Unknowns: " + $"{value.EmoteMode.Value.ConditionMode} {value.Unknown8},{value.Unknown9},{value.Unknown10},{value.Unknown13},{value.Unknown14}," +
-                                            $"{value.Unknown17},{value.Unknown24},");
+                                        //_chat.Print("Emote Unknowns: " + $"{value.EmoteMode.Value.ConditionMode} {value.Unknown8},{value.Unknown9},{value.Unknown10},{value.Unknown13},{value.Unknown14}," +
+                                        //    $"{value.Unknown17},{value.Unknown24},");
                                     }
                                     if (config.UsePlayerSync) {
                                         unsafe {
@@ -2683,17 +2682,17 @@ namespace RoleplayingVoice {
                 }
             }
             foreach (var item in emotes) {
-                if (!string.IsNullOrWhiteSpace(item.Name.RawString)) {
-                    if ((emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + " ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed ") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing ") ||
-                        emoteString.ToLower().EndsWith(" " + item.Name.RawString.ToLower()) ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "s") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ed") ||
-                        emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower() + "ing"))
-                        || (emoteString.ToLower().Contains(" " + item.Name.RawString.ToLower()) && item.Name.RawString.Length > 3)) {
-                        _messageQueue.Enqueue("/" + item.Name.RawString.ToLower());
+                if (!string.IsNullOrWhiteSpace(item.Name.ToString())) {
+                    if ((emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + " ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "s ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ed ") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ing ") ||
+                        emoteString.ToLower().EndsWith(" " + item.Name.ToString().ToLower()) ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "s") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ed") ||
+                        emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower() + "ing"))
+                        || (emoteString.ToLower().Contains(" " + item.Name.ToString().ToLower()) && item.Name.ToString().Length > 3)) {
+                        _messageQueue.Enqueue("/" + item.Name.ToString().ToLower());
                         break;
                     }
                 }
@@ -2981,7 +2980,7 @@ namespace RoleplayingVoice {
             return HousingManager.Instance()->IsInside() || HousingManager.Instance()->OutdoorTerritory != null;
         }
 
-        private void _clientState_Logout() {
+        private void _clientState_Logout(int type, int code) {
             CleanSounds();
         }
 
@@ -3235,23 +3234,23 @@ namespace RoleplayingVoice {
         }
         private string GetEmoteName(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
-            if (emote != null) {
-                return CleanSenderName(emote.Name).Replace(" ", "").ToLower();
+            if (!string.IsNullOrEmpty(emote.Name.ToString())) {
+                return CleanSenderName(emote.Name.ToString()).Replace(" ", "").ToLower();
             } else {
                 return "";
             }
         }
         private Emote GetEmoteData(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
-            if (emote != null) {
+            if (!string.IsNullOrEmpty(emote.Name.ToString())) {
                 return emote;
             } else {
-                return null;
+                return new Emote();
             }
         }
         private string GetEmoteCommand(ushort emoteId) {
             Emote emote = _dataManager.GetExcelSheet<Emote>().GetRow(emoteId);
-            return CleanSenderName(emote.TextCommand.Value.Command.RawString).Replace(" ", "").ToLower();
+            return CleanSenderName(emote.TextCommand.Value.Command.ToString()).Replace(" ", "").ToLower();
         }
         private string GetEmotePath(CharacterVoicePack characterVoicePack, ushort emoteId, int delay, out bool isVoicedEmote) {
             Emote emoteEnglish = _dataManager.GetExcelSheet<Emote>(ClientLanguage.English).GetRow(emoteId);
@@ -3260,10 +3259,10 @@ namespace RoleplayingVoice {
             Emote emoteJapanese = _dataManager.GetExcelSheet<Emote>(ClientLanguage.Japanese).GetRow(emoteId);
 
             string emotePathId = characterVoicePack.GetMisc(emoteId.ToString(), delay, true);
-            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name, delay, true);
-            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name, delay, true);
-            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name, delay, true);
-            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name, delay, true);
+            string emotePathEnglish = characterVoicePack.GetMisc(emoteEnglish.Name.ToString(), delay, true);
+            string emotePathFrench = characterVoicePack.GetMisc(emoteFrench.Name.ToString(), delay, true);
+            string emotePathGerman = characterVoicePack.GetMisc(emoteGerman.Name.ToString(), delay, true);
+            string emotePathJapanese = characterVoicePack.GetMisc(emoteJapanese.Name.ToString(), delay, true);
 
             characterVoicePack.EmoteIndex = -1;
             isVoicedEmote = true;
@@ -4045,11 +4044,11 @@ namespace RoleplayingVoice {
 
         public unsafe void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
             foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
+                if (!string.IsNullOrEmpty(emoteItem.TextCommand.Value.Command.ToString())) {
                     if ((
-                        emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
-                        emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
-                        emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
+                        emoteItem.TextCommand.Value.ShortCommand.ToString().Contains(command) ||
+                        emoteItem.TextCommand.Value.Command.ToString().Contains(command)) ||
+                        emoteItem.TextCommand.Value.ShortAlias.ToString().Contains(command)) {
                         foreach (var gameObject in GetNearestObjects()) {
                             try {
                                 ICharacter character = gameObject as ICharacter;
@@ -4102,11 +4101,11 @@ namespace RoleplayingVoice {
         public void DoEmote(string command, ICharacter targetNPC, bool becomesPreOccupied = true) {
             try {
                 foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                    if (emoteItem.TextCommand != null && emoteItem.TextCommand.Value != null) {
+                    if (!string.IsNullOrEmpty(emoteItem.TextCommand.Value.Command.ToString())) {
                         if ((
-                        emoteItem.TextCommand.Value.ShortCommand.RawString.Contains(command) ||
-                        emoteItem.TextCommand.Value.Command.RawString.Contains(command)) ||
-                        emoteItem.TextCommand.Value.ShortAlias.RawString.Contains(command)) {
+                        emoteItem.TextCommand.Value.ShortCommand.ToString().Contains(command) ||
+                        emoteItem.TextCommand.Value.Command.ToString().Contains(command)) ||
+                        emoteItem.TextCommand.Value.ShortAlias.ToString().Contains(command)) {
                             if (!IsPartOfQuestOrImportant(targetNPC as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                 if (becomesPreOccupied) {
                                     _addonTalkHandler.TriggerEmote(targetNPC.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
@@ -4205,7 +4204,7 @@ namespace RoleplayingVoice {
                                                 if (list.ContainsKey(foundAnimation)) {
                                                     foreach (var value in list[foundAnimation]) {
                                                         try {
-                                                            string name = value.TextCommand.Value.Command.RawString.ToLower().Replace(" ", null).Replace("'", null);
+                                                            string name = value.TextCommand.Value.Command.ToString().ToLower().Replace(" ", null).Replace("'", null);
                                                             if (!string.IsNullOrEmpty(name)) {
                                                                 if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
                                                                     emoteData.Add(new
@@ -4375,7 +4374,7 @@ namespace RoleplayingVoice {
                     var emoteTmbs = new HashSet<string>(8);
                     var tmbs = new Queue<string>(8);
 
-                    foreach (var timeline in emote.ActionTimeline.Where(t => t.Row != 0 && t.Value != null).Select(t => t.Value!)) {
+                    foreach (var timeline in emote.ActionTimeline.Where(t => t.RowId != 0).Select(t => t.Value!)) {
                         var key = timeline.Key.ToDalamudString().TextValue;
                         AddEmote(Path.GetFileName(key) + ".pap", emote);
                     }
@@ -4387,7 +4386,7 @@ namespace RoleplayingVoice {
                     }
                 }
 
-                Parallel.ForEach(sheet.Where(n => n.Name.RawData.Length > 0), options, ProcessEmote);
+                Parallel.ForEach(sheet.Where(n => n.Name.Data.Length > 0), options, ProcessEmote);
 
                 var sit = sheet.GetRow(50)!;
                 AddEmote("s_pose01_loop.pap", sit);

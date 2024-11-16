@@ -114,15 +114,15 @@ public class CharacterFile : JsonFileBase
 
 		if (this.IncludeSection(SaveModes.EquipmentWeapons, mode))
 		{
-			if (actor.MainHand != null)
-				this.MainHand = new WeaponSave(actor.MainHand);
-			////this.MainHand.Color = actor.GetValue(Offsets.Main.MainHandColor);
-			////this.MainHand.Scale = actor.GetValue(Offsets.Main.MainHandScale);
+			//if (actor.MainHand != null)
+			//	this.MainHand = new WeaponSave(actor.MainHand);
+			//this.MainHand.Color = actor.GetValue(Offsets.Main.MainHandColor);
+			//this.MainHand.Scale = actor.GetValue(Offsets.Main.MainHandScale);
 
-			if (actor.OffHand != null)
-				this.OffHand = new WeaponSave(actor.OffHand);
-			////this.OffHand.Color = actor.GetValue(Offsets.Main.OffhandColor);
-			////this.OffHand.Scale = actor.GetValue(Offsets.Main.OffhandScale);
+			//if (actor.OffHand != null)
+			//	this.OffHand = new WeaponSave(actor.OffHand);
+			//this.OffHand.Color = actor.GetValue(Offsets.Main.OffhandColor);
+			//this.OffHand.Scale = actor.GetValue(Offsets.Main.OffhandScale);
 		}
 
 		if (this.IncludeSection(SaveModes.EquipmentGear, mode))
@@ -251,8 +251,8 @@ public class CharacterFile : JsonFileBase
 
 			if (this.IncludeSection(SaveModes.EquipmentWeapons, mode))
 			{
-				this.MainHand?.Write(actor.MainHand, true);
-				this.OffHand?.Write(actor.OffHand, false);
+				//this.MainHand?.Write(actor.MainHand, true);
+				//this.OffHand?.Write(actor.OffHand, false);
 				actor.IsWeaponDirty = true;
 			}
 
@@ -428,13 +428,13 @@ public class CharacterFile : JsonFileBase
 		{
 		}
 
-		public WeaponSave(WeaponMemory from)
-		{
-			this.ModelSet = from.Set;
-			this.ModelBase = from.Base;
-			this.ModelVariant = from.Variant;
-			//this.DyeId = from.Dye;
-		}
+		//public WeaponSave(WeaponMemory from)
+		//{
+		//	this.ModelSet = from.Set;
+		//	this.ModelBase = from.Base;
+		//	this.ModelVariant = from.Variant;
+		//	//this.DyeId = from.Dye;
+		//}
 
         public Color Color { get; set; }
         public Vector Scale { get; set; }
@@ -444,37 +444,37 @@ public class CharacterFile : JsonFileBase
         public byte DyeId { get; set; }
         public byte DyeId2 { get; set; }
 
-        public void Write(WeaponMemory? vm, bool isMainHand)
-		{
-			if (vm == null)
-				return;
+  //      public void Write(WeaponMemory? vm, bool isMainHand)
+		//{
+		//	if (vm == null)
+		//		return;
 
-			vm.Set = this.ModelSet;
+		//	vm.Set = this.ModelSet;
 
-			// sanity check values
-			if (vm.Set != 0)
-			{
-				vm.Base = this.ModelBase;
-				vm.Variant = this.ModelVariant;
-			}
-			else
-			{
-				if (isMainHand)
-				{
-					vm.Set = ItemUtility.EmperorsNewFists.ModelSet;
-					vm.Base = ItemUtility.EmperorsNewFists.ModelBase;
-					vm.Variant = ItemUtility.EmperorsNewFists.ModelVariant;
-				}
-				else
-				{
-					vm.Set = 0;
-					vm.Base = 0;
-					vm.Variant = 0;
-				}
+		//	// sanity check values
+		//	if (vm.Set != 0)
+		//	{
+		//		vm.Base = this.ModelBase;
+		//		vm.Variant = this.ModelVariant;
+		//	}
+		//	else
+		//	{
+		//		if (isMainHand)
+		//		{
+		//			vm.Set = ItemUtility.EmperorsNewFists.ModelSet;
+		//			vm.Base = ItemUtility.EmperorsNewFists.ModelBase;
+		//			vm.Variant = ItemUtility.EmperorsNewFists.ModelVariant;
+		//		}
+		//		else
+		//		{
+		//			vm.Set = 0;
+		//			vm.Base = 0;
+		//			vm.Variant = 0;
+		//		}
 
-				vm.Dye = ItemUtility.NoneDye.Id;
-			}
-		}
+		//		vm.Dye = ItemUtility.NoneDye.Id;
+		//	}
+		//}
 	}
 
 	[Serializable]

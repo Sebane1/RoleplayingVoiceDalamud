@@ -25,16 +25,16 @@ public class GameService : ServiceBase<GameService>
 
 		try
 		{
-			if (GameDataService.Territories == null)
-				return false;
+			//if (GameDataService.Territories == null)
+			//	return false;
 
 			int territoryID = MemoryService.Read<int>(AddressService.Territory);
 
 			if (territoryID == -1)
 				return false;
 
-			if (GameDataService.Territories.GetOrDefault((uint)territoryID) == null)
-				return false;
+			//if (GameDataService.Territories.GetOrDefault((uint)territoryID) == null)
+			//	return false;
 
 			return true;
 		}

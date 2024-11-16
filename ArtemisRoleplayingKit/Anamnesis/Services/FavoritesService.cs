@@ -57,36 +57,36 @@ public class FavoritesService : ServiceBase<FavoritesService>
 		Save();
 	}
 
-	public static bool IsOwned(Item item)
-	{
-		if (Instance.Current == null)
-			return false;
+	//public static bool IsOwned(Item item)
+	//{
+	//	if (Instance.Current == null)
+	//		return false;
 
-		return Instance.Current.Owned.Contains(item);
-	}
+	//	return Instance.Current.Owned.Contains(item);
+	//}
 
-	public static void SetOwned(Item item, bool favorite)
-	{
-		if (Instance.Current == null)
-			return;
+	//public static void SetOwned(Item item, bool favorite)
+	//{
+	//	if (Instance.Current == null)
+	//		return;
 
-		bool isOwned = IsOwned(item);
+	//	bool isOwned = IsOwned(item);
 
-		if (favorite == isOwned)
-			return;
+	//	if (favorite == isOwned)
+	//		return;
 
-		if (favorite)
-		{
-			Instance.Current.Owned.Add(item);
-		}
-		else
-		{
-			Instance.Current.Owned.Remove(item);
-		}
+	//	if (favorite)
+	//	{
+	//		Instance.Current.Owned.Add(item);
+	//	}
+	//	else
+	//	{
+	//		Instance.Current.Owned.Remove(item);
+	//	}
 
-		Instance.RaisePropertyChanged(nameof(Favorites.Items));
-		Save();
-	}
+	//	Instance.RaisePropertyChanged(nameof(Favorites.Items));
+	//	Save();
+	//}
 
 	public static bool IsFavorite(IDye item)
 	{

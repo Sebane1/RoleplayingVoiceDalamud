@@ -21,7 +21,6 @@ using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Common.Lua;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Ktisis.Structs.Actor;
-using Lumina.Excel.GeneratedSheets;
 using NAudio.Lame;
 using NAudio.Vorbis;
 using NAudio.Wave;
@@ -52,7 +51,7 @@ using VfxEditor.ScdFormat;
 using static Lumina.Data.Parsing.Layer.LayerCommon;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
-using ActionTimeline = Anamnesis.GameData.Excel.ActionTimeline;
+//using ActionTimeline = Anamnesis.GameData.Excel.ActionTimeline;
 using ICharacter = Dalamud.Game.ClientState.Objects.Types.ICharacter;
 using SoundType = RoleplayingMediaCore.SoundType;
 
@@ -104,7 +103,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         bool _blockNpcChat = false;
         private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
 
-        public List<ActionTimeline> LipSyncTypes { get; private set; }
+        ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
         private Dictionary<string, byte> _voiceList;
         private readonly List<NPCBubbleInformation> _speechBubbleInfo = new();
@@ -175,7 +174,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _targetService.Initialize();
                 _gposeService.Initialize();
 
-                LipSyncTypes = GenerateLipList().ToList();
+                //LipSyncTypes = GenerateLipList().ToList();
                 _voiceList = GenerateVoiceList();
                 _animationService.Initialize();
                 _animationService.Start();
@@ -253,20 +252,20 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        private IEnumerable<ActionTimeline> GenerateLipList() {
-            // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
-            IEnumerable<ActionTimeline> lips = GameDataService.ActionTimelines.Where(x => x.AnimationId == 0 || (x.Key?.StartsWith("speak/") ?? false));
-            return lips;
-        }
+        //private IEnumerable<ActionTimeline> GenerateLipList() {
+        //    // Grab "no animation" and all "speak/" animations, which are the only ones valid in this slot
+        //    IEnumerable<ActionTimeline> lips = GameDataService.ActionTimelines.Where(x => x.AnimationId == 0 || (x.Key?.StartsWith("speak/") ?? false));
+        //    return lips;
+        //}
 
         private Dictionary<string, byte> GenerateVoiceList() {
             Dictionary<string, byte> items = new Dictionary<string, byte>();
-            foreach (var item in GameDataService.CharacterMakeTypes) {
-                int value = 1;
-                foreach (var voice in item.Voices) {
-                    items.Add(item.Tribe + " " + item.Gender + " " + value++ + " (" + voice + ")", voice);
-                }
-            }
+            //foreach (var item in GameDataService.CharacterMakeTypes) {
+            //    int value = 1;
+            //    foreach (var voice in item.Voices) {
+            //        items.Add(item.Tribe + " " + item.Gender + " " + value++ + " (" + voice + ")", voice);
+            //    }
+            //}
             return items;
         }
         private void RedoLineWindow_RedoLineClicked(object sender, string value) {
@@ -439,7 +438,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             NPCText(finalName,
                                                                 npcBubbleInformaton.MessageText.TextValue, character->DrawData.CustomizeData.Sex == 1,
                                                                 character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
-                                                                character->DrawData.CustomizeData.BodyType : character->CharacterData.ModelSkeletonId,
+                                                                character->DrawData.CustomizeData.BodyType : character->ModelCharaId,
                                                                 character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
                                                                 character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor), NPCVoiceManager.VoiceModel.Speed);
                                                         }
@@ -570,7 +569,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 !_blockAudioGeneration && _plugin.Config.NpcSpeechEnabled) {
                                                     try {
                                                         var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                                        if (otherData.Id == 15) {
+                                                        if (otherData.Value.RowId == 15) {
                                                             ScdFile scdFile = GetScdFile(_currentDialoguePaths[_currentDialoguePaths.Count - 1]);
                                                             WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                                             var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
@@ -587,7 +586,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }
                                             if (_currentSpeechObject != null && _startedNewDialogue) {
                                                 var otherData = _clientState.LocalPlayer.OnlineStatus;
-                                                if (otherData.Id != 15) {
+                                                if (otherData.Value.RowId != 15) {
                                                     _namesToRemove.Clear();
                                                     _currentText = "";
                                                     _currentSpeechObject = null;
@@ -621,7 +620,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             var actorMemory = new ActorMemory();
             actorMemory.SetAddress(_clientState.LocalPlayer.Address);
             var animationMemory = actorMemory.Animation;
-            animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+            //animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
             _defaultBaseOverride = MemoryService.Read<ushort>(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)));
             _defaultCharacterModeInput = MemoryService.Read<ushort>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeInput)));
             _defaultCharacterModeRaw = MemoryService.Read<byte>(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)));
@@ -703,9 +702,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 var actorMemory = new ActorMemory();
                 actorMemory.SetAddress(character.Address);
                 var animationMemory = actorMemory.Animation;
-                animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
+                //animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)),
-                    LipSyncTypes[lipSyncType].Timeline.AnimationId, "Lipsync");
+                    630, "Lipsync");
                 await Task.Run(delegate {
                     Thread.Sleep(10000);
                     StopLipSync(character);
@@ -1056,14 +1055,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             initialState = actorMemory.CharacterMode;
                                             animationMemory = actorMemory.Animation;
                                             animationMemory.LipsOverride = 630;
-                                            animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                                            if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
-                                                lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                            } else if (wavePlayer.TotalTime.Seconds < 7) {
-                                                lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                            } else {
-                                                lipId = LipSyncTypes[6].Timeline.AnimationId;
-                                            }
+                                            //animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
+                                            ////if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
+                                            ////    lipId = LipSyncTypes[2].Timeline.AnimationId;
+                                            ////} else if (wavePlayer.TotalTime.Seconds < 7) {
+                                            ////    lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                            ////} else {
+                                            ////    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                            ////}
+                                            lipId = 630;
                                             //if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                             //    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                             //}
@@ -1142,13 +1142,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
                                                             float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
                                                             if (percentage > 0.90f) {
-                                                                if (seconds < 2000) {
-                                                                    lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                                                } else if (wavePlayer.TotalTime.Seconds < 7000) {
-                                                                    lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                                                } else {
-                                                                    lipId = LipSyncTypes[6].Timeline.AnimationId;
-                                                                }
+                                                                //if (seconds < 2000) {
+                                                                //    lipId = LipSyncTypes[2].Timeline.AnimationId;
+                                                                //} else if (wavePlayer.TotalTime.Seconds < 7000) {
+                                                                //    lipId = LipSyncTypes[5].Timeline.AnimationId;
+                                                                //} else {
+                                                                //    lipId = LipSyncTypes[6].Timeline.AnimationId;
+                                                                //}
+                                                                lipId = 630;
                                                             }
                                                             if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
                                                                 if (!Conditions.IsBoundByDuty || IsInACutscene()) {
@@ -1369,7 +1370,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     isRetainer = character.ObjectKind == ObjectKind.Retainer;
                                     if (body == 0) {
                                         var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address);
-                                        body = gameObject->CharacterData.ModelSkeletonId;
+                                        body = gameObject->ModelCharaId;
                                     }
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
@@ -1416,7 +1417,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 isRetainer = character.ObjectKind == ObjectKind.Retainer;
                 if (body == 0) {
                     var unsafeReference = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(character as ICharacter).Address);
-                    body = unsafeReference->CharacterData.ModelSkeletonId;
+                    body = unsafeReference->ModelCharaId;
                 }
                 if (_plugin.Config.DebugMode) {
                     _plugin.Chat.Print(character.Name.TextValue + " is model type " + body + ", and race " + race + ".");

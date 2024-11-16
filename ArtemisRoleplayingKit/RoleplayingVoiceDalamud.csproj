@@ -42,7 +42,6 @@
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="11.0.0" />
 		<PackageReference Include="Glamourer.Api" Version="2.2.0" />
-		<PackageReference Include="Lumina" Version="4.2.1" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />

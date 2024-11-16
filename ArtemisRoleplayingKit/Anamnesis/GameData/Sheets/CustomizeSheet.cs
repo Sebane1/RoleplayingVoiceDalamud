@@ -16,38 +16,38 @@ public static class CustomizeSheet
 		FacePaint,
 	}
 
-	public static List<CharaMakeCustomize> GetFeatureOptions(this ExcelSheet<CharaMakeCustomize> self, Features featureType, ActorCustomizeMemory.Tribes tribe, ActorCustomizeMemory.Genders gender)
-	{
-		List<CharaMakeCustomize> results = new List<CharaMakeCustomize>();
-		uint fromIndex = (uint)GetFeatureStartIndex(featureType, tribe, gender);
-		int count = GetFeatureLength(featureType);
+	//public static List<CharaMakeCustomize> GetFeatureOptions(this ExcelSheet<CharaMakeCustomize> self, Features featureType, ActorCustomizeMemory.Tribes tribe, ActorCustomizeMemory.Genders gender)
+	//{
+	//	List<CharaMakeCustomize> results = new List<CharaMakeCustomize>();
+	//	uint fromIndex = (uint)GetFeatureStartIndex(featureType, tribe, gender);
+	//	int count = GetFeatureLength(featureType);
 
-		for (int i = 1; i < 200; i++)
-		{
-			CharaMakeCustomize? feature = self.FindFeatureById(fromIndex, count, (byte)i);
+	//	for (int i = 1; i < 200; i++)
+	//	{
+	//		CharaMakeCustomize? feature = self.FindFeatureById(fromIndex, count, (byte)i);
 
-			if (feature == null)
-				continue;
+	//		if (feature == null)
+	//			continue;
 
-			results.Add(feature);
-		}
+	//		results.Add(feature);
+	//	}
 
-		return results;
-	}
+	//	return results;
+	//}
 
-	public static CharaMakeCustomize? GetFeature(this ExcelSheet<CharaMakeCustomize> self, Features featureType, ActorCustomizeMemory.Tribes tribe, ActorCustomizeMemory.Genders gender, byte featureId)
-	{
-		List<CharaMakeCustomize> hairs = self.GetFeatureOptions(featureType, tribe, gender);
-		foreach (CharaMakeCustomize hair in hairs)
-		{
-			if (hair.FeatureId == featureId)
-			{
-				return hair;
-			}
-		}
+	//public static CharaMakeCustomize? GetFeature(this ExcelSheet<CharaMakeCustomize> self, Features featureType, ActorCustomizeMemory.Tribes tribe, ActorCustomizeMemory.Genders gender, byte featureId)
+	//{
+	//	List<CharaMakeCustomize> hairs = self.GetFeatureOptions(featureType, tribe, gender);
+	//	foreach (CharaMakeCustomize hair in hairs)
+	//	{
+	//		if (hair.FeatureId == featureId)
+	//		{
+	//			return hair;
+	//		}
+	//	}
 
-		return null;
-	}
+	//	return null;
+	//}
 
 	private static int GetFeatureStartIndex(Features featureType, ActorCustomizeMemory.Tribes tribe, ActorCustomizeMemory.Genders gender)
 	{
@@ -112,21 +112,21 @@ public static class CustomizeSheet
 		throw new Exception("Unrecognized feature: " + featureType);
 	}
 
-	private static CharaMakeCustomize? FindFeatureById(this ExcelSheet<CharaMakeCustomize> self, uint from, int length, byte value)
-	{
-		for (uint i = from; i < from + length; i++)
-		{
-			CharaMakeCustomize feature = self.Get(i);
+	//private static CharaMakeCustomize? FindFeatureById(this ExcelSheet<CharaMakeCustomize> self, uint from, int length, byte value)
+	//{
+	//	for (uint i = from; i < from + length; i++)
+	//	{
+	//		CharaMakeCustomize feature = self.Get(i);
 
-			if (feature == null)
-				continue;
+	//		if (feature == null)
+	//			continue;
 
-			if (feature.FeatureId == value)
-			{
-				return feature;
-			}
-		}
+	//		if (feature.FeatureId == value)
+	//		{
+	//			return feature;
+	//		}
+	//	}
 
-		return null;
-	}
+	//	return null;
+	//}
 }

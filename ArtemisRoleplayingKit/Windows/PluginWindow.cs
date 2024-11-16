@@ -299,7 +299,7 @@ namespace RoleplayingVoice {
 
         public event EventHandler OnMoveFailed;
 
-        private void ClientState_Logout() {
+        private void ClientState_Logout(int type, int code) {
             characterVoice = "None";
         }
 

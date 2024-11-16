@@ -36,11 +36,11 @@ public class Equipment : IItem
 	public FitsSlots Slot { get; set; } = FitsSlots.None;
 	public byte EquipLevel => 0;
 
-	[JsonIgnore] public ushort ModelBase => IItemConverter.SplitString(this.Id).modelBase;
-	[JsonIgnore] public ushort ModelVariant => IItemConverter.SplitString(this.Id).modelVariant;
-	[JsonIgnore] public ushort ModelSet => IItemConverter.SplitString(this.Id).modelSet;
+	//[JsonIgnore] public ushort ModelBase => IItemConverter.SplitString(this.Id).modelBase;
+	//[JsonIgnore] public ushort ModelVariant => IItemConverter.SplitString(this.Id).modelVariant;
+	//[JsonIgnore] public ushort ModelSet => IItemConverter.SplitString(this.Id).modelSet;
 
-	[JsonIgnore] public bool IsWeapon => this.ModelSet != 0;
+	//[JsonIgnore] public bool IsWeapon => this.ModelSet != 0;
 	[JsonIgnore] public bool HasSubModel => false;
 	[JsonIgnore] public ushort SubModelBase => 0;
 	[JsonIgnore] public ushort SubModelVariant => 0;

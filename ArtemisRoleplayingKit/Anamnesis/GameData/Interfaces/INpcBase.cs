@@ -27,11 +27,11 @@ public interface INpcAppearance
 	int FacePaint { get; }
 	int ExtraFeature2OrBust { get; }
 	int ExtraFeature1 { get; }
-	Race? Race { get; }
+	//Race? Race { get; }
 	int Gender { get; }
 	int BodyType { get; }
 	int Height { get; }
-	Tribe? Tribe { get; }
+	//Tribe? Tribe { get; }
 	int Face { get; }
 	int HairStyle { get; }
 	bool EnableHairHighlight { get; }

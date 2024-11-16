@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Action = Lumina.Excel.GeneratedSheets.Action;
 using Dalamud;
 using Dalamud.Plugin.Services;
 using System.Threading.Tasks;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using Task = System.Threading.Tasks.Task;
+using Action = Lumina.Excel.Sheets.Action;
 using Lumina.Excel;
 using System.Windows.Forms;
 using System.Collections.Concurrent;
@@ -32,7 +32,7 @@ namespace RoleplayingVoiceDalamud {
         private string lastAction;
         private IDataManager _dataManager;
         private ClientLanguage _clientLanguage;
-        private ConcurrentDictionary<ClientLanguage, ExcelSheet<Action>> _dataSheets = new ConcurrentDictionary<ClientLanguage, ExcelSheet<Lumina.Excel.GeneratedSheets.Action>>();
+        private ConcurrentDictionary<ClientLanguage, ExcelSheet<Action>> _dataSheets = new ConcurrentDictionary<ClientLanguage, ExcelSheet<Action>>();
         private string _sprint;
         private string _teleport;
 
@@ -86,40 +86,40 @@ namespace RoleplayingVoiceDalamud {
         }
         public string GetActionInLanguage(ClientLanguage clientLanguage, uint index, string name) {
             Action actionName = _dataSheets[clientLanguage].GetRow(index);
-            if (!string.IsNullOrEmpty(actionName.Name.RawString)) {
-                return actionName.Name.RawString;
+            if (!string.IsNullOrEmpty(actionName.Name.ToString())) {
+                return actionName.Name.ToString();
             } else {
                 return name;
             }
         }
         public uint GetLanguageAgnosticActionIndex(string name) {
-            uint englishIndex = GetLanguageSpecifcActionIndex(ClientLanguage.English, name);
+            uint englishIndex = GetLanguageSpecificActionIndex(ClientLanguage.English, name);
             if (englishIndex is not 0) {
                 return englishIndex;
             }
-            uint japaneseIndex = GetLanguageSpecifcActionIndex(ClientLanguage.Japanese, name);
+            uint japaneseIndex = GetLanguageSpecificActionIndex(ClientLanguage.Japanese, name);
             if (japaneseIndex is not 0) {
                 return japaneseIndex;
             }
-            uint germanIndex = GetLanguageSpecifcActionIndex(ClientLanguage.German, name);
+            uint germanIndex = GetLanguageSpecificActionIndex(ClientLanguage.German, name);
             if (germanIndex is not 0) {
                 return germanIndex;
             }
-            uint frenchIndex = GetLanguageSpecifcActionIndex(ClientLanguage.French, name);
+            uint frenchIndex = GetLanguageSpecificActionIndex(ClientLanguage.French, name);
             if (frenchIndex is not 0) {
                 return frenchIndex;
             }
             return 0;
         }
-        public uint GetLanguageSpecifcActionIndex(ClientLanguage clientLanguage, string name) {
+        public uint GetLanguageSpecificActionIndex(ClientLanguage clientLanguage, string name) {
             if (!string.IsNullOrEmpty(name)) {
                 string sanitizedNamed = name.ToLower().Replace(" ", null).Trim();
                 if (!_dataSheets.ContainsKey(clientLanguage)) {
                     _dataSheets[clientLanguage] = _dataManager.GetExcelSheet<Action>(clientLanguage);
                 }
                 foreach (var item in _dataSheets[clientLanguage]) {
-                    string strippedName = StripNonCharacters(item.Name.RawString, _clientLanguage).ToLower();
-                    string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : item.Name.RawString;
+                    string strippedName = StripNonCharacters(item.Name.ToString(), _clientLanguage).ToLower();
+                    string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : item.Name.ToString();
                     if (final.StartsWith(sanitizedNamed) && sanitizedNamed.Length > 5 || final.StartsWith(sanitizedNamed)) {
                         return item.RowId;
                     }

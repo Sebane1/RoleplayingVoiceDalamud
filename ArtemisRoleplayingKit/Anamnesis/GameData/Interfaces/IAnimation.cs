@@ -22,6 +22,6 @@ public interface IAnimation
 
 	public string? DisplayName { get; }
 	public ImageReference? Icon { get; }
-	public ActionTimeline? Timeline { get; }
+	//public ActionTimeline? Timeline { get; }
 	public AnimationPurpose Purpose { get; }
 }
