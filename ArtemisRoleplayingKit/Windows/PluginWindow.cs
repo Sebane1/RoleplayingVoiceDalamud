@@ -224,7 +224,7 @@ namespace RoleplayingVoice {
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     _voicePackTypeBox.SelectedIndex = configuration.VoiceReplacementType;
                     _voiceToSwap.SelectedIndex = configuration.ChosenVanillaReplacement;
-                    _dialogueServerIp = configuration.CustomDialogueRelayServerIp;
+                    //_dialogueServerIp = configuration.CustomDialogueRelayServerIp;
                     if (configuration.Characters != null && clientState.LocalPlayer != null) {
                         if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
                             characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
@@ -487,7 +487,7 @@ namespace RoleplayingVoice {
                 }
             }
             ImGui.TextWrapped("While we have taken care to ensure text to speech is not based on training, please dont publicly display, stream, advertise, or perform this feature. You may share privately with friends. " +
-                "We will no longer acknowledge or talk about this feature on discord, please use Quality Assurance mode for reporting issues.");
+                "Please use Quality Assurance mode for reporting issues.");
             try {
                 ImGui.BeginTable("##NPC Dialogue Options Table", 2);
                 ImGui.TableSetupColumn("Page 1", ImGuiTableColumnFlags.WidthStretch, 300);
@@ -509,12 +509,11 @@ namespace RoleplayingVoice {
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
-                ImGui.Checkbox("Use Relay Server", ref _useCustomDialogueRelayServer);
-                if (_useCustomDialogueRelayServer) {
-                    ImGui.SameLine();
-                    ImGui.InputText("Server Host ##customDialogueRelayServer", ref _dialogueServerIp, 255);
+                // ImGui.Checkbox("Use Relay Server", ref _useCustomDialogueRelayServer);
+                if (PluginReference != null && PluginReference.NpcVoiceManager != null && PluginReference.NpcVoiceManager.UseCustomRelayServer) {
+                    ImGui.Text("Connected to server " + PluginReference.NpcVoiceManager.CurrentServerAlias + ".");
                 }
-                ImGui.Text(clientState.LocalPlayer != null ?  clientState.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
+                ImGui.Text(clientState.LocalPlayer != null ? clientState.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
@@ -523,7 +522,7 @@ namespace RoleplayingVoice {
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
                             MemoryStream stream = new MemoryStream();
-                            var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream,item.Text, item.OriginalValue, item.RawValue, item.Character,
+                            var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream, item.Text, item.OriginalValue, item.RawValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
                             if (stream != null) {
                                 if (stream.Length > 0) {
@@ -810,8 +809,8 @@ namespace RoleplayingVoice {
             configuration.LocalVoiceForNonWhitelistedPlayers = _localVoiceForNonWhitelistedPlayers;
             configuration.VoiceReplacementType = _voicePackTypeBox.SelectedIndex;
             configuration.ChosenVanillaReplacement = _voiceToSwap.SelectedIndex;
-            configuration.CustomDialogueRelayServerIp = _dialogueServerIp;
-            configuration.UseCustomDialogueRelayServer = _useCustomDialogueRelayServer;
+            //configuration.CustomDialogueRelayServerIp = _dialogueServerIp;
+            //configuration.UseCustomDialogueRelayServer = _useCustomDialogueRelayServer;
 
             if (voicePackComboBox != null && _voicePackList != null) {
                 if (voicePackComboBox.SelectedIndex < _voicePackList.Length) {

@@ -157,14 +157,14 @@ namespace RoleplayingVoice {
         public bool LocalVoiceForNonWhitelistedPlayers { get => localVoiceForNonWhitelistedPlayers; set => localVoiceForNonWhitelistedPlayers = value; }
         internal bool NarrateUnquotedText { get => narrateUnquotedText; set => narrateUnquotedText = value; }
         public int ChosenVanillaReplacement { get => _chosenVanillaReplacement; set => _chosenVanillaReplacement = value; }
-        public bool UseCustomDialogueRelayServer { get => _useCustomDialogueRelayServer; set => _useCustomDialogueRelayServer = value; }
-        public string CustomDialogueRelayServerIp {
-            get {
-                if (_customDialogueRelayServerIp == null) { _customDialogueRelayServerIp = ""; }
-                return _customDialogueRelayServerIp;
-            }
-            set => _customDialogueRelayServerIp = value;
-        }
+        //public bool UseCustomDialogueRelayServer { get => _useCustomDialogueRelayServer; set => _useCustomDialogueRelayServer = value; }
+        //public string CustomDialogueRelayServerIp {
+        //    get {
+        //        if (_customDialogueRelayServerIp == null) { _customDialogueRelayServerIp = ""; }
+        //        return _customDialogueRelayServerIp;
+        //    }
+        //    set => _customDialogueRelayServerIp = value;
+        //}
 
         #endregion
 
@@ -172,8 +172,8 @@ namespace RoleplayingVoice {
         private bool localVoiceForNonWhitelistedPlayers;
         private bool narrateUnquotedText;
         private int _chosenVanillaReplacement;
-        private string _customDialogueRelayServerIp = "ai.hubujubu.com";
-        private bool _useCustomDialogueRelayServer;
+        //private string _customDialogueRelayServerIp = "ai.hubujubu.com";
+        //private bool _useCustomDialogueRelayServer;
 
         public Configuration(IDalamudPluginInterface pi) {
             this.pluginInterface = pi;
