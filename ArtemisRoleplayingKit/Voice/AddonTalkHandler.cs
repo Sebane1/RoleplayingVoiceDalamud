@@ -205,7 +205,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             .Replace(@"7/", "7 out of ")
                             .Replace(@"8/", "8 out of ")
                             .Replace(@"9/", "9 out of ")
-                            .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadQuestObjectives);
+                            .Replace(@"10/", "10 out of ") + (options.DisplayCheckmark ? " has been completed." : ""), "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadQuestObjectives, "", VoiceLinePriority.ETTS);
                     }
                 }
             }
@@ -246,7 +246,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (_plugin.Config.NpcSpeechEnabled) {
                 if (_clientState.IsLoggedIn) {
                     if (CheckForBannedKeywords(message) && message.TextValue.Length < 21) {
-                        NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications);
+                        NPCText("Narrator", message.TextValue, "Hyn", NPCVoiceManager.VoiceModel.Cheap, true, !_plugin.Config.ReadLocationsAndToastNotifications, "", VoiceLinePriority.ETTS);
                     }
                 }
             }
