@@ -108,7 +108,7 @@ namespace RoleplayingVoice {
         private readonly PluginCommandManager<Plugin> commandManager;
         private readonly Configuration config;
         private readonly WindowSystem windowSystem;
-        private PluginWindow _window { get; init; }
+        public PluginWindow Window { get; init; }
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
         private CatalogueWindow _catalogueWindow;
@@ -345,7 +345,7 @@ namespace RoleplayingVoice {
                           ?? this.pluginInterface.Create<Configuration>();
                 // Initialize the UI
                 this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
-                _window = this.pluginInterface.Create<PluginWindow>();
+                Window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
                 _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
                 _redoLineWindow = this.pluginInterface.Create<RedoLineWindow>();
@@ -359,16 +359,16 @@ namespace RoleplayingVoice {
                 _npcPersonalityWindow.Plugin = this;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
                 pluginInterface.UiBuilder.DisableGposeUiHide = true;
-                _window.ClientState = this._clientState;
-                _window.PluginReference = this;
-                _window.PluginInterface = this.pluginInterface;
-                _window.Configuration = this.config;
+                Window.ClientState = this._clientState;
+                Window.PluginReference = this;
+                Window.PluginInterface = this.pluginInterface;
+                Window.Configuration = this.config;
                 _gposeWindow.Plugin = this;
                 _animationCatalogue.Plugin = this;
                 _animationEmoteSelection.Plugin = this;
                 _targetManager = targetManager;
-                if (_window is not null) {
-                    this.windowSystem.AddWindow(_window);
+                if (Window is not null) {
+                    this.windowSystem.AddWindow(Window);
                 }
                 if (_videoWindow is not null) {
                     this.windowSystem.AddWindow(_videoWindow);
@@ -455,8 +455,8 @@ namespace RoleplayingVoice {
                 if (config.ApiKey != null) {
                     InitialzeManager();
                 }
-                _window.RequestingReconnect += Window_RequestingReconnect;
-                _window.OnMoveFailed += Window_OnMoveFailed;
+                Window.RequestingReconnect += Window_RequestingReconnect;
+                Window.OnMoveFailed += Window_OnMoveFailed;
                 config.OnConfigurationChanged += Config_OnConfigurationChanged;
                 _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTableThreadUnsafe);
                 _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
@@ -472,7 +472,7 @@ namespace RoleplayingVoice {
                 _clientState.TerritoryChanged += _clientState_TerritoryChanged;
                 _clientState.LeavePvP += _clientState_LeavePvP;
                 _clientState.CfPop += _clientState_CfPop;
-                _window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+                Window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
                 _catalogueWindow.Plugin = this;
                 if (_clientState.IsLoggedIn) {
                     _gposeWindow.Initialize();
@@ -560,12 +560,12 @@ namespace RoleplayingVoice {
                 _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
                 _roleplayingMediaManager.OnVoiceFailed += _roleplayingMediaManager_OnVoiceFailed;
-                _window.Manager = _roleplayingMediaManager;
+                Window.Manager = _roleplayingMediaManager;
                 if (config.PlayerVoiceEngine == 1) {
                     _roleplayingMediaManager.InitializeXTTS();
                 }
             }
-            _window?.RefreshVoices();
+            Window?.RefreshVoices();
         }
         private void _roleplayingMediaManager_InitializationStatus(object sender, string e) {
             try {
@@ -1509,7 +1509,7 @@ namespace RoleplayingVoice {
                     return await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
                     type == XivChatType.CustomEmote,
                     config.PlayerCharacterVolume,
-                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync, _window.XttsLanguageComboBox.Contents[config.XTTSLanguage]);
+                    _clientState.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync, Window.XttsLanguageComboBox.Contents[config.XTTSLanguage]);
                 case 2:
                     _roleplayingMediaManager.SetVoiceMicrosoftNarrator(config.Characters[_clientState.LocalPlayer.Name.TextValue]);
                     return await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
@@ -3793,8 +3793,8 @@ namespace RoleplayingVoice {
             this.windowSystem.Draw();
         }
         private void UiBuilder_OpenConfigUi() {
-            _window?.RefreshVoices();
-            _window?.Toggle();
+            Window?.RefreshVoices();
+            Window?.Toggle();
         }
         #endregion
         #region Chat Commands
@@ -3852,13 +3852,13 @@ namespace RoleplayingVoice {
                             break;
                         case "on":
                             config.AiVoiceActive = true;
-                            _window.Configuration = config;
+                            Window.Configuration = config;
                             this.pluginInterface.SavePluginConfig(config);
                             config.AiVoiceActive = true;
                             break;
                         case "off":
                             config.AiVoiceActive = false;
-                            _window.Configuration = config;
+                            Window.Configuration = config;
                             this.pluginInterface.SavePluginConfig(config);
                             config.AiVoiceActive = false;
                             break;
@@ -3976,7 +3976,7 @@ namespace RoleplayingVoice {
                                     _chat?.Print("Accessibility Mode Disabled");
                                 }
                             }
-                            _window.NpcSpeechEnabled = config.NpcSpeechEnabled;
+                            Window.NpcSpeechEnabled = config.NpcSpeechEnabled;
                             config.Save();
                             break;
                         case "arrvoice":
@@ -4014,9 +4014,9 @@ namespace RoleplayingVoice {
                             break;
                         default:
                             if (config.AiVoiceActive) {
-                                _window.RefreshVoices();
+                                Window.RefreshVoices();
                             }
-                            _window.Toggle();
+                            Window.Toggle();
                             break;
                     }
                 }

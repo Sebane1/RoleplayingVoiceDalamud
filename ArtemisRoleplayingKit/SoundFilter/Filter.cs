@@ -260,7 +260,7 @@ namespace SoundFilter {
             if (Plugin.ClientState.ClientLanguage == ClientLanguage.English) {
                 if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
                     if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
-                        && Plugin.Config.NpcSpeechEnabled) {
+                        && Plugin.Window.NpcSpeechEnabled) {
                         OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
                         return true;
                     } else {
