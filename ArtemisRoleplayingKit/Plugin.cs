@@ -2525,88 +2525,92 @@ namespace RoleplayingVoice {
             } catch (Exception e) {
                 Plugin.PluginLog?.Warning(e, e.Message);
             }
-            if (!string.IsNullOrEmpty(_lastEmoteAnimationUsed.Name.ToString())) {
-                Emote value = _lastEmoteAnimationUsed;
-                _lastEmoteAnimationUsed = new Emote();
-                if (!Conditions.IsWatchingCutscene) {
-                    _isAlreadyRunningEmote = true;
-                    Task.Run(() => {
-                        if (value.EmoteMode.Value.ConditionMode is not 3) {
-                            Thread.Sleep(2000);
-                        }
-                        if (config.DebugMode) {
-                            _chat.Print("Attempt to find nearest objects.");
-                        }
-                        List<ICharacter> characters = new List<ICharacter>();
-                        foreach (var gameObject in GetNearestObjects()) {
-                            try {
-                                ICharacter character = gameObject as ICharacter;
-                                if (character != null) {
-                                    if (config.DebugMode) {
-                                        Plugin.PluginLog.Debug(character.Name.TextValue + " found!");
-                                    }
-                                    if (!character.IsDead) {
-                                        if (((character.ObjectKind == ObjectKind.Retainer ||
-                                            character.ObjectKind == ObjectKind.BattleNpc ||
-                                            character.ObjectKind == ObjectKind.EventNpc) && config.DebugMode) ||
-                                            character.ObjectKind == ObjectKind.Companion ||
-                                            character.ObjectKind == ObjectKind.Housing) {
-                                            if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
-                                                if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
-                                                    characters.Add(character);
-                                                } else if (config.DebugMode) {
-                                                    _chat.Print("Cannot apply animations to non humanoid minions.");
+            try {
+                if (!string.IsNullOrEmpty(_lastEmoteAnimationUsed.Name.ToString())) {
+                    Emote value = _lastEmoteAnimationUsed;
+                    _lastEmoteAnimationUsed = new Emote();
+                    if (!Conditions.IsWatchingCutscene) {
+                        _isAlreadyRunningEmote = true;
+                        Task.Run(() => {
+                            if (value.EmoteMode.Value.ConditionMode is not 3) {
+                                Thread.Sleep(2000);
+                            }
+                            if (config.DebugMode) {
+                                _chat.Print("Attempt to find nearest objects.");
+                            }
+                            List<ICharacter> characters = new List<ICharacter>();
+                            foreach (var gameObject in GetNearestObjects()) {
+                                try {
+                                    ICharacter character = gameObject as ICharacter;
+                                    if (character != null) {
+                                        if (config.DebugMode) {
+                                            Plugin.PluginLog.Debug(character.Name.TextValue + " found!");
+                                        }
+                                        if (!character.IsDead) {
+                                            if (((character.ObjectKind == ObjectKind.Retainer ||
+                                                character.ObjectKind == ObjectKind.BattleNpc ||
+                                                character.ObjectKind == ObjectKind.EventNpc) && config.DebugMode) ||
+                                                character.ObjectKind == ObjectKind.Companion ||
+                                                character.ObjectKind == ObjectKind.Housing) {
+                                                if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
+                                                    if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
+                                                        characters.Add(character);
+                                                    } else if (config.DebugMode) {
+                                                        _chat.Print("Cannot apply animations to non humanoid minions.");
+                                                    }
+                                                } else {
+                                                    if (config.DebugMode) {
+                                                        _chat.Print("Cannot affect NPC's with map markers.");
+                                                    }
+                                                    characters.Clear();
+                                                    break;
                                                 }
-                                            } else {
-                                                if (config.DebugMode) {
-                                                    _chat.Print("Cannot affect NPC's with map markers.");
-                                                }
-                                                characters.Clear();
-                                                break;
                                             }
                                         }
                                     }
-                                }
-                            } catch {
-                                if (config.DebugMode) {
-                                    _chat.Print("Could not trigger emote on " + gameObject.Name + ".");
+                                } catch {
+                                    if (config.DebugMode) {
+                                        _chat.Print("Could not trigger emote on " + gameObject.Name + ".");
+                                    }
                                 }
                             }
-                        }
-                        foreach (ICharacter character in characters) {
-                            try {
-                                if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
-                                    if (config.DebugMode) {
-                                        _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
-                                        //_chat.Print("Emote Unknowns: " + $"{value.EmoteMode.Value.ConditionMode} {value.Unknown8},{value.Unknown9},{value.Unknown10},{value.Unknown13},{value.Unknown14}," +
-                                        //    $"{value.Unknown17},{value.Unknown24},");
-                                    }
-                                    if (config.UsePlayerSync) {
-                                        unsafe {
-                                            var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
-                                            if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.RowId);
-                                                _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
-                                                Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
+                            foreach (ICharacter character in characters) {
+                                try {
+                                    if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                        if (config.DebugMode) {
+                                            _chat.Print("Triggering emote! " + value.ActionTimeline[0].Value.RowId);
+                                            //_chat.Print("Emote Unknowns: " + $"{value.EmoteMode.Value.ConditionMode} {value.Unknown8},{value.Unknown9},{value.Unknown10},{value.Unknown13},{value.Unknown14}," +
+                                            //    $"{value.Unknown17},{value.Unknown24},");
+                                        }
+                                        if (config.UsePlayerSync) {
+                                            unsafe {
+                                                var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                                if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.RowId);
+                                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
+                                                    Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
+                                                }
                                             }
                                         }
+                                        if (value.EmoteMode.Value.ConditionMode == 3 || value.EmoteMode.Value.ConditionMode == 11) {
+                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                        } else {
+                                            _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                        }
+                                        Thread.Sleep(500);
                                     }
-                                    if (value.EmoteMode.Value.ConditionMode == 3 || value.EmoteMode.Value.ConditionMode == 11) {
-                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
-                                    } else {
-                                        _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
+                                } catch {
+                                    if (config.DebugMode) {
+                                        _chat.Print("Could not trigger emote on " + character.Name.TextValue + ".");
                                     }
-                                    Thread.Sleep(500);
-                                }
-                            } catch {
-                                if (config.DebugMode) {
-                                    _chat.Print("Could not trigger emote on " + character.Name.TextValue + ".");
                                 }
                             }
-                        }
-                        _isAlreadyRunningEmote = false;
-                    });
+                            _isAlreadyRunningEmote = false;
+                        });
+                    }
                 }
+            } catch {
+
             }
         }
 

@@ -954,7 +954,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print("Attempt to play audio stream.");
                                     }
-                                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC, IsInACutscene() || _plugin.Config.AllowDialogueQueuingOutsideCutscenes, useSmbPitch, pitch, 0,
+                                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC, (IsInACutscene() && Conditions.IsBoundByDuty), useSmbPitch, pitch, 0,
                                     IsInACutscene() || lowLatencyMode, delegate {
                                         if (_hook != null) {
                                             try {
