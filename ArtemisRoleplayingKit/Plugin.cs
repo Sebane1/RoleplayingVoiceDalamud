@@ -86,6 +86,7 @@ using RoleplayingVoiceDalamud.GameObjects;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Common.Lua;
 using Lumina.Excel.Sheets;
+using RoleplayingVoiceDalamud.VoiceSorting;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
@@ -140,7 +141,7 @@ namespace RoleplayingVoice {
         private MediaGameObject _playerObject;
         private MediaManager _mediaManager;
         private RaceVoice _raceVoice;
-        private List<KeyValuePair<List<string>, int>> penumbraSoundPacks;
+        private List<ArtemisVoiceMod> penumbraSoundPacks;
         private unsafe Camera* _camera;
         private MediaCameraObject _playerCamera;
 
@@ -149,7 +150,7 @@ namespace RoleplayingVoice {
         ConcurrentDictionary<string, MovingObject> gameObjectPositions = new ConcurrentDictionary<string, MovingObject>();
         Queue<string> temporaryWhitelistQueue = new Queue<string>();
         List<string> temporaryWhitelist = new List<string>();
-        private List<string> combinedSoundList;
+        private ArtemisVoiceMod combinedSoundList;
 
         private int _muteLength = 4000;
         private int attackCount;
@@ -2757,11 +2758,13 @@ namespace RoleplayingVoice {
                 }
             }
         }
-        public async Task<List<string>> GetCombinedSoundList(List<KeyValuePair<List<string>, int>> sounds) {
-            List<string> list = new List<string>();
+        public async Task<ArtemisVoiceMod> GetCombinedSoundList(List<ArtemisVoiceMod> soundMods) {
+            ArtemisVoiceMod list = new ArtemisVoiceMod();
             Dictionary<string, bool> keyValuePairs = new Dictionary<string, bool>();
-            foreach (var sound in sounds) {
-                foreach (string value in sound.Key) {
+            Dictionary<string, ArtemisVoiceMod> subMods = new Dictionary<string, ArtemisVoiceMod>();
+
+            foreach (var soundMod in soundMods) {
+                foreach (string value in soundMod.Files) {
                     string strippedValue = CharacterVoicePack.StripNonCharacters(Path.GetFileNameWithoutExtension(value), _clientState.ClientLanguage);
                     bool allowedToAdd;
                     if (keyValuePairs.ContainsKey(strippedValue)) {
@@ -2771,14 +2774,44 @@ namespace RoleplayingVoice {
                         allowedToAdd = true;
                     }
                     if (allowedToAdd) {
-                        list.Add(value);
+                        list.Files.Add(value);
                     }
                 }
                 foreach (string value in keyValuePairs.Keys) {
                     if (!string.IsNullOrEmpty(value)) {
                         try {
                             keyValuePairs[value] = true;
-                        } catch { }
+                        } catch {
+
+                        }
+                    }
+                }
+                Dictionary<string, bool> alreadyPairedSounds = new Dictionary<string, bool>();
+                foreach (var item in soundMod.ArtemisSubMods) {
+                    if (!subMods.ContainsKey(item.Name)) {
+                        subMods[item.Name] = new ArtemisVoiceMod();
+                    }
+                    foreach (string value in soundMod.Files) {
+                        string strippedValue = CharacterVoicePack.StripNonCharacters(Path.GetFileNameWithoutExtension(value), _clientState.ClientLanguage);
+                        bool allowedToAdd;
+                        if (alreadyPairedSounds.ContainsKey(strippedValue)) {
+                            allowedToAdd = !alreadyPairedSounds[strippedValue];
+                        } else {
+                            alreadyPairedSounds[strippedValue] = false;
+                            allowedToAdd = true;
+                        }
+                        if (allowedToAdd) {
+                            subMods[item.Name].Files.Add(value);
+                        }
+                    }
+                    foreach (string value in alreadyPairedSounds.Keys) {
+                        if (!string.IsNullOrEmpty(value)) {
+                            try {
+                                alreadyPairedSounds[value] = true;
+                            } catch {
+
+                            }
+                        }
                     }
                 }
             }
@@ -2812,7 +2845,7 @@ namespace RoleplayingVoice {
                                 }
                             }
                         }
-                        foreach (var sound in list) {
+                        foreach (var sound in list.Files) {
                             try {
                                 File.Copy(sound, Path.Combine(stagingPath, Path.GetFileName(sound)), true);
                             } catch (Exception e) {
@@ -3528,12 +3561,12 @@ namespace RoleplayingVoice {
             }
         }
 
-        public async Task<List<KeyValuePair<List<string>, int>>> GetPrioritySortedModPacks(bool skipModelData) {
+        public async Task<List<ArtemisVoiceMod>> GetPrioritySortedModPacks(bool skipModelData) {
             Filter.Blacklist?.Clear();
             _scdReplacements?.Clear();
             //_papSorting?.Clear();
             //_mdlSorting?.Clear();
-            List<KeyValuePair<List<string>, int>> list = new List<KeyValuePair<List<string>, int>>();
+            List<ArtemisVoiceMod> list = new List<ArtemisVoiceMod>();
             string refreshGuid = Guid.NewGuid().ToString();
             _currentModPackRefreshGuid = refreshGuid;
             try {
@@ -3631,27 +3664,49 @@ namespace RoleplayingVoice {
                         if (!string.IsNullOrEmpty(voice)) {
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
                             if (Directory.Exists(path)) {
-                                list.Add(new KeyValuePair<List<string>, int>(Directory.EnumerateFiles(path).ToList(), list.Count));
+                                ArtemisVoiceMod artemisVoiceMod = new ArtemisVoiceMod();
+                                artemisVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
+                                artemisVoiceMod.Priority = list.Count;
+                                foreach (var subMod in Directory.EnumerateDirectories(path)) {
+                                    ArtemisVoiceMod artemisSubVoiceMod = new ArtemisVoiceMod();
+                                    artemisSubVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
+                                    artemisSubVoiceMod.Priority = list.Count + 1;
+                                    artemisVoiceMod.ArtemisSubMods.Add(artemisSubVoiceMod);
+                                }
+                                list.Add(artemisVoiceMod);
                             }
                         }
                     }
                 }
             }
             if (list.Count > 0) {
-                list.Sort((x, y) => y.Value.CompareTo(x.Value));
+                list.Sort((x, y) => y.Priority.CompareTo(x.Priority));
             }
             return list;
         }
 
-        private void GetSoundPackData(string soundPackData, int priority, List<KeyValuePair<List<string>, int>> list) {
+        private void GetSoundPackData(string soundPackData, int priority, List<ArtemisVoiceMod> list) {
             if (Path.Exists(soundPackData)) {
-                var soundList = new List<string>();
+                ArtemisVoiceMod artemisVoiceMod = new ArtemisVoiceMod();
+                artemisVoiceMod.Priority = priority;
                 foreach (string file in Directory.EnumerateFiles(soundPackData)) {
                     if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
-                        soundList.Add(file);
+                        artemisVoiceMod.Files.Add(file);
                     }
                 }
-                list.Add(new KeyValuePair<List<string>, int>(soundList, priority));
+                foreach (var directory in Directory.EnumerateDirectories(soundPackData)) {
+                    ArtemisVoiceMod artemisSubVoiceMod = new ArtemisVoiceMod();
+                    artemisSubVoiceMod.Priority = priority;
+                    foreach (var file in Directory.EnumerateFiles(directory)) {
+                        if (file.EndsWith(".mp3") || file.EndsWith(".ogg")) {
+                            artemisSubVoiceMod.Files.Add(file);
+                        }
+                    }
+                    if (artemisSubVoiceMod.Files.Count > 0) {
+                        artemisVoiceMod.ArtemisSubMods.Add(artemisSubVoiceMod);
+                    }
+                }
+                list.Add(artemisVoiceMod);
             }
         }
         #endregion

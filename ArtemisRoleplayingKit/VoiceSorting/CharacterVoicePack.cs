@@ -14,8 +14,11 @@ using System.Windows.Forms;
 using System.Collections.Concurrent;
 using Dalamud.Game;
 using RoleplayingVoice;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
+using RoleplayingVoiceDalamud.VoiceSorting;
 namespace RoleplayingVoiceDalamud {
     public class CharacterVoicePack {
+        private ConcurrentDictionary<string, CharacterVoicePack> subCharacterVoicePacks = new ConcurrentDictionary<string, CharacterVoicePack>();
         private List<string> _castedAttack = new List<string>();
         private List<string> _meleeAttack = new List<string>();
         private List<string> _attack = new List<string>();
@@ -37,6 +40,7 @@ namespace RoleplayingVoiceDalamud {
         private string _teleport;
 
         public int EmoteIndex { get => emoteIndex; set => emoteIndex = value; }
+        public ConcurrentDictionary<string, CharacterVoicePack> SubCharacterVoicePacks { get => subCharacterVoicePacks; set => subCharacterVoicePacks = value; }
 
         public CharacterVoicePack(string directory, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
             _dataManager = dataManager;
@@ -56,23 +60,32 @@ namespace RoleplayingVoiceDalamud {
                     }
                 }
             }
+            foreach (var directoryItem in Directory.GetDirectories(directory)) {
+                subCharacterVoicePacks[Path.GetFileNameWithoutExtension(directoryItem + ".directory")] = new CharacterVoicePack(directoryItem, dataManager, clientLanguage, true);
+            }
         }
-        public CharacterVoicePack(List<string> files, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
+        public CharacterVoicePack(ArtemisVoiceMod artemisVoicePack, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
+            Dictionary<string, string> alreadyInspectedDirectories = new Dictionary<string, string>();
             _dataManager = dataManager;
             _clientLanguage = clientLanguage;
             if (asyncSort) {
                 Task.Run(() => {
-                    if (files != null) {
-                        foreach (string file in files) {
+                    if (artemisVoicePack.Files != null) {
+                        foreach (string file in artemisVoicePack.Files) {
                             SortFile(file);
                         }
                     }
                 });
             } else {
-                if (files != null) {
-                    foreach (string file in files) {
+                if (artemisVoicePack.Files != null) {
+                    foreach (string file in artemisVoicePack.Files) {
                         SortFile(file);
                     }
+                }
+            }
+            foreach (var artemis in artemisVoicePack.ArtemisSubMods) {
+                foreach (var subMod in artemis.ArtemisSubMods) {
+                    subCharacterVoicePacks[subMod.Name] = new CharacterVoicePack(subMod, dataManager, clientLanguage, asyncSort);
                 }
             }
         }
