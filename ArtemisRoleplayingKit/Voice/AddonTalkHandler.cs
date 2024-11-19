@@ -1056,14 +1056,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             animationMemory = actorMemory.Animation;
                                             animationMemory.LipsOverride = 630;
                                             //animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
-                                            ////if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
-                                            ////    lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                            ////} else if (wavePlayer.TotalTime.Seconds < 7) {
-                                            ////    lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                            ////} else {
-                                            ////    lipId = LipSyncTypes[6].Timeline.AnimationId;
-                                            ////}
-                                            lipId = 630;
+                                            if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
+                                                lipId = 632;
+                                            } else if (wavePlayer.TotalTime.Seconds < 7) {
+                                                lipId = 630;
+                                            } else {
+                                                lipId = 631;
+                                            }
                                             //if (!Conditions.IsBoundByDuty || IsInACutscene()) {
                                             //    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
                                             //}
@@ -1142,14 +1141,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             int seconds = wavePlayer.TotalTime.Milliseconds - wavePlayer.CurrentTime.Milliseconds;
                                                             float percentage = (float)wavePlayer.CurrentTime.Milliseconds / (float)wavePlayer.TotalTime.Milliseconds;
                                                             if (percentage > 0.90f) {
-                                                                //if (seconds < 2000) {
-                                                                //    lipId = LipSyncTypes[2].Timeline.AnimationId;
-                                                                //} else if (wavePlayer.TotalTime.Seconds < 7000) {
-                                                                //    lipId = LipSyncTypes[5].Timeline.AnimationId;
-                                                                //} else {
-                                                                //    lipId = LipSyncTypes[6].Timeline.AnimationId;
-                                                                //}
-                                                                lipId = 630;
+                                                                if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
+                                                                    lipId = 632;
+                                                                } else if (wavePlayer.TotalTime.Seconds < 7) {
+                                                                    lipId = 630;
+                                                                } else {
+                                                                    lipId = 631;
+                                                                }
                                                             }
                                                             if ((int)MemoryService.Read(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), typeof(int)) != lipId) {
                                                                 if (!Conditions.IsBoundByDuty || IsInACutscene()) {
@@ -1370,7 +1368,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     isRetainer = character.ObjectKind == ObjectKind.Retainer;
                                     if (body == 0) {
                                         var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(item as ICharacter).Address);
-                                        body = gameObject->ModelCharaId;
+                                        body = gameObject->ModelContainer.ModelSkeletonId;
                                     }
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print(item.Name.TextValue + " is model type " + body + ", and race " + race + ".");
