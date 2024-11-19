@@ -617,12 +617,12 @@ namespace RoleplayingVoice {
                         CheckIfDied();
                         switch (performanceLimiter++) {
                             case 0:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForMovingObjects();
                                 }
                                 break;
                             case 1:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForNewDynamicEmoteRequests();
                                 }
                                 break;
@@ -632,27 +632,27 @@ namespace RoleplayingVoice {
                             case 3:
                                 break;
                             case 4:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomMountingAudio();
                                 }
                                 break;
                             case 5:
-                                if (!Conditions.IsBoundByDuty) {
+                                if (!Conditions.IsBoundByDuty && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomCombatAudio();
                                 }
                                 break;
                             case 6:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                    //CheckForGPose();
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                    CheckForGPose();
                                 }
                                 break;
                             case 7:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomEmoteTriggers();
                                 }
                                 break;
                             case 8:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomNPCMinion();
                                 }
                                 break;
@@ -663,12 +663,14 @@ namespace RoleplayingVoice {
                                 }
                                 break;
                             case 10:
-                                if (_checkAnimationModsQueue.Count > 0 && !_queueTimer.IsRunning) {
-                                    var item = _checkAnimationModsQueue.Dequeue();
-                                    CheckAnimationMods(item.Item1, item.Item2, item.Item3);
-                                    _queueTimer.Restart();
-                                } else if (_queueTimer.ElapsedMilliseconds > 500) {
-                                    _queueTimer.Reset();
+                                if (!_addonTalkHandler.IsInACutscene()) {
+                                    if (_checkAnimationModsQueue.Count > 0 && !_queueTimer.IsRunning) {
+                                        var item = _checkAnimationModsQueue.Dequeue();
+                                        CheckAnimationMods(item.Item1, item.Item2, item.Item3);
+                                        _queueTimer.Restart();
+                                    } else if (_queueTimer.ElapsedMilliseconds > 500) {
+                                        _queueTimer.Reset();
+                                    }
                                 }
                                 performanceLimiter = 0;
                                 break;

@@ -1,15 +1,13 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
-using NAudio.Wave.SampleProviders;
-using Newtonsoft.Json;
 using RoleplayingMediaCore.AudioRecycler;
-using RoleplayingVoiceCore;
-using RoleplayingVoiceDalamud;
 using System;
 using System.Collections.Generic;
 using System.IO;
-
+using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 namespace RoleplayingVoice {
+    [JsonSerializable(typeof(Configuration))]
     public class Configuration : IPluginConfiguration {
         static bool configAlreadyLoaded = true;
         public event EventHandler OnConfigurationChanged;
@@ -28,6 +26,7 @@ namespace RoleplayingVoice {
         private bool ignoreWhitelist = true;
         private bool performEmotesBasedOnWrittenText;
         private bool seperateSCDModsFromNativeSoundSystem;
+        [JsonProperty]
         private bool _npcSpeechEnabled;
         private List<string> whitelist = new List<string>();
         private string streamPath = "";
@@ -120,11 +119,15 @@ namespace RoleplayingVoice {
         public bool HasMigrated { get => _hasMigrated; set => _hasMigrated = value; }
         public bool PerformEmotesBasedOnWrittenText { get => performEmotesBasedOnWrittenText; set => performEmotesBasedOnWrittenText = value; }
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
+        
+        [JsonProperty]
         public bool NpcSpeechEnabled {
             get {
                 return _npcSpeechEnabled;
             }
-            set => _npcSpeechEnabled = value;
+            set {
+                _npcSpeechEnabled = value;
+            }
         }
         public float NpcVolume {
             get => _npcVolume; set {
