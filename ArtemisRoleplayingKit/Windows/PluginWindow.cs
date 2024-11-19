@@ -196,7 +196,7 @@ namespace RoleplayingVoice {
                     _ignoreWhitelist = configuration.IgnoreWhitelist;
                     _performEmotesBasedOnWrittenText = configuration.PerformEmotesBasedOnWrittenText;
                     _moveSCDBasedModsToPerformanceSlider = configuration.MoveSCDBasedModsToPerformanceSlider;
-                    _npcSpeechEnabled = configuration.NpcSpeechEnabled;
+                    _npcSpeechEnabled = configuration.NpcSpeechIsOn;
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
@@ -785,7 +785,7 @@ namespace RoleplayingVoice {
             configuration.StreamPath = _streamPath;
             configuration.PerformEmotesBasedOnWrittenText = _performEmotesBasedOnWrittenText;
             configuration.MoveSCDBasedModsToPerformanceSlider = _moveSCDBasedModsToPerformanceSlider;
-            configuration.NpcSpeechEnabled = _npcSpeechEnabled;
+            configuration.NpcSpeechIsOn = _npcSpeechEnabled;
             configuration.AutoTextAdvance = _npcAutoTextAdvance;
             configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
             configuration.AudioOutputType = _audioOutputType.SelectedIndex;

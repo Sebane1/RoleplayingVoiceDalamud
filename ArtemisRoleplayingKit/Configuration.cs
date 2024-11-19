@@ -121,7 +121,7 @@ namespace RoleplayingVoice {
         public bool SeperateSCDModsFromNativeSoundSystem { get => seperateSCDModsFromNativeSoundSystem; set => seperateSCDModsFromNativeSoundSystem = value; }
         
         [JsonProperty]
-        public bool NpcSpeechEnabled {
+        public bool NpcSpeechIsOn {
             get {
                 return _npcSpeechEnabled;
             }

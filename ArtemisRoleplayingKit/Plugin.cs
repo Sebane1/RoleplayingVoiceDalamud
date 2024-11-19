@@ -3968,17 +3968,17 @@ namespace RoleplayingVoice {
                             config.Save();
                             break;
                         case "accessibilitymode":
-                            config.NpcSpeechEnabled = !config.NpcSpeechEnabled;
+                            config.NpcSpeechIsOn = !config.NpcSpeechIsOn;
                             if (StreamDetection.RecordingSoftwareIsActive) {
                                 _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is interfering with accessibility mode.");
                             } else {
-                                if (config.NpcSpeechEnabled) {
+                                if (config.NpcSpeechIsOn) {
                                     _chat?.Print("Accessibility Mode Enabled");
                                 } else {
                                     _chat?.Print("Accessibility Mode Disabled");
                                 }
                             }
-                            Window.NpcSpeechEnabled = config.NpcSpeechEnabled;
+                            Window.NpcSpeechEnabled = config.NpcSpeechIsOn;
                             config.Save();
                             break;
                         case "arrvoice":

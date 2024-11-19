@@ -530,7 +530,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         }
                                         alreadyConfiguredBubbles = true;
                                         if (_plugin.Window.NpcSpeechEnabled) {
-                                            _plugin.Window.NpcSpeechEnabled = Service.ClientState.ClientLanguage != ClientLanguage.English;
+                                            _plugin.Window.NpcSpeechEnabled = Service.ClientState.ClientLanguage == ClientLanguage.English;
                                         }
                                     }
                                     _state = GetTalkAddonState();
