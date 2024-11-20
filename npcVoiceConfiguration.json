@@ -233,7 +233,7 @@
   },  
   "CharacterToCacheType": {
     "Cid": 0,
-    "Papalymo": 1,
+    "Papalymo": 0,
     "Biggs": 1,
     "Wedge": 1,
     "Unei": 1,
