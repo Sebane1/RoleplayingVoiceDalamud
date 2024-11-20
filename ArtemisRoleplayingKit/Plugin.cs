@@ -2500,7 +2500,7 @@ namespace RoleplayingVoice {
                     } else {
                         if (_messageTimer.ElapsedMilliseconds > 1000) {
                             try {
-                                _realChat.SendMessage(_messageQueue.Dequeue());
+                                //_realChat.SendMessage(_messageQueue.Dequeue());
                             } catch (Exception e) {
                                 Plugin.PluginLog?.Warning(e, e.Message);
                             }
@@ -2510,7 +2510,7 @@ namespace RoleplayingVoice {
                 }
                 if (_fastMessageQueue.Count > 0 && !disposed) {
                     try {
-                        _realChat.SendMessage(_fastMessageQueue.Dequeue());
+                        //_realChat.SendMessage(_fastMessageQueue.Dequeue());
                     } catch (Exception e) {
                         Plugin.PluginLog?.Warning(e, e.Message);
                     }
