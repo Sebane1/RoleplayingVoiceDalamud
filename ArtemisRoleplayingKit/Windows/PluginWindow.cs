@@ -1020,7 +1020,11 @@ namespace RoleplayingVoice {
                 }
                 if (index != _lastIndex) {
                     if (OnSelectedIndexChanged != null) {
-                        OnSelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+                        try {
+                            OnSelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+                        } catch {
+
+                        }
                     }
                 }
                 _lastIndex = index;

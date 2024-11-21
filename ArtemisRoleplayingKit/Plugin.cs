@@ -424,6 +424,7 @@ namespace RoleplayingVoice {
                 Task.Run(async () => {
                     _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
                         config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
+                    _voiceEditor.NPCVoiceManager = _npcVoiceManager;
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                     _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTableThreadUnsafe, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
@@ -524,6 +525,7 @@ namespace RoleplayingVoice {
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                     }
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
+                    _voiceEditor.MediaManager = _mediaManager;
                     _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
                     _videoWindow.MediaManager = _mediaManager;
                 }
@@ -618,7 +620,7 @@ namespace RoleplayingVoice {
                     if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
                         CheckCataloging();
                     }
-                    if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized) {
+                    if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized && _addonTalkHandler != null) {
                         pollingTimer.Restart();
                         CheckIfDied();
                         switch (performanceLimiter++) {
@@ -669,7 +671,7 @@ namespace RoleplayingVoice {
                                 }
                                 break;
                             case 10:
-                                if (!_addonTalkHandler.IsInACutscene()) {
+                                if (_addonTalkHandler != null && !_addonTalkHandler.IsInACutscene()) {
                                     if (_checkAnimationModsQueue.Count > 0 && !_queueTimer.IsRunning) {
                                         var item = _checkAnimationModsQueue.Dequeue();
                                         CheckAnimationMods(item.Item1, item.Item2, item.Item3);
