@@ -125,7 +125,7 @@ namespace RoleplayingVoice {
             ImGui.SameLine();
             if (ImGui.Button("Upload Voice Line Pack")) {
                 if (_npcVoiceManager.GetFileCountForCharacter(_currentCharacter) >= _voiceLinesCount) {
-                    _npcVoiceManager.UploadCharacterVoicePack(_currentCharacter + "_" + NPCVoiceManager.CreateMD5(Environment.MachineName));
+                    _npcVoiceManager.UploadCharacterVoicePack(_currentCharacter);
                 }
             }
             if (_npcVoiceManager.GetFileCountForCharacter(_currentCharacter) < _voiceLinesCount) {
