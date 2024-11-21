@@ -27,13 +27,14 @@ namespace RoleplayingVoice {
         private IDalamudPluginInterface _pluginInterface;
         private string _stringValue = "";
         private EventHandler<string> _currentEvent;
-        private BetterComboBox _characterList = new BetterComboBox("CharacterList", new string[] { "" }, 300);
+        private BetterComboBox _characterList = new BetterComboBox("CharacterList", new string[] { "" }, 500);
         private string _currentVoiceLine = "";
         private string _voiceLinePath;
         private int _voiceLinesCount;
         private SpeechRecordingManager _speechRecordingManager;
         private int _currentVoiceLineIndex = 0;
-        private string _currentCharacter;
+        private string _currentCharacter = "";
+        private string _searchText = "";
 
         public VoiceEditor(IDalamudPluginInterface pluginInterface) :
             base("NPC Voice Editor", ImGuiWindowFlags.None, false) {
@@ -57,7 +58,10 @@ namespace RoleplayingVoice {
 
         private void CheckForMasterList() {
             if (_npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Count > 0) {
+                _currentVoiceLineIndex = 0;
                 _characterList.Contents = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Keys.ToArray();
+                _characterList.SelectedIndex = 0;
+                RefreshCharacterSelection();
             }
         }
         private void _npcVoiceManager_OnMasterListAcquired(object sender, EventArgs e) {
@@ -68,11 +72,15 @@ namespace RoleplayingVoice {
         }
         private void _characterList_OnSelectedIndexChanged(object sender, EventArgs e) {
             _currentVoiceLineIndex = 0;
-            if (_npcVoiceManager.CharacterVoicesMasterList != null && _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue != null) {
-                _currentCharacter = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Keys.ElementAt(_characterList.SelectedIndex);
-                _currentVoiceLine = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue[_currentCharacter].Keys.ElementAt(_currentVoiceLineIndex);
-                _voiceLinesCount = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue[_currentCharacter].Count;
-                _voiceLinePath = _npcVoiceManager.VoicelinePath(_currentVoiceLine, _currentCharacter);
+            RefreshCharacterSelection();
+        }
+
+        private void RefreshCharacterSelection() {
+        if (_npcVoiceManager.CharacterVoicesMasterList != null && _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue != null) {
+            _currentCharacter = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Keys.ElementAt(_characterList.SelectedIndex);
+            _currentVoiceLine = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue[_currentCharacter].Keys.ElementAt(_currentVoiceLineIndex);
+            _voiceLinesCount = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue[_currentCharacter].Count;
+            _voiceLinePath = _npcVoiceManager.VoicelinePath(_currentVoiceLine, _currentCharacter);
             }
         }
 
@@ -92,11 +100,21 @@ namespace RoleplayingVoice {
         public override void Draw() {
             ImGui.TextWrapped("Use this window to volunteer your own recorded voice lines that can be submitted for use in Accessibility Dialogue." +
                 "\r\n\r\nYou will need to record all lines for the selected character to be able to upload.\r\n");
+            ImGui.InputText("##Search", ref _searchText, 300);
+            ImGui.SameLine();
+            if (ImGui.Button("Search##NPC")) {
+                _currentVoiceLineIndex = 0;
+                _currentCharacter = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Keys.FirstOrDefault(value => value.ToLower().Contains(_searchText.ToLower()));
+                _voiceLinePath = _npcVoiceManager.VoicelinePath(_currentVoiceLine, _currentCharacter);
+                _characterList.SelectedIndex = _npcVoiceManager.CharacterVoicesMasterList.VoiceCatalogue.Keys.ToList().IndexOf(_currentCharacter);
+            }
             ImGui.Text("Selected NPC Character:");
             ImGui.SameLine();
+            _characterList.Width = (int)ImGui.GetWindowSize().X - 300;
             _characterList.Draw();
             ImGui.LabelText("##voiceLineLabel", "Voice line to record:");
             ImGui.TextWrapped(_currentVoiceLine);
+            ImGui.Dummy(new Vector2(0, 10));
             if (ImGui.Button("Previous Line")) {
                 PreviousLine();
             }
@@ -123,7 +141,7 @@ namespace RoleplayingVoice {
                 ImGui.BeginDisabled(true);
             }
             ImGui.SameLine();
-            if (ImGui.Button("Upload Voice Line Pack")) {
+            if (ImGui.Button($"Upload Voice Line Pack ({_currentCharacter.Split("_")[0]})")) {
                 if (_npcVoiceManager.GetFileCountForCharacter(_currentCharacter) >= _voiceLinesCount) {
                     _npcVoiceManager.UploadCharacterVoicePack(_currentCharacter);
                 }
