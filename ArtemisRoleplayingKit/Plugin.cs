@@ -119,6 +119,7 @@ namespace RoleplayingVoice {
         private AnimationEmoteSelection _animationEmoteSelection;
         private NPCPersonalityWindow _npcPersonalityWindow;
         private DragAndDropTextureWindow _dragAndDropTextures;
+        private VoiceEditor _voiceEditor;
         private static IPluginLog _plugin;
         private RoleplayingMediaManager _roleplayingMediaManager;
 
@@ -309,6 +310,7 @@ namespace RoleplayingVoice {
         public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
         public GameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
         public static bool Disposed { get; internal set; }
+        public VoiceEditor VoiceEditor { get => _voiceEditor; set => _voiceEditor = value; }
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -355,6 +357,7 @@ namespace RoleplayingVoice {
                 _animationEmoteSelection = this.pluginInterface.Create<AnimationEmoteSelection>();
                 _npcPersonalityWindow = this.pluginInterface.Create<NPCPersonalityWindow>();
                 _dragAndDropTextures = this.pluginInterface.Create<DragAndDropTextureWindow>();
+                _voiceEditor = this.pluginInterface.Create<VoiceEditor>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
                 _npcPersonalityWindow.Plugin = this;
                 pluginInterface.UiBuilder.DisableAutomaticUiHide = true;
@@ -398,6 +401,9 @@ namespace RoleplayingVoice {
                     this.windowSystem.AddWindow(_dragAndDropTextures);
                     _dragAndDropTextures.Plugin = this;
                     _dragAndDropTextures.IsOpen = true;
+                }
+                if (_voiceEditor is not null) {
+                    this.windowSystem.AddWindow(_voiceEditor);
                 }
                 _cooldown = new Stopwatch();
                 _muteTimer = new Stopwatch();

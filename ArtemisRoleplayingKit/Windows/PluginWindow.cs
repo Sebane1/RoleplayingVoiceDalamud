@@ -467,10 +467,11 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Contribute Your Voice!", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 Process process = new Process();
                 try {
-                    // true is the default, but it is important not to set it to false
-                    process.StartInfo.UseShellExecute = true;
-                    process.StartInfo.FileName = "https://forms.gle/JrarUbRpnhNyEThAA";
-                    process.Start();
+                    //// true is the default, but it is important not to set it to false
+                    //process.StartInfo.UseShellExecute = true;
+                    //process.StartInfo.FileName = "https://forms.gle/JrarUbRpnhNyEThAA";
+                    //process.Start();
+                    PluginReference.VoiceEditor.IsOpen = true;
                 } catch (Exception e) {
 
                 }
