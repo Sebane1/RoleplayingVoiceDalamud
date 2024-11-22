@@ -87,6 +87,8 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Common.Lua;
 using Lumina.Excel.Sheets;
 using RoleplayingVoiceDalamud.VoiceSorting;
+using SixLabors.ImageSharp.Drawing;
+using Path = System.IO.Path;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
@@ -2877,11 +2879,13 @@ namespace RoleplayingVoice {
             try {
                 Directory.Delete(path, true);
             } catch {
-                foreach (string file in Directory.EnumerateFiles(path)) {
-                    try {
-                        File.Delete(file);
-                    } catch (Exception e) {
-                        Plugin.PluginLog?.Warning(e, e.Message);
+                if (Directory.Exists(path)) {
+                    foreach (string file in Directory.EnumerateFiles(path)) {
+                        try {
+                            File.Delete(file);
+                        } catch (Exception e) {
+                            Plugin.PluginLog?.Warning(e, e.Message);
+                        }
                     }
                 }
             }
@@ -3546,31 +3550,35 @@ namespace RoleplayingVoice {
         }
 
         public void RecursivelyFindPapFiles(string modName, string directory, int levels, int maxLevels) {
-            foreach (string file in Directory.EnumerateFiles(directory)) {
-                if (file.EndsWith(".pap")) {
-                    string[] strings = file.Split("\\");
-                    string value = strings[strings.Length - 1];
-                    if (!_animationMods.ContainsKey(modName)) {
-                        _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
-                    }
-                    if (!_animationMods[modName].Value.Contains(value)) {
-                        _animationMods[modName].Value.Add(value);
-                    }
-                    if (!_papSorting.ContainsKey(value)) {
-                        try {
-                            _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>()
-                            { new Tuple<string, string, bool>(directory, modName, false) });
-                        } catch {
-                            Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
+            if (Directory.Exists(directory)) {
+                foreach (string file in Directory.EnumerateFiles(directory)) {
+                    if (file.EndsWith(".pap")) {
+                        string[] strings = file.Split("\\");
+                        string value = strings[strings.Length - 1];
+                        if (!_animationMods.ContainsKey(modName)) {
+                            _animationMods[modName] = new KeyValuePair<string, List<string>>(directory, new());
                         }
-                    } else {
-                        _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, false));
+                        if (!_animationMods[modName].Value.Contains(value)) {
+                            _animationMods[modName].Value.Add(value);
+                        }
+                        if (!_papSorting.ContainsKey(value)) {
+                            try {
+                                _papSorting.TryAdd(value, new List<Tuple<string, string, bool>>()
+                                { new Tuple<string, string, bool>(directory, modName, false) });
+                            } catch {
+                                Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + value + " already exists, ignoring.");
+                            }
+                        } else {
+                            _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, false));
+                        }
                     }
                 }
-            }
-            if (levels < maxLevels) {
-                foreach (string file in Directory.EnumerateDirectories(directory)) {
-                    RecursivelyFindPapFiles(modName, file, levels + 1, maxLevels);
+                if (levels < maxLevels) {
+                    if (Directory.Exists(directory)) {
+                        foreach (string file in Directory.EnumerateDirectories(directory)) {
+                            RecursivelyFindPapFiles(modName, file, levels + 1, maxLevels);
+                        }
+                    }
                 }
             }
         }
