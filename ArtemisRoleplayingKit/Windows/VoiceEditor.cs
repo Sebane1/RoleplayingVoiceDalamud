@@ -69,6 +69,7 @@ namespace RoleplayingVoice {
         }
         public override void OnOpen() {
             CheckForMasterList();
+            _npcVoiceManager.GetVoiceLineMasterList();
         }
         private void _characterList_OnSelectedIndexChanged(object sender, EventArgs e) {
             _currentVoiceLineIndex = 0;
