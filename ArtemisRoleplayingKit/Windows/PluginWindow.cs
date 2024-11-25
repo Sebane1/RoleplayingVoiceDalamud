@@ -1166,7 +1166,7 @@ namespace RoleplayingVoice {
                         if (ImGui.Button("Add Free Narrator Voices")) {
                             ProcessStartInfo ProcessInfo;
                             Process Process;
-                            string urlPath = "https://github.com/gexgd0419/NaturalVoiceSAPIAdapter/releases/Pack";
+                            string urlPath = "https://github.com/gexgd0419/NaturalVoiceSAPIAdapter/releases/";
                             ProcessInfo = new ProcessStartInfo(urlPath);
                             ProcessInfo.UseShellExecute = true;
                             Process = Process.Start(ProcessInfo);

@@ -267,7 +267,7 @@ namespace RoleplayingVoice {
                                         } else {
                                             // Thread.Sleep(100);
                                             var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, mod.Item2, false);
-                                            var ipcResult2 = PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection.Item3.Id, mod.Item2, -10);
+                                            var ipcResult2 = PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection.Item3.Id, mod.Item2, 0);
                                             if (config.DebugMode) {
                                                 Plugin.PluginLog.Debug(mod.Item2 + " was attempted to be disabled. The result was " + ipcResult + ".");
                                             }
