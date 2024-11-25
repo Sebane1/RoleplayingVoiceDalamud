@@ -2,14 +2,14 @@
 using Dalamud.Plugin;
 using RoleplayingMediaCore.Twitch;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
         #region Stream Management
+        private void _videoWindow_WindowResized(object sender, EventArgs e) {
+            ChangeStreamQuality();
+        }
         private void TuneIntoStream(string url, RoleplayingMediaCore.IMediaGameObject audioGameObject, bool isNotTwitch) {
             Task.Run(async () => {
                 string cleanedURL = RemoveSpecialSymbols(url);

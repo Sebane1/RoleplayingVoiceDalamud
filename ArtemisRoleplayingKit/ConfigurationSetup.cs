@@ -1,16 +1,21 @@
-﻿using Dalamud.Plugin;
+﻿using ArtemisRoleplayingKit;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVVoicePackCreator;
 using Newtonsoft.Json;
 using Penumbra.Api.Enums;
 using RoleplayingMediaCore;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
+using SoundFilter;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using XivCommon.Functions;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
@@ -117,6 +122,50 @@ namespace RoleplayingVoice {
         private void modSettingChanged(ModSettingChange arg1, Guid arg2, string arg3, bool arg4) {
             RefreshData();
         }
+        private void InitializeEverything() {
+            try {
+                try {
+                    new PenumbraAndGlamourerIpcWrapper(pluginInterface);
+                    Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
+                    Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                    Plugin.PluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
+                    _penumbraReady = true;
+                } catch (Exception e) {
+                    Plugin.PluginLog.Warning(e, e.Message);
+                }
+                AttemptConnection();
+                if (config.ApiKey != null) {
+                    InitialzeManager();
+                }
+                Window.RequestingReconnect += Window_RequestingReconnect;
+                Window.OnMoveFailed += Window_OnMoveFailed;
+                config.OnConfigurationChanged += Config_OnConfigurationChanged;
+                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTableThreadUnsafe);
+                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
+                _realChat = new Chat(_sigScanner);
+                RaceVoice.LoadRacialVoiceInfo();
+                CheckDependancies();
+                Filter = new Filter(this);
+                Filter.Enable();
+                Filter.OnSoundIntercepted += _filter_OnSoundIntercepted;
+                _chat.ChatMessage += Chat_ChatMessage;
+                _clientState.Login += _clientState_Login;
+                _clientState.Logout += _clientState_Logout; ;
+                _clientState.TerritoryChanged += _clientState_TerritoryChanged;
+                _clientState.LeavePvP += _clientState_LeavePvP;
+                _clientState.CfPop += _clientState_CfPop;
+                Window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
+                _catalogueWindow.Plugin = this;
+                if (_clientState.IsLoggedIn) {
+                    _gposeWindow.Initialize();
+                }
+                RefreshData();
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, e.Message);
+                _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
+            }
+        }
+
         #endregion
     }
 }
