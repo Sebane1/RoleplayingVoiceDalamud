@@ -1,94 +1,41 @@
 ﻿#region Usings
 using Dalamud.Game;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.SubKinds;
-using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.Config;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVLooseTextureCompiler.Networking;
 using FFXIVVoicePackCreator;
-using FFXIVVoicePackCreator.VoiceSorting;
-using Penumbra.Api;
 using RoleplayingVoice.Attributes;
 using RoleplayingMediaCore;
-using RoleplayingMediaCore.Twitch;
 using RoleplayingVoiceDalamud;
 using SoundFilter;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using XivCommon.Functions;
 using Dalamud.Plugin.Services;
 using ArtemisRoleplayingKit;
-using Group = FFXIVVoicePackCreator.Json.Group;
-using VfxEditor.ScdFormat;
 using NAudio.Wave;
-using SoundType = RoleplayingMediaCore.SoundType;
-using Option = FFXIVVoicePackCreator.Json.Option;
-using EventHandler = System.EventHandler;
-using ScdFile = VfxEditor.ScdFormat.ScdFile;
-using Dalamud.Utility;
 using System.Collections.Concurrent;
-using VfxEditor.TmbFormat;
-using Penumbra.Api.Enums;
 using RoleplayingVoiceCore;
 using Dalamud.Plugin.Ipc;
-using Glamourer.Utility;
-using System.Windows.Forms;
 using RoleplayingVoiceDalamud.Glamourer;
-using Vector3 = System.Numerics.Vector3;
-using System.Drawing.Imaging;
-using System.Drawing;
-using Rectangle = System.Drawing.Rectangle;
 using RoleplayingVoiceDalamud.Voice;
-using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.DragDrop;
 using RoleplayingVoiceDalamud.Services;
-using NAudio.Wave.SampleProviders;
-using FFXIVClientStructs.FFXIV.Client.System.Timer;
-using NAudio.MediaFoundation;
-using RoleplayingVoiceDalamud.Animation;
-using ImGuiNET;
-using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using Map = FFXIVClientStructs.FFXIV.Client.Game.UI.Map;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
-using GameObject = Dalamud.Game.ClientState.Objects.Types.IGameObject;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 using RoleplayingVoiceDalamud.IPC;
-using Race = RoleplayingVoiceDalamud.Glamourer.Race;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using ICharacter = Dalamud.Game.ClientState.Objects.Types.ICharacter;
 using RoleplayingVoiceDalamud.NPC;
-using static Lumina.Data.Parsing.Layer.LayerCommon;
-using System.Buffers.Text;
-using FFXIVClientStructs.FFXIV.Application.Network.WorkDefinitions;
-using System.Diagnostics.Eventing.Reader;
-using Newtonsoft.Json.Linq;
-using Glamourer.Api.Enums;
-using RoleplayingVoiceDalamud.Catalogue;
 using Dalamud.Game.ClientState.Objects;
-using NAudio.Lame;
-using System.Xml.Linq;
-using System.Numerics;
-using RoleplayingVoiceDalamud.GameObjects;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Common.Lua;
 using Lumina.Excel.Sheets;
 using RoleplayingVoiceDalamud.VoiceSorting;
-using SixLabors.ImageSharp.Drawing;
-using Path = System.IO.Path;
+using Dalamud.Game.ClientState.Objects.Types;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
@@ -258,7 +205,7 @@ namespace RoleplayingVoice {
         private bool _objectRecentlyDidEmote;
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
-        private GameObject[] _objectTable;
+        private IGameObject[] _objectTable;
         private bool _checkingMovementInProgress;
 
         public string Name => "Artemis Roleplaying Kit";
@@ -310,7 +257,7 @@ namespace RoleplayingVoice {
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
         public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
-        public GameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
+        public IGameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
         public static bool Disposed { get; internal set; }
         public VoiceEditor VoiceEditor { get => _voiceEditor; set => _voiceEditor = value; }
         #endregion
