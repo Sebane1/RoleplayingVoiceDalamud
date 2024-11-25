@@ -263,7 +263,7 @@ namespace RoleplayingVoice {
 
         public string Name => "Artemis Roleplaying Kit";
 
-        public static RoleplayingMediaManager RoleplayingMediaManager { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
+        public static RoleplayingMediaManager RoleplayingMediaManagerReference { get => _roleplayingMediaManager; set => _roleplayingMediaManager = value; }
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public ISigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
 

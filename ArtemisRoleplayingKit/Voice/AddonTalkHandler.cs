@@ -766,8 +766,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                         unsafe {
                             var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
                             if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
-                                _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
+                                Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
+                                Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
                                 Plugin.PluginLog.Verbose("Sent emote cancellation to server for " + reference);
                             }
                         }
@@ -802,8 +802,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 unsafe {
                                     var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)player.Address);
                                     if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                        _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)0);
-                                        _plugin.RoleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)0);
+                                        Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)0);
+                                        Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)0);
                                     }
                                 }
                             }
