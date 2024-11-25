@@ -737,10 +737,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                 var actorMemory = new ActorMemory();
                 actorMemory.SetAddress(character);
                 var animationMemory = actorMemory.Animation;
-                if (animationMemory.BaseOverride != animationId) {
-                    animationMemory!.BaseOverride = animationId;
-                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), animationId, "Base Override");
-                }
+                //if (animationMemory.BaseOverride != animationId) {
+                //    animationMemory!.BaseOverride = animationId;
+                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)), animationId, "Base Override");
+                //}
                 MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.Normal, "Animation Mode Override");
                 _plugin.IpcSystem?.InvokeOnTriggerAnimation(character, animationId);
             } catch (Exception e) {

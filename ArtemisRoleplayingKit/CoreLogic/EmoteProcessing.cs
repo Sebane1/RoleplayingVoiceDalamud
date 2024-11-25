@@ -186,7 +186,6 @@ namespace RoleplayingVoice {
                             bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, _voicePackStaging);
                         });
                     }
-                    _didRealEmote = true;
                 });
             }
         }

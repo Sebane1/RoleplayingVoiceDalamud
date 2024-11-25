@@ -986,6 +986,7 @@ namespace RoleplayingVoice {
             if (!disposed) {
                 _lastPlayerToEmote = new MediaGameObject(instigator);
                 if (instigator.Name.TextValue == _clientState.LocalPlayer.Name.TextValue || instigator.OwnerId == _clientState.LocalPlayer.GameObjectId) {
+                    _didRealEmote = true;
                     if (config.VoicePackIsActive) {
                         SendingEmote(instigator, emoteId);
                     }

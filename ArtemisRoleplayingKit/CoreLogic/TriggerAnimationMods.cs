@@ -316,7 +316,11 @@ namespace RoleplayingVoice {
             PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
                 Thread.Sleep(1000);
-                if (character == _clientState.LocalPlayer) {
+                bool ownsEmote = false;
+                unsafe {
+                    ownsEmote = AgentEmote.Instance()->CanUseEmote((ushort)emoteModData.EmoteId);
+                }
+                if (character == _clientState.LocalPlayer && ownsEmote) {
                     _messageQueue.Enqueue(emoteModData.Emote);
                     if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
                         Thread.Sleep(100);
@@ -327,7 +331,7 @@ namespace RoleplayingVoice {
                     Thread.Sleep(2000);
                 } else {
                     _mediaManager.StopAudio(_playerObject);
-                    Thread.Sleep(1000);
+                    //Thread.Sleep(1000);
                 }
                 if (_objectRecentlyDidEmote) {
                     Thread.Sleep(1000);
@@ -335,8 +339,7 @@ namespace RoleplayingVoice {
                 } else {
                     _objectRecentlyDidEmote = true;
                 }
-                ushort value = _addonTalkHandler.GetCurrentEmoteId(character);
-                if (!_didRealEmote) {
+                if (!_didRealEmote || !ownsEmote) {
                     if (character == _clientState.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
@@ -363,6 +366,7 @@ namespace RoleplayingVoice {
                         while (true) {
                             Thread.Sleep(500);
                             if (Vector3.Distance(lastPosition, character.Position) > 0.001f) {
+                                _didRealEmote = false;
                                 _addonTalkHandler.StopEmote(character.Address);
                                 _wasDoingFakeEmote = false;
                                 unsafe {

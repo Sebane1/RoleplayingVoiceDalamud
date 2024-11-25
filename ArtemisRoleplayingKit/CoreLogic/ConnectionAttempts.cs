@@ -1,10 +1,6 @@
 ﻿using Dalamud.Plugin;
 using FFXIVLooseTextureCompiler.Networking;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
