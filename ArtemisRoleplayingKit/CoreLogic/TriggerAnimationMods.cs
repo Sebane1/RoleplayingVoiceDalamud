@@ -315,7 +315,7 @@ namespace RoleplayingVoice {
             }
             PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.ObjectIndex, RedrawType.Redraw);
             Task.Run(() => {
-                Thread.Sleep(1000);
+                //Thread.Sleep(1000);
                 bool ownsEmote = false;
                 unsafe {
                     ownsEmote = AgentEmote.Instance()->CanUseEmote((ushort)emoteModData.EmoteId);
@@ -340,10 +340,10 @@ namespace RoleplayingVoice {
                     _objectRecentlyDidEmote = true;
                 }
                 if (!_didRealEmote || !ownsEmote) {
-                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
                     if (character == _clientState.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
+                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
                     OnEmote(character, (ushort)emoteModData.EmoteId);
                     if (character.ObjectKind == ObjectKind.Companion) {
                         if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
@@ -377,6 +377,7 @@ namespace RoleplayingVoice {
                                     } else {
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort.MaxValue));
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort.MaxValue));
+                                        _animationModsAlreadyTriggered.Remove(emoteModData.FoundModName);
                                     }
                                     Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                 }
