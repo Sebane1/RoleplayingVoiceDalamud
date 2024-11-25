@@ -3,6 +3,8 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
 using Penumbra.Api.Enums;
 using RoleplayingVoiceDalamud.Animation;
@@ -48,6 +50,125 @@ namespace RoleplayingVoice {
                 }
             } catch {
 
+            }
+        }
+        private void CheckNPCEmoteControl(string[] splitArgs, string args) {
+            switch (splitArgs[1].ToLower()) {
+                case "do":
+                    DoEmote(splitArgs[2].ToLower(), splitArgs[3].ToLower());
+                    break;
+                case "stop":
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            ICharacter character = gameObject as ICharacter;
+                            if (character != null) {
+                                if (!character.IsDead) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
+                                            if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
+                                                _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
+                                                _addonTalkHandler.StopEmote(character.Address);
+                                                if (_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                    _preOccupiedWithEmoteCommand.Remove(character.Name.TextValue);
+                                                }
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch { }
+                    }
+                    break;
+                case "playerpos":
+                    foreach (var gameObject in GetNearestObjects()) {
+                        try {
+                            ICharacter character = gameObject as ICharacter;
+                            if (character != null) {
+                                if (!character.IsDead) {
+                                    if (character.ObjectKind == ObjectKind.Retainer ||
+                                        character.ObjectKind == ObjectKind.BattleNpc ||
+                                        character.ObjectKind == ObjectKind.EventNpc ||
+                                        character.ObjectKind == ObjectKind.Companion ||
+                                        character.ObjectKind == ObjectKind.Housing) {
+                                        if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
+                                            bool hasQuest = false;
+                                            unsafe {
+                                                var item = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)(character as ICharacter).Address;
+                                                item->Balloon.PlayTimer = 1;
+                                                item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String("I will stand here master!");
+                                                item->Balloon.Type = BalloonType.Timer;
+                                                item->Balloon.State = BalloonState.Active;
+                                                item->GameObject.Position = _clientState.LocalPlayer.Position;
+                                            }
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch { }
+                    }
+                    break;
+            }
+        }
+
+        public unsafe void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
+            foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
+                if (!string.IsNullOrEmpty(emoteItem.TextCommand.Value.Command.ToString())) {
+                    if ((
+                        emoteItem.TextCommand.Value.ShortCommand.ToString().Contains(command) ||
+                        emoteItem.TextCommand.Value.Command.ToString().Contains(command)) ||
+                        emoteItem.TextCommand.Value.ShortAlias.ToString().Contains(command)) {
+                        foreach (var gameObject in GetNearestObjects()) {
+                            try {
+                                ICharacter character = gameObject as ICharacter;
+                                if (character != null) {
+                                    if (!character.IsDead) {
+                                        if (character.ObjectKind == ObjectKind.Retainer ||
+                                            character.ObjectKind == ObjectKind.BattleNpc ||
+                                            character.ObjectKind == ObjectKind.EventNpc ||
+                                            character.ObjectKind == ObjectKind.Companion ||
+                                            character.ObjectKind == ObjectKind.Housing) {
+                                            if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
+                                                if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
+                                                    if (AgentEmote.Instance()->CanUseEmote((ushort)emoteItem.RowId)) {
+                                                        _toast.ShowNormal(character.Name.TextValue + " follows your command!");
+                                                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                                        if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
+                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteItem.RowId);
+                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                        Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
+                                                        if (becomesPreOccupied) {
+                                                            _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                            if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
+                                                                _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
+                                                            }
+                                                        } else {
+                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
+                                                                (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                        }
+                                                    } else {
+                                                        _toast.ShowError(character.Name.TextValue + " you have not unlocked this emote yet.");
+                                                    }
+                                                } else {
+                                                    _toast.ShowError(character.Name.TextValue + " resists your command! (Cannot affect quest NPCs)");
+                                                }
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch { }
+                        }
+                        break;
+                    }
+                }
             }
         }
         public void CheckAnimationMods(string[] splitArgs, string args, ICharacter character, bool willOpen = true) {

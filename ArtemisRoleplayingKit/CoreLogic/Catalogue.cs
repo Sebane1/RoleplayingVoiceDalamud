@@ -7,14 +7,24 @@ using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
+        public void StartCatalogingItems() {
+            _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
+            _catalogueCollectionName = _originalCollection.Item3.Id;
+            Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+            _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
+            _chat?.Print("Creating Thumbnails For New Clothing Mods");
+            _catalogueMods = true;
+            _modelModList = new List<string>();
+            _modelModList.AddRange(_modelMods.Keys);
+            _catalogueWindow.ScanCatalogue();
+            ScanClothingMods();
+        }
         private void ScanClothingMods() {
             Task.Run(() => {
                 while (_catalogueMods && !disposed) {
