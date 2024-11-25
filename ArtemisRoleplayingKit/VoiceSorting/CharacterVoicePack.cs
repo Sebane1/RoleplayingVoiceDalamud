@@ -60,8 +60,12 @@ namespace RoleplayingVoiceDalamud {
                     }
                 }
             }
-            foreach (var directoryItem in Directory.GetDirectories(directory)) {
-                subCharacterVoicePacks[Path.GetFileNameWithoutExtension(directoryItem + ".directory")] = new CharacterVoicePack(directoryItem, dataManager, clientLanguage, true);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
+                foreach (var directoryItem in Directory.GetDirectories(directory)) {
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directoryItem)) {
+                        subCharacterVoicePacks[Path.GetFileNameWithoutExtension(directoryItem + ".directory")] = new CharacterVoicePack(directoryItem, dataManager, clientLanguage, true);
+                    }
+                }
             }
         }
         public CharacterVoicePack(ArtemisVoiceMod artemisVoicePack, IDataManager dataManager, ClientLanguage clientLanguage, bool asyncSort = true) {
