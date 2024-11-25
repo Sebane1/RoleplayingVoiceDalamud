@@ -340,11 +340,11 @@ namespace RoleplayingVoice {
                     _objectRecentlyDidEmote = true;
                 }
                 if (!_didRealEmote || !ownsEmote) {
+                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
                     if (character == _clientState.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
                     OnEmote(character, (ushort)emoteModData.EmoteId);
-                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
                     if (character.ObjectKind == ObjectKind.Companion) {
                         if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                             _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);

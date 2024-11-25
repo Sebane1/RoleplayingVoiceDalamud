@@ -133,6 +133,9 @@ namespace RoleplayingVoice {
                                 string animation = _animationPages[_currentCategory].AnimationItems[selectionIndex];
 
                                 if (ImGui.Button(animation)) {
+                                    if (_currentSelection > _characterList.Count) {
+                                        _currentSelection = 0;
+                                    }
                                     Plugin.DoAnimation(animation.ToLower(), 0, _characterList.ElementAt(_currentSelection).Value);
                                 }
                             }
