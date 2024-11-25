@@ -31,6 +31,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using static System.Net.WebRequestMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using File = System.IO.File;
+using AIDataProxy.XTTS;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {
@@ -1135,7 +1136,19 @@ namespace RoleplayingVoice {
                             }
                         }
                     } else {
-                        ImGui.TextWrapped("XTTS has not been installed yet. Upon clicking save Artemis will attempt to install C++ builds tools, Python 3.10.0, and finally the XTTS system. You may get several administrative access prompts during the process.");
+                        ImGui.TextWrapped("XTTS has not been installed yet. You will need to install C++ builds tools, Python 3.10.0, and finally the XTTS system. You may get several administrative access prompts during the process.");
+                        if (!Environment.GetEnvironmentVariable("Path").Contains("Python")) {
+                            if (ImGui.Button("Install Python")) {
+                                Plugin.RoleplayingMediaManagerReference.InstallPython();
+                            }
+                        }
+                        if (!XTTSCommunicator.SetSpeakers(Path.Combine(configuration.CacheFolder, "speakers"))) {
+                            if (!File.Exists(Path.Combine(configuration.CacheFolder, "xtts_models\\v2.0.2\\model.pth"))) {
+                                if (ImGui.Button("Install XTTS")) {
+                                    Plugin.RoleplayingMediaManagerReference.InstallXTTS(configuration.CacheFolder);
+                                }
+                            }
+                        }
                     }
                 }
                 switch (_voiceEngineComboBox.SelectedIndex) {
@@ -1150,6 +1163,14 @@ namespace RoleplayingVoice {
                         break;
                     case 2:
                         ImGui.TextWrapped($"Narrator is free to use and runs on your own machine. Uses any Narrator voices you have installed.");
+                        if (ImGui.Button("Add Free Narrator Voices")) {
+                            ProcessStartInfo ProcessInfo;
+                            Process Process;
+                            string urlPath = "https://github.com/gexgd0419/NaturalVoiceSAPIAdapter/releases/Pack";
+                            ProcessInfo = new ProcessStartInfo(urlPath);
+                            ProcessInfo.UseShellExecute = true;
+                            Process = Process.Start(ProcessInfo);
+                        }
                         break;
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
