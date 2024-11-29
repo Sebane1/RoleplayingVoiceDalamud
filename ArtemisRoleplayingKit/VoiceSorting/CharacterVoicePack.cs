@@ -62,7 +62,7 @@ namespace RoleplayingVoiceDalamud {
             }
             if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory)) {
                 foreach (var directoryItem in Directory.GetDirectories(directory)) {
-                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directoryItem)) {
+                    if (!string.IsNullOrEmpty(directoryItem) && Directory.Exists(directoryItem)) {
                         subCharacterVoicePacks[Path.GetFileNameWithoutExtension(directoryItem + ".directory")] = new CharacterVoicePack(directoryItem, dataManager, clientLanguage, true);
                     }
                 }

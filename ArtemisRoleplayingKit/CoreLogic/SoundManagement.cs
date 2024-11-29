@@ -1573,7 +1573,7 @@ namespace RoleplayingVoice {
             try {
                 Directory.CreateDirectory(path);
             } catch {
-                _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administraive access!");
+                _chat?.PrintError("[Artemis Roleplaying Kit] Failed to write to disk, please make sure the cache folder does not require administrative access!");
             }
             string hash = RoleplayingMediaManager.Shai1Hash(playerSender);
             string clipPath = path + @"\" + hash;
