@@ -21,7 +21,7 @@ Repo Link:
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
 ```
 
-CN Repo Link:
+CN Repo Link (只是为了提供兼容性，我们没有翻译该插件):
 ```
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo_cn.json
 ```
