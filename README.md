@@ -21,6 +21,11 @@ Repo Link:
 https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo.json
 ```
 
+CN Repo Link:
+```
+https://raw.githubusercontent.com/Sebane1/RoleplayingVoiceDalamud/master/repo_cn.json
+```
+
 Setup Guide:
 
 In the dalamud settings experimental tab, put the repository link here, click the plus icon, and then save.
