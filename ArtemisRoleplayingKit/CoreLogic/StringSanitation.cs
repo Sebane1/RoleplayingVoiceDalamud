@@ -28,7 +28,7 @@ namespace RoleplayingVoice {
                 RegexOptions.Compiled).Trim();
         }
         public static string RemoveSpecialSymbols(string value) {
-            Regex rgx = new Regex(@"[^a-zA-Z0-9:/._\ -]");
+            Regex rgx = new Regex(@"[^a-zA-Z0-9:/.'_\ -]");
             return rgx.Replace(value, "");
         }
         #endregion
