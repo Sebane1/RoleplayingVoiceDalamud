@@ -172,10 +172,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _poseService.Initialize();
                 _targetService.Initialize();
                 _gposeService.Initialize();
-
+                _animationService.Initialize();
                 //LipSyncTypes = GenerateLipList().ToList();
                 _voiceList = GenerateVoiceList();
-                _animationService.Initialize();
                 _animationService.Start();
                 _memoryService.Start();
                 _addressService.Start();
@@ -699,15 +698,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                 var actorMemory = new ActorMemory();
                 actorMemory.SetAddress(character.Address);
                 var animationMemory = actorMemory.Animation;
-                //animationMemory.LipsOverride = LipSyncTypes[lipSyncType].Timeline.AnimationId;
                 MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)),
                     630, "Lipsync");
                 await Task.Run(delegate {
                     Thread.Sleep(10000);
                     StopLipSync(character);
                 });
-            } catch {
-
+                Plugin.PluginLog.Debug("Lipsync Succeeded.");
+            } catch (Exception e) {
+                Plugin.PluginLog.Error(e, e.Message);
             }
         }
 
@@ -866,10 +865,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                     var actorMemory = new ActorMemory();
                     actorMemory.SetAddress(character.Address);
                     var animationMemory = actorMemory.Animation;
-                    animationMemory.LipsOverride = 0;
-                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                } catch {
-
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 154, "Lipsync");
+                    Plugin.PluginLog.Debug("Lipsync Stop Succeeded.");
+                } catch (Exception e) {
+                  Plugin.PluginLog.Error(e, e.Message);
                 }
             }
         }

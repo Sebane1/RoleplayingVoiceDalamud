@@ -16,7 +16,7 @@ using Anamnesis.Memory;
 
 public class ActorService : ServiceBase<ActorService> {
     private const int TickDelay = 10000;
-    private const int ActorTableSize = 424;
+    private const int ActorTableSize = 819;
     private const int GPoseIndexStart = 200;
     private const int GPoseIndexEnd = 244;
     private const int OverworldPlayerIndex = 0;

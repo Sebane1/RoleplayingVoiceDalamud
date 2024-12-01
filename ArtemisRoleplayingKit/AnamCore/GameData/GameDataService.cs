@@ -147,13 +147,13 @@ public override Task Initialize() {
     //Log.Information($"Found game client region: {Region}");
 
     // these are json files that we write by hand
-    try {
-        Equipment = new EquipmentSheet("Anamnesis/Data/Equipment.json");
-        itemCategories = EmbeddedFileUtility.Load<Dictionary<uint, ItemCategories>>("Anamnesis/Data/ItemCategories.json");
-        npcNames = EmbeddedFileUtility.Load<Dictionary<string, string>>("Anamnesis/Data/NpcNames.json");
-    } catch (Exception ex) {
-        throw new Exception("Failed to read data sheets", ex);
-    }
+    //try {
+    //    Equipment = new EquipmentSheet("Anamnesis/Data/Equipment.json");
+    //    itemCategories = EmbeddedFileUtility.Load<Dictionary<uint, ItemCategories>>("Anamnesis/Data/ItemCategories.json");
+    //    npcNames = EmbeddedFileUtility.Load<Dictionary<string, string>>("Anamnesis/Data/NpcNames.json");
+    //} catch (Exception ex) {
+    //    throw new Exception("Failed to read data sheets", ex);
+    //}
 
     try {
         Lumina.LuminaOptions options = new Lumina.LuminaOptions();

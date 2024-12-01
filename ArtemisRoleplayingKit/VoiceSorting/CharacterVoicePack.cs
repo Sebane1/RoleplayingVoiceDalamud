@@ -295,13 +295,13 @@ namespace RoleplayingVoiceDalamud {
             }
         }
 
-        public string GetMisc(string value, bool allowEmotes = false, bool ignoreMinimuminNameLength = false) {
+        public string GetMisc(string value, bool allowEmotes = false, bool useShorterMinimum = false) {
             if (value != null) {
                 string strippedName = StripNonCharacters(value, _clientLanguage).ToLower();
                 string final = !string.IsNullOrWhiteSpace(strippedName) ? strippedName : value;
                 foreach (string name in _misc.Keys) {
                     string alternate = name.Remove(name.Length - 1);
-                    if (((final.Contains(name) && (name.Length > 5 || ignoreMinimuminNameLength) || final.EndsWith(name))
+                    if (((final.Contains(name) && (name.Length > 5 || (useShorterMinimum && name.Length > 2)) || final.StartsWith(name))
                         || (_clientLanguage == ClientLanguage.Japanese && final.Contains(alternate)))
                         && (!InLanguageBlacklist(name) || allowEmotes)) {
                         return _misc[name][GetRandom(0, _misc[name].Count)];
@@ -316,7 +316,7 @@ namespace RoleplayingVoiceDalamud {
                 string final = (!string.IsNullOrWhiteSpace(strippedName) ? strippedName : value).ToLower();
                 if (!string.IsNullOrEmpty(final)) {
                     foreach (string name in _misc.Keys) {
-                        if ((final.Contains(name) && name.Length > 5 || final.EndsWith(name)) && (!InLanguageBlacklist(name) || allowEmotes)) {
+                        if ((final.Contains(name) && name.Length > 5 || final.StartsWith(name)) && (!InLanguageBlacklist(name) || allowEmotes)) {
                             return _misc[name][GetRandom(0, _misc[name].Count, delay)];
                         }
                     }
