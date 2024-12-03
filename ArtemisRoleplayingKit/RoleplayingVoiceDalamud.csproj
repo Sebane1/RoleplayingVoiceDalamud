@@ -16,22 +16,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="AnamCore\Data\Equipment.json" />
-	  <None Remove="AnamCore\Data\Images.json" />
-	  <None Remove="AnamCore\Data\ItemCategories.json" />
-	  <None Remove="AnamCore\Data\NpcNames.json" />
-	  <None Remove="AnamCore\Data\Tips.json" />
 	  <None Remove="emote.scd" />
 	  <None Remove="nameless.json" />
 	  <None Remove="racialEmoteTime.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Include="AnamCore\Data\Equipment.json" />
-	  <EmbeddedResource Include="AnamCore\Data\Images.json" />
-	  <EmbeddedResource Include="AnamCore\Data\ItemCategories.json" />
-	  <EmbeddedResource Include="AnamCore\Data\NpcNames.json" />
-	  <EmbeddedResource Include="AnamCore\Data\Tips.json" />
 	  <EmbeddedResource Include="emote.scd" />
 	  <EmbeddedResource Include="nameless.json" />
 	  <EmbeddedResource Include="racialEmoteTime.txt">
