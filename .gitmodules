@@ -4,3 +4,6 @@
 [submodule "LooseTextureCompilerCore"]
 	path = LooseTextureCompilerCore
 	url = https://github.com/Sebane1/LooseTextureCompilerCore
+[submodule "ArtemisRoleplayingKit/AnamCore"]
+	path = ArtemisRoleplayingKit/AnamCore
+	url = https://github.com/Sebane1/AnamCore.git
