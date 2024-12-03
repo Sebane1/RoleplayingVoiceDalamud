@@ -7,3 +7,6 @@
 [submodule "ArtemisRoleplayingKit/AnamCore"]
 	path = ArtemisRoleplayingKit/AnamCore
 	url = https://github.com/Sebane1/AnamCore.git
+[submodule "ArtemisRoleplayingKit/EmoteReading"]
+	path = ArtemisRoleplayingKit/EmoteReading
+	url = https://github.com/Sebane1/EmoteReading.git
