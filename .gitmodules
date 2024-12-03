@@ -10,3 +10,6 @@
 [submodule "ArtemisRoleplayingKit/EmoteReading"]
 	path = ArtemisRoleplayingKit/EmoteReading
 	url = https://github.com/Sebane1/EmoteReading.git
+[submodule "ArtemisRoleplayingKit/MediaGameObjects"]
+	path = ArtemisRoleplayingKit/MediaGameObjects
+	url = https://github.com/Sebane1/MediaGameObjects.git
