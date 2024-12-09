@@ -105,7 +105,7 @@ namespace RoleplayingVoiceDalamud.IPC {
         public bool PlaySound(nint objectAddress, string soundPath, int soundType) {
             try {
                 unsafe {
-                    _plugin.MediaManager.PlayAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
+                    _plugin.MediaManager.PlayMedia(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
                     soundPath, (SoundType)soundType, false);
                 }
                 return true;

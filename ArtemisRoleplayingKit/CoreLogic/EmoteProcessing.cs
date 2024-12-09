@@ -90,7 +90,7 @@ namespace RoleplayingVoice {
                                                     TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     bool lipWasSynced = false;
-                                                    _mediaManager.PlayAudio(new MediaGameObject(instigator), value, SoundType.OtherPlayer, false,
+                                                    _mediaManager.PlayMedia(new MediaGameObject(instigator), value, SoundType.OtherPlayer, false,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
                                                          Task.Run(delegate {
                                                              _addonTalkHandler.StopLipSync(instigator);
@@ -148,7 +148,7 @@ namespace RoleplayingVoice {
                         TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                         _mediaManager.StopAudio(new MediaGameObject(instigator));
                         bool lipWasSynced = false;
-                        _mediaManager.PlayAudio(_playerObject, emotePath, SoundType.Emote, false,
+                        _mediaManager.PlayMedia(_playerObject, emotePath, SoundType.Emote, false,
                         _mainCharacterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[_mainCharacterVoicePack.EmoteIndex]) : 0, default, delegate {
                             Task.Run(delegate {
                                 _addonTalkHandler.StopLipSync(instigator);

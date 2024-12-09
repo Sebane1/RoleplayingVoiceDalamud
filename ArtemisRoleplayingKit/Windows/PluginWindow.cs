@@ -529,7 +529,7 @@ namespace RoleplayingVoice {
                             if (stream != null) {
                                 if (stream.Length > 0) {
                                     var player = PluginReference.NpcVoiceManager.StreamToFoundationReader(stream);
-                                    PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                                    PluginReference.MediaManager.PlayMediaStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                 }
                             }
                         });
@@ -559,7 +559,7 @@ namespace RoleplayingVoice {
                                 if (stream != null) {
                                     if (stream.Length > 0) {
                                         var player = PluginReference.NpcVoiceManager.StreamToFoundationReader(stream);
-                                        PluginReference.MediaManager.PlayAudioStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
+                                        PluginReference.MediaManager.PlayMediaStream(new DummyObject(), player, SoundType.NPC, false, false, 1);
                                     }
                                 }
                                 stream.Dispose();

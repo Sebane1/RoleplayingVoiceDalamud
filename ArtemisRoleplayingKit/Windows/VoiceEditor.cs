@@ -135,7 +135,7 @@ namespace RoleplayingVoice {
             if (File.Exists(_voiceLinePath) && !_speechRecordingManager.IsRecording) {
                 ImGui.SameLine();
                 if (ImGui.Button("Listen To Recording")) {
-                    _mediaManager.PlayAudio(new DummyObject() { Name = _currentCharacter }, _voiceLinePath, SoundType.NPC, true);
+                    _mediaManager.PlayMedia(new DummyObject() { Name = _currentCharacter }, _voiceLinePath, SoundType.NPC, true);
                 }
             }
             if (_npcVoiceManager.GetFileCountForCharacter(_currentCharacter) < _voiceLinesCount) {

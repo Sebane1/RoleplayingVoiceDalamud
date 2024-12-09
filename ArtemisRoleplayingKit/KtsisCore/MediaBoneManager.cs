@@ -48,7 +48,7 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                                                             var boneObject = new MediaBoneObject(bone, characterActor, model);
                                                             string boneName = bone.HkaBone.Name.String;
                                                             Plugin.PluginLog.Verbose(boneName + " playing sound.");
-                                                            mediaManager.PlayAudio(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
+                                                            mediaManager.PlayMedia(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
                                                                 movingObject.IsMoving = false;
                                                                 Plugin.PluginLog.Verbose(boneName + " stopping sound.");
                                                             });
