@@ -1706,7 +1706,7 @@ namespace RoleplayingVoice {
                             _scdProcessingDelayTimer.Stop();
                             bool lipWasSynced = false;
                             ICharacter character = mediaObject.GameObject as ICharacter;
-                            _mediaManager.PlayMediaStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1, 0, false, delegate {
+                            _mediaManager.PlayAudioStream(mediaObject, _nativeAudioStream, RoleplayingMediaCore.SoundType.Loop, false, false, 1, 0, false, delegate {
                                 _addonTalkHandler.StopLipSync(character);
                             }, delegate (object sender, StreamVolumeEventArgs e) {
                                 if (e.MaxSampleValues.Length > 0) {

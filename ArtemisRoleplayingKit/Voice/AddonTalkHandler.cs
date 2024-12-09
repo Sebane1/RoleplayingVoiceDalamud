@@ -570,7 +570,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                             ScdFile scdFile = GetScdFile(_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key);
                                                             WaveStream stream = scdFile.Audio[0].Data.GetStream();
                                                             var pcmStream = WaveFormatConversionStream.CreatePcmStream(stream);
-                                                            _plugin.MediaManager.PlayMediaStream(new DummyObject(),
+                                                            _plugin.MediaManager.PlayAudioStream(new DummyObject(),
                                                                 pcmStream, SoundType.NPC, false, false, 1, 0, true, null);
                                                         }
                                                     } catch (Exception e) {
@@ -950,7 +950,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print("Attempt to play audio stream.");
                                     }
-                                    _plugin.MediaManager.PlayMediaStream(currentSpeechObject, wavePlayer, SoundType.NPC, (IsInACutscene() && Conditions.IsBoundByDuty), useSmbPitch, pitch, 0,
+                                    _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC, (IsInACutscene() && Conditions.IsBoundByDuty), useSmbPitch, pitch, 0,
                                     IsInACutscene() || lowLatencyMode, delegate {
                                         if (_hook != null) {
                                             try {
@@ -1093,7 +1093,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _plugin.Chat.Print("Attempt to play audio stream.");
                                     }
                                     if (!_blockAudioGeneration) {
-                                        _plugin.MediaManager.PlayMediaStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
+                                        _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
                                        (IsInACutscene() && Conditions.IsBoundByDuty), useSmbPitch, pitch, 0,
                                         IsInACutscene() || lowLatencyMode, delegate (object obj, string value) {
                                             if (_hook != null) {
@@ -1262,7 +1262,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = values.Item1 ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
-                        _plugin.MediaManager.PlayMediaStream(currentSpeechObject, wavePlayer, SoundType.NPC,
+                        _plugin.MediaManager.PlayAudioStream(currentSpeechObject, wavePlayer, SoundType.NPC,
                        Conditions.IsBoundByDuty && IsInACutscene(), useSmbPitch, pitch, 0,
                       IsInACutscene(), null);
                     } else {
