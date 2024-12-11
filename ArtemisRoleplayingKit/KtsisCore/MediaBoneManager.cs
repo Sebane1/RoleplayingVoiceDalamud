@@ -22,7 +22,7 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                     if (character != null) {
                         Actor* characterActor = (Actor*)character.Address;
                         var model = characterActor->Model;
-                        if (model->Skeleton != null) {
+                        if (model != null && model->Skeleton != null) {
                             for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
                                 var partialSkeleton = model->Skeleton->PartialSkeletons[i];
                                 var pos = partialSkeleton.GetHavokPose(0);
