@@ -1412,6 +1412,8 @@ namespace RoleplayingVoice {
 
         private int GetMinAttackCounts() {
             switch (_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString().ToLower()) {
+                case "rpr":
+                    return 9;
                 case "mch":
                     return 9;
                 case "mnk":
