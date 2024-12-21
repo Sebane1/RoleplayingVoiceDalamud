@@ -36,6 +36,7 @@ using Dalamud.Game.ClientState.Objects;
 using Lumina.Excel.Sheets;
 using RoleplayingVoiceDalamud.VoiceSorting;
 using Dalamud.Game.ClientState.Objects.Types;
+using RoleplayingVoiceDalamudWrapper;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion

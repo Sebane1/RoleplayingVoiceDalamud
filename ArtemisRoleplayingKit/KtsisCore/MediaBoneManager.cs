@@ -8,6 +8,7 @@ using System;
 using FFXIVClientStructs.FFXIV.Common.Lua;
 using RoleplayingVoice;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
+using RoleplayingVoiceDalamudWrapper;
 
 namespace RoleplayingVoiceDalamud.GameObjects {
     public class MediaBoneManager {

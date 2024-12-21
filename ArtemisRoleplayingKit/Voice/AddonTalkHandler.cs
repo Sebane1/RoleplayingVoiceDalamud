@@ -32,6 +32,7 @@ using RoleplayingVoice;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
+using RoleplayingVoiceDalamudWrapper;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

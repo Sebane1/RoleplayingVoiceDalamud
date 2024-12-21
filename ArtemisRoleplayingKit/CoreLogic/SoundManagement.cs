@@ -20,6 +20,7 @@ using RoleplayingVoiceDalamud.Catalogue;
 using RoleplayingVoiceDalamud.GameObjects;
 using RoleplayingVoiceDalamud.Glamourer;
 using RoleplayingVoiceDalamud.NPC;
+using RoleplayingVoiceDalamudWrapper;
 using SoundFilter;
 using System;
 using System.Collections.Generic;
