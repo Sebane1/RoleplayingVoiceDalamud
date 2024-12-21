@@ -9,6 +9,7 @@ using RoleplayingMediaCore;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
 using RoleplayingVoiceDalamud.Voice;
+using RoleplayingVoiceDalamudWrapper;
 using System;
 using System.Diagnostics;
 using System.IO;

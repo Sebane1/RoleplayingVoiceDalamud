@@ -32,6 +32,7 @@ using static System.Net.WebRequestMethods;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using File = System.IO.File;
 using AIDataProxy.XTTS;
+using RoleplayingVoiceDalamudWrapper;
 
 namespace RoleplayingVoice {
     public class PluginWindow : Window {

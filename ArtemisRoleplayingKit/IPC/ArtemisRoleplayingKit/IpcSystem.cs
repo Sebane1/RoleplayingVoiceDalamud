@@ -3,6 +3,7 @@ using Dalamud.Plugin.Ipc;
 using RoleplayingMediaCore;
 using RoleplayingVoice;
 using RoleplayingVoiceDalamud.Voice;
+using RoleplayingVoiceDalamudWrapper;
 using System;
 using System.Collections.Generic;
 

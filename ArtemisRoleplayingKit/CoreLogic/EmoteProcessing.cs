@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using RoleplayingMediaCore;
+using RoleplayingVoiceDalamudWrapper;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {

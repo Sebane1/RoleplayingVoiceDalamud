@@ -8,6 +8,7 @@ using Penumbra.Api.Enums;
 using RoleplayingMediaCore;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
+using RoleplayingVoiceDalamudWrapper;
 using SoundFilter;
 using System;
 using System.Collections.Generic;
