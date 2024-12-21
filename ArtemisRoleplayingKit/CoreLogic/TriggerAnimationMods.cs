@@ -119,11 +119,34 @@ namespace RoleplayingVoice {
 
         public unsafe void DoEmote(string command, string targetNPC, bool becomesPreOccupied = true) {
             foreach (var emoteItem in DataManager.GameData.GetExcelSheet<Emote>()) {
-                if (!string.IsNullOrEmpty(emoteItem.TextCommand.Value.Command.ToString())) {
-                    if ((
-                        emoteItem.TextCommand.Value.ShortCommand.ToString().Contains(command) ||
-                        emoteItem.TextCommand.Value.Command.ToString().Contains(command)) ||
-                        emoteItem.TextCommand.Value.ShortAlias.ToString().Contains(command)) {
+                string text = "";
+                try {
+                    text = emoteItem.TextCommand.Value.Command.ToString();
+                } catch {
+
+                }
+                if (!string.IsNullOrEmpty(text)) {
+                    bool comparison1 = false;
+                    try {
+                        comparison1 = emoteItem.TextCommand.Value.ShortCommand.ToString().Contains(command);
+                    } catch {
+
+                    }
+                    bool comparison2 = false;
+                    try {
+                        comparison2 = emoteItem.TextCommand.Value.Command.ToString().Contains(command);
+                    } catch {
+
+                    }
+                    bool comparison3 = false;
+                    try {
+                        comparison3 = emoteItem.TextCommand.Value.ShortAlias.ToString().Contains(command);
+                    } catch {
+
+                    }
+                    if ((comparison1
+                         || comparison2
+                         || comparison3)) {
                         foreach (var gameObject in GetNearestObjects()) {
                             try {
                                 ICharacter character = gameObject as ICharacter;
