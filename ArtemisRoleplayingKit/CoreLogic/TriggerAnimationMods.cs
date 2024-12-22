@@ -329,8 +329,76 @@ namespace RoleplayingVoice {
                 _blockDataRefreshes = false;
             });
         }
+        public void DoVanillaAnimation(string animationName, ICharacter targetObject) {
+            Task.Run(() => {
+                _blockDataRefreshes = true;
+                var list = CreateEmoteList(_dataManager);
+                List<uint> deDuplicate = new List<uint>();
+                List<EmoteModData> emoteData = new List<EmoteModData>();
+                var collection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke((int)targetObject.ObjectIndex);
+                string commandArguments = animationName;
+                if (config.DebugMode) {
+                    Plugin.PluginLog.Debug("Attempting to find mods that contain \"" + commandArguments + "\".");
+                }
+                _mediaManager?.CleanNonStreamingSounds();
+                foreach (var modName in _animationMods.Keys) {
+                    if (collection.Item3.Name != "None") {
+                        _mediaManager.StopAudio(_playerObject);
+                        var animationItems = _animationMods[modName];
+                        foreach (var foundAnimation in animationItems.Value) {
+                            bool foundEmote = false;
+                            if (_papSorting.ContainsKey(foundAnimation)) {
+                                var sortedList = _papSorting[foundAnimation];
+                                foreach (var mod in sortedList) {
+                                    if (list.ContainsKey(foundAnimation)) {
+                                        foreach (var value in list[foundAnimation]) {
+                                            try {
+                                                string name = value.TextCommand.Value.Command.ToString().ToLower().Replace(" ", null).Replace("'", null);
+                                                if (!string.IsNullOrEmpty(name) && name.Replace("/", null) == commandArguments.ToLower()) {
+                                                    if (!deDuplicate.Contains(value.ActionTimeline[0].Value.RowId)) {
+                                                        emoteData.Add(new
+                                                        EmoteModData(
+                                                        name,
+                                                        value.RowId,
+                                                        value.ActionTimeline[0].Value.RowId,
+                                                        modName));
+                                                        deDuplicate.Add(value.ActionTimeline[0].Value.RowId);
+                                                    }
+                                                    var ipcResult = PenumbraAndGlamourerIpcWrapper.Instance.TrySetMod.Invoke(collection.Item3.Id, mod.Item2, false);
+                                                    var ipcResult2 = PenumbraAndGlamourerIpcWrapper.Instance.TrySetModPriority.Invoke(collection.Item3.Id, mod.Item2, 0);
+                                                    break;
+                                                }
+                                            } catch {
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        _chat.PrintError("Failed to trigger animation. The specified character has no assigned Penumbra collection!");
+                    }
+                }
+                //}
+                if (emoteData.Count > 0) {
+                    if (emoteData.Count == 1) {
+                        TriggerCharacterEmote(emoteData[0], targetObject, false);
+                    }
+                } else {
+                    Task.Run(() => {
+                        if (_failCount++ < 10) {
+                            Thread.Sleep(3000);
+                            DoVanillaAnimation(animationName, targetObject);
+                        } else {
+                            _failCount = 0;
+                        }
+                    });
+                }
+                _blockDataRefreshes = false;
+            });
+        }
 
-        public void TriggerCharacterEmote(EmoteModData emoteModData, ICharacter character) {
+        public void TriggerCharacterEmote(EmoteModData emoteModData, ICharacter character, bool stillTriggerIfDontOwnEmote = true) {
             if (character == _clientState.LocalPlayer) {
                 if (_wasDoingFakeEmote) {
                     _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
@@ -362,7 +430,7 @@ namespace RoleplayingVoice {
                 } else {
                     _objectRecentlyDidEmote = true;
                 }
-                if (!_didRealEmote || !ownsEmote) {
+                if ((!_didRealEmote || !ownsEmote) && stillTriggerIfDontOwnEmote) {
                     if (character == _clientState.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
@@ -413,6 +481,10 @@ namespace RoleplayingVoice {
                             }
                         }
                     });
+                } else {
+                    if(!ownsEmote && !stillTriggerIfDontOwnEmote) {
+                        _toast.ShowError("You do not own this vanilla emote, so it was not triggered. Unlock it in game or via Mogstation.");
+                    }
                 }
                 _didRealEmote = false;
             });

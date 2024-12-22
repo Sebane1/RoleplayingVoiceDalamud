@@ -4,15 +4,20 @@ using FFXIVVoicePackCreator.Json;
 using Glamourer.Api.Enums;
 using Newtonsoft.Json;
 using RoleplayingVoiceDalamud.VoiceSorting;
+using SevenZip;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
+        private bool _isBackingUpAnimations;
+
+        public bool IsBackingUpAnimations { get => _isBackingUpAnimations; set => _isBackingUpAnimations = value; }
         #region Penumbra Parsing
         public void ExtractSCDOptions(Option option, string directory) {
             Task.Run(() => {
@@ -64,6 +69,71 @@ namespace RoleplayingVoice {
                     } else {
                         _papSorting[value].Add(new Tuple<string, string, bool>(directory, modName, !skipPap));
                     }
+                }
+            }
+        }
+        public void BackupAnimations() {
+            Task.Run(() => {
+                _isBackingUpAnimations = true;
+                string penumbraPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                string backupPath = Path.Combine(config.CacheFolder, "AnimationBackups");
+                Directory.CreateDirectory(backupPath);
+                foreach (var item in _animationMods.Values) {
+                    string modPath = item.Key;
+                    string backup = Path.Combine(backupPath, Path.GetFileNameWithoutExtension(item.Key + ".back"));
+                    try {
+                        if (Path.Exists(modPath)) {
+                            CopyDirectory(modPath, backup, true);
+                        }
+                    } catch {
+
+                    }
+                }
+                try {
+                    SevenZipCompressor compressor = new SevenZipCompressor();
+                    using (FileStream fileStream = new FileStream(backupPath + ".zip", FileMode.Create, FileAccess.Write)) {
+                        compressor.CompressDirectory(backupPath, fileStream);
+                    }
+                } catch (Exception ex) {
+                    Plugin.PluginLog.Warning(ex, ex.Message);
+                }
+                _isBackingUpAnimations = false;
+            });
+        }
+        public void ImportBackup() {
+            Task.Run(() => {
+                _isBackingUpAnimations = true;
+                string penumbraPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                string backupPath = Path.Combine(config.CacheFolder, "AnimationBackups");
+                ZipFile.ExtractToDirectory(backupPath, penumbraPath);
+                _isBackingUpAnimations = false;
+            });
+        }
+        static void CopyDirectory(string sourceDir, string destinationDir, bool recursive) {
+            // Get information about the source directory
+            var dir = new DirectoryInfo(sourceDir);
+
+            // Check if the source directory exists
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+            // Cache directories before we start copying
+            DirectoryInfo[] dirs = dir.GetDirectories();
+
+            // Create the destination directory
+            Directory.CreateDirectory(destinationDir);
+
+            // Get the files in the source directory and copy to the destination directory
+            foreach (FileInfo file in dir.GetFiles()) {
+                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath);
+            }
+
+            // If recursive and copying subdirectories, recursively call this method
+            if (recursive) {
+                foreach (DirectoryInfo subDir in dirs) {
+                    string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                    CopyDirectory(subDir.FullName, newDestinationDir, true);
                 }
             }
         }

@@ -205,6 +205,7 @@ namespace RoleplayingVoice {
         private ITargetManager _targetManager;
         private bool _objectRecentlyDidEmote;
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
+        private Queue<Tuple<string[], string, ICharacter>> _checkVanillaEmoteQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
         private IGameObject[] _objectTable;
         private bool _checkingMovementInProgress;
@@ -447,6 +448,7 @@ namespace RoleplayingVoice {
                              "listen (tune into a publically shared twitch stream)\r\n" +
                              "endlisten (end a publically shared twitch stream)\r\n" +
                              "anim [partial animation mod name] (triggers an animation mod that contains the desired text in its name)\r\n" +
+                             "vanillaemote [emotecommand] (triggers the desired vanilla emote, disabling any mods affecting it)\r\n" +
                              "companionanim [partial animation mod name] (triggers an animation mod that contains the desired text in its name on the currently summoned minion)\r\n" +
                              "emotecontrol do [emote command] [NPC or Minion name] (Makes the desired NPC or Minion perform an emote)\r\n" +
                              "emotecontrol stop [NPC or Minion name] (Makes the desired NPC or Minion stop an emote)\r\n" +
@@ -483,6 +485,9 @@ namespace RoleplayingVoice {
                             break;
                         case "anim":
                             _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _clientState.LocalPlayer as ICharacter));
+                            break;
+                        case "vanillaemote":
+                            _checkVanillaEmoteQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _clientState.LocalPlayer as ICharacter));
                             break;
                         case "companionanim":
                             Task.Run(() => {

@@ -66,6 +66,16 @@ namespace RoleplayingVoice {
                        .Replace("~", "*").Replace("`", "*");
         }
         public override void Draw() {
+            if (Plugin.IsBackingUpAnimations) {
+                ImGui.BeginDisabled();
+            }
+            if(ImGui.Button(Plugin.IsBackingUpAnimations ? "Backing Up Please Wait" : "Backup Animations")) {
+                Plugin.BackupAnimations();
+            }
+            if (Plugin.IsBackingUpAnimations) {
+                ImGui.EndDisabled();
+            }
+
             ImGui.BeginTable("##Animation Table", 2);
             ImGui.TableSetupColumn("Character List", ImGuiTableColumnFlags.WidthFixed, 200);
             ImGui.TableSetupColumn("Custom Animation Mods", ImGuiTableColumnFlags.WidthStretch, 300);

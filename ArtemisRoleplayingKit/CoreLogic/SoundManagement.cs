@@ -108,6 +108,11 @@ namespace RoleplayingVoice {
                                 break;
                             case 10:
                                 if (_addonTalkHandler != null && !_addonTalkHandler.IsInACutscene()) {
+                                    if (_checkVanillaEmoteQueue.Count > 0 && !_queueTimer.IsRunning) {
+                                        var item = _checkVanillaEmoteQueue.Dequeue();
+                                        DoVanillaAnimation(item.Item1[1], item.Item3);
+                                        _queueTimer.Restart();
+                                    }
                                     if (_checkAnimationModsQueue.Count > 0 && !_queueTimer.IsRunning) {
                                         var item = _checkAnimationModsQueue.Dequeue();
                                         CheckAnimationMods(item.Item1, item.Item2, item.Item3);
