@@ -213,14 +213,17 @@ namespace SoundFilter {
 
         private void* ResourceDetour(bool isSync, IntPtr pFileManager, uint* pCategoryId, char* pResourceType, uint* pResourceHash, char* pPath, void* pUnknown, bool isUnknown) {
             var ret = this.CallOriginalResourceHandler(isSync, pFileManager, pCategoryId, pResourceType, pResourceHash, pPath, pUnknown, isUnknown);
-
-            var path = Util.ReadTerminatedString((byte*)pPath);
-            if (ret != null && path.EndsWith(".scd")) {
-                var scdData = Marshal.ReadIntPtr((IntPtr)ret + ResourceDataPointerOffset);
-                // if we immediately have the scd data, cache it, otherwise add it to a waiting list to hopefully be picked up at sound play time
-                if (scdData != IntPtr.Zero) {
-                    this.Scds[scdData] = path;
+            try {
+                var path = Util.ReadTerminatedString((byte*)pPath);
+                if (ret != null && path.EndsWith(".scd")) {
+                    var scdData = Marshal.ReadIntPtr((IntPtr)ret + ResourceDataPointerOffset);
+                    // if we immediately have the scd data, cache it, otherwise add it to a waiting list to hopefully be picked up at sound play time
+                    if (scdData != IntPtr.Zero) {
+                        this.Scds[scdData] = path;
+                    }
                 }
+            } catch {
+
             }
 
             return ret;
@@ -233,43 +236,47 @@ namespace SoundFilter {
                 : this.GetResourceAsyncHook!.Original(pFileManager, pCategoryId, pResourceType, pResourceHash, pPath, pUnknown, isUnknown);
         }
         private bool PlaySpecificSoundDetourInner(long a1, int idx) {
-            if (a1 == 0) {
-                return false;
-            }
+            try {
+                if (a1 == 0) {
+                    return false;
+                }
 
-            var scdData = *(byte**)(a1 + 8);
-            if (scdData == null) {
-                return false;
-            }
+                var scdData = *(byte**)(a1 + 8);
+                if (scdData == null) {
+                    return false;
+                }
 
-            // check cached scds for path
-            if (!this.Scds.TryGetValue((IntPtr)scdData, out var path)) {
-                return false;
-            }
-            path = path.ToLowerInvariant();
-            var specificPath = $"{path}/{idx}";
-            string splitPath = specificPath.Split(".scd")[0] + ".scd";
-            if ((specificPath.Contains("vo_battle") && muted)
-                || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider) && !splitPath.Contains("sound/foot")) {
-                Plugin.PluginLog.Info("Trigger Sound Interception");
-                OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
-                return true;
-            } else if (specificPath.Contains("/strm/")) {
-                return true;
-            }
-            if (Plugin.ClientState.ClientLanguage == ClientLanguage.English) {
-                if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
-                    if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
-                        && Plugin.Window.NpcSpeechEnabled) {
-                        OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
-                        return true;
-                    } else {
-                        OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
-                        return false;
+                // check cached scds for path
+                if (!this.Scds.TryGetValue((IntPtr)scdData, out var path)) {
+                    return false;
+                }
+                path = path.ToLowerInvariant();
+                var specificPath = $"{path}/{idx}";
+                string splitPath = specificPath.Split(".scd")[0] + ".scd";
+                if ((specificPath.Contains("vo_battle") && muted)
+                    || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider) && !splitPath.Contains("sound/foot")) {
+                    Plugin.PluginLog.Info("Trigger Sound Interception");
+                    OnSoundIntercepted?.Invoke(this, new InterceptedSound() { SoundPath = splitPath });
+                    return true;
+                } else if (specificPath.Contains("/strm/")) {
+                    return true;
+                }
+                if (Plugin.ClientState.ClientLanguage == ClientLanguage.English) {
+                    if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
+                        if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
+                            && Plugin.Window.NpcSpeechEnabled) {
+                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
+                            return true;
+                        } else {
+                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
+                            return false;
+                        }
                     }
                 }
+                OnFilterWasRan?.Invoke(this, new InterceptedSound { SoundPath = splitPath });
+            } catch (Exception ex) {
+                Plugin.PluginLog.Error(ex, ex.Message);
             }
-            OnFilterWasRan?.Invoke(this, new InterceptedSound { SoundPath = splitPath });
             return false;
         }
         public bool IsCutsceneDetectionNull() {
