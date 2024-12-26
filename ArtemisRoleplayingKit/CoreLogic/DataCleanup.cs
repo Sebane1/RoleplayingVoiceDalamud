@@ -126,7 +126,7 @@ namespace RoleplayingVoice {
 
         private void SendNetworkedVoice() {
             Task.Run(async () => {
-                while (AddonTalkHandler != null) {
+                while (AddonTalkHandler == null) {
                     Thread.Sleep(1000);
                 }
                 while (AddonTalkHandler.VoiceList != null) {
