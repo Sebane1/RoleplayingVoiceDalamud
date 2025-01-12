@@ -538,9 +538,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         _state = GetBattleTalkAddonState();
                                     }
                                     _threadSafeObjectTable = _objectTable.ToList();
-                                    _threadSafeObjectTable.Sort((x, y) => {
-                                        return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
-                                    });
+                                    if (_plugin.PlayerCamera != null) {
+                                        _threadSafeObjectTable.Sort((x, y) => {
+                                            return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
+                                        });
+                                    }
                                     Task.Run(delegate {
                                         if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
                                             _textIsPresent = true;
