@@ -18,7 +18,6 @@ using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
 using RoleplayingVoiceDalamud.Catalogue;
 using RoleplayingVoiceDalamud.GameObjects;
-using RoleplayingVoiceDalamud.Glamourer;
 using RoleplayingVoiceDalamud.NPC;
 using RoleplayingVoiceDalamudWrapper;
 using SoundFilter;

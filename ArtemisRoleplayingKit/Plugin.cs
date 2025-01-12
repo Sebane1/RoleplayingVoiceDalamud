@@ -69,7 +69,6 @@ namespace RoleplayingVoice
         private AnimationCatalogue _animationCatalogue;
         private AnimationEmoteSelection _animationEmoteSelection;
         private NPCPersonalityWindow _npcPersonalityWindow;
-        private DragAndDropTextureWindow _dragAndDropTextures;
         private VoiceEditor _voiceEditor;
         private static IPluginLog _plugin;
         private static RoleplayingMediaManager _roleplayingMediaManager;
@@ -308,7 +307,6 @@ namespace RoleplayingVoice
                 _animationCatalogue = this.pluginInterface.Create<AnimationCatalogue>();
                 _animationEmoteSelection = this.pluginInterface.Create<AnimationEmoteSelection>();
                 _npcPersonalityWindow = this.pluginInterface.Create<NPCPersonalityWindow>();
-                _dragAndDropTextures = this.pluginInterface.Create<DragAndDropTextureWindow>();
                 _voiceEditor = this.pluginInterface.Create<VoiceEditor>();
                 _gposePhotoTakerWindow.GposeWindow = _gposeWindow;
                 _npcPersonalityWindow.Plugin = this;
