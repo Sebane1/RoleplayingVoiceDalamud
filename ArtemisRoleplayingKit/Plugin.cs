@@ -23,7 +23,6 @@ using NAudio.Wave;
 using System.Collections.Concurrent;
 using RoleplayingVoiceCore;
 using Dalamud.Plugin.Ipc;
-using RoleplayingVoiceDalamud.Glamourer;
 using RoleplayingVoiceDalamud.Voice;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.DragDrop;
@@ -37,10 +36,12 @@ using Lumina.Excel.Sheets;
 using RoleplayingVoiceDalamud.VoiceSorting;
 using Dalamud.Game.ClientState.Objects.Types;
 using RoleplayingVoiceDalamudWrapper;
+using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
-namespace RoleplayingVoice {
+namespace RoleplayingVoice
+{
     public partial class Plugin : IDalamudPlugin {
         #region Fields
         private int performanceLimiter;

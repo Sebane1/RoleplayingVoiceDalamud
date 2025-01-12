@@ -16,3 +16,6 @@
 [submodule "ArtemisRoleplayingKit/BoneReadingCore"]
 	path = ArtemisRoleplayingKit/BoneReadingCore
 	url = https://github.com/Sebane1/BoneReadingCore.git
+[submodule "ArtemisRoleplayingKit/IPC/PenumbraAndGlamourerHelpers"]
+	path = ArtemisRoleplayingKit/IPC/PenumbraAndGlamourerHelpers
+	url = https://github.com/Sebane1/PenumbraAndGlamourerHelpers.git

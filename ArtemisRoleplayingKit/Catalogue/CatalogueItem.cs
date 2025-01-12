@@ -1,11 +1,12 @@
 ﻿using Glamourer.Api.Enums;
 using RoleplayingVoice;
-using RoleplayingVoiceDalamud.Glamourer;
+using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
 using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace RoleplayingVoiceDalamud.Catalogue {
+namespace RoleplayingVoiceDalamud.Catalogue
+{
     public class CatalogueItem {
         public EquipObject EquipObject { get; set; }
         public List<CatalogueItem> Variants { get => variants; set => variants = value; }

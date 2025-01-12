@@ -1,7 +1,6 @@
 ﻿using Dalamud.Plugin;
 using Newtonsoft.Json;
 using RoleplayingVoiceDalamud.Catalogue;
-using RoleplayingVoiceDalamud.Glamourer;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
@@ -10,8 +9,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
+using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
 
-namespace RoleplayingVoice {
+namespace RoleplayingVoice
+{
     public partial class Plugin : IDalamudPlugin {
         public void StartCatalogingItems() {
             _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_clientState.LocalPlayer.ObjectIndex);

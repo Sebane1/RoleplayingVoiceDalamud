@@ -105,8 +105,4 @@
 	  </None>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="KtsisCore\Interop\Hooks\" />
-	</ItemGroup>
-
 </Project>
