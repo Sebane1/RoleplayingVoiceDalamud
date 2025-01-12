@@ -13,3 +13,6 @@
 [submodule "ArtemisRoleplayingKit/MediaGameObjects"]
 	path = ArtemisRoleplayingKit/MediaGameObjects
 	url = https://github.com/Sebane1/MediaGameObjects.git
+[submodule "ArtemisRoleplayingKit/BoneReadingCore"]
+	path = ArtemisRoleplayingKit/BoneReadingCore
+	url = https://github.com/Sebane1/BoneReadingCore.git
