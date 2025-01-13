@@ -347,11 +347,6 @@ namespace RoleplayingVoice
                 if (_npcPersonalityWindow is not null) {
                     this.windowSystem.AddWindow(_npcPersonalityWindow);
                 }
-                if (_dragAndDropTextures is not null) {
-                    this.windowSystem.AddWindow(_dragAndDropTextures);
-                    _dragAndDropTextures.Plugin = this;
-                    _dragAndDropTextures.IsOpen = true;
-                }
                 if (_voiceEditor is not null) {
                     this.windowSystem.AddWindow(_voiceEditor);
                 }
