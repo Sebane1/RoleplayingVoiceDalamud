@@ -42,7 +42,7 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                                                 var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
                                                 float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
                                                 float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
-                                                if (distance > 2f || rotationDistance > 2f) {
+                                                if (distance > 3f || rotationDistance > 3f) {
                                                     if (!movingObject.IsMoving) {
                                                         string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
                                                         if (!string.IsNullOrEmpty(value)) {
