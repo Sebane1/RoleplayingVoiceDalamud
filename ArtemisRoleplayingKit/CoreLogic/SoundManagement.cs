@@ -295,7 +295,7 @@ namespace RoleplayingVoice {
         }
 
         private void CheckIfDied() {
-            if (config.VoicePackIsActive && config.VoiceReplacementType == 0) {
+            if (config.VoiceReplacementType == 0) {
                 Task.Run(delegate {
                     if (_clientState.LocalPlayer != null) {
                         if (_clientState.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
@@ -929,30 +929,28 @@ namespace RoleplayingVoice {
         }
 
         private void _toast_ErrorToast(ref SeString message, ref bool isHandled) {
-            if (config.VoicePackIsActive) {
-                if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                    if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 9000) {
-                        if (_mainCharacterVoicePack == null) {
-                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                        }
-                        string value = _mainCharacterVoicePack.GetMisc(message.TextValue);
-                        if (!string.IsNullOrEmpty(value)) {
-                            _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, delegate {
-                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
-                            },
-                            delegate (object sender, StreamVolumeEventArgs e) {
-                                if (e.MaxSampleValues.Length > 0) {
-                                    if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer as ICharacter, 2);
-                                    } else {
-                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
-                                    }
-                                }
-                            });
-                        }
+            if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                if (!_cooldown.IsRunning || _cooldown.ElapsedMilliseconds > 9000) {
+                    if (_mainCharacterVoicePack == null) {
+                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                     }
-                    _cooldown.Restart();
+                    string value = _mainCharacterVoicePack.GetMisc(message.TextValue);
+                    if (!string.IsNullOrEmpty(value)) {
+                        _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, delegate {
+                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
+                        },
+                        delegate (object sender, StreamVolumeEventArgs e) {
+                            if (e.MaxSampleValues.Length > 0) {
+                                if (e.MaxSampleValues[0] > 0.2) {
+                                    _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer as ICharacter, 2);
+                                } else {
+                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer as ICharacter);
+                                }
+                            }
+                        });
+                    }
                 }
+                _cooldown.Restart();
             }
         }
         private void _filter_OnSoundIntercepted(object sender, InterceptedSound e) {
@@ -1150,91 +1148,89 @@ namespace RoleplayingVoice {
         private void BattleText(string playerName, SeString message, XivChatType type) {
             CheckDependancies();
             if ((type != (XivChatType)8235 && type != (XivChatType)4139) || message.TextValue.Contains("You")) {
-                if (config.VoicePackIsActive) {
-                    Task.Run(delegate () {
-                        string value = "";
-                        string playerMessage = message.TextValue.Replace("「", " ").Replace("」", " ").Replace("の", " の").Replace("に", " に");
-                        string[] values = playerMessage.Split(' ');
-                        if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                            string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
-                            bool attackIntended = false;
-                            Stopwatch performanceTimer = Stopwatch.StartNew();
-                            if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                                if (config.DebugMode) {
-                                    Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
-                                }
-                            }
-                            performanceTimer.Restart();
-                            if (!message.TextValue.Contains("cancel")) {
-                                if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
-                                    LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
-                                        playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
-                                } else {
-                                    PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
-                                }
-                            }
+                Task.Run(delegate () {
+                    string value = "";
+                    string playerMessage = message.TextValue.Replace("「", " ").Replace("」", " ").Replace("の", " の").Replace("に", " に");
+                    string[] values = playerMessage.Split(' ');
+                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                        string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                        bool attackIntended = false;
+                        Stopwatch performanceTimer = Stopwatch.StartNew();
+                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                             if (config.DebugMode) {
-                                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice line decision took " + performanceTimer.ElapsedMilliseconds + " milliseconds to calculate.");
-                            }
-                            if (!string.IsNullOrEmpty(value) || attackIntended) {
-                                if (!attackIntended) {
-                                    if (config.DebugMode) {
-                                        Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
-                                    }
-                                    Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
-                                    _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default,
-                                        Conditions.IsBoundByDuty ?
-                                        null
-                                    : delegate {
-                                        Task.Run(delegate {
-                                            if (_clientState.LocalPlayer != null) {
-                                                _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                            }
-                                        });
-                                    },
-                                  Conditions.IsBoundByDuty ?
-                                  null
-                                    : delegate (object sender, StreamVolumeEventArgs e) {
-                                        Task.Run(delegate {
-                                            if (_clientState.LocalPlayer != null) {
-                                                if (e.MaxSampleValues.Length > 0) {
-                                                    if (e.MaxSampleValues[0] > 0.2) {
-                                                        _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 2);
-                                                    } else {
-                                                        _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    });
-                                    if (config.DebugMode) {
-                                        Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
-                                       " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
-                                    }
-                                }
-                                if (!_muteTimer.IsRunning) {
-                                    if (Filter != null) {
-                                        Filter.Muted = true;
-                                    }
-                                    Task.Run(() => {
-                                        if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
-                                            Task.Run(async () => {
-                                                if (_clientState.LocalPlayer != null) {
-                                                    bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                                if (config.DebugMode) {
-                                    Plugin.PluginLog.Debug("Battle Voice Muted");
-                                }
-                                _muteTimer.Restart();
+                                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
                             }
                         }
-                    });
-                }
+                        performanceTimer.Restart();
+                        if (!message.TextValue.Contains("cancel")) {
+                            if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
+                                LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
+                                    playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
+                            } else {
+                                PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
+                            }
+                        }
+                        if (config.DebugMode) {
+                            Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice line decision took " + performanceTimer.ElapsedMilliseconds + " milliseconds to calculate.");
+                        }
+                        if (!string.IsNullOrEmpty(value) || attackIntended) {
+                            if (!attackIntended) {
+                                if (config.DebugMode) {
+                                    Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
+                                }
+                                Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
+                                _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default,
+                                    Conditions.IsBoundByDuty ?
+                                    null
+                                : delegate {
+                                    Task.Run(delegate {
+                                        if (_clientState.LocalPlayer != null) {
+                                            _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                        }
+                                    });
+                                },
+                              Conditions.IsBoundByDuty ?
+                              null
+                                : delegate (object sender, StreamVolumeEventArgs e) {
+                                    Task.Run(delegate {
+                                        if (_clientState.LocalPlayer != null) {
+                                            if (e.MaxSampleValues.Length > 0) {
+                                                if (e.MaxSampleValues[0] > 0.2) {
+                                                    _addonTalkHandler.TriggerLipSync(_clientState.LocalPlayer, 2);
+                                                } else {
+                                                    _addonTalkHandler.StopLipSync(_clientState.LocalPlayer);
+                                                }
+                                            }
+                                        }
+                                    });
+                                });
+                                if (config.DebugMode) {
+                                    Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] " + Path.GetFileName(value) +
+                                   " took " + audioPlaybackTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                }
+                            }
+                            if (!_muteTimer.IsRunning) {
+                                if (Filter != null) {
+                                    Filter.Muted = true;
+                                }
+                                Task.Run(() => {
+                                    if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
+                                        Task.Run(async () => {
+                                            if (_clientState.LocalPlayer != null) {
+                                                bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            if (config.DebugMode) {
+                                Plugin.PluginLog.Debug("Battle Voice Muted");
+                            }
+                            _muteTimer.Restart();
+                        }
+                    }
+                });
             } else {
                 if (config.UsePlayerSync) {
                     Task.Run(delegate () {

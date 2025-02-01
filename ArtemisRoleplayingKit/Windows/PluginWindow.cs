@@ -1200,7 +1200,7 @@ namespace RoleplayingVoice {
             ImGui.LabelText("##EBSLabel", "Emote and Battle Sounds ");
             ImGui.Checkbox("##characterVoicePackActive", ref _characterVoicePackActive);
             ImGui.SameLine();
-            ImGui.Text("Sound Modding Enabled");
+            ImGui.Text("Voice Pack Enabled");
             if (_characterVoicePackActive) {
                 _voicePackTypeBox.Draw();
                 switch (_voicePackTypeBox.SelectedIndex) {

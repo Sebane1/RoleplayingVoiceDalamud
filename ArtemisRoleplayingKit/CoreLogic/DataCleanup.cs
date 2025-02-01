@@ -135,21 +135,19 @@ namespace RoleplayingVoice {
                 while (AddonTalkHandler.VoiceList.Count == 0) {
                     Thread.Sleep(1000);
                 }
-                if (config.VoicePackIsActive) {
-                    var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
-                    if (AddonTalkHandler != null) {
-                        if (config.VoiceReplacementType == 0) {
-                            AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, 0);
-                        }
-                        if (config.VoiceReplacementType == 1) {
-                            AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
-                        }
+                var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
+                if (AddonTalkHandler != null) {
+                    if (config.VoiceReplacementType == 0) {
+                        AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, 0);
                     }
-                    AddonTalkHandler.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
-                    if (config.UsePlayerSync) {
-                        string senderName = CleanSenderName(_clientState.LocalPlayer.Name.TextValue);
-                        await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
+                    if (config.VoiceReplacementType == 1) {
+                        AddonTalkHandler?.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
                     }
+                }
+                AddonTalkHandler.SetVanillaVoice(_clientState.LocalPlayer, voiceItem.Value);
+                if (config.UsePlayerSync) {
+                    string senderName = CleanSenderName(_clientState.LocalPlayer.Name.TextValue);
+                    await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
                 }
             });
         }

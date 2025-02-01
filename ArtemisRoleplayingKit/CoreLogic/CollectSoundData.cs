@@ -33,7 +33,7 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog.Error(e.Message);
                         }
                     });
-                    if (!config.VoicePackIsActive && config.VoiceReplacementType == 0) {
+                    if (config.VoiceReplacementType == 0) {
                         try {
                             if (Filter != null) {
                                 Filter.Muted = false;

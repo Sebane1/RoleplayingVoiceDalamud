@@ -307,9 +307,6 @@ namespace RoleplayingVoice {
                                 string modName = Path.GetFileName(directory);
                                 Option option = null;
                                 List<Group> groups = new List<Group>();
-                                if (directory.Contains("GREAT ASSET")) {
-                                    object test = new object();
-                                }
                                 if (Directory.Exists(directory)) {
                                     foreach (string file in Directory.EnumerateFiles(directory)) {
                                         if (file.EndsWith(".json") && !file.EndsWith("meta.json")) {
@@ -383,22 +380,24 @@ namespace RoleplayingVoice {
                 Plugin.PluginLog?.Warning("Error 404, penumbra not found.");
             }
             if (config != null) {
-                if (config.CharacterVoicePacks != null && config.VoiceReplacementType == 0) {
-                    if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                        string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
-                        if (!string.IsNullOrEmpty(voice)) {
-                            string path = config.CacheFolder + @"\VoicePack\" + voice;
-                            if (Directory.Exists(path)) {
-                                ArtemisVoiceMod artemisVoiceMod = new ArtemisVoiceMod();
-                                artemisVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
-                                artemisVoiceMod.Priority = list.Count;
-                                foreach (var subMod in Directory.EnumerateDirectories(path)) {
-                                    ArtemisVoiceMod artemisSubVoiceMod = new ArtemisVoiceMod();
-                                    artemisSubVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
-                                    artemisSubVoiceMod.Priority = list.Count + 1;
-                                    artemisVoiceMod.ArtemisSubMods.Add(artemisSubVoiceMod);
+                if (config.VoicePackIsActive) {
+                    if (config.CharacterVoicePacks != null && config.VoiceReplacementType == 0) {
+                        if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
+                            string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                            if (!string.IsNullOrEmpty(voice)) {
+                                string path = config.CacheFolder + @"\VoicePack\" + voice;
+                                if (Directory.Exists(path)) {
+                                    ArtemisVoiceMod artemisVoiceMod = new ArtemisVoiceMod();
+                                    artemisVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
+                                    artemisVoiceMod.Priority = list.Count;
+                                    foreach (var subMod in Directory.EnumerateDirectories(path)) {
+                                        ArtemisVoiceMod artemisSubVoiceMod = new ArtemisVoiceMod();
+                                        artemisSubVoiceMod.Files = Directory.EnumerateFiles(path).ToList();
+                                        artemisSubVoiceMod.Priority = list.Count + 1;
+                                        artemisVoiceMod.ArtemisSubMods.Add(artemisSubVoiceMod);
+                                    }
+                                    list.Add(artemisVoiceMod);
                                 }
-                                list.Add(artemisVoiceMod);
                             }
                         }
                     }
