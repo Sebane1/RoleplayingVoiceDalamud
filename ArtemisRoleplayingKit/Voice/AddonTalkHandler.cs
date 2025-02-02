@@ -1054,7 +1054,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             initialState = actorMemory.CharacterMode;
                                             animationMemory = actorMemory.Animation;
                                             animationMemory.LipsOverride = 630;
-                                            //animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
                                             if (wavePlayer.TotalTime.Seconds < 2 || !IsInACutscene()) {
                                                 lipId = 632;
                                             } else if (wavePlayer.TotalTime.Seconds < 7) {
@@ -1062,26 +1061,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             } else {
                                                 lipId = 631;
                                             }
-                                            //if (!Conditions.IsBoundByDuty || IsInACutscene()) {
-                                            //    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
-                                            //}
-                                            //MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                            //if (!Conditions.IsBoundByDuty || IsInACutscene()) {
-                                            //    MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                            //}
-                                            //MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                            //task = Task.Run(delegate {
-                                            //    Thread.Sleep(500);
-                                            //    if (!Conditions.IsBoundByDuty || IsInACutscene()) {
-                                            //        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), ActorMemory.CharacterModes.EmoteLoop, "Animation Mode Override");
-                                            //    }
-                                            //    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), lipId, "Lipsync");
-                                            //    Thread.Sleep((int)wavePlayer.TotalTime.TotalMilliseconds - 1000);
-                                            //    if (!Conditions.IsBoundByDuty || IsInACutscene()) {
-                                            //        MemoryService.Write(actorMemory.GetAddressOfProperty(nameof(ActorMemory.CharacterModeRaw)), initialState, "Animation Mode Override");
-                                            //    }
-                                            //    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)), 0, "Lipsync");
-                                            //});
                                         } catch {
                                             Plugin.PluginLog.Error("Lip sync has failed, developer please fix!");
                                         }
@@ -1182,7 +1161,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                 }
                                             }
-                                        }, !Conditions.IsBoundByDuty || IsInACutscene() ? _plugin.Config.NPCSpeechSpeed : 1.2f, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
+                                        }, _plugin.Config.NPCSpeechSpeed, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
                                     }
                                     break;
                                 } else {
