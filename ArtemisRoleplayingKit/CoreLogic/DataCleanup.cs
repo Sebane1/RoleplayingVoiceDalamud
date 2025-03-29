@@ -203,10 +203,10 @@ namespace RoleplayingVoice {
                 CleanupEmoteWatchList();
             });
         }
-        public void ResetTwitchValues() {
+        public unsafe void ResetTwitchValues() {
             Task.Run(async () => {
                 Thread.Sleep(1000);
-                while (Conditions.IsInBetweenAreas) {
+                while (Conditions.Instance()->BetweenAreas) {
                     Thread.Sleep(500);
                 }
                 _lastStreamObject = null;

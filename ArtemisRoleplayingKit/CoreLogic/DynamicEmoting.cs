@@ -20,7 +20,7 @@ using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
         #region Dynamic Emoting
-        private void CheckForNewDynamicEmoteRequests() {
+        private unsafe void CheckForNewDynamicEmoteRequests() {
             try {
                 if (_messageQueue.Count > 0 && !disposed) {
                     if (!_messageTimer.IsRunning) {
@@ -59,7 +59,7 @@ namespace RoleplayingVoice {
                 if (!string.IsNullOrEmpty(_lastEmoteAnimationUsed.Name.ToString())) {
                     Emote value = _lastEmoteAnimationUsed;
                     _lastEmoteAnimationUsed = new Emote();
-                    if (!Conditions.IsWatchingCutscene) {
+                    if (!Conditions.Instance()->WatchingCutscene) {
                         _isAlreadyRunningEmote = true;
                         Task.Run(() => {
                             if (value.EmoteMode.Value.ConditionMode is not 3) {

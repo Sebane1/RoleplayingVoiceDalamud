@@ -37,8 +37,13 @@ using VfxEditor.ScdFormat;
 using SoundType = RoleplayingMediaCore.SoundType;
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
+        public unsafe static Conditions* ConditionValues {
+            get {
+                return Conditions.Instance();
+            }
+        }
         #region Sound Management
-        private void framework_Update(IFramework framework) {
+        private unsafe void framework_Update(IFramework framework) {
             try {
                 if (!disposed) {
                     if (_objectTable != null) {
@@ -52,7 +57,7 @@ namespace RoleplayingVoice {
                         InitializeEverything();
                         _hasBeenInitialized = true;
                     }
-                    if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                    if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat) {
                         CheckCataloging();
                     }
                     if (pollingTimer.ElapsedMilliseconds > 60 && _clientState.LocalPlayer != null && _clientState.IsLoggedIn && _hasBeenInitialized && _addonTalkHandler != null) {
@@ -60,12 +65,12 @@ namespace RoleplayingVoice {
                         CheckIfDied();
                         switch (performanceLimiter++) {
                             case 0:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForMovingObjects();
                                 }
                                 break;
                             case 1:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForNewDynamicEmoteRequests();
                                 }
                                 break;
@@ -75,27 +80,27 @@ namespace RoleplayingVoice {
                             case 3:
                                 break;
                             case 4:
-                                if (!Conditions.IsBoundByDuty && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomMountingAudio();
                                 }
                                 break;
                             case 5:
-                                if (!Conditions.IsBoundByDuty && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomCombatAudio();
                                 }
                                 break;
                             case 6:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForGPose();
                                 }
                                 break;
                             case 7:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomEmoteTriggers();
                                 }
                                 break;
                             case 8:
-                                if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat && !_addonTalkHandler.IsInACutscene()) {
+                                if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat && !_addonTalkHandler.IsInACutscene()) {
                                     CheckForCustomNPCMinion();
                                 }
                                 break;
@@ -168,8 +173,14 @@ namespace RoleplayingVoice {
         }
 
         private void CheckForCustomEmoteTriggers() {
+            bool boundByDuty = false;
+            bool inCombat = false;
+            unsafe {
+                boundByDuty = !Conditions.Instance()->BoundByDuty;
+                inCombat = !Conditions.Instance()->InCombat;
+            }
             Task.Run(delegate {
-                if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
+                if (config.UsePlayerSync && boundByDuty) {
                     if (_emoteSyncCheck.ElapsedMilliseconds > 10000) {
                         _emoteSyncCheck.Restart();
                         try {
@@ -185,8 +196,8 @@ namespace RoleplayingVoice {
                                                     Vector3 lastPosition = item.Position;
                                                     int startingTerritoryId = _clientState.TerritoryType;
                                                     while (!disposed && _clientState.IsLoggedIn &&
-                                                    startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
-                                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                                    startingTerritoryId == _clientState.TerritoryType && boundByDuty) {
+                                                        if (boundByDuty && inCombat) {
                                                             Plugin.PluginLog?.Verbose("Checking " + playerSender);
                                                             Plugin.PluginLog?.Verbose("Getting emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "emote");
@@ -231,8 +242,8 @@ namespace RoleplayingVoice {
                                                     Vector3 lastPosition = item.Position;
                                                     int startingTerritoryId = _clientState.TerritoryType;
                                                     while (!disposed && _clientState.IsLoggedIn &&
-                                                    startingTerritoryId == _clientState.TerritoryType && !Conditions.IsBoundByDuty) {
-                                                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
+                                                    startingTerritoryId == _clientState.TerritoryType && boundByDuty) {
+                                                        if (boundByDuty && inCombat) {
                                                             Plugin.PluginLog?.Verbose("Checking minion from" + playerSender);
                                                             Plugin.PluginLog?.Verbose("Getting Minion Emote.");
                                                             ushort animation = await _roleplayingMediaManager.GetShort(playerSender + "MinionEmote");
@@ -371,8 +382,8 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void CheckForCustomCombatAudio() {
-            if (Conditions.IsInCombat && !Conditions.IsMounted && !Conditions.IsBoundByDuty) {
+        private unsafe void CheckForCustomCombatAudio() {
+            if (Conditions.Instance()->InCombat && !Conditions.Instance()->Mounted && !Conditions.Instance()->BoundByDuty) {
                 if (!_combatOccured) {
                     Task.Run(delegate () {
                         if (_clientState.LocalPlayer != null) {
@@ -424,8 +435,8 @@ namespace RoleplayingVoice {
         }
 
         private unsafe void CheckForCustomMountingAudio() {
-            if (!Conditions.IsInBetweenAreas && !Conditions.IsInBetweenAreas51 && _clientState.LocalPlayer != null && _recentCFPop != 2) {
-                if (Conditions.IsMounted) {
+            if (!Conditions.Instance()->BetweenAreas && !Conditions.Instance()->BetweenAreas51 && _clientState.LocalPlayer != null && _recentCFPop != 2) {
+                if (Conditions.Instance()->Mounted) {
                     if (!_mountingOccured) {
                         Task.Run(delegate () {
                             if (_clientState.LocalPlayer != null) {
@@ -570,7 +581,7 @@ namespace RoleplayingVoice {
                                 Task.Run(() => EmoteReaction(message.TextValue));
                             }
                         }
-                        //if (!Conditions.IsBoundByDuty) {
+                        //if (!Conditions.Instance()->BoundByDuty) {
                         if (true) {
                             Task.Run(async () => {
                                 try {
@@ -621,8 +632,10 @@ namespace RoleplayingVoice {
                         string playerMessage = message.TextValue;
                         ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                         PluginLog.Verbose("Found " + player.Name.TextValue + " for speech detection.");
-                        if (config.TwitchStreamTriggersIfShouter && !Conditions.IsBoundByDuty) {
-                            TwitchChatCheck(message, type, player, playerSender);
+                        unsafe {
+                            if (config.TwitchStreamTriggersIfShouter && !Conditions.Instance()->BoundByDuty) {
+                                TwitchChatCheck(message, type, player, playerSender);
+                            }
                         }
                         if (config.AiVoiceActive) {
                             bool lipWasSynced = true;
@@ -1158,19 +1171,23 @@ namespace RoleplayingVoice {
                         string staging = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
                         bool attackIntended = false;
                         Stopwatch performanceTimer = Stopwatch.StartNew();
-                        if (!Conditions.IsBoundByDuty && !Conditions.IsInCombat) {
-                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                            if (config.DebugMode) {
-                                Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
+                        unsafe {
+                            if (!Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat) {
+                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                                if (config.DebugMode) {
+                                    Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] voice pack took " + performanceTimer.ElapsedMilliseconds + " milliseconds to load.");
+                                }
                             }
                         }
                         performanceTimer.Restart();
-                        if (!message.TextValue.Contains("cancel")) {
-                            if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
-                                LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
-                                    playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
-                            } else {
-                                PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
+                        unsafe {
+                            if (!message.TextValue.Contains("cancel")) {
+                                if (Conditions.Instance()->BoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
+                                    LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
+                                        playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, _mainCharacterVoicePack, ref value, ref attackIntended);
+                                } else {
+                                    PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
+                                }
                             }
                         }
                         if (config.DebugMode) {
@@ -1181,9 +1198,13 @@ namespace RoleplayingVoice {
                                 if (config.DebugMode) {
                                     Plugin.PluginLog.Debug("[Artemis Roleplaying Kit] Playing sound: " + Path.GetFileName(value));
                                 }
+                                bool boundByDuty = false;
+                                unsafe {
+                                    boundByDuty = Conditions.Instance()->BoundByDuty;
+                                }
                                 Stopwatch audioPlaybackTimer = Stopwatch.StartNew();
                                 _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default,
-                                    Conditions.IsBoundByDuty ?
+                                  boundByDuty ?
                                     null
                                 : delegate {
                                     Task.Run(delegate {
@@ -1192,7 +1213,7 @@ namespace RoleplayingVoice {
                                         }
                                     });
                                 },
-                              Conditions.IsBoundByDuty ?
+                              boundByDuty ?
                               null
                                 : delegate (object sender, StreamVolumeEventArgs e) {
                                     Task.Run(delegate {
@@ -1217,7 +1238,11 @@ namespace RoleplayingVoice {
                                     Filter.Muted = true;
                                 }
                                 Task.Run(() => {
-                                    if (config.UsePlayerSync && !Conditions.IsBoundByDuty) {
+                                    bool canProceeed = false;
+                                    unsafe {
+                                        canProceeed = config.UsePlayerSync && !Conditions.Instance()->BoundByDuty;
+                                    }
+                                    if (canProceeed) {
                                         Task.Run(async () => {
                                             if (_clientState.LocalPlayer != null) {
                                                 bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, staging);
@@ -1272,10 +1297,12 @@ namespace RoleplayingVoice {
                                             characterVoicePack = _characterVoicePacks[playerSender];
                                         }
                                         string value = "";
-                                        if (Conditions.IsBoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
-                                            OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
-                                        } else {
-                                            PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
+                                        unsafe {
+                                            if (Conditions.Instance()->BoundByDuty || !IsDicipleOfTheHand(_clientState.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
+                                                OtherPlayerCombat(playerName, message, type, characterVoicePack, ref value);
+                                            } else {
+                                                PlayerCrafting(playerName, message, type, characterVoicePack, ref value);
+                                            }
                                         }
                                         IPlayerCharacter player = (IPlayerCharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                                         Task.Run(async () => {
