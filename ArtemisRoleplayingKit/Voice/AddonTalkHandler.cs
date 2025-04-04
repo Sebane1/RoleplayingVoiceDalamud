@@ -15,6 +15,7 @@ using Dalamud.Hooking;
 using Dalamud.Logging;
 using Dalamud.Memory;
 using Dalamud.Plugin.Services;
+using DragAndDropTexturing.ThreadSafeDalamudObjectTable;
 using FFBardMusicPlayer.FFXIV;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -61,7 +62,6 @@ namespace RoleplayingVoiceDalamud.Voice {
         Stopwatch pollingTimer = new Stopwatch();
         private AddonTalkManager addonTalkManager;
         private IFramework framework;
-        private IObjectTable _objectTable;
         private IClientState _clientState;
         private object subscription;
         private string _lastText;
@@ -96,7 +96,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private AddressService _addressService;
         private PoseService _poseService;
         private TargetService _targetService;
-        private List<Dalamud.Game.ClientState.Objects.Types.IGameObject> _threadSafeObjectTable;
+        private ThreadSafeGameObjectManager _threadSafeObjectTable;
         ConcurrentDictionary<string, string> _lastBattleNPCLines = new ConcurrentDictionary<string, string>();
         private int _blockAudioGenerationCount;
         private string _lastSoundPath;
@@ -125,11 +125,11 @@ namespace RoleplayingVoiceDalamud.Voice {
         List<string> _knownNPCBossAnnouncers = new List<string>();
         List<string> _knownNPCAnnouncers = new List<string>();
 
-        public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, IObjectTable objects,
+        public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, ThreadSafeGameObjectManager objects,
             IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWindow redoLineWindow, IToastGui toastGui) {
             this.addonTalkManager = addonTalkManager;
             this.framework = framework;
-            this._objectTable = objects;
+            this._threadSafeObjectTable = objects;
             _clientState = clientState;
             framework.Update += Framework_Update;
             _plugin = plugin;
@@ -240,6 +240,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         };
         private bool _filterWasRan;
         private Dictionary<string, string> _knownNpcs;
+        private List<IGameObject> _sortedObjectTable;
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_plugin.Window.NpcSpeechEnabled) {
@@ -543,13 +544,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_state == null) {
                                         _state = GetBattleTalkAddonState();
                                     }
-                                    _threadSafeObjectTable = _objectTable.ToList();
+                                    _sortedObjectTable = _threadSafeObjectTable.ToList();
                                     if (_plugin.PlayerCamera != null) {
-                                        _threadSafeObjectTable.Sort((x, y) => {
+										_sortedObjectTable.Sort((x, y) => {
                                             return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
                                         });
                                     }
-                                    Task.Run(delegate {
+                                    Task.Run((Action)delegate {
                                         if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
                                             _textIsPresent = true;
                                             if (_state.Text != _currentText) {
@@ -574,7 +575,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 if (!_currentDialoguePaths[_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key] &&
                                                 !_blockAudioGeneration && _plugin.Window.NpcSpeechEnabled) {
                                                     try {
-                                                        var otherData = _clientState.LocalPlayer.OnlineStatus;
+                                                        var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
                                                         if (otherData.Value.RowId == 15) {
                                                             ScdFile scdFile = GetScdFile(_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key);
                                                             WaveStream stream = scdFile.Audio[0].Data.GetStream();
@@ -591,7 +592,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 }
                                             }
                                             if (_currentSpeechObject != null && _startedNewDialogue) {
-                                                var otherData = _clientState.LocalPlayer.OnlineStatus;
+                                                var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
                                                 if (otherData.Value.RowId != 15) {
                                                     _namesToRemove.Clear();
                                                     _currentText = "";
@@ -625,7 +626,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private void GetAnimationDefaults() {
             var actorMemory = new ActorMemory();
-            actorMemory.SetAddress(_clientState.LocalPlayer.Address);
+            actorMemory.SetAddress(_threadSafeObjectTable.LocalPlayer.Address);
             var animationMemory = actorMemory.Animation;
             //animationMemory.LipsOverride = LipSyncTypes[5].Timeline.AnimationId;
             _defaultBaseOverride = MemoryService.Read<ushort>(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.BaseOverride)));
@@ -774,10 +775,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                     StopEmote(reference.Address);
                     if (_plugin.Config.UsePlayerSync) {
                         unsafe {
-                            var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                            var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
                             if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
-                                Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
+                                Plugin.RoleplayingMediaManagerReference.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmoteId", ushort.MaxValue);
+                                Plugin.RoleplayingMediaManagerReference.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmote", ushort.MaxValue);
                                 Plugin.PluginLog.Verbose("Sent emote cancellation to server for " + reference);
                             }
                         }
@@ -787,7 +788,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
             }
         }
-        public void TriggerEmoteUntilPlayerMoves(IPlayerCharacter player, ICharacter character, ushort emoteId) {
+        public void TriggerEmoteUntilPlayerMoves(ICharacter player, ICharacter character, ushort emoteId) {
             try {
                 var actorMemory = new ActorMemory();
                 actorMemory.SetAddress(character.Address);
@@ -812,8 +813,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                 unsafe {
                                     var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)player.Address);
                                     if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                        Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)0);
-                                        Plugin.RoleplayingMediaManagerReference.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)0);
+                                        Plugin.RoleplayingMediaManagerReference.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)0);
+                                        Plugin.RoleplayingMediaManagerReference.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)0);
                                     }
                                 }
                             }
@@ -918,12 +919,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                     bool isRetainer = false;
                     if (!isRetainer || !_plugin.Config.DontVoiceRetainers) {
                         string nameToUse = npcName;
-                        MediaGameObject currentSpeechObject = new MediaGameObject(_clientState.LocalPlayer);
+                        MediaGameObject currentSpeechObject = new MediaGameObject(_threadSafeObjectTable.LocalPlayer);
                         _currentSpeechObject = currentSpeechObject;
                         string backupVoice = voice;
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         bool foundName = false;
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _clientState.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
+                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _threadSafeObjectTable.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         MemoryStream stream = new MemoryStream();
                         bool canProceed = false;
@@ -1022,13 +1023,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Dalamud.Game.ClientState.Objects.Types.IGameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body, ref isRetainer);
                     if (!isRetainer || (_plugin != null && !_plugin.Config.DontVoiceRetainers)) {
                         string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
-                        MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_clientState.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
+                        MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_threadSafeObjectTable.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                         _currentSpeechObject = currentSpeechObject;
                         bool foundName = false;
                         bool isExtra = false;
                         bool isTerritorySpecific = false;
                         string initialCleanedValue = PhoneticLexiconCorrection(ConvertRomanNumberals(message));
-                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(initialCleanedValue, _clientState.LocalPlayer.Name.TextValue, ref foundName));
+                        string value = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogue(initialCleanedValue, _threadSafeObjectTable.LocalPlayer.Name.TextValue, ref foundName));
                         string arcValue = FeoUlRetainerCleanup(nameToUse, StripPlayerNameFromNPCDialogueArc(message));
                         string backupVoice = PickVoiceBasedOnTraits(nameToUse, gender, race, body, ref isExtra, ref isTerritorySpecific);
                         ReportData reportData = new ReportData(npcName, value, npcObject, _clientState.TerritoryType, note);
@@ -1258,7 +1259,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     _currentSpeechObject = currentSpeechObject;
                     bool foundName = false;
                     string initialConvertedString = PhoneticLexiconCorrection(ConvertRomanNumberals(message));
-                    string value = StripPlayerNameFromNPCDialogue(initialConvertedString, _clientState.LocalPlayer.Name.TextValue, ref foundName);
+                    string value = StripPlayerNameFromNPCDialogue(initialConvertedString, _threadSafeObjectTable.LocalPlayer.Name.TextValue, ref foundName);
                     ReportData reportData = new ReportData(name, message, objectId, body, gender, race, tribe, eyes, _clientState.TerritoryType, note);
                     string npcData = JsonConvert.SerializeObject(reportData);
                     bool isExtra = false;
@@ -1311,7 +1312,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private string FindNPCNameFromMessage(string message) {
             try {
-                return NPCVoiceMapping.GetNamelessNPCs()[message.Replace(_clientState.LocalPlayer.Name.TextValue.Split(" ")[0], "_NAME_")];
+                return NPCVoiceMapping.GetNamelessNPCs()[message.Replace(_threadSafeObjectTable.LocalPlayer.Name.TextValue.Split(" ")[0], "_NAME_")];
             } catch {
                 return "???";
             }
@@ -1332,7 +1333,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Servingway",
                     "Estate"
                 };
-            lock (_threadSafeObjectTable) {
+            lock (_sortedObjectTable) {
                 if (npcName == "???" || npcName == "Narrator") {
                     List<string> npcNames = new List<string>(){
                     "Minfillia",
@@ -1352,10 +1353,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                     "Pipin",
                     "Beq Lugg"
                 };
-                    foreach (var item in _threadSafeObjectTable) {
+                    foreach (var item in _sortedObjectTable) {
                         if (!npcNames.Contains(item.Name.TextValue) && !string.IsNullOrEmpty(item.Name.TextValue)) {
                             ICharacter character = item as ICharacter;
-                            if (character != null && character != _clientState.LocalPlayer) {
+                            if (character != null && character != _threadSafeObjectTable.LocalPlayer) {
                                 if (character.Customize[(byte)CustomizeIndex.ModelType] > 0) {
                                     if (item.ObjectKind == ObjectKind.EventNpc && !item.Name.TextValue.Contains("Estate")) {
                                         if (!npcNames.Contains(item.Name.TextValue)) {
@@ -1373,10 +1374,10 @@ namespace RoleplayingVoiceDalamud.Voice {
                         npcNames.Remove(item);
                     }
                     foreach (var name in npcNames) {
-                        foreach (var item in _threadSafeObjectTable) {
+                        foreach (var item in _sortedObjectTable) {
                             if (item.Name.TextValue.Contains(name) && !string.IsNullOrEmpty(item.Name.TextValue)) {
                                 ICharacter character = item as ICharacter;
-                                if (character != null && character != _clientState.LocalPlayer) {
+                                if (character != null && character != _threadSafeObjectTable.LocalPlayer) {
                                     gender = Convert.ToBoolean(character.Customize[(int)CustomizeIndex.Gender]);
                                     race = character.Customize[(int)CustomizeIndex.Race];
                                     body = character.Customize[(int)CustomizeIndex.ModelType];
@@ -1395,14 +1396,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                     }
                 } else {
-                    foreach (var item in _threadSafeObjectTable) {
+                    foreach (var item in _sortedObjectTable) {
                         if (item.Name.TextValue == npcName) {
                             _namesToRemove.Add(npcName);
                             return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
                         }
                     }
-                    foreach (var item in _threadSafeObjectTable) {
-                        if (item != _clientState.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
+                    foreach (var item in _sortedObjectTable) {
+                        if (item != _threadSafeObjectTable.LocalPlayer && !ContainsItemInList(item.Name.TextValue, npcBlacklist)) {
                             if (item.ObjectKind == ObjectKind.EventNpc) {
                                 _namesToRemove.Add(npcName);
                                 return GetCharacterData(item, ref gender, ref race, ref body, ref isRetainer);
@@ -1445,7 +1446,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return value.Replace(mainCharacterName[0], null).Replace(mainCharacterName[1], null);
         }
         private string StripPlayerNameFromNPCDialogueArc(string value) {
-            string[] mainCharacterName = _clientState.LocalPlayer.Name.TextValue.Split(" ");
+            string[] mainCharacterName = _threadSafeObjectTable.LocalPlayer.Name.TextValue.Split(" ");
             return value.Replace(mainCharacterName[0] + " " + mainCharacterName[1], "Arc")
                         .Replace(mainCharacterName[0], "Arc")
                         .Replace(mainCharacterName[1], "Arc");

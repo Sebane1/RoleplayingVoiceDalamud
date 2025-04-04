@@ -184,7 +184,7 @@ namespace RoleplayingVoice {
                     }
                     if (config.UsePlayerSync) {
                         Task.Run(async () => {
-                            bool success = await _roleplayingMediaManager.SendZip(_clientState.LocalPlayer.Name.TextValue, _voicePackStaging);
+                            bool success = await _roleplayingMediaManager.SendZip(_threadSafeObjectTable.LocalPlayer.Name.TextValue, _voicePackStaging);
                         });
                     }
                 });

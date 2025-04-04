@@ -44,7 +44,7 @@ namespace RoleplayingVoice {
                             Plugin.PluginLog.Error(e.Message);
                         }
                     }
-                    if (_clientState.LocalPlayer != null && _clientState.IsLoggedIn) {
+                    if (_threadSafeObjectTable.LocalPlayer != null && _clientState.IsLoggedIn) {
                         SendNetworkedVoice();
                     }
                     //if (_npcVoiceManager != null && config != null) {
@@ -116,8 +116,8 @@ namespace RoleplayingVoice {
                         Thread.Sleep(1000);
                     }
                     staging = true;
-                    if (_clientState.LocalPlayer != null) {
-                        stagingPath = config.CacheFolder + @"\Staging\" + _clientState.LocalPlayer.Name.TextValue;
+                    if (_threadSafeObjectTable.LocalPlayer != null) {
+                        stagingPath = config.CacheFolder + @"\Staging\" + _threadSafeObjectTable.LocalPlayer.Name.TextValue;
                         if (Directory.Exists(config.CacheFolder + @"\Staging")) {
                             foreach (string file in Directory.EnumerateFiles(config.CacheFolder + @"\Staging")) {
                                 try {

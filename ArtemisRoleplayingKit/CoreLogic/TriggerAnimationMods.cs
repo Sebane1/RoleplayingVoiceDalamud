@@ -37,7 +37,7 @@ namespace RoleplayingVoice {
                                     }
                                 } else {
                                     if (emoteItem.EmoteMode.Value.ConditionMode == 3 || emoteItem.EmoteMode.Value.ConditionMode == 11) {
-                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, targetNPC,
+                                        _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_threadSafeObjectTable.LocalPlayer, targetNPC,
                                          (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                     } else {
                                         _addonTalkHandler.TriggerEmoteTimed(targetNPC, (ushort)emoteItem.ActionTimeline[0].Value.RowId);
@@ -103,7 +103,7 @@ namespace RoleplayingVoice {
                                                 item->Balloon.Text = new FFXIVClientStructs.FFXIV.Client.System.String.Utf8String("I will stand here master!");
                                                 item->Balloon.Type = BalloonType.Timer;
                                                 item->Balloon.State = BalloonState.Active;
-                                                item->GameObject.Position = _clientState.LocalPlayer.Position;
+                                                item->GameObject.Position = _threadSafeObjectTable.LocalPlayer.Position;
                                             }
 
                                             break;
@@ -161,10 +161,10 @@ namespace RoleplayingVoice {
                                                 if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                     if (AgentEmote.Instance()->CanUseEmote((ushort)emoteItem.RowId)) {
                                                         _toast.ShowNormal(character.Name.TextValue + " follows your command!");
-                                                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
                                                         if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteItem.RowId);
-                                                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteItem.ActionTimeline[0].Value.RowId);
+                                                            _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteItem.RowId);
+                                                            _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                                         }
                                                         Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                                         if (becomesPreOccupied) {
@@ -173,7 +173,7 @@ namespace RoleplayingVoice {
                                                                 _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
                                                             }
                                                         } else {
-                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character,
+                                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_threadSafeObjectTable.LocalPlayer, character,
                                                                 (ushort)emoteItem.ActionTimeline[0].Value.RowId);
                                                         }
                                                     } else {
@@ -399,9 +399,9 @@ namespace RoleplayingVoice {
         }
 
         public void TriggerCharacterEmote(EmoteModData emoteModData, ICharacter character, bool stillTriggerIfDontOwnEmote = true) {
-            if (character == _clientState.LocalPlayer) {
+            if (character == _threadSafeObjectTable.LocalPlayer) {
                 if (_wasDoingFakeEmote) {
-                    _addonTalkHandler.StopEmote(_clientState.LocalPlayer.Address);
+                    _addonTalkHandler.StopEmote(_threadSafeObjectTable.LocalPlayer.Address);
                 }
             }
             PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.ObjectIndex, RedrawType.Redraw);
@@ -411,7 +411,7 @@ namespace RoleplayingVoice {
                 unsafe {
                     ownsEmote = AgentEmote.Instance()->CanUseEmote((ushort)emoteModData.EmoteId);
                 }
-                if (character == _clientState.LocalPlayer && ownsEmote) {
+                if (character == _threadSafeObjectTable.LocalPlayer && ownsEmote) {
                     _messageQueue.Enqueue(emoteModData.Emote);
                     if (!_animationModsAlreadyTriggered.Contains(emoteModData.FoundModName) && config.MoveSCDBasedModsToPerformanceSlider) {
                         Thread.Sleep(100);
@@ -431,7 +431,7 @@ namespace RoleplayingVoice {
                     _objectRecentlyDidEmote = true;
                 }
                 if ((!_didRealEmote || !ownsEmote) && stillTriggerIfDontOwnEmote) {
-                    if (character == _clientState.LocalPlayer) {
+                    if (character == _threadSafeObjectTable.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
                     _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
@@ -442,10 +442,10 @@ namespace RoleplayingVoice {
                         }
                     }
                     unsafe {
-                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                        var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
                         if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteModData.EmoteId);
-                            _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteModData.AnimationId);
+                            _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)emoteModData.EmoteId);
+                            _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)emoteModData.AnimationId);
                         } else {
                             _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort)emoteModData.EmoteId);
                             _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort)emoteModData.AnimationId);
@@ -461,10 +461,10 @@ namespace RoleplayingVoice {
                                 _addonTalkHandler.StopEmote(character.Address);
                                 _wasDoingFakeEmote = false;
                                 unsafe {
-                                    var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                    var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
                                     if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name + "MinionEmoteId", (ushort.MaxValue));
-                                        _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name + "MinionEmote", (ushort.MaxValue));
+                                        _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name + "MinionEmoteId", (ushort.MaxValue));
+                                        _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name + "MinionEmote", (ushort.MaxValue));
                                     } else {
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emoteId", (ushort.MaxValue));
                                         _roleplayingMediaManager.SendShort(character.Name.TextValue + "emote", (ushort.MaxValue));

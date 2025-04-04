@@ -114,16 +114,16 @@ namespace RoleplayingVoice {
                                         }
                                         if (config.UsePlayerSync) {
                                             unsafe {
-                                                var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_clientState.LocalPlayer.Address);
+                                                var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
                                                 if (characterStruct->CompanionObject != null && character.Address == (nint)characterStruct->CompanionObject) {
-                                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.RowId);
-                                                    _roleplayingMediaManager.SendShort(_clientState.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
+                                                    _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmoteId", (ushort)value.RowId);
+                                                    _roleplayingMediaManager.SendShort(_threadSafeObjectTable.LocalPlayer.Name.TextValue + "MinionEmote", (ushort)value.ActionTimeline[0].Value.RowId);
                                                     Plugin.PluginLog.Verbose("Sent emote to server for " + character.Name);
                                                 }
                                             }
                                         }
                                         if (value.EmoteMode.Value.ConditionMode == 3 || value.EmoteMode.Value.ConditionMode == 11) {
-                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_clientState.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
+                                            _addonTalkHandler.TriggerEmoteUntilPlayerMoves(_threadSafeObjectTable.LocalPlayer, character, (ushort)value.ActionTimeline[0].Value.RowId);
                                         } else {
                                             _addonTalkHandler.TriggerEmoteTimed(character, (ushort)value.ActionTimeline[0].Value.RowId, 1000);
                                         }
@@ -155,9 +155,9 @@ namespace RoleplayingVoice {
         }
         public Dictionary<string, ICharacter> GetLocalCharacters(bool incognito) {
             var _objects = new Dictionary<string, ICharacter>();
-            if (_clientState.LocalPlayer != null) {
+            if (_threadSafeObjectTable.LocalPlayer != null) {
                 _objects.Add(incognito ? "Player Character" :
-                _clientState.LocalPlayer.Name.TextValue, _clientState.LocalPlayer as ICharacter);
+                _threadSafeObjectTable.LocalPlayer.Name.TextValue, _threadSafeObjectTable.LocalPlayer as ICharacter);
                 bool oneMinionOnly = false;
                 foreach (var item in GetNearestObjects()) {
                     ICharacter character = item as ICharacter;
@@ -195,8 +195,8 @@ namespace RoleplayingVoice {
             _playerCount = 0;
             List<Dalamud.Game.ClientState.Objects.Types.IGameObject> gameObjects = new List<Dalamud.Game.ClientState.Objects.Types.IGameObject>();
             foreach (var item in _objectTable) {
-                if (Vector3.Distance(_clientState.LocalPlayer.Position, item.Position) < 3f
-                    && item.GameObjectId != _clientState.LocalPlayer.GameObjectId) {
+                if (Vector3.Distance(_threadSafeObjectTable.LocalPlayer.Position, item.Position) < 3f
+                    && item.GameObjectId != _threadSafeObjectTable.LocalPlayer.GameObjectId) {
                     if (item.IsValid()) {
                         gameObjects.Add((item as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                     }

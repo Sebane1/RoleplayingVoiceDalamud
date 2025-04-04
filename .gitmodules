@@ -19,3 +19,6 @@
 [submodule "ArtemisRoleplayingKit/IPC/PenumbraAndGlamourerHelpers"]
 	path = ArtemisRoleplayingKit/IPC/PenumbraAndGlamourerHelpers
 	url = https://github.com/Sebane1/PenumbraAndGlamourerHelpers.git
+[submodule "ArtemisRoleplayingKit/ThreadSafeDalamudObjectTable"]
+	path = ArtemisRoleplayingKit/ThreadSafeDalamudObjectTable
+	url = https://github.com/Sebane1/ThreadSafeDalamudObjectTable

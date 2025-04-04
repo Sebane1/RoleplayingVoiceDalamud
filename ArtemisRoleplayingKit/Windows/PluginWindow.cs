@@ -158,7 +158,7 @@ namespace RoleplayingVoice {
 
         public override void OnOpen() {
             base.OnOpen();
-            PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ClientState.LocalPlayer as ICharacter, false);
+            PluginReference.CheckAnimationMods(new string[1], "", PluginReference.ThreadSafeObjectTable.LocalPlayer as ICharacter, false);
             PluginReference.NpcPersonalityWindow.OnOpen();
         }
         private void VoicePackComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
@@ -227,14 +227,14 @@ namespace RoleplayingVoice {
                     _voicePackTypeBox.SelectedIndex = configuration.VoiceReplacementType;
                     _voiceToSwap.SelectedIndex = configuration.ChosenVanillaReplacement;
                     //_dialogueServerIp = configuration.CustomDialogueRelayServerIp;
-                    if (configuration.Characters != null && clientState.LocalPlayer != null) {
-                        if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                            characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
+                    if (configuration.Characters != null && PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
+                        if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                            characterVoice = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue];
                         }
                     }
-                    if (configuration.CharacterVoicePacks != null && clientState.LocalPlayer != null) {
-                        if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                            characterVoicePack = configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue];
+                    if (configuration.CharacterVoicePacks != null && PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
+                        if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                            characterVoicePack = configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue];
                         }
                     }
                     RefreshVoices();
@@ -307,9 +307,9 @@ namespace RoleplayingVoice {
 
         private void ClientState_Login() {
             if (configuration.Characters != null) {
-                if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                    characterVoice = configuration.Characters[clientState.LocalPlayer.Name.TextValue]
-                        != null ? configuration.Characters[clientState.LocalPlayer.Name.TextValue] : "";
+                if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                    characterVoice = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
+                        != null ? configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
                 } else {
                     characterVoice = "None";
                 }
@@ -317,9 +317,9 @@ namespace RoleplayingVoice {
                 characterVoice = "None";
             }
             if (configuration.CharacterVoicePacks != null) {
-                if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
-                    characterVoicePack = configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue]
-                        != null ? configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] : "";
+                if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                    characterVoicePack = configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
+                        != null ? configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
                 } else {
                     characterVoicePack = "None";
                 }
@@ -331,8 +331,8 @@ namespace RoleplayingVoice {
             }
         }
         public override void Draw() {
-            if (clientState.LocalPlayer != null) {
-                this.WindowName = clientState.LocalPlayer.Name + "'s Config";
+            if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
+                this.WindowName = PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s Config";
             } else {
                 this.WindowName = "No User Present";
             }
@@ -516,7 +516,7 @@ namespace RoleplayingVoice {
                 if (PluginReference != null && PluginReference.NpcVoiceManager != null && PluginReference.NpcVoiceManager.UseCustomRelayServer) {
                     ImGui.Text("Connected to server " + PluginReference.NpcVoiceManager.CurrentServerAlias + ".");
                 }
-                ImGui.Text(clientState.LocalPlayer != null ? clientState.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
+                ImGui.Text(PluginReference.ThreadSafeObjectTable.LocalPlayer != null ? PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
@@ -605,9 +605,9 @@ namespace RoleplayingVoice {
             ImGui.Text("Player Whitelist");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
             ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
-            bool playerTargetted = (clientState.LocalPlayer != null && clientState.LocalPlayer.TargetObject != null);
+            bool playerTargetted = (PluginReference.ThreadSafeObjectTable.LocalPlayer != null && PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject != null);
             bool playerCloseEnough = playerTargetted && Vector3.Distance(
-            clientState.LocalPlayer.Position, clientState.LocalPlayer.TargetObject.Position) < 1;
+            PluginReference.ThreadSafeObjectTable.LocalPlayer.Position, PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.Position) < 1;
             string targetedPlayerText = "Add Targetted Player";
             if (!playerTargetted) {
                 targetedPlayerText += " (No Target)";
@@ -617,8 +617,8 @@ namespace RoleplayingVoice {
                 ImGui.BeginDisabled();
             }
             if (ImGui.Button(targetedPlayerText)) {
-                if (clientState.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
-                    string senderName = Plugin.CleanSenderName(clientState.LocalPlayer.TargetObject.Name.TextValue);
+                if (PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
+                    string senderName = Plugin.CleanSenderName(PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.Name.TextValue);
                     if (!configuration.Whitelist.Contains(senderName)) {
                         configuration.Whitelist.Add(senderName);
                     }
@@ -757,11 +757,11 @@ namespace RoleplayingVoice {
         }
         public void SaveSettings() {
             configuration.ConnectionIP = serverIP;
-            if (clientState.LocalPlayer != null) {
+            if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
                 if (configuration.Characters == null) {
                     configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                 }
-                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
+                configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = characterVoice != null ? characterVoice : "";
             }
             if (_customTTSVoiceActive && !string.IsNullOrEmpty(apiKey)) {
                 configuration.ApiKey = apiKey;
@@ -770,7 +770,7 @@ namespace RoleplayingVoice {
             if (configuration.CharacterVoicePacks == null) {
                 configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
             }
-            configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
+            configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = characterVoicePack != null ? characterVoicePack : "";
             configuration.PlayerCharacterVolume = _playerCharacterVolume;
             configuration.OtherCharacterVolume = _otherCharacterVolume;
             configuration.UnfocusedCharacterVolume = _unfocusedCharacterVolume;
@@ -867,7 +867,7 @@ namespace RoleplayingVoice {
             Task.Run(async delegate () {
                 _refreshing = true;
                 try {
-                    if (clientState.LocalPlayer != null) {
+                    if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
                         List<string> voicePacks = new List<string>();
                         string path = cacheFolder + @"\VoicePack\";
                         if (Directory.Exists(path)) {
@@ -884,21 +884,21 @@ namespace RoleplayingVoice {
                         if (configuration.CharacterVoicePacks == null) {
                             configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
                         }
-                        if (configuration.CharacterVoicePacks.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                        if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
                             if (voicePackComboBox != null) {
                                 if (_voicePackList != null) {
                                     if (voiceComboBox != null) {
                                         voicePackComboBox.Contents = _voicePackList;
                                         if (voicePackComboBox.Contents.Length > 0) {
                                             for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
-                                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
                                                     voicePackComboBox.SelectedIndex = i;
                                                     break;
                                                 }
                                             }
-                                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue])) {
+                                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
                                                 if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
-                                                    configuration.CharacterVoicePacks[clientState.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                                    configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
                                                 }
                                             }
                                         }
@@ -925,14 +925,14 @@ namespace RoleplayingVoice {
                             }
                             switch (_voiceEngineComboBox.SelectedIndex) {
                                 case 0:
-                                    _manager.SetVoiceElevenlabs(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    _manager.SetVoiceElevenlabs(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
                                     _manager.RefreshElevenlabsSubscriptionInfo();
                                     break;
                                 case 1:
-                                    _manager.SetVoiceXTTS(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    _manager.SetVoiceXTTS(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
                                     break;
                                 case 2:
-                                    _manager.SetVoiceMicrosoftNarrator(Configuration.Characters[clientState.LocalPlayer.Name.TextValue]);
+                                    _manager.SetVoiceMicrosoftNarrator(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
                                     break;
                             }
                             if (_voiceList != null && _voiceList.Length > 0) {
@@ -942,21 +942,21 @@ namespace RoleplayingVoice {
                         if (configuration.Characters == null) {
                             configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
                         }
-                        if (configuration.Characters.ContainsKey(clientState.LocalPlayer.Name.TextValue)) {
+                        if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
                             if (voiceComboBox != null) {
                                 if (_voiceList != null && _voiceList.Length > 0) {
                                     voiceComboBox.Contents = _voiceList;
                                     if (voiceComboBox.Contents.Length > 0) {
                                         for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                            string value = configuration.Characters[clientState.LocalPlayer.Name.TextValue];
+                                            string value = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue];
                                             if (voiceComboBox.Contents[i].Contains(value) && !string.IsNullOrEmpty(value)) {
                                                 voiceComboBox.SelectedIndex = i;
                                                 break;
                                             }
                                         }
-                                        if (string.IsNullOrWhiteSpace(configuration.Characters[clientState.LocalPlayer.Name.TextValue])) {
+                                        if (string.IsNullOrWhiteSpace(configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
                                             if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
-                                                configuration.Characters[clientState.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                                configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
                                             }
                                         }
                                     }
@@ -1066,7 +1066,7 @@ namespace RoleplayingVoice {
             ImGui.Checkbox("##characterVoiceActive", ref _customTTSVoiceActive);
             ImGui.SameLine();
             ImGui.Text("TTS Voice Enabled");
-            if (clientState.LocalPlayer != null && _customTTSVoiceActive) {
+            if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null && _customTTSVoiceActive) {
                 ImGui.Text("TTS Voice Engine");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 _voiceEngineComboBox.Width = (int)ImGui.GetContentRegionMax().X;
@@ -1102,7 +1102,7 @@ namespace RoleplayingVoice {
                 if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
                     || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2))) {
                     if (_voiceList.Length > 0) {
-                        ImGui.Text((_streamDetectionActive ? "Your characters " : clientState.LocalPlayer.Name + "'s") + " TTS Voice");
+                        ImGui.Text((_streamDetectionActive ? "Your characters " : PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s") + " TTS Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
                         voiceComboBox.Draw();
                     } else {
@@ -1175,7 +1175,7 @@ namespace RoleplayingVoice {
                         break;
                 }
             } else if (voiceComboBox.Contents.Length == 1 && voiceComboBox != null
-              && !isApiKeyValid && _customTTSVoiceActive || clientState.LocalPlayer == null && !isApiKeyValid && _customTTSVoiceActive) {
+              && !isApiKeyValid && _customTTSVoiceActive || PluginReference.ThreadSafeObjectTable.LocalPlayer == null && !isApiKeyValid && _customTTSVoiceActive) {
                 voiceComboBox.Contents[0] = "API not initialized";
                 if (_voiceList.Length > 0) {
                     ImGui.Text("Voice");

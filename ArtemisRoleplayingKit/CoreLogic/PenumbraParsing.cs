@@ -382,8 +382,8 @@ namespace RoleplayingVoice {
             if (config != null) {
                 if (config.VoicePackIsActive) {
                     if (config.CharacterVoicePacks != null && config.VoiceReplacementType == 0) {
-                        if (config.CharacterVoicePacks.ContainsKey(_clientState.LocalPlayer.Name.TextValue)) {
-                            string voice = config.CharacterVoicePacks[_clientState.LocalPlayer.Name.TextValue];
+                        if (config.CharacterVoicePacks.ContainsKey(_threadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                            string voice = config.CharacterVoicePacks[_threadSafeObjectTable.LocalPlayer.Name.TextValue];
                             if (!string.IsNullOrEmpty(voice)) {
                                 string path = config.CacheFolder + @"\VoicePack\" + voice;
                                 if (Directory.Exists(path)) {

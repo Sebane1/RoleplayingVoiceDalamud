@@ -36,9 +36,9 @@ namespace RoleplayingVoice {
             pluginInterface.SavePluginConfig(config);
         }
         unsafe private void CheckDependancies(bool forceNewAssignments = false) {
-            if (_clientState.LocalPlayer != null) {
+            if (_threadSafeObjectTable.LocalPlayer != null) {
                 if (_playerObject == null || forceNewAssignments) {
-                    _playerObject = new MediaGameObject(_clientState.LocalPlayer);
+                    _playerObject = new MediaGameObject(_threadSafeObjectTable.LocalPlayer);
                 }
                 if (_mediaManager == null || forceNewAssignments) {
                     _camera = CameraManager.Instance()->GetActiveCamera();
@@ -99,7 +99,7 @@ namespace RoleplayingVoice {
         }
         private void _roleplayingMediaManager_InitializationStatus(object sender, string e) {
             try {
-                if (_clientState.LocalPlayer != null) {
+                if (_threadSafeObjectTable.LocalPlayer != null) {
                     if (_chat != null) {
                         _chat.Print(e);
                     }
@@ -141,7 +141,7 @@ namespace RoleplayingVoice {
                 Window.RequestingReconnect += Window_RequestingReconnect;
                 Window.OnMoveFailed += Window_OnMoveFailed;
                 config.OnConfigurationChanged += Config_OnConfigurationChanged;
-                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _objectTableThreadUnsafe);
+                _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _threadSafeObjectTable);
                 _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();

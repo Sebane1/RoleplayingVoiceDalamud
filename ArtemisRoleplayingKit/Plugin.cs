@@ -37,11 +37,11 @@ using RoleplayingVoiceDalamud.VoiceSorting;
 using Dalamud.Game.ClientState.Objects.Types;
 using RoleplayingVoiceDalamudWrapper;
 using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
+using DragAndDropTexturing.ThreadSafeDalamudObjectTable;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
-namespace RoleplayingVoice
-{
+namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
         #region Fields
         private int performanceLimiter;
@@ -53,7 +53,7 @@ namespace RoleplayingVoice
         private IGameConfig _gameConfig;
         private ISigScanner _sigScanner;
         private IGameInteropProvider _interopProvider;
-        private IObjectTable _objectTableThreadUnsafe;
+        private ThreadSafeGameObjectManager _threadSafeObjectTable;
         private IFramework _framework;
 
         private readonly PluginCommandManager<Plugin> commandManager;
@@ -262,6 +262,7 @@ namespace RoleplayingVoice
         public IGameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
         public static bool Disposed { get; internal set; }
         public VoiceEditor VoiceEditor { get => _voiceEditor; set => _voiceEditor = value; }
+        public ThreadSafeGameObjectManager ThreadSafeObjectTable { get => _threadSafeObjectTable; set => _threadSafeObjectTable = value; }
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -294,6 +295,7 @@ namespace RoleplayingVoice
                 this.pluginInterface = pi;
                 this._clientState = clientState;
                 // Get or create a configuration object
+                _threadSafeObjectTable = new ThreadSafeGameObjectManager(_clientState, objectTable, framework, pluginLog);
                 this.config = (Configuration)this.pluginInterface.GetPluginConfig()
                           ?? this.pluginInterface.Create<Configuration>();
                 // Initialize the UI
@@ -362,7 +364,6 @@ namespace RoleplayingVoice
                 _gameConfig = gameConfig;
                 _sigScanner = scanner;
                 _interopProvider = interopProvider;
-                _objectTableThreadUnsafe = objectTable;
                 _framework = framework;
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
@@ -371,7 +372,7 @@ namespace RoleplayingVoice
                         config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
                     _voiceEditor.NPCVoiceManager = _npcVoiceManager;
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _objectTableThreadUnsafe, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
                     _gameGui = gameGui;
                     _dragDrop = dragDrop;
@@ -425,7 +426,7 @@ namespace RoleplayingVoice
         [HelpMessage("Chat With Custom NPC")]
         public void ExecuteCommandD(string command, string args) {
             bool handled = false;
-            var name = _clientState.LocalPlayer.Name;
+            var name = _threadSafeObjectTable.LocalPlayer.Name;
             var message = new SeString(new TextPayload(args.Replace("cc", "")));
             _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
             //Chat_ChatMessage(XivChatType.Say, 0, ref name, ref message, ref handled);
@@ -478,10 +479,10 @@ namespace RoleplayingVoice
                             AttemptConnection();
                             break;
                         case "anim":
-                            _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _clientState.LocalPlayer as ICharacter));
+                            _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _threadSafeObjectTable.LocalPlayer as ICharacter));
                             break;
                         case "vanillaemote":
-                            _checkVanillaEmoteQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _clientState.LocalPlayer as ICharacter));
+                            _checkVanillaEmoteQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _threadSafeObjectTable.LocalPlayer as ICharacter));
                             break;
                         case "companionanim":
                             Task.Run(() => {

@@ -15,7 +15,7 @@ namespace RoleplayingVoice
 {
     public partial class Plugin : IDalamudPlugin {
         public void StartCatalogingItems() {
-            _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
+            _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_threadSafeObjectTable.LocalPlayer.ObjectIndex);
             _catalogueCollectionName = _originalCollection.Item3.Id;
             Directory.CreateDirectory(_catalogueWindow.CataloguePath);
             _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
@@ -87,7 +87,7 @@ namespace RoleplayingVoice
                                     Thread.Sleep(100);
                                     PenumbraAndGlamourerHelperFunctions.SetDependancies(catalogueMod, _modelMods.Keys, _catalogueCollectionName);
                                     Thread.Sleep(100);
-                                    PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_clientState.LocalPlayer.ObjectIndex);
+                                    PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_threadSafeObjectTable.LocalPlayer.ObjectIndex);
                                 }
                             }
                         }
@@ -97,7 +97,7 @@ namespace RoleplayingVoice
                         _currentClothingChangedItems.Count && !AlreadyHasScreenShots(_currentModelMod)) {
                             try {
                                 _currentClothingItem = _currentClothingChangedItems[_currentChangedItemIndex];
-                                CleanEquipment(_clientState.LocalPlayer.ObjectIndex);
+                                CleanEquipment(_threadSafeObjectTable.LocalPlayer.ObjectIndex);
                                 _glamourerScreenshotQueue.Enqueue(_currentClothingItem);
                                 _catalogueScreenShotTaken = false;
                                 while (!_catalogueScreenShotTaken) {
@@ -136,7 +136,7 @@ namespace RoleplayingVoice
             if (_glamourerScreenshotQueue.Count > 0) {
                 var item = _glamourerScreenshotQueue.Dequeue();
                 if (item != null && item != null) {
-                    _equipmentFound = PenumbraAndGlamourerHelperFunctions.SetEquipment(item, _clientState.LocalPlayer.ObjectIndex);
+                    _equipmentFound = PenumbraAndGlamourerHelperFunctions.SetEquipment(item, _threadSafeObjectTable.LocalPlayer.ObjectIndex);
                     if (_equipmentFound) {
                         _chat.Print("Screenshotting item " + item.Name + "! " + (((float)_catalogueIndex / (float)_modelModList.Count) * 100f) + "% complete!");
                         Task.Run(() => {
