@@ -110,17 +110,16 @@ public class Chat {
     /// <returns>sanitised text</returns>
     /// <exception cref="InvalidOperationException">If the signature for this function could not be found</exception>
     public unsafe string SanitiseText(string text) {
-        if (this._sanitiseString == null) {
-            throw new InvalidOperationException("Could not find signature for chat sanitisation");
-        }
+        //if (this._sanitiseString == null) {
+        //    throw new InvalidOperationException("Could not find signature for chat sanitisation");
+        //}
 
         var uText = Utf8String.FromString(text);
 
-        this._sanitiseString(uText, 0x27F, IntPtr.Zero);
+        uText->SanitizeString((AllowedEntities)0x27F);
         var sanitised = uText->ToString();
 
-        uText->Dtor();
-        IMemorySpace.Free(uText);
+        uText->Dtor(true);
 
         return sanitised;
     }
