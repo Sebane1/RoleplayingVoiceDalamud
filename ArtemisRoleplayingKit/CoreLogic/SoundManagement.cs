@@ -9,10 +9,12 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Lumina.Excel.Sheets;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Newtonsoft.Json;
+using Penumbra.Api.Enums;
 using RoleplayingMediaCore;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud;
@@ -52,6 +54,10 @@ namespace RoleplayingVoice {
                         }
                     } else {
                         _objectTable = _threadSafeObjectTable.ToArray();
+                    }
+                    if (_queuePenumbraRefresh) {
+                        _queuePenumbraRefresh = false;
+                        PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_penumbraRefreshIndex, RedrawType.Redraw);
                     }
                     if (!_hasBeenInitialized && _threadSafeObjectTable.LocalPlayer != null) {
                         InitializeEverything();

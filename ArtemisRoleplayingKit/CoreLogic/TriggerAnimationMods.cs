@@ -4,6 +4,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Lumina.Excel.Sheets;
 using Penumbra.Api.Enums;
@@ -17,9 +18,12 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using VfxEditor.TmbFormat;
+using Task = System.Threading.Tasks.Task;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
+        private bool _queuePenumbraRefresh;
+        private ushort _penumbraRefreshIndex;
         #region Trigger Animation Mods
         public void DoEmote(string command, ICharacter targetNPC, bool becomesPreOccupied = true) {
             try {
@@ -404,7 +408,8 @@ namespace RoleplayingVoice {
                     _addonTalkHandler.StopEmote(_threadSafeObjectTable.LocalPlayer.Address);
                 }
             }
-            PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(character.ObjectIndex, RedrawType.Redraw);
+            _penumbraRefreshIndex = character.ObjectIndex;
+            _queuePenumbraRefresh = true;
             Task.Run(() => {
                 //Thread.Sleep(1000);
                 bool ownsEmote = false;
@@ -422,7 +427,6 @@ namespace RoleplayingVoice {
                     Thread.Sleep(2000);
                 } else {
                     _mediaManager.StopAudio(_playerObject);
-                    //Thread.Sleep(1000);
                 }
                 if (_objectRecentlyDidEmote) {
                     Thread.Sleep(1000);
@@ -434,8 +438,8 @@ namespace RoleplayingVoice {
                     if (character == _threadSafeObjectTable.LocalPlayer) {
                         _wasDoingFakeEmote = true;
                     }
-                    _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId);
-                    OnEmote(character, (ushort)emoteModData.EmoteId);
+                    _framework.RunOnFrameworkThread(() => _addonTalkHandler.TriggerEmote(character.Address, (ushort)emoteModData.AnimationId));
+                    _framework.RunOnFrameworkThread(() => OnEmote(character, (ushort)emoteModData.EmoteId));
                     if (character.ObjectKind == ObjectKind.Companion) {
                         if (!_preOccupiedWithEmoteCommand.Contains(character.Name.TextValue)) {
                             _preOccupiedWithEmoteCommand.Add(character.Name.TextValue);
@@ -458,7 +462,7 @@ namespace RoleplayingVoice {
                             Thread.Sleep(500);
                             if (Vector3.Distance(lastPosition, character.Position) > 0.001f) {
                                 _didRealEmote = false;
-                                _addonTalkHandler.StopEmote(character.Address);
+                                _framework.RunOnFrameworkThread(() => _addonTalkHandler.StopEmote(character.Address));
                                 _wasDoingFakeEmote = false;
                                 unsafe {
                                     var characterStruct = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address);
@@ -482,7 +486,7 @@ namespace RoleplayingVoice {
                         }
                     });
                 } else {
-                    if(!ownsEmote && !stillTriggerIfDontOwnEmote) {
+                    if (!ownsEmote && !stillTriggerIfDontOwnEmote) {
                         _toast.ShowError("You do not own this vanilla emote, so it was not triggered. Unlock it in game or via Mogstation.");
                     }
                 }
