@@ -37,7 +37,7 @@ jobs:
       - name: Write version into manifest
         run: |
           $ver = '${{ github.ref }}' -replace 'refs/tags/',''
-          $path = './ArtemisRoleplayingKit/bin/Release/net9.0-windows/RoleplayingVoiceDalamud.json'
+          $path = './ArtemisRoleplayingKit/bin/Release/RoleplayingVoiceDalamud.json'
           $content = get-content -path $path
           $content = $content -replace '0.0.0.0',$ver
           set-content -Path $path -Value $content
