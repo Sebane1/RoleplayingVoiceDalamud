@@ -44,7 +44,7 @@ jobs:
 
       - name: Packing Release
         run: |
-          pushd ArtemisRoleplayingKit/bin/Release/net8.0-windows
+          pushd ArtemisRoleplayingKit/bin/Release/
           7z a ../RoleplayingVoiceDalamud.zip *
           popd
         shell: bash
