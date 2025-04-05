@@ -23,42 +23,44 @@ namespace RoleplayingVoiceDalamud.GameObjects {
                     if (character != null) {
                         Actor* characterActor = (Actor*)character.Address;
                         var model = characterActor->Model;
-                        if (model != null && model->Skeleton != null) {
-                            for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
-                                var partialSkeleton = model->Skeleton->PartialSkeletons[i];
-                                var pos = partialSkeleton.GetHavokPose(0);
-                                if (pos != null) {
-                                    var skeleton = pos->Skeleton;
-                                    for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
-                                        if (model->Skeleton != null) {
-                                            var bone = model->Skeleton->GetBone(i, i2);
-                                            if (bone.HkaBone.Name.String != null) {
-                                                if (!_lastBonePositions[character.Name.TextValue].ContainsKey(bone.HkaBone.Name.String)) {
-                                                    _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String] = new MovingObject(new Vector3(), new Vector3(), false);
-                                                }
-                                                var movingObject = _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String];
+                        if (model != null) {
+                            if (model != null && model->Skeleton != null) {
+                                for (int i = 0; i < model->Skeleton->PartialSkeletonCount; i++) {
+                                    var partialSkeleton = model->Skeleton->PartialSkeletons[i];
+                                    var pos = partialSkeleton.GetHavokPose(0);
+                                    if (pos != null) {
+                                        var skeleton = pos->Skeleton;
+                                        for (var i2 = 1; i2 < skeleton->Bones.Length; i2++) {
+                                            if (model->Skeleton != null) {
+                                                var bone = model->Skeleton->GetBone(i, i2);
+                                                if (bone.HkaBone.Name.String != null) {
+                                                    if (!_lastBonePositions[character.Name.TextValue].ContainsKey(bone.HkaBone.Name.String)) {
+                                                        _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String] = new MovingObject(new Vector3(), new Vector3(), false);
+                                                    }
+                                                    var movingObject = _lastBonePositions[character.Name.TextValue][bone.HkaBone.Name.String];
 
-                                                var worldPos = bone.GetWorldPos(characterActor, model);
-                                                var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
-                                                float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
-                                                float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
-                                                if (distance > 3f || rotationDistance > 3f) {
-                                                    if (!movingObject.IsMoving) {
-                                                        string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
-                                                        if (!string.IsNullOrEmpty(value)) {
-                                                            var boneObject = new MediaBoneObject(bone, characterActor, model);
-                                                            string boneName = bone.HkaBone.Name.String;
-                                                            Plugin.PluginLog.Verbose(boneName + " playing sound.");
-                                                            mediaManager.PlayMedia(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
-                                                                movingObject.IsMoving = false;
-                                                                Plugin.PluginLog.Verbose(boneName + " stopping sound.");
-                                                            });
-                                                            movingObject.IsMoving = true;
+                                                    var worldPos = bone.GetWorldPos(characterActor, model);
+                                                    var rotation = MediaBoneObject.Q2E(bone.Transform.Rotation);
+                                                    float distance = Vector3.Distance(movingObject.LastPosition, worldPos);
+                                                    float rotationDistance = Vector3.Distance(movingObject.LastRotation, rotation);
+                                                    if (distance > 3f || rotationDistance > 3f) {
+                                                        if (!movingObject.IsMoving) {
+                                                            string value = characterVoicePack.GetMisc(bone.HkaBone.Name.String, false, true);
+                                                            if (!string.IsNullOrEmpty(value)) {
+                                                                var boneObject = new MediaBoneObject(bone, characterActor, model);
+                                                                string boneName = bone.HkaBone.Name.String;
+                                                                Plugin.PluginLog.Verbose(boneName + " playing sound.");
+                                                                mediaManager.PlayMedia(boneObject, value, SoundType.LoopWhileMoving, false, 0, default, (object o, string args) => {
+                                                                    movingObject.IsMoving = false;
+                                                                    Plugin.PluginLog.Verbose(boneName + " stopping sound.");
+                                                                });
+                                                                movingObject.IsMoving = true;
+                                                            }
                                                         }
                                                     }
+                                                    movingObject.LastPosition = worldPos;
+                                                    movingObject.LastRotation = rotation;
                                                 }
-                                                movingObject.LastPosition = worldPos;
-                                                movingObject.LastRotation = rotation;
                                             }
                                         }
                                     }
