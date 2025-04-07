@@ -73,32 +73,34 @@ namespace RoleplayingVoice {
             }
         }
         public void BackupAnimations() {
-            Task.Run(() => {
-                _isBackingUpAnimations = true;
-                string penumbraPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
-                string backupPath = Path.Combine(config.CacheFolder, "AnimationBackups");
-                Directory.CreateDirectory(backupPath);
-                foreach (var item in _animationMods.Values) {
-                    string modPath = item.Key;
-                    string backup = Path.Combine(backupPath, Path.GetFileNameWithoutExtension(item.Key + ".back"));
-                    try {
-                        if (Path.Exists(modPath)) {
-                            CopyDirectory(modPath, backup, true);
-                        }
-                    } catch {
+            if (!_isBackingUpAnimations) {
+                Task.Run(() => {
+                    _isBackingUpAnimations = true;
+                    string penumbraPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                    string backupPath = Path.Combine(config.CacheFolder, "AnimationBackups");
+                    Directory.CreateDirectory(backupPath);
+                    foreach (var item in _animationMods.Values) {
+                        string modPath = item.Key;
+                        string backup = Path.Combine(backupPath, Path.GetFileNameWithoutExtension(item.Key + ".back"));
+                        try {
+                            if (Path.Exists(modPath)) {
+                                CopyDirectory(modPath, backup, true);
+                            }
+                        } catch {
 
+                        }
                     }
-                }
-                try {
-                    SevenZipCompressor compressor = new SevenZipCompressor();
-                    using (FileStream fileStream = new FileStream(backupPath + ".zip", FileMode.Create, FileAccess.Write)) {
-                        compressor.CompressDirectory(backupPath, fileStream);
+                    try {
+                        SevenZipCompressor compressor = new SevenZipCompressor();
+                        using (FileStream fileStream = new FileStream(backupPath + ".zip", FileMode.Create, FileAccess.Write)) {
+                            compressor.CompressDirectory(backupPath, fileStream);
+                        }
+                    } catch (Exception ex) {
+                        Plugin.PluginLog.Warning(ex, ex.Message);
                     }
-                } catch (Exception ex) {
-                    Plugin.PluginLog.Warning(ex, ex.Message);
-                }
-                _isBackingUpAnimations = false;
-            });
+                    _isBackingUpAnimations = false;
+                });
+            }
         }
         public void ImportBackup() {
             Task.Run(() => {

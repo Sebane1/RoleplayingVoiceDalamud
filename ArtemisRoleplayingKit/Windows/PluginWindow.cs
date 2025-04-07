@@ -306,29 +306,34 @@ namespace RoleplayingVoice {
         }
 
         private void ClientState_Login() {
-            if (configuration.Characters != null) {
-                if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
-                    characterVoice = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
-                        != null ? configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
+            Task.Run(() => {
+                while (PluginReference.ThreadSafeObjectTable.LocalPlayer == null) {
+                    Thread.Sleep(1000);
+                }
+                if (configuration.Characters != null) {
+                    if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                        characterVoice = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
+                            != null ? configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
+                    } else {
+                        characterVoice = "None";
+                    }
                 } else {
                     characterVoice = "None";
                 }
-            } else {
-                characterVoice = "None";
-            }
-            if (configuration.CharacterVoicePacks != null) {
-                if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
-                    characterVoicePack = configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
-                        != null ? configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
+                if (configuration.CharacterVoicePacks != null) {
+                    if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                        characterVoicePack = configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]
+                            != null ? configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] : "";
+                    } else {
+                        characterVoicePack = "None";
+                    }
                 } else {
                     characterVoicePack = "None";
                 }
-            } else {
-                characterVoicePack = "None";
-            }
-            if (_customTTSVoiceActive) {
-                RefreshVoices();
-            }
+                if (_customTTSVoiceActive) {
+                    RefreshVoices();
+                }
+            });
         }
         public override void Draw() {
             if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
@@ -896,10 +901,14 @@ namespace RoleplayingVoice {
                                                     break;
                                                 }
                                             }
-                                            if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
-                                                if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
-                                                    configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                            try {
+                                                if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
+                                                    if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
+                                                        configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                                    }
                                                 }
+                                            } catch {
+
                                             }
                                         }
                                     }
@@ -954,10 +963,14 @@ namespace RoleplayingVoice {
                                                 break;
                                             }
                                         }
-                                        if (string.IsNullOrWhiteSpace(configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
-                                            if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
-                                                configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                        try {
+                                            if (string.IsNullOrWhiteSpace(configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
+                                                if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
+                                                    configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                                }
                                             }
+                                        } catch {
+
                                         }
                                     }
                                 }
@@ -1401,7 +1414,8 @@ namespace RoleplayingVoice {
                                     currentFile++;
                                     if (!fileMoved)
                                         moveFailed++;
-                                };
+                                }
+                                ;
                             });
                         }
 
