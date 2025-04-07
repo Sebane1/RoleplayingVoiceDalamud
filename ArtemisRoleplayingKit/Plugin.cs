@@ -580,15 +580,15 @@ namespace RoleplayingVoice {
                             break;
                         case "accessibilitymode":
                             config.NpcSpeechIsOn = !config.NpcSpeechIsOn;
-                            if (StreamDetection.RecordingSoftwareIsActive) {
-                                _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is interfering with accessibility mode.");
+                            //if (StreamDetection.RecordingSoftwareIsActive) {
+                            //    _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is interfering with accessibility mode.");
+                            //} else {
+                            if (config.NpcSpeechIsOn) {
+                                _chat?.Print("Accessibility Mode Enabled");
                             } else {
-                                if (config.NpcSpeechIsOn) {
-                                    _chat?.Print("Accessibility Mode Enabled");
-                                } else {
-                                    _chat?.Print("Accessibility Mode Disabled");
-                                }
+                                _chat?.Print("Accessibility Mode Disabled");
                             }
+                            //}
                             Window.NpcSpeechEnabled = config.NpcSpeechIsOn;
                             config.Save();
                             break;
@@ -605,26 +605,6 @@ namespace RoleplayingVoice {
                             CleanSounds();
                             _chat?.Print("All Sounds Cleared!");
                             break;
-                        //case "catalogue":
-                        //    if (splitArgs.Length > 1) {
-                        //        switch (splitArgs[1].ToLower()) {
-                        //            case "scan":
-                        //                StartCatalogingItems();
-                        //                break;
-                        //            case "clean":
-                        //                // PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
-                        //                break;
-                        //            case "stop":
-                        //                _catalogueMods = false;
-                        //                _chat.Print("Stopping cataloguing.");
-                        //                //PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
-                        //                break;
-                        //        }
-
-                        //    } else {
-                        //        _catalogueWindow.IsOpen = true;
-                        //    }
-                        //    break;
                         default:
                             if (config.AiVoiceActive) {
                                 Window.RefreshVoices();

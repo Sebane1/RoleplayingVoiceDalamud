@@ -89,7 +89,7 @@ namespace RoleplayingVoice {
         }
 
         private void DrawObjectList() {
-            _characterList = Plugin.GetLocalCharacters(StreamDetection.RecordingSoftwareIsActive);
+            _characterList = Plugin.GetLocalCharacters(false);
             ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
             ImGui.ListBox("##NPCEditing", ref _currentSelection, _characterList.Keys.ToArray(), _characterList.Count, 29);
         }

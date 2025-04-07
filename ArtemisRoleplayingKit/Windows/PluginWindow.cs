@@ -341,7 +341,7 @@ namespace RoleplayingVoice {
             } else {
                 this.WindowName = "No User Present";
             }
-            _streamDetectionActive = StreamDetection.RecordingSoftwareIsActive;
+            //_streamDetectionActive = StreamDetection.RecordingSoftwareIsActive;
             if (clientState.IsLoggedIn) {
                 fileDialogManager.Draw();
                 if (ImGui.BeginTabBar("ConfigTabs")) {
