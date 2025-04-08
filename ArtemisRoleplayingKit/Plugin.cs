@@ -37,7 +37,7 @@ using RoleplayingVoiceDalamud.VoiceSorting;
 using Dalamud.Game.ClientState.Objects.Types;
 using RoleplayingVoiceDalamudWrapper;
 using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
-using DragAndDropTexturing.ThreadSafeDalamudObjectTable;
+using GameObjectHelper.ThreadSafeDalamudObjectTable;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
