@@ -48,13 +48,7 @@ namespace RoleplayingVoice {
         private unsafe void framework_Update(IFramework framework) {
             try {
                 if (!disposed) {
-                    if (_objectTable != null) {
-                        lock (_objectTable) {
-                            _objectTable = _threadSafeObjectTable.ToArray();
-                        }
-                    } else {
-                        _objectTable = _threadSafeObjectTable.ToArray();
-                    }
+                    _threadSafeObjectTable.DoProfiling = config.DebugMode;
                     if (_queuePenumbraRefresh) {
                         _queuePenumbraRefresh = false;
                         PenumbraAndGlamourerIpcWrapper.Instance.RedrawObject.Invoke(_penumbraRefreshIndex, RedrawType.Redraw);

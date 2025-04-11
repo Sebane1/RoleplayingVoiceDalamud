@@ -124,34 +124,6 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void SendNetworkedVoice() {
-            Task.Run(async () => {
-                while (AddonTalkHandler == null) {
-                    Thread.Sleep(1000);
-                }
-                while (AddonTalkHandler.VoiceList != null) {
-                    Thread.Sleep(1000);
-                }
-                while (AddonTalkHandler.VoiceList.Count == 0) {
-                    Thread.Sleep(1000);
-                }
-                var voiceItem = AddonTalkHandler.VoiceList.ElementAt(config.ChosenVanillaReplacement);
-                if (AddonTalkHandler != null) {
-                    if (config.VoiceReplacementType == 0) {
-                        AddonTalkHandler?.SetVanillaVoice(_threadSafeObjectTable.LocalPlayer, 0);
-                    }
-                    if (config.VoiceReplacementType == 1) {
-                        AddonTalkHandler?.SetVanillaVoice(_threadSafeObjectTable.LocalPlayer, voiceItem.Value);
-                    }
-                }
-                AddonTalkHandler.SetVanillaVoice(_threadSafeObjectTable.LocalPlayer, voiceItem.Value);
-                if (config.UsePlayerSync) {
-                    string senderName = CleanSenderName(_threadSafeObjectTable.LocalPlayer.Name.TextValue);
-                    await _roleplayingMediaManager.SendShort(senderName + "vanilla voice" + _clientState.TerritoryType, voiceItem.Value);
-                }
-            });
-        }
-
         private void CleanupEmoteWatchList() {
             foreach (var item in _emoteWatchList.Values) {
                 try {

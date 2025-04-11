@@ -527,7 +527,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                     _sortedObjectTable = _threadSafeObjectTable.ToList();
                                     if (_plugin.PlayerCamera != null) {
-										_sortedObjectTable.Sort((x, y) => {
+                                        _sortedObjectTable.Sort((x, y) => {
                                             return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
                                         });
                                     }
@@ -688,16 +688,18 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public async void TriggerLipSync(ICharacter character, int lipSyncType) {
             try {
-                var actorMemory = new ActorMemory();
-                actorMemory.SetAddress(character.Address);
-                var animationMemory = actorMemory.Animation;
-                MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)),
-                    630, "Lipsync");
-                await Task.Run(delegate {
-                    Thread.Sleep(10000);
-                    StopLipSync(character);
-                });
-                Plugin.PluginLog.Debug("Lipsync Succeeded.");
+                if (character != null) {
+                    var actorMemory = new ActorMemory();
+                    actorMemory.SetAddress(character.Address);
+                    var animationMemory = actorMemory.Animation;
+                    MemoryService.Write(animationMemory.GetAddressOfProperty(nameof(AnimationMemory.LipsOverride)),
+                        630, "Lipsync");
+                    await Task.Run(delegate {
+                        Thread.Sleep(10000);
+                        StopLipSync(character);
+                    });
+                    Plugin.PluginLog.Debug("Lipsync Succeeded.");
+                }
             } catch (Exception e) {
                 Plugin.PluginLog.Error(e, e.Message);
             }

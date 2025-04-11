@@ -207,7 +207,7 @@ namespace RoleplayingVoice {
         private Queue<Tuple<string[], string, ICharacter>> _checkAnimationModsQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Queue<Tuple<string[], string, ICharacter>> _checkVanillaEmoteQueue = new Queue<Tuple<string[], string, ICharacter>>();
         private Dictionary<string, IReadOnlyList<Emote>> _emoteList;
-        private IGameObject[] _objectTable;
+        private IObjectTable _objectTable;
         private bool _checkingMovementInProgress;
 
         public string Name => "Artemis Roleplaying Kit";
@@ -259,7 +259,7 @@ namespace RoleplayingVoice {
         public static bool BlockDataRefreshes { get => _blockDataRefreshes; set => _blockDataRefreshes = value; }
         public RedoLineWindow RedoLineWindow { get => _redoLineWindow; set => _redoLineWindow = value; }
         public MediaCameraObject PlayerCamera { get => _playerCamera; set => _playerCamera = value; }
-        public IGameObject[] ObjectTable { get => _objectTable; set => _objectTable = value; }
+        public IObjectTable ObjectTable { get => _objectTable; set => _objectTable = value; }
         public static bool Disposed { get; internal set; }
         public VoiceEditor VoiceEditor { get => _voiceEditor; set => _voiceEditor = value; }
         public ThreadSafeGameObjectManager ThreadSafeObjectTable { get => _threadSafeObjectTable; set => _threadSafeObjectTable = value; }
@@ -296,6 +296,8 @@ namespace RoleplayingVoice {
                 this._clientState = clientState;
                 // Get or create a configuration object
                 _threadSafeObjectTable = new ThreadSafeGameObjectManager(_clientState, objectTable, framework, pluginLog);
+                _objectTable = _threadSafeObjectTable;
+                _threadSafeObjectTable.OnlyTrackCharacterObjects = true;
                 this.config = (Configuration)this.pluginInterface.GetPluginConfig()
                           ?? this.pluginInterface.Create<Configuration>();
                 // Initialize the UI
