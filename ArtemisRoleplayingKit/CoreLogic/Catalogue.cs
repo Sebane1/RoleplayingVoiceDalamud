@@ -14,18 +14,18 @@ using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
 namespace RoleplayingVoice
 {
     public partial class Plugin : IDalamudPlugin {
-        public void StartCatalogingItems() {
-            _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_threadSafeObjectTable.LocalPlayer.ObjectIndex);
-            _catalogueCollectionName = _originalCollection.Item3.Id;
-            Directory.CreateDirectory(_catalogueWindow.CataloguePath);
-            _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
-            _chat?.Print("Creating Thumbnails For New Clothing Mods");
-            _catalogueMods = true;
-            _modelModList = new List<string>();
-            _modelModList.AddRange(_modelMods.Keys);
-            _catalogueWindow.ScanCatalogue();
-            ScanClothingMods();
-        }
+        ////public void StartCatalogingItems() {
+        ////    _originalCollection = PenumbraAndGlamourerIpcWrapper.Instance.GetCollectionForObject.Invoke(_threadSafeObjectTable.LocalPlayer.ObjectIndex);
+        ////    _catalogueCollectionName = _originalCollection.Item3.Id;
+        ////    Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+        ////    _currentScreenshotList = Directory.GetFiles(_catalogueWindow.CataloguePath);
+        ////    _chat?.Print("Creating Thumbnails For New Clothing Mods");
+        ////    _catalogueMods = true;
+        ////    _modelModList = new List<string>();
+        ////    _modelModList.AddRange(_modelMods.Keys);
+        ////    _catalogueWindow.ScanCatalogue();
+        ////    ScanClothingMods();
+        ////}
         private void ScanClothingMods() {
             Task.Run(() => {
                 while (_catalogueMods && !disposed) {
@@ -126,7 +126,7 @@ namespace RoleplayingVoice
                         _catalogueTimer.Reset();
                         RefreshData();
                         //PenumbraAndGlamourerHelperFunctions.CleanSlate(Guid.Empty, _modelMods.Keys, _modelDependancyMods.Keys);
-                        _catalogueWindow.ScanCatalogue();
+                        //_catalogueWindow.ScanCatalogue();
                         PenumbraAndGlamourerIpcWrapper.Instance.SetCollectionForObject.Invoke(0, _originalCollection.Item3.Id, true, true);
                     }
                 }
@@ -147,7 +147,7 @@ namespace RoleplayingVoice
                                 try {
                                     //NativeGameWindow.BringMainWindowToFront(Process.GetCurrentProcess().ProcessName);
                                 } catch { }
-                                TakeScreenshot(item, path);
+                                //TakeScreenshot(item, path);
                             }
                         });
                     } else {
@@ -167,19 +167,19 @@ namespace RoleplayingVoice
             return false;
         }
 
-        private void TakeScreenshot(EquipObject clothingItem, string pathName) {
-            if (clothingItem != null) {
-                Rectangle bounds = Screen.GetBounds(Point.Empty);
-                using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height)) {
-                    using (Graphics g = Graphics.FromImage(bitmap)) {
-                        g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
-                    }
-                    Directory.CreateDirectory(_catalogueWindow.CataloguePath);
-                    new Bitmap(CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)), 250, 250).Save(pathName, ImageFormat.Jpeg);
-                }
-            }
-            _catalogueScreenShotTaken = true;
-        }
+        ////private void TakeScreenshot(EquipObject clothingItem, string pathName) {
+        ////    if (clothingItem != null) {
+        ////        Rectangle bounds = Screen.GetBounds(Point.Empty);
+        ////        using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height)) {
+        ////            using (Graphics g = Graphics.FromImage(bitmap)) {
+        ////                g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+        ////            }
+        ////            Directory.CreateDirectory(_catalogueWindow.CataloguePath);
+        ////            new Bitmap(CropImage(new Bitmap(bitmap, 1920, 1080), new Rectangle(560, 200, 800, 800)), 250, 250).Save(pathName, ImageFormat.Jpeg);
+        ////        }
+        ////    }
+        ////    _catalogueScreenShotTaken = true;
+        ////}
         private static Image CropImage(Image img, Rectangle cropArea) {
             Bitmap bmpImage = new Bitmap(img);
             return bmpImage.Clone(cropArea, bmpImage.PixelFormat);

@@ -1080,7 +1080,13 @@ namespace RoleplayingVoice {
                                     if (cleanedName == CleanSenderName(_threadSafeObjectTable.LocalPlayer.Name.TextValue)) {
                                         MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, _mainCharacterVoicePack, _roleplayingMediaManager, _mediaManager);
                                     } else {
-                                        CheckOtherPlayerBoneMovement(cleanedName, gameObject);
+                                        unsafe {
+                                            if (Vector3.Distance(_threadSafeObjectTable.LocalPlayer.Position, gameObject.Position) < 5) {
+                                                if (!Conditions.Instance()->InCombat) {
+                                                    CheckOtherPlayerBoneMovement(cleanedName, gameObject);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 

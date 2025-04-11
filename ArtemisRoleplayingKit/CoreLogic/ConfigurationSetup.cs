@@ -156,7 +156,7 @@ namespace RoleplayingVoice {
                 _clientState.LeavePvP += _clientState_LeavePvP;
                 _clientState.CfPop += _clientState_CfPop;
                 Window.OnWindowOperationFailed += Window_OnWindowOperationFailed;
-                _catalogueWindow.Plugin = this;
+                //_catalogueWindow.Plugin = this;
                 if (_clientState.IsLoggedIn) {
                     _gposeWindow.Initialize();
                 }

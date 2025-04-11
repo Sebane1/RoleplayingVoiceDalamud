@@ -62,7 +62,7 @@ namespace RoleplayingVoice {
         public PluginWindow Window { get; init; }
         private NetworkedClient _networkedClient;
         private VideoWindow _videoWindow;
-        private CatalogueWindow _catalogueWindow;
+        //private CatalogueWindow _catalogueWindow;
         private RedoLineWindow _redoLineWindow;
         private GposeWindow _gposeWindow;
         private readonly GposePhotoTakerWindow _gposePhotoTakerWindow;
@@ -302,7 +302,7 @@ namespace RoleplayingVoice {
                 this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
                 Window = this.pluginInterface.Create<PluginWindow>();
                 _videoWindow = this.pluginInterface.Create<VideoWindow>();
-                _catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
+                //_catalogueWindow = this.pluginInterface.Create<CatalogueWindow>();
                 _redoLineWindow = this.pluginInterface.Create<RedoLineWindow>();
                 _gposeWindow = this.pluginInterface.Create<GposeWindow>();
                 _gposePhotoTakerWindow = this.pluginInterface.Create<GposePhotoTakerWindow>();
@@ -328,9 +328,9 @@ namespace RoleplayingVoice {
                 if (_videoWindow is not null) {
                     this.windowSystem.AddWindow(_videoWindow);
                 }
-                if (_catalogueWindow is not null) {
-                    this.windowSystem.AddWindow(_catalogueWindow);
-                }
+                //if (_catalogueWindow is not null) {
+                //    this.windowSystem.AddWindow(_catalogueWindow);
+                //}
                 if (_gposeWindow is not null) {
                     this.windowSystem.AddWindow(_gposeWindow);
                 }
@@ -634,7 +634,6 @@ namespace RoleplayingVoice {
             try {
                 disposed = true;
                 Disposed = true;
-                _mediaManager.Invalidated = true;
                 config.Save();
                 config.OnConfigurationChanged -= Config_OnConfigurationChanged;
                 IpcSystem.Dispose();
@@ -648,6 +647,7 @@ namespace RoleplayingVoice {
                 }
                 try {
                     if (_mediaManager != null) {
+                        _mediaManager.Invalidated = true;
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                         _mediaManager?.Dispose();
                     }

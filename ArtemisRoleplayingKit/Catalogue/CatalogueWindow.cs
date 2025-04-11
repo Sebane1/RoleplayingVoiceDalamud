@@ -96,7 +96,7 @@ namespace RoleplayingVoice {
                 }
                 ImGui.SameLine();
                 if (ImGui.Button("Scan And Catalogue Mods", new Vector2(200, 30))) {
-                    _plugin.StartCatalogingItems();
+                    //_plugin.StartCatalogingItems();
                     IsOpen = false;
                 }
                 if (!string.IsNullOrEmpty(_currentCategory)) {
@@ -171,7 +171,7 @@ namespace RoleplayingVoice {
 
                     "For the moment, you will need to assign a brand new collection with only body dependancies enabled to use scan your mods.");
                 if (ImGui.Button("Scan And Catalogue Mods", new Vector2(ImGui.CalcItemWidth(), 50))) {
-                    _plugin.StartCatalogingItems();
+                    //_plugin.StartCatalogingItems();
                     IsOpen = false;
                 }
             }

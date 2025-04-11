@@ -20,7 +20,7 @@ namespace RoleplayingVoice {
                             _roleplayingMediaManager?.InitializeXTTS();
                         }
                     }
-                    _catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
+                    //_catalogueWindow.CataloguePath = Path.Combine(config.CacheFolder, "ClothingCatalogue\\");
                     _ = Task.Run(async () => {
                         try {
                             if (penumbraSoundPacks == null || penumbraSoundPacks.Count == 0 || !skipPenumbraScan) {
