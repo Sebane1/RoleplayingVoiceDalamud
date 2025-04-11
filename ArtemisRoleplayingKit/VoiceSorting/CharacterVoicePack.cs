@@ -29,6 +29,7 @@ namespace RoleplayingVoiceDalamud {
         private List<string> _missed = new List<string>();
         private List<string> _castingAttack = new List<string>();
         private List<string> _castingHeal = new List<string>();
+        static private ConcurrentDictionary<string, string> _cachedRegex = new ConcurrentDictionary<string, string>();
         private ConcurrentDictionary<string, List<string>> _misc = new ConcurrentDictionary<string, List<string>>();
         private int emoteIndex;
         private string lastMissed;
@@ -225,19 +226,28 @@ namespace RoleplayingVoiceDalamud {
         }
         public static string StripNonCharacters(string str, ClientLanguage clientLanguage) {
             if (clientLanguage == ClientLanguage.English) {
-                if (str != null) {
-                    Regex rgx = new Regex("[^a-zA-Z]");
-                    str = rgx.Replace(str, "");
+                if (!string.IsNullOrEmpty(str)) {
+                    if (!_cachedRegex.ContainsKey(str)) {
+                        Regex rgx = new Regex("[^a-zA-Z]");
+                        var newString = rgx.Replace(str, "");
+                        _cachedRegex[str] = newString;
+                    } else {
+                        return _cachedRegex[str];
+                    }
                 } else {
                     return "";
                 }
             } else {
-                return str.Replace("0", "").Replace("1", "")
+                if (!_cachedRegex.ContainsKey(str)) {
+                    return _cachedRegex[str] = str.Replace("0", "").Replace("1", "")
                     .Replace("2", "").Replace("3", "")
                     .Replace("4", "").Replace("5", "")
                     .Replace("6", "").Replace("7", "")
                     .Replace("8", "").Replace("9", "")
                     .Replace("-", "").Replace("|", "").Replace(" ", "");
+                } else {
+                    return _cachedRegex[str];
+                }
             }
             return str;
         }
