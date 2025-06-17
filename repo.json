@@ -16,8 +16,8 @@
       "Character"
     ],
     "InternalName": "RoleplayingVoiceDalamud",
-    "AssemblyVersion": "0.5.8.2",
-    "TestingAssemblyVersion": "0.5.8.2",
+    "AssemblyVersion": "0.5.8.3",
+    "TestingAssemblyVersion": "0.5.8.3",
     "RepoUrl": "https://github.com/Sebane1/RoleplayingVoiceDalamud",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 12,
