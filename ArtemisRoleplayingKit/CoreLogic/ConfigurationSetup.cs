@@ -58,7 +58,7 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void _speechToTextManager_RecordingFinished(object sender, EventArgs e) {
+        private void _speechToTextManager_RecordingFinished(object sender, string e) {
             if (!_speechToTextManager.RpMode) {
                 _messageQueue.Enqueue(_speechToTextManager.FinalText);
             } else {

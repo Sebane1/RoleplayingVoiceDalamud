@@ -118,6 +118,7 @@ namespace RoleplayingVoice {
         private bool _streamDetectionActive;
         private string _dialogueServerIp = "";
         private bool _useCustomDialogueRelayServer;
+        private bool _useClosestRelayServer;
         private static readonly object fileLock = new object();
         private static readonly object currentFileLock = new object();
         public event EventHandler RequestingReconnect;
@@ -222,6 +223,7 @@ namespace RoleplayingVoice {
                     _xttsLanguageComboBox.SelectedIndex = configuration.XTTSLanguage;
                     _localVoiceForNonWhitelistedPlayers = configuration.LocalVoiceForNonWhitelistedPlayers;
                     _narrateUnquotedText = configuration.NarrateUnquotedText;
+                    _useClosestRelayServer = configuration.UseClosestRelayServer;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     _voicePackTypeBox.SelectedIndex = configuration.VoiceReplacementType;
@@ -513,6 +515,7 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("Use the same voices for A Realm Reborn", ref _replaceVoicedARRCutscenes);
                 ImGui.Checkbox("Ignore bubbles from overworld NPCs", ref _ignoreBubblesFromOverworldNPCs);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
+                ImGui.Checkbox("Use Closest Relay Server", ref _useClosestRelayServer);
                 ImGui.EndTable();
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
@@ -815,6 +818,8 @@ namespace RoleplayingVoice {
             configuration.IgnoreBubblesFromOverworldNPCs = _ignoreBubblesFromOverworldNPCs;
             configuration.XTTSLanguage = _xttsLanguageComboBox.SelectedIndex;
             configuration.LocalVoiceForNonWhitelistedPlayers = _localVoiceForNonWhitelistedPlayers;
+            configuration.UseClosestRelayServer = _useClosestRelayServer;
+            configuration.NarrateUnquotedText = _narrateUnquotedText;
             configuration.VoiceReplacementType = _voicePackTypeBox.SelectedIndex;
             configuration.ChosenVanillaReplacement = _voiceToSwap.SelectedIndex;
             //configuration.CustomDialogueRelayServerIp = _dialogueServerIp;
@@ -830,6 +835,7 @@ namespace RoleplayingVoice {
                     characterVoice = _voiceList[voiceComboBox.SelectedIndex];
                 }
             }
+                                PluginReference.NpcVoiceManager.UseClosestRelay = _useClosestRelayServer;
             configuration.Save();
             save = false;
             RefreshVoices();

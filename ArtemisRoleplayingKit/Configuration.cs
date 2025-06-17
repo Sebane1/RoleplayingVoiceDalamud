@@ -160,6 +160,8 @@ namespace RoleplayingVoice {
         public bool LocalVoiceForNonWhitelistedPlayers { get => localVoiceForNonWhitelistedPlayers; set => localVoiceForNonWhitelistedPlayers = value; }
         internal bool NarrateUnquotedText { get => narrateUnquotedText; set => narrateUnquotedText = value; }
         public int ChosenVanillaReplacement { get => _chosenVanillaReplacement; set => _chosenVanillaReplacement = value; }
+        public bool UseClosestRelayServer { get => _useClosestRelayServer; set => _useClosestRelayServer = value; }
+
         //public bool UseCustomDialogueRelayServer { get => _useCustomDialogueRelayServer; set => _useCustomDialogueRelayServer = value; }
         //public string CustomDialogueRelayServerIp {
         //    get {
@@ -175,6 +177,8 @@ namespace RoleplayingVoice {
         private bool localVoiceForNonWhitelistedPlayers;
         private bool narrateUnquotedText;
         private int _chosenVanillaReplacement;
+        private bool _useClosestRelayServer;
+
         //private string _customDialogueRelayServerIp = "ai.hubujubu.com";
         //private bool _useCustomDialogueRelayServer;
 

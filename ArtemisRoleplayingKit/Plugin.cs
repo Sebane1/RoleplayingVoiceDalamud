@@ -376,6 +376,7 @@ namespace RoleplayingVoice {
                     _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
                     _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
                     _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
+                    NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
                     _gameGui = gameGui;
                     _dragDrop = dragDrop;
                     _videoWindow.WindowResized += _videoWindow_WindowResized;
