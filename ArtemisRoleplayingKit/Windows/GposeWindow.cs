@@ -4,7 +4,7 @@ using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using RoleplayingMediaCore;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -120,7 +120,7 @@ namespace RoleplayingVoice {
                         });
                     }
                     if (_frameToLoad != null) {
-                        ImGui.Image(_frameToLoad.ImGuiHandle,
+                        ImGui.Image(_frameToLoad.Handle,
                             new Vector2(ImGui.GetMainViewport().Size.X, ImGui.GetMainViewport().Size.Y));
                     }
                 }

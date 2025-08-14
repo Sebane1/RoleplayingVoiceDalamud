@@ -5,7 +5,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Common.Math;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using ImGuiScene;
 using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
@@ -78,7 +78,7 @@ namespace RoleplayingVoice {
                             });
                         }
                         if (_frameToLoad != null) {
-                            ImGui.Image(_frameToLoad.ImGuiHandle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
+                            ImGui.Image(_frameToLoad.Handle, new Vector2(Size.Value.X, Size.Value.X * 0.5625f));
                         }
                     } catch (Exception e) {
                         Plugin.PluginLog.Warning(e, e.Message);

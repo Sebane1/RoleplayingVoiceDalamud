@@ -10,6 +10,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
+using GameObjectHelper.ThreadSafeDalamudObjectTable;
 using Lumina.Excel.Sheets;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -21,6 +22,7 @@ using RoleplayingVoiceDalamud;
 using RoleplayingVoiceDalamud.Catalogue;
 using RoleplayingVoiceDalamud.GameObjects;
 using RoleplayingVoiceDalamud.NPC;
+using RoleplayingVoiceDalamud.ThreadSafeDalamudObjectTable;
 using RoleplayingVoiceDalamudWrapper;
 using SoundFilter;
 using System;
@@ -696,7 +698,7 @@ namespace RoleplayingVoice {
                                     PluginLog.Verbose("No object for speech was found.");
                                     return false;
                                 });
-                                var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player) : new MediaGameObject(playerSender, _threadSafeObjectTable.LocalPlayer.Position);
+                                var playerMediaReference = player != null && !isShoutYell && !audioFocus ? new MediaGameObject(player.ToThreadSafeObject()) : new MediaGameObject(playerSender, _threadSafeObjectTable.LocalPlayer.Position);
                                 bool narratePlayer = false;
                                 if (config.UsePlayerSync) {
                                     if (GetCombinedWhitelist().Contains(playerSender)) {
@@ -834,8 +836,8 @@ namespace RoleplayingVoice {
                             if (value.Contains("twitch.tv") && lastStreamURL != value) {
                                 _lastStreamObject = player != null ?
                                     player != null ?
-                                    new MediaGameObject(player.TargetObject) :
-                                    new MediaGameObject(player) :
+                                    new MediaGameObject(player.TargetObject.ToThreadSafeObject()) :
+                                    new MediaGameObject(player.ToThreadSafeObject()) :
                                     new MediaGameObject(name, _threadSafeObjectTable.LocalPlayer.Position);
                                 var audioGameObject = _lastStreamObject;
                                 if (_mediaManager.IsAllowedToStartStream(audioGameObject)) {
@@ -913,7 +915,7 @@ namespace RoleplayingVoice {
                     value = characterVoicePack.GetMisc(soundTrigger);
                 }
                 if (!string.IsNullOrEmpty(value)) {
-                    _mediaManager.PlayMedia(new MediaGameObject(player), value, SoundType.ChatSound, false);
+                    _mediaManager.PlayMedia(new MediaGameObject(player.ToThreadSafeObject()), value, SoundType.ChatSound, false);
                 }
             }
         }
@@ -1002,7 +1004,7 @@ namespace RoleplayingVoice {
         }
         public void OnEmote(ICharacter instigator, ushort emoteId) {
             if (!disposed) {
-                _lastPlayerToEmote = new MediaGameObject(instigator);
+                _lastPlayerToEmote = new MediaGameObject(instigator.ToThreadSafeObject());
                 if (instigator.Name.TextValue == _threadSafeObjectTable.LocalPlayer.Name.TextValue || instigator.OwnerId == _threadSafeObjectTable.LocalPlayer.GameObjectId) {
                     if (!_wasDoingFakeEmote) {
                         _didRealEmote = true;
@@ -1322,7 +1324,7 @@ namespace RoleplayingVoice {
                                                         break;
                                                     }
                                                 }
-                                                _mediaManager.PlayMedia(new MediaGameObject((IPlayerCharacter)character,
+                                                _mediaManager.PlayMedia(new MediaGameObject(character.ToThreadSafeObject(),
                                                 playerSender, character.Position), value, SoundType.OtherPlayerCombat, false, 0, default, delegate {
                                                     Task.Run(delegate {
                                                         _addonTalkHandler.StopLipSync(player as ICharacter);
@@ -1635,12 +1637,12 @@ namespace RoleplayingVoice {
                             bool isVoicedEmote = false;
                             string value = characterVoicePack.GetMisc("moving");
                             if (!string.IsNullOrEmpty(value)) {
-                                _mediaManager.PlayMedia(new MediaGameObject(gameObject), value, SoundType.LoopWhileMoving, false, 0);
+                                _mediaManager.PlayMedia(new MediaGameObject(gameObject.ToThreadSafeObject()), value, SoundType.LoopWhileMoving, false, 0);
                                 if (isVoicedEmote) {
                                     MuteVoiceCheck(6000);
                                 }
                             } else {
-                                _mediaManager.StopAudio(new MediaGameObject(gameObject));
+                                _mediaManager.StopAudio(new MediaGameObject(gameObject.ToThreadSafeObject()));
                             }
                             //MediaBoneManager.CheckForValidBoneSounds(gameObject as ICharacter, characterVoicePack, _roleplayingMediaManager, _mediaManager);
                         }

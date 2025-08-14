@@ -2,7 +2,7 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using ImGuiScene;
 using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
@@ -89,7 +89,7 @@ namespace RoleplayingVoice {
 
         private void DrawListBox() {
             ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-            ImGui.ListBox("##NPCEditing", ref _currentSelection, npcItemNames, npcItemNames.Length, 25);
+            ImGui.ListBox("##NPCEditing", ref _currentSelection, npcItemNames);
 
             if (ImGui.Button("+", new Vector2(35))) {
                 _customNpcCharacters.Add(new CustomNpcCharacter());

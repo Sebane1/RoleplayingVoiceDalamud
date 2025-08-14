@@ -4,7 +4,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using RoleplayingMediaCore;
 using System;
 using System.IO;
@@ -612,7 +612,7 @@ namespace RoleplayingVoice {
             ImGui.Dummy(new Vector2(0, 10));
             ImGui.Text("Player Whitelist");
             ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
-            ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist, whitelist.Length, 10);
+            ImGui.ListBox("##whitelist", ref _currentWhitelistItem, whitelist);
             bool playerTargetted = (PluginReference.ThreadSafeObjectTable.LocalPlayer != null && PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject != null);
             bool playerCloseEnough = playerTargetted && Vector3.Distance(
             PluginReference.ThreadSafeObjectTable.LocalPlayer.Position, PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.Position) < 1;

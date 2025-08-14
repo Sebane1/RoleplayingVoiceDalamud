@@ -49,18 +49,18 @@ namespace RoleplayingVoiceDalamud.IPC {
         /// <param name="objectId">The address of the GameObject to affect</param>
         public bool StopAnimation(nint objectAddress);
 
-        /// <summary>
-        /// Starts a sound tied to the specified GameObject;
-        /// </summary>
-        /// <param name="objectAddress">The address of the GameObject to affect</</param>
-        /// <param name="soundPath">The path of the desired sound</param>
-        public bool PlaySound(nint objectAddress, string soundPath, int soundType);
+        ///// <summary>
+        ///// Starts a sound tied to the specified GameObject;
+        ///// </summary>
+        ///// <param name="objectAddress">The address of the GameObject to affect</</param>
+        ///// <param name="soundPath">The path of the desired sound</param>
+        //public bool PlaySound(nint objectAddress, string soundPath, int soundType);
 
-        /// <summary>
-        /// Stops a sound to the specified GameObject
-        /// </summary>
-        /// <param name="objectAddress">The gameobject sound</param>
-        public bool StopSound(nint objectAddress);
+        ///// <summary>
+        ///// Stops a sound to the specified GameObject
+        ///// </summary>
+        ///// <param name="objectAddress">The gameobject sound</param>
+        //public bool StopSound(nint objectAddress);
 
     }
 }

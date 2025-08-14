@@ -3,7 +3,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using RoleplayingVoiceDalamud;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;
@@ -91,7 +91,7 @@ namespace RoleplayingVoice {
         private void DrawObjectList() {
             _characterList = Plugin.GetLocalCharacters(false);
             ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-            ImGui.ListBox("##NPCEditing", ref _currentSelection, _characterList.Keys.ToArray(), _characterList.Count, 29);
+            ImGui.ListBox("##NPCEditing", ref _currentSelection, _characterList.Keys.ToArray());
         }
 
         private void DrawAnimationMenu() {

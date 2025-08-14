@@ -1,7 +1,7 @@
 ﻿using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using RoleplayingVoiceDalamud.Animation;
 using RoleplayingVoiceDalamud.Catalogue;
 using System;

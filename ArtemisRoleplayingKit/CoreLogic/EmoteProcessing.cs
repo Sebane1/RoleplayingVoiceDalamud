@@ -18,6 +18,8 @@ using System.Threading.Tasks;
 using System.Threading;
 using RoleplayingMediaCore;
 using RoleplayingVoiceDalamudWrapper;
+using GameObjectHelper.ThreadSafeDalamudObjectTable;
+using RoleplayingVoiceDalamud.ThreadSafeDalamudObjectTable;
 
 namespace RoleplayingVoice {
     public partial class Plugin : IDalamudPlugin {
@@ -91,7 +93,7 @@ namespace RoleplayingVoice {
                                                     TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
                                                     copyTimer.Stop();
                                                     bool lipWasSynced = false;
-                                                    _mediaManager.PlayMedia(new MediaGameObject(instigator), value, SoundType.OtherPlayer, false,
+                                                    _mediaManager.PlayMedia(new MediaGameObject(instigator.ToThreadSafeObject()), value, SoundType.OtherPlayer, false,
                                                      characterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000.0 * data.TimeCodes[characterVoicePack.EmoteIndex]) : 0, copyTimer.Elapsed, delegate {
                                                          Task.Run(delegate {
                                                              _addonTalkHandler.StopLipSync(instigator);
@@ -116,7 +118,7 @@ namespace RoleplayingVoice {
                                                         MuteVoiceCheck(6000);
                                                     }
                                                 } else {
-                                                    _mediaManager.StopAudio(new MediaGameObject(instigator));
+                                                    _mediaManager.StopAudio(new MediaGameObject(instigator.ToThreadSafeObject()));
                                                 }
                                             }
                                         });
@@ -147,7 +149,7 @@ namespace RoleplayingVoice {
                     if (!string.IsNullOrEmpty(emotePath)) {
                         string gender = instigator.Customize[(int)CustomizeIndex.Gender] == 0 ? "Masculine" : "Feminine";
                         TimeCodeData data = RaceVoice.TimeCodeData[PenumbraAndGlamourerHelperFunctions.GetRace(instigator) + "_" + gender];
-                        _mediaManager.StopAudio(new MediaGameObject(instigator));
+                        _mediaManager.StopAudio(new MediaGameObject(instigator.ToThreadSafeObject()));
                         bool lipWasSynced = false;
                         _mediaManager.PlayMedia(_playerObject, emotePath, SoundType.Emote, false,
                         _mainCharacterVoicePack.EmoteIndex > -1 ? (int)((decimal)1000m * data.TimeCodes[_mainCharacterVoicePack.EmoteIndex]) : 0, default, delegate {
@@ -178,7 +180,7 @@ namespace RoleplayingVoice {
                         }
                     } else {
                         if (!_inGameSoundStartedAudio) {
-                            _mediaManager.StopAudio(new MediaGameObject(instigator));
+                            _mediaManager.StopAudio(new MediaGameObject(instigator.ToThreadSafeObject()));
                         }
                         _inGameSoundStartedAudio = false;
                     }

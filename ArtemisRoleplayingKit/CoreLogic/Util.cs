@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using Dalamud.Game;
 using Dalamud.Interface;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace RoleplayingVoiceDalamud {
     internal static class Util {

@@ -1,7 +1,7 @@
 ﻿    using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using Microsoft.VisualBasic.Devices;
 using System.Diagnostics;
 using System.Drawing.Imaging;

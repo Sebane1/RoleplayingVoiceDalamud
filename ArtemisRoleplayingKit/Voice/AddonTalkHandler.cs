@@ -22,6 +22,7 @@ using RoleplayingVoice;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud.Datamining;
 using RoleplayingVoiceDalamud.Services;
+using RoleplayingVoiceDalamud.ThreadSafeDalamudObjectTable;
 using RoleplayingVoiceDalamudWrapper;
 using System;
 using System.Collections.Concurrent;
@@ -422,7 +423,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                                 character->DrawData.CustomizeData.Race, character->DrawData.CustomizeData.BodyType != 0 ?
                                                                 character->DrawData.CustomizeData.BodyType : character->ModelContainer.ModelCharaId,
                                                                 character->DrawData.CustomizeData.Tribe, character->DrawData.CustomizeData.EyeShape,
-                                                                character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(pActor), NPCVoiceManager.VoiceModel.Speed);
+                                                                character->GameObject.GetGameObjectId().ObjectId, new MediaGameObject(Guid.NewGuid().ToString(), character->Position), NPCVoiceManager.VoiceModel.Speed);
                                                         }
                                                         if (_plugin.Config.DebugMode) {
                                                             _plugin.Chat.Print("Sent audio from NPC bubble.");
@@ -1006,7 +1007,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     Dalamud.Game.ClientState.Objects.Types.IGameObject npcObject = DiscoverNpc(npcName, message, ref gender, ref race, ref body, ref isRetainer);
                     if (!isRetainer || (_plugin != null && !_plugin.Config.DontVoiceRetainers)) {
                         string nameToUse = NPCVoiceMapping.CheckForNameVariant(npcObject == null || npcName != "???" ? npcName : npcObject.Name.TextValue, _clientState.TerritoryType);
-                        MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject : (_threadSafeObjectTable.LocalPlayer as Dalamud.Game.ClientState.Objects.Types.IGameObject));
+                        MediaGameObject currentSpeechObject = new MediaGameObject(npcObject != null ? npcObject.ToThreadSafeObject() : _threadSafeObjectTable.LocalPlayer);
                         _currentSpeechObject = currentSpeechObject;
                         bool foundName = false;
                         bool isExtra = false;

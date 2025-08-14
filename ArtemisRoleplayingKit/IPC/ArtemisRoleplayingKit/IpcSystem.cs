@@ -47,8 +47,8 @@ namespace RoleplayingVoiceDalamud.IPC {
             _getCacheFolder.RegisterFunc(GetCacheFolder);
             _doAnimation.RegisterFunc(DoAnimation);
             _stopAnimation.RegisterFunc(StopAnimation);
-            _playSound.RegisterFunc(PlaySound);
-            _stopSound.RegisterFunc(StopSound);
+            //_playSound.RegisterFunc(PlaySound);
+            //_stopSound.RegisterFunc(StopSound);
             _onAnimationTriggered.RegisterFunc(OnAnimationTriggered);
             _onAnimationStopped.RegisterFunc(OnAnimationStopped);
             _onVoicePackChanged.RegisterFunc(OnVoicePackChanged);
@@ -103,28 +103,28 @@ namespace RoleplayingVoiceDalamud.IPC {
             return true;
         }
 
-        public bool PlaySound(nint objectAddress, string soundPath, int soundType) {
-            try {
-                unsafe {
-                    _plugin.MediaManager.PlayMedia(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
-                    soundPath, (SoundType)soundType, false);
-                }
-                return true;
-            } catch {
-                return false;
-            }
-        }
+        //public bool PlaySound(nint objectAddress, string soundPath, int soundType) {
+        //    try {
+        //        unsafe {
+        //            _plugin.MediaManager.PlayMedia(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress),
+        //            soundPath, (SoundType)soundType, false);
+        //        }
+        //        return true;
+        //    } catch {
+        //        return false;
+        //    }
+        //}
 
-        public bool StopSound(nint objectAddress) {
-            try {
-                unsafe {
-                    _plugin.MediaManager.StopAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress));
-                }
-                return true;
-            } catch {
-                return false;
-            }
-        }
+        //public bool StopSound(nint objectAddress) {
+        //    try {
+        //        unsafe {
+        //            _plugin.MediaManager.StopAudio(new MediaGameObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)objectAddress));
+        //        }
+        //        return true;
+        //    } catch {
+        //        return false;
+        //    }
+        //}
 
         public void Dispose() {
             _isReady = false;
