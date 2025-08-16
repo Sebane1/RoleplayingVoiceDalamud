@@ -655,14 +655,16 @@ namespace RoleplayingVoice {
                                     }
                                 }, delegate (object sender, StreamVolumeEventArgs e) {
                                     Task.Run(delegate {
-                                        if (e.MaxSampleValues.Length > 0) {
-                                            if (e.MaxSampleValues[0] > 0.2) {
-                                                _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 5);
-                                                lipWasSynced = true;
-                                            } else {
-                                                _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                        Task.Run(delegate {
+                                            if (e.MaxSampleValues.Length > 0) {
+                                                if (e.MaxSampleValues[0] > 0.2) {
+                                                    _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 5);
+                                                    lipWasSynced = true;
+                                                } else {
+                                                    _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                                }
                                             }
-                                        }
+                                        });
                                     });
                                 });
                             });
@@ -962,13 +964,15 @@ namespace RoleplayingVoice {
                                 _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
                             },
                             delegate (object sender, StreamVolumeEventArgs e) {
-                                if (e.MaxSampleValues.Length > 0) {
-                                    if (e.MaxSampleValues[0] > 0.2) {
-                                        _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 2);
-                                    } else {
-                                        _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                Task.Run(delegate {
+                                    if (e.MaxSampleValues.Length > 0) {
+                                        if (e.MaxSampleValues[0] > 0.2) {
+                                            _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 2);
+                                        } else {
+                                            _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                        }
                                     }
-                                }
+                                });
                             });
                         }
                     }
@@ -1337,13 +1341,15 @@ namespace RoleplayingVoice {
                                                     });
                                                 },
                                         delegate (object sender, StreamVolumeEventArgs e) {
-                                            if (e.MaxSampleValues.Length > 0) {
-                                                if (e.MaxSampleValues[0] > 0.2) {
-                                                    _addonTalkHandler.TriggerLipSync(player as ICharacter, 2);
-                                                } else {
-                                                    _addonTalkHandler.StopLipSync(player as ICharacter);
+                                            Task.Run(delegate {
+                                                if (e.MaxSampleValues.Length > 0) {
+                                                    if (e.MaxSampleValues[0] > 0.2) {
+                                                        _addonTalkHandler.TriggerLipSync(player as ICharacter, 2);
+                                                    } else {
+                                                        _addonTalkHandler.StopLipSync(player as ICharacter);
+                                                    }
                                                 }
-                                            }
+                                            });
                                         });
                                                 _otherPlayerCombatTrigger = 0;
                                             } else {
