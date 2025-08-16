@@ -494,82 +494,86 @@ namespace RoleplayingVoice {
         }
 
         private void Chat_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
-            if (!disposed) {
-                CheckDependancies();
-                string playerName = "";
-                try {
-                    foreach (var item in sender.Payloads) {
-                        PlayerPayload player = item as PlayerPayload;
-                        TextPayload text = item as TextPayload;
-                        if (player != null) {
-                            string possiblePlayerName = RemoveSpecialSymbols(player.PlayerName).Trim();
-                            if (!string.IsNullOrEmpty(possiblePlayerName)) {
-                                if (char.IsLower(possiblePlayerName[1])) {
-                                    playerName = player.PlayerName;
-                                    break;
+            var storedSender = sender;
+            var storedMessage = message;
+            Task.Run(delegate () {
+                if (!disposed) {
+                    CheckDependancies();
+                    string playerName = "";
+                    try {
+                        foreach (var item in storedSender.Payloads) {
+                            PlayerPayload player = item as PlayerPayload;
+                            TextPayload text = item as TextPayload;
+                            if (player != null) {
+                                string possiblePlayerName = RemoveSpecialSymbols(player.PlayerName).Trim();
+                                if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                    if (char.IsLower(possiblePlayerName[1])) {
+                                        playerName = player.PlayerName;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (text != null) {
+                                string possiblePlayerName = RemoveSpecialSymbols(text.Text).Trim();
+                                if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                    if (char.IsLower(possiblePlayerName[1])) {
+                                        playerName = text.Text;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        if (text != null) {
-                            string possiblePlayerName = RemoveSpecialSymbols(text.Text).Trim();
-                            if (!string.IsNullOrEmpty(possiblePlayerName)) {
-                                if (char.IsLower(possiblePlayerName[1])) {
-                                    playerName = text.Text;
-                                    break;
-                                }
-                            }
-                        }
-                    }
 #if DEBUG
-                    //_chat?.Print(playerName);
+                        //_chat?.Print(playerName);
 #endif
-                    //playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
-                    //if (playerName.ToLower().Contains("PlayerName")) {
-                    //    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
-                    //}
-                } catch {
+                        //playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim() + " " + sender.Payloads[0].ToString().Split(" ")[4].Trim(',');
+                        //if (playerName.ToLower().Contains("PlayerName")) {
+                        //    playerName = sender.Payloads[0].ToString().Split(" ")[3].Trim();
+                        //}
+                    } catch {
 
-                }
-                if (_roleplayingMediaManager != null) {
-                    switch (type) {
-                        case XivChatType.Say:
-                        case XivChatType.Shout:
-                        case XivChatType.Yell:
-                        case XivChatType.CustomEmote:
-                        case XivChatType.Party:
-                        case XivChatType.CrossParty:
-                        case XivChatType.TellIncoming:
-                        case XivChatType.TellOutgoing:
-                        case XivChatType.FreeCompany:
-                        case XivChatType.Alliance:
-                        case XivChatType.PvPTeam:
-                            if ((type != XivChatType.Shout && type != XivChatType.Yell) || IsResidential()) {
-                                ChatText(playerName, message, type, timestamp);
-                            }
-                            break;
-                        case XivChatType.NPCDialogue:
-                        case XivChatType.NPCDialogueAnnouncements:
-                            //NPCText(playerName, message, type, senderId);
-                            break;
-                        case (XivChatType)2729:
-                        case (XivChatType)2091:
-                        case (XivChatType)2234:
-                        case (XivChatType)2730:
-                        case (XivChatType)2219:
-                        case (XivChatType)2859:
-                        case (XivChatType)2731:
-                        case (XivChatType)2106:
-                        case (XivChatType)10409:
-                        case (XivChatType)8235:
-                        case (XivChatType)9001:
-                        case (XivChatType)4139:
-                            BattleText(playerName, message, type);
-                            break;
                     }
-                } else {
-                    InitialzeManager();
+                    if (_roleplayingMediaManager != null) {
+                        switch (type) {
+                            case XivChatType.Say:
+                            case XivChatType.Shout:
+                            case XivChatType.Yell:
+                            case XivChatType.CustomEmote:
+                            case XivChatType.Party:
+                            case XivChatType.CrossParty:
+                            case XivChatType.TellIncoming:
+                            case XivChatType.TellOutgoing:
+                            case XivChatType.FreeCompany:
+                            case XivChatType.Alliance:
+                            case XivChatType.PvPTeam:
+                                if ((type != XivChatType.Shout && type != XivChatType.Yell) || IsResidential()) {
+                                    ChatText(playerName, storedMessage, type, timestamp);
+                                }
+                                break;
+                            case XivChatType.NPCDialogue:
+                            case XivChatType.NPCDialogueAnnouncements:
+                                //NPCText(playerName, message, type, senderId);
+                                break;
+                            case (XivChatType)2729:
+                            case (XivChatType)2091:
+                            case (XivChatType)2234:
+                            case (XivChatType)2730:
+                            case (XivChatType)2219:
+                            case (XivChatType)2859:
+                            case (XivChatType)2731:
+                            case (XivChatType)2106:
+                            case (XivChatType)10409:
+                            case (XivChatType)8235:
+                            case (XivChatType)9001:
+                            case (XivChatType)4139:
+                                BattleText(playerName, storedMessage, type);
+                                break;
+                        }
+                    } else {
+                        InitialzeManager();
+                    }
                 }
-            }
+            });
         }
 
         private void ChatText(string sender, SeString message, XivChatType type, int timeStamp, bool isCustomNPC = false) {
@@ -650,14 +654,16 @@ namespace RoleplayingVoice {
                                         }
                                     }
                                 }, delegate (object sender, StreamVolumeEventArgs e) {
-                                    if (e.MaxSampleValues.Length > 0) {
-                                        if (e.MaxSampleValues[0] > 0.2) {
-                                            _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 5);
-                                            lipWasSynced = true;
-                                        } else {
-                                            _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                    Task.Run(delegate {
+                                        if (e.MaxSampleValues.Length > 0) {
+                                            if (e.MaxSampleValues[0] > 0.2) {
+                                                _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter, 5);
+                                                lipWasSynced = true;
+                                            } else {
+                                                _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                            }
                                         }
-                                    }
+                                    });
                                 });
                             });
                         }
