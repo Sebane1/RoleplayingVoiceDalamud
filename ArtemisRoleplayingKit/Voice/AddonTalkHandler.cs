@@ -223,6 +223,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _filterWasRan;
         private Dictionary<string, string> _knownNpcs;
         private List<IGameObject> _sortedObjectTable;
+        private bool _alreadySortingList;
 
         private void _toast_Toast(ref SeString message, ref Dalamud.Game.Gui.Toast.ToastOptions options, ref bool isHandled) {
             if (_plugin.Window.NpcSpeechEnabled) {
@@ -493,7 +494,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                             if (_clientState != null) {
                                 if (_clientState.IsLoggedIn) {
                                     unsafe {
-                                        _plugin.Filter.Streaming = !Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat;
+                                        Task.Run(delegate {
+                                            bool inCombat = !Conditions.Instance()->BoundByDuty && !Conditions.Instance()->InCombat;
+                                            if (inCombat != _plugin.Filter.Streaming) {
+                                                _plugin.Filter.Streaming = inCombat;
+                                            }
+                                        });
                                     }
                                     if (_plugin.Filter.IsCutsceneDetectionNull()) {
                                         if (!_alreadyAddedEvent) {
@@ -502,8 +508,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             _alreadyAddedEvent = true;
                                         }
                                     }
-                                    if (_gotPlayerDefaultState) {
+                                    if (!_gotPlayerDefaultState) {
                                         GetAnimationDefaults();
+                                        _gotPlayerDefaultState = true;
                                     }
                                     if (!alreadyConfiguredBubbles) {
                                         //	Hook
@@ -526,13 +533,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_state == null) {
                                         _state = GetBattleTalkAddonState();
                                     }
-                                    _sortedObjectTable = _threadSafeObjectTable.ToList();
-                                    if (_plugin.PlayerCamera != null) {
-                                        _sortedObjectTable.Sort((x, y) => {
-                                            return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
-                                        });
-                                    }
                                     Task.Run((Action)delegate {
+                                        if (!_alreadySortingList) {
+                                            _alreadySortingList = true;
+                                            _sortedObjectTable = _threadSafeObjectTable.ToList();
+                                            if (_plugin.PlayerCamera != null) {
+                                                _sortedObjectTable.Sort((x, y) => {
+                                                    return Vector3.Distance(x.Position, _plugin.PlayerCamera.Position).CompareTo(Vector3.Distance(y.Position, _plugin.PlayerCamera.Position));
+                                                });
+                                            }
+                                            _alreadySortingList = false;
+                                        }
                                         if (_state != null && !string.IsNullOrEmpty(_state.Text) && _state.Speaker != "All") {
                                             _textIsPresent = true;
                                             if (_state.Text != _currentText) {
