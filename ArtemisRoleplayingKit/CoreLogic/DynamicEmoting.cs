@@ -197,9 +197,9 @@ namespace RoleplayingVoice {
             foreach (var item in _objectTable) {
                 if (Vector3.Distance(_threadSafeObjectTable.LocalPlayer.Position, item.Position) < 3f
                     && item.GameObjectId != _threadSafeObjectTable.LocalPlayer.GameObjectId) {
-                    if (item.IsValid()) {
+                   // if (item.IsValid()) {
                         gameObjects.Add((item as Dalamud.Game.ClientState.Objects.Types.IGameObject));
-                    }
+                 //   }
                 }
                 if (item.ObjectKind == ObjectKind.Player) {
                     _playerCount++;
