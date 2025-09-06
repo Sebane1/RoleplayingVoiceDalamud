@@ -29,12 +29,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="13.0.0" />
+		<PackageReference Include="DalamudPackager" Version="13.1.0" />
 		<PackageReference Include="Glamourer.Api" Version="2.6.0" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
 		<PackageReference Include="NAudio.WinMM" Version="2.2.1" />
-		<PackageReference Include="Penumbra.Api" Version="5.10.0" />
+		<PackageReference Include="Penumbra.Api" Version="5.12.0" />
 		<PackageReference Include="Penumbra.String" Version="1.0.5" />
 		<PackageReference Include="SevenZipSharp.Interop" Version="19.1.0" />
 		<PackageReference Include="Sewer56.Update.Extractors.SevenZipSharp" Version="1.1.4" />
