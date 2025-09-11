@@ -458,10 +458,16 @@ namespace RoleplayingVoice
             {
                 if (ClientState.IsLoggedIn && _threadSafeObjectTable.LocalPlayer != null)
                 {
-                    bool handled = false;
-                    var name = _threadSafeObjectTable.LocalPlayer.Name;
-                    var message = new SeString(new TextPayload(args.Replace("cc", "")));
-                    _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
+                    if (!string.IsNullOrEmpty(args))
+                    {
+                        bool handled = false;
+                        var name = _threadSafeObjectTable.LocalPlayer.Name;
+                        var message = new SeString(new TextPayload(args.Replace("cc", "")));
+                        if (!string.IsNullOrEmpty(message.TextValue))
+                        {
+                            _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
+                        }
+                    }
                 }
             } catch (Exception e)
             {
