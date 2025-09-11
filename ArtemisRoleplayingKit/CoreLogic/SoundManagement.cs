@@ -829,9 +829,9 @@ namespace RoleplayingVoice {
         private unsafe string GetWrittenGameState(string playerName, string npcName) {
             string locationValue = HousingManager.Instance()->IsInside() ? "inside a house" : "outside";
             string value = "";
-            //string value = $"{playerName} and npc are currently {locationValue}. The current zone is "
-            //    + DataManager.GetExcelSheet<TerritoryType>().GetRow(_clientState.TerritoryType).PlaceName.Value.Name.ToString() +
-            //    ". The date and time is " + DateTime.Now.ToString("MM/dd/yyyy h:mm tt") + ".";
+            value = $"{playerName} and npc are currently {locationValue}. The current zone is "
+                + DataManager.GetExcelSheet<TerritoryType>().GetRow(_clientState.TerritoryType).PlaceName.Value.Name.ToString() +
+                ". The date and time is " + DateTime.Now.ToString("MM/dd/yyyy h:mm tt") + ".";
             return value;
         }
 

@@ -41,8 +41,10 @@ using GameObjectHelper.ThreadSafeDalamudObjectTable;
 //using Anamnesis.GameData.Excel;
 //using Lumina.Excel.GeneratedSheets2;
 #endregion
-namespace RoleplayingVoice {
-    public partial class Plugin : IDalamudPlugin {
+namespace RoleplayingVoice
+{
+    public partial class Plugin : IDalamudPlugin
+    {
         #region Fields
         private int performanceLimiter;
         private readonly IDalamudPluginInterface pluginInterface;
@@ -216,9 +218,12 @@ namespace RoleplayingVoice {
         public NetworkedClient NetworkedClient { get => _networkedClient; set => _networkedClient = value; }
         public ISigScanner SigScanner { get => _sigScanner; set => _sigScanner = value; }
 
-        internal Filter Filter {
-            get {
-                if (_filter == null) {
+        internal Filter Filter
+        {
+            get
+            {
+                if (_filter == null)
+                {
                     _filter = new Filter(this);
                     _filter.Enable();
                 }
@@ -281,11 +286,13 @@ namespace RoleplayingVoice {
             IGameGui gameGui,
             IDragDropManager dragDrop,
             IPluginLog pluginLog,
-             ITargetManager targetManager) {
+             ITargetManager targetManager)
+        {
             Plugin.PluginLog = pluginLog;
             this._chat = chat;
             #region Constructor
-            try {
+            try
+            {
                 Service.DataManager = dataManager;
                 Service.SigScanner = scanner;
                 Service.GameInteropProvider = interopProvider;
@@ -324,34 +331,43 @@ namespace RoleplayingVoice {
                 _animationCatalogue.Plugin = this;
                 _animationEmoteSelection.Plugin = this;
                 _targetManager = targetManager;
-                if (Window is not null) {
+                if (Window is not null)
+                {
                     this.windowSystem.AddWindow(Window);
                 }
-                if (_videoWindow is not null) {
+                if (_videoWindow is not null)
+                {
                     this.windowSystem.AddWindow(_videoWindow);
                 }
                 //if (_catalogueWindow is not null) {
                 //    this.windowSystem.AddWindow(_catalogueWindow);
                 //}
-                if (_gposeWindow is not null) {
+                if (_gposeWindow is not null)
+                {
                     this.windowSystem.AddWindow(_gposeWindow);
                 }
-                if (_gposePhotoTakerWindow is not null) {
+                if (_gposePhotoTakerWindow is not null)
+                {
                     this.windowSystem.AddWindow(_gposePhotoTakerWindow);
                 }
-                if (_redoLineWindow is not null) {
+                if (_redoLineWindow is not null)
+                {
                     this.windowSystem.AddWindow(_redoLineWindow);
                 }
-                if (_animationCatalogue is not null) {
+                if (_animationCatalogue is not null)
+                {
                     this.windowSystem.AddWindow(_animationCatalogue);
                 }
-                if (_animationEmoteSelection is not null) {
+                if (_animationEmoteSelection is not null)
+                {
                     this.windowSystem.AddWindow(_animationEmoteSelection);
                 }
-                if (_npcPersonalityWindow is not null) {
+                if (_npcPersonalityWindow is not null)
+                {
                     this.windowSystem.AddWindow(_npcPersonalityWindow);
                 }
-                if (_voiceEditor is not null) {
+                if (_voiceEditor is not null)
+                {
                     this.windowSystem.AddWindow(_voiceEditor);
                 }
                 _cooldown = new Stopwatch();
@@ -369,7 +385,8 @@ namespace RoleplayingVoice {
                 _framework = framework;
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
-                Task.Run(async () => {
+                Task.Run(async () =>
+                {
                     _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
                         config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
                     _voiceEditor.NPCVoiceManager = _npcVoiceManager;
@@ -382,7 +399,8 @@ namespace RoleplayingVoice {
                     _videoWindow.WindowResized += _videoWindow_WindowResized;
                     _toast.ErrorToast += _toast_ErrorToast;
                 });
-            } catch (Exception e) {
+            } catch (Exception e)
+            {
                 Plugin.PluginLog?.Warning(e, e.Message);
                 _chat?.PrintError("[Artemis Roleplaying Kit] Fatal Error, the plugin did not initialize correctly!");
             }
@@ -390,21 +408,25 @@ namespace RoleplayingVoice {
             #endregion
         }
 
-        private void Plugin_Event() {
+        private void Plugin_Event()
+        {
             _penumbraReady = true;
         }
 
-        private void _clientState_CfPop(Lumina.Excel.Sheets.ContentFinderCondition obj) {
+        private void _clientState_CfPop(Lumina.Excel.Sheets.ContentFinderCondition obj)
+        {
             _recentCFPop = 1;
         }
         #endregion Plugin Initiialization
 
 
         #region UI Management
-        private void UiBuilder_Draw() {
+        private void UiBuilder_Draw()
+        {
             this.windowSystem.Draw();
         }
-        private void UiBuilder_OpenConfigUi() {
+        private void UiBuilder_OpenConfigUi()
+        {
             Window?.RefreshVoices();
             Window?.Toggle();
         }
@@ -412,33 +434,48 @@ namespace RoleplayingVoice {
         #region Chat Commands
         [Command("/rpvoice")]
         [HelpMessage("OpenConfig")]
-        public void ExecuteCommandA(string command, string args) {
+        public void ExecuteCommandA(string command, string args)
+        {
             OpenConfig(command, args);
         }
         [Command("/ark")]
         [HelpMessage("OpenConfig")]
-        public void ExecuteCommandB(string command, string args) {
+        public void ExecuteCommandB(string command, string args)
+        {
             OpenConfig(command, args);
         }
         [Command("/artemis")]
         [HelpMessage("OpenConfig")]
-        public void ExecuteCommandC(string command, string args) {
+        public void ExecuteCommandC(string command, string args)
+        {
             OpenConfig(command, args);
         }
         [Command("/cc")]
         [HelpMessage("Chat With Custom NPC")]
-        public void ExecuteCommandD(string command, string args) {
-            bool handled = false;
-            var name = _threadSafeObjectTable.LocalPlayer.Name;
-            var message = new SeString(new TextPayload(args.Replace("cc", "")));
-            _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
-            //Chat_ChatMessage(XivChatType.Say, 0, ref name, ref message, ref handled);
+        public void ExecuteCommandD(string command, string args)
+        {
+            try
+            {
+                if (ClientState.IsLoggedIn && _threadSafeObjectTable.LocalPlayer != null)
+                {
+                    bool handled = false;
+                    var name = _threadSafeObjectTable.LocalPlayer.Name;
+                    var message = new SeString(new TextPayload(args.Replace("cc", "")));
+                    _chat.Print(new XivChatEntry() { Name = name, Message = message, Timestamp = -1, Type = XivChatType.Party });
+                }
+            } catch (Exception e)
+            {
+            }
         }
-        public void OpenConfig(string command, string args) {
-            if (!disposed) {
+        public void OpenConfig(string command, string args)
+        {
+            if (!disposed)
+            {
                 string[] splitArgs = args.Split(' ');
-                if (splitArgs.Length > 0) {
-                    switch (splitArgs[0].ToLower()) {
+                if (splitArgs.Length > 0)
+                {
+                    switch (splitArgs[0].ToLower())
+                    {
                         case "help":
                             _chat?.Print("on (Enable Player TTS Voice)\r\n" +
                              "off (Disable Player TTS Voice)\r\n" +
@@ -488,24 +525,30 @@ namespace RoleplayingVoice {
                             _checkVanillaEmoteQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, _threadSafeObjectTable.LocalPlayer as ICharacter));
                             break;
                         case "companionanim":
-                            Task.Run(() => {
+                            Task.Run(() =>
+                            {
                                 ICharacter foundCharacter = null;
-                                for (int i = 0; i < 4; i++) {
-                                    foreach (var item in GetNearestObjects()) {
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    foreach (var item in GetNearestObjects())
+                                    {
                                         ICharacter character = item as ICharacter;
-                                        if (character != null && character.ObjectKind == ObjectKind.Companion) {
+                                        if (character != null && character.ObjectKind == ObjectKind.Companion)
+                                        {
                                             foundCharacter = character;
                                             break;
                                         }
                                     }
-                                    if (foundCharacter != null) {
+                                    if (foundCharacter != null)
+                                    {
                                         _preOccupiedWithEmoteCommand.Add(foundCharacter.Name.TextValue);
                                         _checkAnimationModsQueue.Enqueue(new Tuple<string[], string, ICharacter>(splitArgs, args, foundCharacter));
                                         break;
                                     }
                                     Thread.Sleep(1000);
                                 }
-                                if (foundCharacter == null) {
+                                if (foundCharacter == null)
+                                {
                                     _chat.PrintError("Could not find owned companion to apply animation");
                                 }
                             });
@@ -516,44 +559,56 @@ namespace RoleplayingVoice {
                         case "summon":
                             bool foundNPC = false;
                             string npc = args.Replace(splitArgs[0], null).Trim();
-                            foreach (var item in config.CustomNpcCharacters) {
-                                if (item.NpcName.ToLower().Contains(npc.ToLower())) {
+                            foreach (var item in config.CustomNpcCharacters)
+                            {
+                                if (item.NpcName.ToLower().Contains(npc.ToLower()))
+                                {
                                     MessageQueue.Enqueue("/minion " + @"""" + item.MinionToReplace + @"""");
                                     foundNPC = true;
                                     break;
                                 }
                             }
-                            if (!foundNPC) {
+                            if (!foundNPC)
+                            {
                                 _chat.PrintError("Could not find custom NPC with the name " + @"""" + npc + @"""");
                             }
                             break;
                         case "twitch":
-                            if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv")) {
+                            if (splitArgs.Length > 1 && splitArgs[1].Contains("twitch.tv"))
+                            {
                                 _lastStreamObject = _playerObject;
                                 TuneIntoStream(splitArgs[1], _playerObject, false);
-                            } else {
-                                if (!string.IsNullOrEmpty(_currentStreamer)) {
-                                    try {
-                                        Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                            } else
+                            {
+                                if (!string.IsNullOrEmpty(_currentStreamer))
+                                {
+                                    try
+                                    {
+                                        Process.Start(new System.Diagnostics.ProcessStartInfo()
+                                        {
                                             FileName = @"https://www.twitch.tv/popout/" + _currentStreamer + @"/chat?popout=",
                                             UseShellExecute = true,
                                             Verb = "OPEN"
                                         });
-                                    } catch (Exception e) {
+                                    } catch (Exception e)
+                                    {
                                         Plugin.PluginLog?.Warning(e, e.Message);
                                     }
-                                } else {
+                                } else
+                                {
                                     _chat?.PrintError("There is no active stream");
                                 }
                             }
                             break;
                         case "rtmp":
-                            if (splitArgs.Length > 1 && splitArgs[1].Contains("rtmp")) {
+                            if (splitArgs.Length > 1 && splitArgs[1].Contains("rtmp"))
+                            {
                                 TuneIntoStream(splitArgs[1], _playerObject, true);
                             }
                             break;
                         case "listen":
-                            if (!string.IsNullOrEmpty(potentialStream)) {
+                            if (!string.IsNullOrEmpty(potentialStream))
+                            {
                                 TuneIntoStream(potentialStream, _playerObject, false);
                             }
                             break;
@@ -574,9 +629,11 @@ namespace RoleplayingVoice {
                             break;
                         case "textadvance":
                             config.AutoTextAdvance = !config.AutoTextAdvance;
-                            if (config.AutoTextAdvance) {
+                            if (config.AutoTextAdvance)
+                            {
                                 _chat?.Print("Auto Text Advance Enabled");
-                            } else {
+                            } else
+                            {
                                 _chat?.Print("Auto Text Advance Disabled");
                             }
                             config.Save();
@@ -586,9 +643,11 @@ namespace RoleplayingVoice {
                             //if (StreamDetection.RecordingSoftwareIsActive) {
                             //    _chat?.PrintError("Please close " + StreamDetection.LastProcess.ProcessName + ". It is interfering with accessibility mode.");
                             //} else {
-                            if (config.NpcSpeechIsOn) {
+                            if (config.NpcSpeechIsOn)
+                            {
                                 _chat?.Print("Accessibility Mode Enabled");
-                            } else {
+                            } else
+                            {
                                 _chat?.Print("Accessibility Mode Disabled");
                             }
                             //}
@@ -597,9 +656,11 @@ namespace RoleplayingVoice {
                             break;
                         case "arrvoice":
                             config.ReplaceVoicedARRCutscenes = !config.ReplaceVoicedARRCutscenes;
-                            if (config.ReplaceVoicedARRCutscenes) {
+                            if (config.ReplaceVoicedARRCutscenes)
+                            {
                                 _chat?.Print("ARR Voice Replaced");
-                            } else {
+                            } else
+                            {
                                 _chat?.Print("ARR Voice Vanilla");
                             }
                             config.Save();
@@ -609,7 +670,8 @@ namespace RoleplayingVoice {
                             _chat?.Print("All Sounds Cleared!");
                             break;
                         default:
-                            if (config.AiVoiceActive) {
+                            if (config.AiVoiceActive)
+                            {
                                 Window.RefreshVoices();
                             }
                             Window.Toggle();
@@ -621,20 +683,25 @@ namespace RoleplayingVoice {
 
         #endregion
         #region Error Logging
-        private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e) {
+        private void Window_OnWindowOperationFailed(object sender, PluginWindow.MessageEventArgs e)
+        {
             _chat?.PrintError("[Artemis Roleplaying Kit] " + e.Message);
             Plugin.PluginLog?.Warning("[Artemis Roleplaying Kit] " + e.Message);
         }
-        private void Window_OnMoveFailed(object sender, EventArgs e) {
+        private void Window_OnMoveFailed(object sender, EventArgs e)
+        {
             _chat?.PrintError("[Artemis Roleplaying Kit] Cache swap failed, this is not a valid cache folder. Please select an empty folder that does not require administrator rights.");
         }
-        private void _mediaManager_OnErrorReceived(object sender, MediaError e) {
+        private void _mediaManager_OnErrorReceived(object sender, MediaError e)
+        {
             Plugin.PluginLog?.Warning(e.Exception, e.Exception.Message);
         }
         #endregion
         #region IDisposable Support
-        protected virtual void Dispose(bool disposing) {
-            try {
+        protected virtual void Dispose(bool disposing)
+        {
+            try
+            {
                 disposed = true;
                 Disposed = true;
                 config.Save();
@@ -645,52 +712,66 @@ namespace RoleplayingVoice {
                 this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
                 this.windowSystem.RemoveAllWindows();
                 this.commandManager?.Dispose();
-                if (_filter != null) {
+                if (_filter != null)
+                {
                     _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
                 }
-                try {
-                    if (_mediaManager != null) {
+                try
+                {
+                    if (_mediaManager != null)
+                    {
                         _mediaManager.Invalidated = true;
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
                         _mediaManager?.Dispose();
                     }
-                } catch (Exception e) {
+                } catch (Exception e)
+                {
                     Plugin.PluginLog?.Warning(e, e.Message);
                 }
-                try {
+                try
+                {
                     _clientState.Login -= _clientState_Login;
                     _clientState.Logout -= _clientState_Logout;
                     _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                     _clientState.LeavePvP -= _clientState_LeavePvP;
-                } catch (Exception e) {
+                } catch (Exception e)
+                {
                     Plugin.PluginLog?.Warning(e, e.Message);
                 }
-                try {
+                try
+                {
                     _toast.ErrorToast -= _toast_ErrorToast;
-                } catch (Exception e) {
+                } catch (Exception e)
+                {
                     Plugin.PluginLog?.Warning(e, e.Message);
                 }
-                try {
+                try
+                {
                     _framework.Update -= framework_Update;
-                } catch (Exception e) {
+                } catch (Exception e)
+                {
                     Plugin.PluginLog?.Warning(e, e.Message);
                 }
                 _networkedClient?.Dispose();
                 Filter?.Dispose();
-                if (_emoteReaderHook != null) {
-                    if (_emoteReaderHook.OnEmote != null) {
+                if (_emoteReaderHook != null)
+                {
+                    if (_emoteReaderHook.OnEmote != null)
+                    {
                         _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
                     }
                 }
                 CleanupEmoteWatchList();
                 _addonTalkHandler?.Dispose();
                 //PenumbraAndGlamourerIPCWrapper.Instance.ModSettingChanged.Event -= modSettingChanged;
-            } catch (Exception e) {
+            } catch (Exception e)
+            {
                 Plugin.PluginLog?.Warning(e, e.Message);
             }
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
