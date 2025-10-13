@@ -418,8 +418,6 @@ namespace RoleplayingVoice
             _recentCFPop = 1;
         }
         #endregion Plugin Initiialization
-
-
         #region UI Management
         private void UiBuilder_Draw()
         {
