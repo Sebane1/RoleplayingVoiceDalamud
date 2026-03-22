@@ -1,4 +1,4 @@
-﻿using Anamnesis;
+using Anamnesis;
 using Anamnesis.Actor;
 using Anamnesis.Core.Memory;
 using Anamnesis.Memory;
@@ -516,7 +516,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (!alreadyConfiguredBubbles) {
                                             //	Hook
                                             unsafe {
-                                                IntPtr fpOpenChatBubble = _scanner.ScanText("E8 ?? ?? ?? ?? F6 86 ?? ?? ?? ?? ?? C7 46 ?? ?? ?? ?? ??");
+                                                IntPtr fpOpenChatBubble = _scanner.ScanText("E8 ?? ?? ?? FF 48 8B 7C 24 48 C7 46 0C 01 00 00 00");
                                                 if (fpOpenChatBubble != IntPtr.Zero) {
                                                     Plugin.PluginLog.Information($"OpenChatBubble function signature found at 0x{fpOpenChatBubble:X}.");
                                                     _openChatBubbleHook = Service.GameInteropProvider.HookFromAddress<NPCSpeechBubble>(fpOpenChatBubble, NPCBubbleTextDetour);
