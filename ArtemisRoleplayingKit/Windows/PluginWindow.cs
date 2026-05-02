@@ -361,10 +361,10 @@ namespace RoleplayingVoice {
                             ImGui.EndTabItem();
                         }
                     }
-                    if (ImGui.BeginTabItem("Custom NPC")) {
-                        PluginReference.NpcPersonalityWindow.Draw();
-                        ImGui.EndTabItem();
-                    }
+                    //if (ImGui.BeginTabItem("Custom NPC")) {
+                    //    PluginReference.NpcPersonalityWindow.Draw();
+                    //    ImGui.EndTabItem();
+                    //}
                     if (ImGui.BeginTabItem("Animation")) {
                         DrawAnimationWindow();
                         ImGui.EndTabItem();
