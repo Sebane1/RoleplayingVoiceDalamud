@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState;
+using Dalamud.Game.ClientState;
 using Dalamud.Interface.Components;
 using Dalamud.Interface;
 using Dalamud.Interface.ImGuiFileDialog;
@@ -532,6 +532,7 @@ namespace RoleplayingVoice {
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
+                            Plugin.PluginLog.Info("Replaying Line");
                             MemoryStream stream = new MemoryStream();
                             var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream, item.Text, item.OriginalValue, item.RawValue, item.Character,
                                  item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false)).Item1;
@@ -625,7 +626,7 @@ namespace RoleplayingVoice {
                 ImGui.BeginDisabled();
             }
             if (ImGui.Button(targetedPlayerText)) {
-                if (PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Player) {
+                if (PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.ObjectKind == ObjectKind.Pc) {
                     string senderName = Plugin.CleanSenderName(PluginReference.ThreadSafeObjectTable.LocalPlayer.TargetObject.Name.TextValue);
                     if (!configuration.Whitelist.Contains(senderName)) {
                         configuration.Whitelist.Add(senderName);

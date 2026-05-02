@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Plugin;
@@ -81,7 +81,7 @@ namespace RoleplayingVoice {
                                                 character.ObjectKind == ObjectKind.BattleNpc ||
                                                 character.ObjectKind == ObjectKind.EventNpc) && config.DebugMode) ||
                                                 character.ObjectKind == ObjectKind.Companion ||
-                                                character.ObjectKind == ObjectKind.Housing) {
+                                                character.ObjectKind == (ObjectKind)12 /* Housing */) {
                                                 if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                     if (character.ObjectKind != ObjectKind.Companion || PenumbraAndGlamourerHelperFunctions.IsHumanoid(character)) {
                                                         characters.Add(character);
@@ -201,7 +201,7 @@ namespace RoleplayingVoice {
                         gameObjects.Add((item as Dalamud.Game.ClientState.Objects.Types.IGameObject));
                  //   }
                 }
-                if (item.ObjectKind == ObjectKind.Player) {
+                if (item.ObjectKind == ObjectKind.Pc) {
                     _playerCount++;
                 }
             }

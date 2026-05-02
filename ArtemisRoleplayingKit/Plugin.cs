@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using Dalamud.Game;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -387,17 +387,24 @@ namespace RoleplayingVoice
                 NPCVoiceMapping.Initialize();
                 Task.Run(async () =>
                 {
-                    _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
-                        config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
-                    _voiceEditor.NPCVoiceManager = _npcVoiceManager;
-                    _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                    _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
-                    _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
-                    NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
-                    _gameGui = gameGui;
-                    _dragDrop = dragDrop;
-                    _videoWindow.WindowResized += _videoWindow_WindowResized;
-                    _toast.ErrorToast += _toast_ErrorToast;
+                    try
+                    {
+                        _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
+                            config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
+                        _voiceEditor.NPCVoiceManager = _npcVoiceManager;
+                        _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
+                        _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                        _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
+                        NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
+                        _gameGui = gameGui;
+                        _dragDrop = dragDrop;
+                        _videoWindow.WindowResized += _videoWindow_WindowResized;
+                        _toast.ErrorToast += _toast_ErrorToast;
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.PluginLog?.Error(e, "[Artemis Roleplaying Kit] Async initialization failed: " + e.Message);
+                    }
                 });
             } catch (Exception e)
             {

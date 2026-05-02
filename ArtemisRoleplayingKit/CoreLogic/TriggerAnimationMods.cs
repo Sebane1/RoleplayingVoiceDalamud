@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -71,7 +71,7 @@ namespace RoleplayingVoice {
                                         character.ObjectKind == ObjectKind.BattleNpc ||
                                         character.ObjectKind == ObjectKind.EventNpc ||
                                         character.ObjectKind == ObjectKind.Companion ||
-                                        character.ObjectKind == ObjectKind.Housing) {
+                                        character.ObjectKind == (ObjectKind)12 /* Housing */) {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
                                             if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                 _toast.ShowNormal(character.Name.TextValue + " ceases your command.");
@@ -98,7 +98,7 @@ namespace RoleplayingVoice {
                                         character.ObjectKind == ObjectKind.BattleNpc ||
                                         character.ObjectKind == ObjectKind.EventNpc ||
                                         character.ObjectKind == ObjectKind.Companion ||
-                                        character.ObjectKind == ObjectKind.Housing) {
+                                        character.ObjectKind == (ObjectKind)12 /* Housing */) {
                                         if (character.Name.TextValue.ToLower().Contains(splitArgs[2].ToLower())) {
                                             bool hasQuest = false;
                                             unsafe {
@@ -160,7 +160,7 @@ namespace RoleplayingVoice {
                                             character.ObjectKind == ObjectKind.BattleNpc ||
                                             character.ObjectKind == ObjectKind.EventNpc ||
                                             character.ObjectKind == ObjectKind.Companion ||
-                                            character.ObjectKind == ObjectKind.Housing) {
+                                            character.ObjectKind == (ObjectKind)12 /* Housing */) {
                                             if (character.Name.TextValue.ToLower().Contains(targetNPC.ToLower())) {
                                                 if (!IsPartOfQuestOrImportant(character as Dalamud.Game.ClientState.Objects.Types.IGameObject)) {
                                                     if (AgentEmote.Instance()->CanUseEmote((ushort)emoteItem.RowId)) {

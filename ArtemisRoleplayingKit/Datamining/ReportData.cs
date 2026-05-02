@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Newtonsoft.Json;
 using System;
@@ -12,7 +12,7 @@ using System.Net;
 
 namespace RoleplayingVoiceDalamud.Datamining {
     public class ReportData {
-        private ushort territoryId;
+        private uint territoryId;
         public string speaker { get; set; }
         public string sentence { get; set; }
         public ulong npcid { get; set; }
@@ -23,10 +23,10 @@ namespace RoleplayingVoiceDalamud.Datamining {
         public byte eyes { get; set; }
         public byte folder { get; set; }
         public string user { get; set; }
-        public ushort TerritoryId { get => territoryId; set => territoryId = value; }
+        public uint TerritoryId { get => territoryId; set => territoryId = value; }
         public string Note { get; set; }
 
-        public ReportData(string name, string message, IGameObject gameObject, ushort territoryId, string note) {
+        public ReportData(string name, string message, IGameObject gameObject, uint territoryId, string note) {
             ICharacter character = gameObject as ICharacter;
             if (character != null) {
                 this.territoryId = territoryId;
@@ -47,7 +47,7 @@ namespace RoleplayingVoiceDalamud.Datamining {
                 user = "ArtemisRoleplayingKit";
             }
         }
-        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes, ushort territoryId, string note) {
+        public ReportData(string name, string message, uint objectId, int body, bool gender, byte race, byte tribe, byte eyes, uint territoryId, string note) {
             speaker = name;
             sentence = message;
             npcid = objectId;

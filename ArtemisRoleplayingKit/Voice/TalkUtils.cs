@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -26,10 +26,6 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public static unsafe AddonTalkText ReadTalkAddon(AddonTalk* talkAddon)
         {
-            string a = ReadTextNode(talkAddon->AtkTextNode220);
-            string b = ReadTextNode(talkAddon->AtkTextNode238);
-            string c = ReadTextNode(talkAddon->AtkTextNode240);
-            string d = ReadTextNode(talkAddon->AtkTextNode248);
             return new AddonTalkText
             {
                 Speaker = ReadTextNode(talkAddon->AtkTextNode220),
@@ -49,7 +45,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             if (textNode == null) return "";
 
             var textPtr = textNode->NodeText.StringPtr;
-            if (textPtr == null) return "";
+            if (textPtr.Value == null) return "";
 
             var textLength = textNode->NodeText.BufUsed - 1; // Null-terminated; chop off the null byte
             if (textLength is <= 0 or > int.MaxValue) return "";

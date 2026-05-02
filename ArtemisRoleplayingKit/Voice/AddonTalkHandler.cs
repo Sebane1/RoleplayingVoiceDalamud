@@ -4,6 +4,7 @@ using Anamnesis.Core.Memory;
 using Anamnesis.Memory;
 using Anamnesis.Services;
 using Dalamud.Game;
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
@@ -217,7 +218,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                   && !message.TextValue.Contains("trophy crystals") && !message.TextValue.Contains("Quality of") && !message.TextValue.Contains("Following") && !message.TextValue.Contains("KO'd") && !message.TextValue.Contains("Unable to equip all items");
         }
 
-        private List<ushort> BannedTerritories = new List<ushort>() {
+        private List<uint> BannedTerritories = new List<uint>() {
             674,719,778,746,810,824,677,720,779,758,811,825,845,846,847,922,858,848,885,923, 992,995,997,1092,1071,1095,1140,1168
         };
         private bool _filterWasRan;
@@ -261,7 +262,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 }
             }
         }
-        private void _clientState_TerritoryChanged(ushort obj) {
+        private void _clientState_TerritoryChanged(uint obj) {
             _speechBubbleInfo.Clear();
             _lastBattleNPCLines.Clear();
             _blockAudioGenerationCount = 0;
@@ -269,7 +270,10 @@ namespace RoleplayingVoiceDalamud.Voice {
             _knownNPCBossAnnouncers.Clear();
         }
 
-        private unsafe void _chatGui_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
+        private unsafe void _chatGui_ChatMessage(IHandleableChatMessage msg) {
+            var type = msg.LogKind;
+            var sender = msg.Sender;
+            var message = msg.Message;
             if (_plugin.Window.NpcSpeechEnabled) {
                 string text = message.TextValue;
                 string npcName = sender.TextValue;
@@ -368,7 +372,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                         if (pString != IntPtr.Zero &&
                         !Service.ClientState.IsPvPExcludingDen) {
                             //	Idk if the actor can ever be null, but if it can, assume that we should print the bubble just in case.  Otherwise, only don't print if the actor is a player.
-                            if (pActor == null || (ObjectKind)pActor->GetObjectKind() != ObjectKind.Player) {
+                            if (pActor == null || (ObjectKind)pActor->GetObjectKind() != ObjectKind.Pc) {
                                 long currentTime_mSec = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                                 SeString speakerName = SeString.Empty;
@@ -534,6 +538,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (_state == null) {
                                             _state = GetBattleTalkAddonState();
                                         }
+                                        if (_state != null) {
+                                            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {_state.Speaker}, Text: {_state.Text?.Substring(0, Math.Min(50, _state.Text?.Length ?? 0))}");
+                                        }
                                         Task.Run((Action)delegate {
                                             if (!_alreadySortingList) {
                                                 _alreadySortingList = true;
@@ -611,7 +618,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 }
                             } catch (Exception e) {
-                                Plugin.PluginLog.Info(e, e.Message);
+                                Plugin.PluginLog.Error(e, "[DEBUG] Framework_Update polling exception: " + e.Message);
                             }
                             pollingTimer.Restart();
                         }

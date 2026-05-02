@@ -1,9 +1,9 @@
-﻿using Dalamud.Interface.Internal;
+using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using Dalamud.Bindings.ImGui;
-using ImGuiScene;
+
 using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
 using System;

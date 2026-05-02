@@ -1,4 +1,5 @@
-﻿using Dalamud.Game;
+using Dalamud.Game;
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -133,7 +134,7 @@ namespace RoleplayingVoice {
                     }
                 }
             } catch (Exception e) {
-                Plugin.PluginLog.Error(e, e.Message);
+                Plugin.PluginLog.Error(e, "[framework_Update] " + e.Message);
             }
         }
 
@@ -187,7 +188,7 @@ namespace RoleplayingVoice {
                         _emoteSyncCheck.Restart();
                         try {
                             foreach (Dalamud.Game.ClientState.Objects.Types.IGameObject item in _objectTable) {
-                                if ((item as IGameObject).ObjectKind == ObjectKind.Player && item.Name.TextValue != _threadSafeObjectTable.LocalPlayer.Name.TextValue) {
+                                if ((item as IGameObject).ObjectKind == ObjectKind.Pc && item.Name.TextValue != _threadSafeObjectTable.LocalPlayer.Name.TextValue) {
                                     string[] senderStrings = SplitCamelCase(RemoveSpecialSymbols(item.Name.TextValue)).Split(" ");
                                     bool isShoutYell = false;
                                     if (senderStrings.Length > 2) {
@@ -196,7 +197,7 @@ namespace RoleplayingVoice {
                                             var task = Task.Run(async delegate () {
                                                 try {
                                                     Vector3 lastPosition = item.Position;
-                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                    uint startingTerritoryId = _clientState.TerritoryType;
                                                     while (!disposed && _clientState.IsLoggedIn &&
                                                     startingTerritoryId == _clientState.TerritoryType && boundByDuty) {
                                                         if (boundByDuty && inCombat) {
@@ -211,7 +212,7 @@ namespace RoleplayingVoice {
                                                                 _addonTalkHandler.TriggerEmote((item as ICharacter).Address, animation);
                                                                 lastPosition = item.Position;
                                                                 _ = Task.Run(() => {
-                                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                                    uint startingTerritoryId = _clientState.TerritoryType;
                                                                     while (true) {
                                                                         Thread.Sleep(500);
                                                                         if ((Vector3.Distance(item.Position, lastPosition) > 0.001f)) {
@@ -242,7 +243,7 @@ namespace RoleplayingVoice {
                                             task = Task.Run(async delegate () {
                                                 try {
                                                     Vector3 lastPosition = item.Position;
-                                                    int startingTerritoryId = _clientState.TerritoryType;
+                                                    uint startingTerritoryId = _clientState.TerritoryType;
                                                     while (!disposed && _clientState.IsLoggedIn &&
                                                     startingTerritoryId == _clientState.TerritoryType && boundByDuty) {
                                                         if (boundByDuty && inCombat) {
@@ -261,7 +262,7 @@ namespace RoleplayingVoice {
                                                                         var gameObject = ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)companion->CompanionObject);
                                                                         lastPosition = gameObject->Position;
                                                                         _ = Task.Run(() => {
-                                                                            int startingTerritoryId = _clientState.TerritoryType;
+                                                                            uint startingTerritoryId = _clientState.TerritoryType;
                                                                             while (true) {
                                                                                 Thread.Sleep(500);
                                                                                 if ((Vector3.Distance(gameObject->Position, lastPosition) > 0.001f)) {
@@ -493,9 +494,10 @@ namespace RoleplayingVoice {
             }
         }
 
-        private void Chat_ChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled) {
-            var storedSender = sender;
-            var storedMessage = message;
+        private void Chat_ChatMessage(IHandleableChatMessage msg) {
+            var type = msg.LogKind;
+            var storedSender = msg.Sender;
+            var storedMessage = msg.Message;
             Task.Run(delegate () {
                 if (!disposed) {
                     CheckDependancies();
@@ -547,7 +549,7 @@ namespace RoleplayingVoice {
                             case XivChatType.Alliance:
                             case XivChatType.PvPTeam:
                                 if ((type != XivChatType.Shout && type != XivChatType.Yell) || IsResidential()) {
-                                    ChatText(playerName, storedMessage, type, timestamp);
+                                    ChatText(playerName, storedMessage, type, msg.Timestamp);
                                 }
                                 break;
                             case XivChatType.NPCDialogue:
@@ -683,7 +685,7 @@ namespace RoleplayingVoice {
                             bool audioFocus = false;
                             if (_threadSafeObjectTable.LocalPlayer.TargetObject != null) {
                                 if (_threadSafeObjectTable.LocalPlayer.TargetObject.ObjectKind ==
-                                    ObjectKind.Player) {
+                                    ObjectKind.Pc) {
                                     audioFocus = _threadSafeObjectTable.LocalPlayer.TargetObject.Name.TextValue == sender
                                         || type == XivChatType.Party
                                         || type == XivChatType.CrossParty || isShoutYell;
@@ -1064,7 +1066,7 @@ namespace RoleplayingVoice {
                     _checkingMovementInProgress = true;
                     try {
                         foreach (IGameObject gameObject in _objectTable) {
-                            if (gameObject.ObjectKind == ObjectKind.Player) {
+                            if (gameObject.ObjectKind == ObjectKind.Pc) {
                                 string cleanedName = CleanSenderName(gameObject.Name.TextValue);
                                 if (!string.IsNullOrEmpty(cleanedName)) {
                                     if (gameObjectPositions.ContainsKey(cleanedName)) {

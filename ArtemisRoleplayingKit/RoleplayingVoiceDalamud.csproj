@@ -1,4 +1,4 @@
-﻿<Project Sdk="Dalamud.NET.Sdk/13.0.0">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
 		<TargetFramework>net10.0-windows7.0</TargetFramework>
 		<LangVersion>11.0</LangVersion>
@@ -29,7 +29,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="14.0.1" />
+
 		<PackageReference Include="Glamourer.Api" Version="2.8.0" />
 		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
@@ -48,33 +48,7 @@
 	  </ProjectReference>
 	</ItemGroup>
 
-	<ItemGroup>
-		<!--You may need to adjust these paths yourself. These point to a Dalamud assembly in AppData.-->
-		<Reference Include="Dalamud">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="ImGuiScene">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\ImGuiScene.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Lumina">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Lumina.Excel">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Lumina.Excel.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Newtonsoft.Json">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Newtonsoft.Json.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="FFXIVClientStructs">
-			<HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-	</ItemGroup>
+
 
 	<ItemGroup>
 	  <None Update="ArtemisRoleplayingKit.json">

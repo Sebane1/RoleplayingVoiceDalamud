@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.Internal;
+using Dalamud.Interface.Internal;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -6,7 +6,7 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using Dalamud.Bindings.ImGui;
-using ImGuiScene;
+
 using RoleplayingMediaCore;
 using RoleplayingMediaCore.Twitch;
 using System;

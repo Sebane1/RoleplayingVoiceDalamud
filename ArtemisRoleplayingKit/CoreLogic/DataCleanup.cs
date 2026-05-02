@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Config;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -95,7 +95,7 @@ namespace RoleplayingVoice {
             CleanSounds();
         }
 
-        private void _clientState_TerritoryChanged(ushort e) {
+        private void _clientState_TerritoryChanged(uint e) {
             if (config.DebugMode) {
                 _chat?.Print("Territory is " + e);
             }

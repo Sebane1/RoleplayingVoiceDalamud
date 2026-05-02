@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using RoleplayingVoiceCore;
 using RoleplayingVoiceDalamud.Datamining;
 using System;
@@ -55,15 +55,15 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
             _timeSinceLastUpdate.Restart();
         }
-        public static string CheckForNameVariant(string name, int variantDiscriminator) {
+        public static string CheckForNameVariant(string name, uint variantDiscriminator) {
             Dictionary<int, Dictionary<string, string>> voiceVariants = new Dictionary<int, Dictionary<string, string>>();
             voiceVariants[1192] = new Dictionary<string, string>() {
                 { "Cahciua", "Cahciua Living" },
                 { "Otis", "Otis Living" } };
 
-            if (voiceVariants.ContainsKey(variantDiscriminator)) {
-                if (voiceVariants[variantDiscriminator].ContainsKey(name)) {
-                    return voiceVariants[variantDiscriminator][name];
+            if (voiceVariants.ContainsKey((int)variantDiscriminator)) {
+                if (voiceVariants[(int)variantDiscriminator].ContainsKey(name)) {
+                    return voiceVariants[(int)variantDiscriminator][name];
                 }
             }
             return name;
