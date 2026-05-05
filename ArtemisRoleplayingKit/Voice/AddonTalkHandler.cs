@@ -1108,7 +1108,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     string chatId = _chatId;
                                     bool lipWasSynced = false;
                                     if (_plugin.Config.DebugMode) {
-                                        _plugin.Chat.Print("Attempt to play audio stream.");
+                                        _plugin.Chat.Print($"Audio: {wavePlayer.WaveFormat.SampleRate}Hz {wavePlayer.WaveFormat.Channels}ch, pitch={pitch:F3}, speed={_plugin.Config.NPCSpeechSpeed:F2}, engine={values.Item2}, smb={useSmbPitch}");
                                     }
                                     unsafe {
                                         if (!_blockAudioGeneration) {
@@ -1517,6 +1517,8 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         public float CalculatePitchBasedOnTraits(string value, bool gender, byte race, int body, float range) {
             string lowered = value.ToLower();
+            if (lowered.Contains("alphinaud") || lowered.Contains("alisaie")) return 1f;
+
             Random random = new Random(AudioConversionHelper.GetSimpleHash(value));
             bool isDawntrail = _clientState.TerritoryType == 1187 || _clientState.TerritoryType == 1188 ||
                     _clientState.TerritoryType == 1189 || _clientState.TerritoryType == 1185;

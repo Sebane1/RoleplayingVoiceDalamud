@@ -1827,6 +1827,126 @@ namespace RoleplayingVoice {
             }
         }
         #endregion
+        
+        #region Action Effect Wiring
+        private void ActionEffectListener_OnActionEffectReceived(uint casterId, uint actionId) {
+            Task.Run(() => {
+                try {
+                    var actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    if (string.IsNullOrEmpty(actionRow.Name.ToString())) return;
+                    string actionName = actionRow.Name.ToString();
+                    if (string.IsNullOrEmpty(actionName)) return;
+
+                    bool isLocalPlayer = false;
+                    string playerName = "";
+                    IGameObject caster = null;
+                    unsafe {
+                        if (_threadSafeObjectTable.LocalPlayer != null && _threadSafeObjectTable.LocalPlayer.GameObjectId == casterId) {
+                            isLocalPlayer = true;
+                            playerName = _threadSafeObjectTable.LocalPlayer.Name.TextValue;
+                            caster = _objectTable.FirstOrDefault(x => x.GameObjectId == casterId);
+                        } else {
+                            caster = _objectTable.FirstOrDefault(x => x.GameObjectId == casterId);
+                            if (caster != null) {
+                                playerName = caster.Name.TextValue;
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(playerName)) return;
+
+                    bool isCast = actionRow.Cast100ms > 0;
+                    string value = "";
+                    bool attackIntended = false;
+
+                    if (isLocalPlayer) {
+                        if (config.CharacterVoicePacks.ContainsKey(playerName)) {
+                            if (_mainCharacterVoicePack == null) {
+                                _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                            }
+                            value = _mainCharacterVoicePack.GetMisc(actionName);
+                            if (string.IsNullOrEmpty(value)) {
+                                if (attackCount == 0) {
+                                    if (isCast) {
+                                        value = _mainCharacterVoicePack.GetCastedAction(actionName);
+                                    } else {
+                                        value = _mainCharacterVoicePack.GetMeleeAction(actionName);
+                                    }
+                                    if (string.IsNullOrEmpty(value)) {
+                                        value = _mainCharacterVoicePack.GetAction(actionName);
+                                    }
+                                    attackCount++;
+                                } else {
+                                    attackCount++;
+                                    if (attackCount >= GetMinAttackCounts()) {
+                                        attackCount = 0;
+                                    }
+                                    attackIntended = true;
+                                }
+                            }
+                            if (!string.IsNullOrEmpty(value) || attackIntended) {
+                                if (!attackIntended) {
+                                    bool boundByDuty = false;
+                                    unsafe { boundByDuty = Conditions.Instance()->BoundByDuty; }
+                                    _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, 
+                                        boundByDuty ? null : delegate { Task.Run(() => { if (_threadSafeObjectTable.LocalPlayer != null) _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer); }); },
+                                        boundByDuty ? null : delegate (object sender, StreamVolumeEventArgs e) {
+                                            Task.Run(() => {
+                                                if (_threadSafeObjectTable.LocalPlayer != null && e.MaxSampleValues.Length > 0) {
+                                                    if (e.MaxSampleValues[0] > 0.2) _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer, 2);
+                                                    else _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer);
+                                                }
+                                            });
+                                        });
+                                }
+                            }
+                        }
+                    } else {
+                        if (config.UsePlayerSync) {
+                            string hash = RoleplayingMediaManager.Shai1Hash(playerName);
+                            string path = config.CacheFolder + @"\VoicePack\Others";
+                            string clipPath = path + @"\" + hash;
+                            if (Path.Exists(clipPath) && !isDownloadingZip) {
+                                CharacterVoicePack characterVoicePack = null;
+                                if (!_characterVoicePacks.ContainsKey(playerName)) {
+                                    characterVoicePack = _characterVoicePacks[playerName] = new CharacterVoicePack(clipPath, DataManager, _clientState.ClientLanguage);
+                                } else {
+                                    characterVoicePack = _characterVoicePacks[playerName];
+                                }
+                                
+                                value = characterVoicePack.GetMisc(actionName);
+                                if (string.IsNullOrEmpty(value)) {
+                                    if (isCast) {
+                                        value = characterVoicePack.GetCastedAction(actionName);
+                                    } else {
+                                        value = characterVoicePack.GetMeleeAction(actionName);
+                                    }
+                                    if (string.IsNullOrEmpty(value)) {
+                                        value = characterVoicePack.GetAction(actionName);
+                                    }
+                                }
+
+                                if (!string.IsNullOrEmpty(value) && caster != null) {
+                                    _mediaManager.PlayMedia(new MediaGameObject(caster.ToThreadSafeObject(), playerName, caster.Position), value, SoundType.OtherPlayerCombat, false, 0, default, delegate {
+                                        Task.Run(() => _addonTalkHandler.StopLipSync((ICharacter)caster));
+                                    },
+                                    delegate (object sender, StreamVolumeEventArgs e) {
+                                        Task.Run(() => {
+                                            if (e.MaxSampleValues.Length > 0) {
+                                                if (e.MaxSampleValues[0] > 0.2) _addonTalkHandler.TriggerLipSync((ICharacter)caster, 2);
+                                                else _addonTalkHandler.StopLipSync((ICharacter)caster);
+                                            }
+                                        });
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    PluginLog.Warning(ex, "[Artemis] Error processing ActionEffect in SoundManagement.");
+                }
+            });
+        }
+        #endregion
         #endregion
     }
 }

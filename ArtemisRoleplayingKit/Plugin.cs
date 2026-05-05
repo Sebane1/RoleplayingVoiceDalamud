@@ -268,6 +268,8 @@ namespace RoleplayingVoice
         public static bool Disposed { get; internal set; }
         public VoiceEditor VoiceEditor { get => _voiceEditor; set => _voiceEditor = value; }
         public ThreadSafeGameObjectManager ThreadSafeObjectTable { get => _threadSafeObjectTable; set => _threadSafeObjectTable = value; }
+        
+        private ArtemisRoleplayingKit.Voice.ActionEffectListener _actionEffectListener;
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -385,6 +387,10 @@ namespace RoleplayingVoice
                 _framework = framework;
                 _framework.Update += framework_Update;
                 NPCVoiceMapping.Initialize();
+
+                _actionEffectListener = new ArtemisRoleplayingKit.Voice.ActionEffectListener(_interopProvider, pluginLog);
+                _actionEffectListener.OnActionEffectReceived += ActionEffectListener_OnActionEffectReceived;
+
                 Task.Run(async () =>
                 {
                     try
