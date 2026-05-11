@@ -86,6 +86,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _lastSoundPath;
         bool _blockNpcChat = false;
         private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
+        private bool _lastLoggedTalkStateWasPresent;
+        private string _lastLoggedTalkStateSpeaker = "";
+        private string _lastLoggedTalkStateText = "";
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -108,6 +111,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         Queue<KeyValuePair<string, string>> _npcDungeonDialogueQueue = new Queue<KeyValuePair<string, string>>();
         List<string> _knownNPCBossAnnouncers = new List<string>();
         List<string> _knownNPCAnnouncers = new List<string>();
+        private readonly object _npcVoiceRequestLock = new object();
+        private CancellationTokenSource _npcVoiceRequestCancellation = new CancellationTokenSource();
+        private long _npcVoiceRequestVersion;
 
         public AddonTalkHandler(AddonTalkManager addonTalkManager, IFramework framework, ThreadSafeGameObjectManager objects,
             IClientState clientState, Plugin plugin, IChatGui chatGui, ISigScanner sigScanner, RedoLineWindow redoLineWindow, IToastGui toastGui) {
@@ -538,9 +544,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (_state == null) {
                                             _state = GetBattleTalkAddonState();
                                         }
-                                        if (_state != null) {
-                                            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {_state.Speaker}, Text: {_state.Text?.Substring(0, Math.Min(50, _state.Text?.Length ?? 0))}");
-                                        }
+                                        LogTalkStateIfChanged(_state);
                                         Task.Run((Action)delegate {
                                             if (!_alreadySortingList) {
                                                 _alreadySortingList = true;
@@ -556,6 +560,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 _textIsPresent = true;
                                                 if (_state.Text != _currentText) {
                                                     _lastText = _currentText;
+                                                    CancelNpcVoiceRequests();
                                                     _currentText = _state.Text;
                                                     _redoLineWindow.IsOpen = false;
                                                     if (!_blockAudioGeneration) {
@@ -593,6 +598,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     }
                                                 }
                                                 if (_currentSpeechObject != null && _startedNewDialogue) {
+                                                    CancelNpcVoiceRequests();
                                                     var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
                                                     if (otherData.Value.RowId != 15) {
                                                         _namesToRemove.Clear();
@@ -624,6 +630,29 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                     }
                 }
+        }
+
+        private void LogTalkStateIfChanged(AddonTalkState state) {
+            if (state == null) {
+                _lastLoggedTalkStateWasPresent = false;
+                return;
+            }
+
+            var speaker = state.Speaker ?? "";
+            var text = state.Text ?? "";
+            if (_lastLoggedTalkStateWasPresent &&
+                speaker == _lastLoggedTalkStateSpeaker &&
+                text == _lastLoggedTalkStateText) {
+                return;
+            }
+
+            _lastLoggedTalkStateWasPresent = true;
+            _lastLoggedTalkStateSpeaker = speaker;
+            _lastLoggedTalkStateText = text;
+
+            // Framework_Update polls frequently while the same dialogue window is
+            // visible; only log new talk states so Dalamud's shared log stays usable.
+            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {speaker}, Text: {text.Substring(0, Math.Min(50, text.Length))}");
         }
 
         private void GetAnimationDefaults() {
@@ -762,6 +791,32 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _plugin.IpcSystem?.InvokeOnTriggerAnimation(character, animationId);
             } catch (Exception e) {
                 Plugin.PluginLog.Warning(e, e.Message);
+            }
+        }
+
+        private (long Version, CancellationToken Token) BeginNpcVoiceRequest() {
+            lock (_npcVoiceRequestLock) {
+                // NPC dialogue is ephemeral: once a newer line arrives, any older
+                // relay response would play stale audio and should be abandoned.
+                _npcVoiceRequestCancellation.Cancel();
+                _npcVoiceRequestCancellation = new CancellationTokenSource();
+                _npcVoiceRequestVersion++;
+                return (_npcVoiceRequestVersion, _npcVoiceRequestCancellation.Token);
+            }
+        }
+
+        private void CancelNpcVoiceRequests() {
+            lock (_npcVoiceRequestLock) {
+                // Closing or advancing dialogue should also release pending relay
+                // work so an unresponsive request cannot block later playback.
+                _npcVoiceRequestCancellation.Cancel();
+                _npcVoiceRequestVersion++;
+            }
+        }
+
+        private bool IsCurrentNpcVoiceRequest(long version) {
+            lock (_npcVoiceRequestLock) {
+                return version == _npcVoiceRequestVersion && !_npcVoiceRequestCancellation.IsCancellationRequested;
             }
         }
         public async void TriggerEmoteTimed(ICharacter character, ushort animationId, int time = 2000) {
@@ -930,7 +985,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                         string backupVoice = voice;
                         Stopwatch downloadTimer = Stopwatch.StartNew();
                         bool foundName = false;
-                        ReportData reportData = new ReportData(npcName, StripPlayerNameFromNPCDialogue(message, _threadSafeObjectTable.LocalPlayer.Name.TextValue, ref foundName), 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
+                        var localPlayerName = _threadSafeObjectTable.LocalPlayer?.Name.TextValue;
+                        // LocalPlayer can briefly be unavailable while zoning, logging in, or
+                        // during plugin startup. Reporting should keep the original line rather
+                        // than dropping NPC playback with a NullReferenceException.
+                        var reportMessage = !string.IsNullOrWhiteSpace(localPlayerName)
+                            ? StripPlayerNameFromNPCDialogue(message, localPlayerName, ref foundName)
+                            : message;
+                        ReportData reportData = new ReportData(npcName, reportMessage, 0, 0, true, 0, 0, 0, _clientState.TerritoryType, note);
                         string npcData = JsonConvert.SerializeObject(reportData);
                         MemoryStream stream = new MemoryStream();
                         bool canProceed = false;
@@ -941,9 +1003,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                         unsafe {
                             canBeMuted = Conditions.Instance()->BoundByDuty && !IsInACutscene();
                         }
+                        var request = !onlySendData && _plugin.Window.NpcSpeechEnabled
+                            ? BeginNpcVoiceRequest()
+                            : (Version: 0L, Token: CancellationToken.None);
                         var values =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(stream, message, message, message, nameToUse, gender, backupVoice, false,
-                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority,
+                        cancellationToken: request.Token);
+                        if (request.Version != 0 && !IsCurrentNpcVoiceRequest(request.Version)) {
+                            stream.Dispose();
+                            return;
+                        }
                         if (!previouslyAddedLines.Contains(message + nameToUse) && _plugin.Window.NpcSpeechEnabled) {
                             _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(message, message, message, nameToUse, gender, backupVoice, false, true, npcData, false, canBeMuted, values.Item2));
                             previouslyAddedLines.Add(message + nameToUse);
@@ -1006,6 +1076,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                         }
                     }
+                } catch (OperationCanceledException) {
+                    // A newer dialogue line replaced this request; dropping it keeps
+                    // old relay responses from speaking over the current line.
                 } catch (Exception e) {
                     Plugin.PluginLog.Warning(e, e.Message);
                     if (_plugin.Config.DebugMode) {
@@ -1052,11 +1125,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                         unsafe {
                             useMuteList = (Conditions.Instance()->BoundByDuty && !IsInACutscene());
                         }
+                        var request = BeginNpcVoiceRequest();
                         for (int i = 0; i < 2; i++) {
                             MemoryStream stream = new MemoryStream();
                             var values =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
-                            false, useMuteList, conditionsForDatamining);
+                            false, useMuteList, conditionsForDatamining, cancellationToken: request.Token);
+                            if (!IsCurrentNpcVoiceRequest(request.Version)) {
+                                stream.Dispose();
+                                return;
+                            }
                             if (!previouslyAddedLines.Contains(value + nameToUse) && _plugin.Window.NpcSpeechEnabled) {
                                 unsafe {
                                     _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false,
@@ -1217,6 +1295,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                         }
                     }
+                } catch (OperationCanceledException) {
+                    // A newer dialogue line replaced this request; dropping it keeps
+                    // old relay responses from speaking over the current line.
                 } catch (Exception e) {
                     Plugin.PluginLog.Warning(e, e.Message);
                     if (_plugin.Config.DebugMode) {
@@ -1279,8 +1360,13 @@ namespace RoleplayingVoiceDalamud.Voice {
                     unsafe {
                         canBeMuted = (Conditions.Instance()->BoundByDuty && !IsInACutscene());
                     }
+                    var request = BeginNpcVoiceRequest();
                     var values =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining);
+                    await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining, cancellationToken: request.Token);
+                    if (!IsCurrentNpcVoiceRequest(request.Version)) {
+                        stream.Dispose();
+                        return;
+                    }
                     if (stream != null && _plugin.Window.NpcSpeechEnabled) {
                         WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
@@ -1293,6 +1379,9 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                     } else {
                     }
+                } catch (OperationCanceledException) {
+                    // A newer dialogue line replaced this request; dropping it keeps
+                    // old relay responses from speaking over the current line.
                 } catch {
                 }
             }
@@ -1739,6 +1828,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
             _toast.Toast -= _toast_Toast;
             disposed = true;
+            CancelNpcVoiceRequests();
+            _npcVoiceRequestCancellation.Dispose();
 
             _memoryService.Shutdown();
             _settingService.Shutdown();

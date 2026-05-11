@@ -525,8 +525,17 @@ namespace RoleplayingVoice {
                     ImGui.Text("Connected to server " + PluginReference.NpcVoiceManager.CurrentServerAlias + ".");
                 }
                 ImGui.Text(PluginReference.ThreadSafeObjectTable.LocalPlayer != null ? PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
+                var npcVoiceHistoryItems = PluginReference?.AddonTalkHandler?.NpcVoiceHistoryItems;
+                if (npcVoiceHistoryItems == null) {
+                    // AddonTalkHandler is created asynchronously during plugin startup. The
+                    // settings window can render before that finishes, especially after a
+                    // reinstall or repo reload, so avoid throwing once per frame here.
+                    ImGui.Text("NPC voice history is still loading.");
+                    return;
+                }
+
                 int count = 0;
-                foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
+                foreach (var item in npcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
                     ImGui.LabelText("##label" + item.Text, $"[{item.GenerationString.Replace("Alternate", "XIVV")}]" + item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
@@ -553,7 +562,7 @@ namespace RoleplayingVoice {
                                     MemoryStream stream = new MemoryStream();
                                     var values = (await PluginReference.NpcVoiceManager.GetCharacterAudio(stream, item.Text, item.OriginalValue, item.RawValue, item.Character,
                                      item.Gender, item.BackupVoice, false, NPCVoiceManager.VoiceModel.Speed, item.ExtraJson, false, false, item.CanBeMuted, VoiceLinePriority.Ignore)).Item1;
-                                    PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                    npcVoiceHistoryItems.Remove(item);
                                     stream.Dispose();
                                 });
                                 break;
@@ -573,7 +582,7 @@ namespace RoleplayingVoice {
                                     }
                                 }
                                 stream.Dispose();
-                                PluginReference.AddonTalkHandler.NpcVoiceHistoryItems.Remove(item);
+                                npcVoiceHistoryItems.Remove(item);
                             });
                             PluginReference.RedoLineWindow.IsOpen = true;
                             break;
