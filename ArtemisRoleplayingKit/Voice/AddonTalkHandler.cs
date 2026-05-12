@@ -89,9 +89,18 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _lastLoggedTalkStateWasPresent;
         private string _lastLoggedTalkStateSpeaker = "";
         private string _lastLoggedTalkStateText = "";
-        // Keep content-based language rejection to strong markers only. Short
-        // words like "de" can be valid English-client fantasy names/titles.
-        private static readonly string[] NonEnglishTextMarkers = new[] { "¿", "¡", "á", "é", "í", "ó", "ú", "ñ", "ü" };
+        private static readonly string[] StrongNonEnglishTextMarkers = new[] { "¿", "¡", "á", "é", "í", "ó", "ú", "ñ", "ü" };
+        // Keep weak text markers separate from strong markers so future false
+        // positives are easy to diagnose. " de " is intentionally excluded
+        // because it appears in valid English-client NPC names and titles.
+        private static readonly string[] WeakNonEnglishTextMarkers = new[] {
+            "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ", " puente ", "Heuso ",
+            "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " billis ", "Sepulcro",
+            " sur ", " cerca", "descubierto", "DESTINO", " y ", "puede", " es ", " muchas ", " pero ",
+            "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ",
+            " amigo", " caer ", "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ",
+            "Y ", "en lo", "de luto ", "Si ", " hecho ", " usted ", "nosotros", "también", " haremos "
+        };
         private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
@@ -1477,9 +1486,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                 return true;
             }
 
-            foreach (string marker in NonEnglishTextMarkers) {
+            foreach (string marker in StrongNonEnglishTextMarkers) {
                 if (message.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
-                    reason = $"contains non-English marker '{marker}'";
+                    reason = $"contains strong non-English marker '{marker}'";
+                    return false;
+                }
+            }
+
+            foreach (string marker in WeakNonEnglishTextMarkers) {
+                if (message.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
+                    reason = $"contains weak non-English marker '{marker}'";
                     return false;
                 }
             }
