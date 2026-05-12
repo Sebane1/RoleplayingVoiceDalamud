@@ -86,9 +86,6 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _lastSoundPath;
         bool _blockNpcChat = false;
         private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
-        private bool _lastLoggedTalkStateWasPresent;
-        private string _lastLoggedTalkStateSpeaker = "";
-        private string _lastLoggedTalkStateText = "";
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -351,14 +348,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             Thread.Sleep(1000);
                                             _blockAudioGenerationCount--;
                                         });
-	                                    }
-	                                    _blockAudioGeneration = e.isBlocking;
-	                                    _lastNPCAnnouncementName = null;
-	                                    _currentDialoguePaths[e.SoundPath] = false;
-	                                    TraceNpcTts($"Cutscene audio filter changed block={e.isBlocking} blockCount={_blockAudioGenerationCount} sound='{e.SoundPath}'");
-	                                    if (_plugin.Config.DebugMode) {
-	                                        if (_lastNPCAnnouncementName != null) {
-	                                            DumpCurrentAudio(_lastNPCAnnouncementName);
+                                    }
+                                    _blockAudioGeneration = e.isBlocking;
+                                    _lastNPCAnnouncementName = null;
+                                    _currentDialoguePaths[e.SoundPath] = false;
+                                    TraceNpcTts($"Cutscene audio filter changed block={e.isBlocking} blockCount={_blockAudioGenerationCount} sound='{e.SoundPath}'");
+                                    if (_plugin.Config.DebugMode) {
+                                        if (_lastNPCAnnouncementName != null) {
+                                            DumpCurrentAudio(_lastNPCAnnouncementName);
                                         }
                                         _plugin.Chat.Print("Block Next Line Of Dialogue Is " + e.isBlocking);
                                         _plugin.Chat.Print("Dialogue block created by " + e.SoundPath);
@@ -545,9 +542,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (_state == null) {
                                             _state = GetBattleTalkAddonState();
                                         }
-                                        var stateSnapshot = _state;
-                                        LogTalkStateIfChanged(stateSnapshot);
+                                        if (_state != null) {
+                                            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {_state.Speaker}, Text: {_state.Text?.Substring(0, Math.Min(50, _state.Text?.Length ?? 0))}");
+                                        }
                                         Task.Run((Action)delegate {
+                                            var stateSnapshot = _state;
                                             if (!_alreadySortingList) {
                                                 _alreadySortingList = true;
                                                 _sortedObjectTable = _threadSafeObjectTable.ToList();
@@ -653,29 +652,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             // These breadcrumbs are intentionally logged only at dialogue handoff
             // boundaries, not every poll, so test logs show where a line was dropped.
             Plugin.PluginLog.Information("[NPC TTS] " + message);
-        }
-
-        private void LogTalkStateIfChanged(AddonTalkState state) {
-            if (state == null) {
-                _lastLoggedTalkStateWasPresent = false;
-                return;
-            }
-
-            var speaker = state.Speaker ?? "";
-            var text = state.Text ?? "";
-            if (_lastLoggedTalkStateWasPresent &&
-                speaker == _lastLoggedTalkStateSpeaker &&
-                text == _lastLoggedTalkStateText) {
-                return;
-            }
-
-            _lastLoggedTalkStateWasPresent = true;
-            _lastLoggedTalkStateSpeaker = speaker;
-            _lastLoggedTalkStateText = text;
-
-            // Framework_Update polls frequently while the same dialogue window is
-            // visible; only log new talk states so Dalamud's shared log stays usable.
-            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {speaker}, Text: {text.Substring(0, Math.Min(50, text.Length))}");
         }
 
         private void GetAnimationDefaults() {
@@ -1164,14 +1140,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                         var request = BeginNpcVoiceRequest($"npc='{nameToUse}' talk addon path");
                         for (int i = 0; i < 2; i++) {
                             MemoryStream stream = new MemoryStream();
-	                            var values =
-	                            await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
-	                            false, useMuteList, conditionsForDatamining, cancellationToken: request.Token);
-	                            if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
-	                                TraceNpcTts($"Dropping stale audio response sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
-	                                stream.Dispose();
-	                                return;
-	                            }
+                            var values =
+                            await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
+                            false, useMuteList, conditionsForDatamining, cancellationToken: request.Token);
+                            if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
+                                TraceNpcTts($"Dropping stale audio response sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
+                                stream.Dispose();
+                                return;
+                            }
                             if (!previouslyAddedLines.Contains(value + nameToUse) && _plugin.Window.NpcSpeechEnabled) {
                                 unsafe {
                                     _npcVoiceHistoryItems.Add(new NPCVoiceHistoryItem(value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false,
@@ -1182,11 +1158,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _npcVoiceHistoryItems.RemoveAt(0);
                                 }
                             }
-	                            if (stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
-	                                TraceNpcTts($"Audio stream ready sequence={request.Sequence} npc='{nameToUse}' engine='{values.Item2}' length={stream.Length}");
-	                                if (_plugin.Config.DebugMode) {
-	                                    _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
-	                                }
+                            if (stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
+                                TraceNpcTts($"Audio stream ready sequence={request.Sequence} npc='{nameToUse}' engine='{values.Item2}' length={stream.Length}");
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
+                                }
                                 WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
@@ -1226,11 +1202,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print($"Audio: {wavePlayer.WaveFormat.SampleRate}Hz {wavePlayer.WaveFormat.Channels}ch, pitch={pitch:F3}, speed={_plugin.Config.NPCSpeechSpeed:F2}, engine={values.Item2}, smb={useSmbPitch}");
                                     }
-	                                    unsafe {
-	                                        if (!_blockAudioGeneration) {
-		                                            TraceNpcTts($"Playing audio sequence={request.Sequence} npc='{nameToUse}' engine='{values.Item2}' pitch={pitch:F3} speed={_plugin.Config.NPCSpeechSpeed:F2}");
-	                                            _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
-	                                           (IsInACutscene() && Conditions.Instance()->BoundByDuty), useSmbPitch, pitch, 0,
+                                    unsafe {
+                                        if (!_blockAudioGeneration) {
+                                            TraceNpcTts($"Playing audio sequence={request.Sequence} npc='{nameToUse}' engine='{values.Item2}' pitch={pitch:F3} speed={_plugin.Config.NPCSpeechSpeed:F2}");
+                                            _plugin.MediaManager.PlayAudioStream(_currentSpeechObject, wavePlayer, SoundType.NPC,
+                                           (IsInACutscene() && Conditions.Instance()->BoundByDuty), useSmbPitch, pitch, 0,
                                             IsInACutscene() || lowLatencyMode, delegate (object obj, string value) {
                                                 if (_hook != null) {
                                                     try {
@@ -1315,41 +1291,41 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                         }
                                                     }
                                                 }
-	                                            }, _plugin.Config.NPCSpeechSpeed, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
-	                                        } else {
-		                                            TraceNpcTts($"Audio ready but playback suppressed by blockAudioGeneration sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
-	                                        }
-	                                    }
+                                            }, _plugin.Config.NPCSpeechSpeed, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
+                                        } else {
+                                            TraceNpcTts($"Audio ready but playback suppressed by blockAudioGeneration sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
+                                        }
+                                    }
                                     break;
                                 } else {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print("Waveplayer failed, trying again." + downloadTimer.Elapsed.ToString());
                                     }
                                 }
-	                            } else {
-	                                TraceNpcTts($"Audio stream unavailable or NPC speech disabled npc='{nameToUse}' enabled={_plugin.Window.NpcSpeechEnabled} streamLength={(stream == null ? -1 : stream.Length)} text='{PreviewText(value)}'");
-	                                if (_plugin.Config.DebugMode) {
-	                                    _plugin.Chat.Print("Stream was null! trying again. " + downloadTimer.Elapsed.ToString());
-	                                }
-		                                if (_plugin.Window.NpcSpeechEnabled) {
-		                                    break;
-		                                }
-		                            }
-		                        }
-			                    } else {
-			                        TraceNpcTts($"NPCText skipped retainer npc='{npcName}' dontVoiceRetainers={_plugin.Config.DontVoiceRetainers}");
-			                    }
-	                } catch (OperationCanceledException) {
-	                    TraceNpcTts($"NPCText cancelled npc='{npcName}' text='{PreviewText(message)}'");
-	                    // A newer dialogue line replaced this request; dropping it keeps
-	                    // old relay responses from speaking over the current line.
-	                } catch (Exception e) {
-	                    TraceNpcTts($"NPCText exception npc='{npcName}' type={e.GetType().Name} message='{e.Message}' text='{PreviewText(message)}'");
-	                    Plugin.PluginLog.Warning(e, e.Message);
-	                    if (_plugin.Config.DebugMode) {
-	                        _plugin.Chat.Print(e.Message);
-	                    }
-	                }
+                            } else {
+                                TraceNpcTts($"Audio stream unavailable or NPC speech disabled npc='{nameToUse}' enabled={_plugin.Window.NpcSpeechEnabled} streamLength={(stream == null ? -1 : stream.Length)} text='{PreviewText(value)}'");
+                                if (_plugin.Config.DebugMode) {
+                                    _plugin.Chat.Print("Stream was null! trying again. " + downloadTimer.Elapsed.ToString());
+                                }
+                                if (_plugin.Window.NpcSpeechEnabled) {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        TraceNpcTts($"NPCText skipped retainer npc='{npcName}' dontVoiceRetainers={_plugin.Config.DontVoiceRetainers}");
+                    }
+            } catch (OperationCanceledException) {
+                TraceNpcTts($"NPCText cancelled npc='{npcName}' text='{PreviewText(message)}'");
+                // A newer dialogue line replaced this request; dropping it keeps
+                // old relay responses from speaking over the current line.
+            } catch (Exception e) {
+                TraceNpcTts($"NPCText exception npc='{npcName}' type={e.GetType().Name} message='{e.Message}' text='{PreviewText(message)}'");
+                Plugin.PluginLog.Warning(e, e.Message);
+                if (_plugin.Config.DebugMode) {
+                    _plugin.Chat.Print(e.Message);
+                }
+            }
         }
 
         public WaveStream GetWavePlayer(string npcName, Stream stream, ReportData reportData) {
