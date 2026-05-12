@@ -89,6 +89,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         private bool _lastLoggedTalkStateWasPresent;
         private string _lastLoggedTalkStateSpeaker = "";
         private string _lastLoggedTalkStateText = "";
+        // Keep content-based language rejection to strong markers only. Short
+        // words like "de" can be valid English-client fantasy names/titles.
+        private static readonly string[] NonEnglishTextMarkers = new[] { "¿", "¡", "á", "é", "í", "ó", "ú", "ñ", "ü" };
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -1118,8 +1121,8 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel,
             bool lowLatencyMode = false, bool redoLine = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
-            if (!VerifyIsEnglish(message)) {
-                TraceNpcTts($"NPCText skipped non-English/preflight text npc='{npcName}' text='{PreviewText(message)}'");
+            if (!VerifyIsEnglish(message, out var languageRejectionReason)) {
+                TraceNpcTts($"NPCText skipped language preflight npc='{npcName}' reason='{languageRejectionReason}' text='{PreviewText(message)}'");
                 return;
             }
 
@@ -1432,22 +1435,29 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        /// <summary>
-        /// Line generation is expensive, for now enforce only generating english text.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
         private bool VerifyIsEnglish(string message) {
-            string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
-            " puente ", "Heuso ", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", " cerca", "descubierto",
-            "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
-            "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto ","Si "," hecho "," usted ", "nosotros", "también", " haremos "};
-            foreach (string symbol in symbolBlacklist) {
-                if (message.Contains(symbol)) {
+            return VerifyIsEnglish(message, out _);
+        }
+
+        private bool VerifyIsEnglish(string message, out string reason) {
+            reason = "";
+            if (_clientState.ClientLanguage != ClientLanguage.English) {
+                reason = $"client language is {_clientState.ClientLanguage}";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(message)) {
+                return true;
+            }
+
+            foreach (string marker in NonEnglishTextMarkers) {
+                if (message.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
+                    reason = $"contains non-English marker '{marker}'";
                     return false;
                 }
             }
-            return _clientState.ClientLanguage == ClientLanguage.English;
+
+            return true;
         }
 
         private string FindNPCNameFromMessage(string message) {
