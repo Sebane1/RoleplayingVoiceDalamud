@@ -952,11 +952,21 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                         }
                         if (_plugin.Window.NpcSpeechEnabled && !onlySendData) {
-                            if (stream != null) {
+                            // GetCharacterAudio can fail without throwing and still leave a non-null MemoryStream.
+                            // MediaFoundation throws a COMException for empty or non-audio streams, so validate the
+                            // request result before handing the stream to NAudio for decoding.
+                            if (values.Item1 && stream != null && stream.Length > 1) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+                                WaveStream wavePlayer = null;
+                                try {
+                                    stream.Position = 0;
+                                    wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+                                } catch (System.Runtime.InteropServices.COMException e) {
+                                    Plugin.PluginLog.Warning(e, "Skipping NPC voice playback because MediaFoundation could not decode the generated audio stream.");
+                                    return;
+                                }
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -1000,6 +1010,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 }
                             } else {
+                                Plugin.PluginLog.Warning($"Skipping NPC voice playback because no playable audio was returned for {nameToUse}. Success={values.Item1}, StreamLength={stream?.Length ?? 0}, Engine={values.Item2}");
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
                                 }
