@@ -92,6 +92,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         // Keep content-based language rejection to strong markers only. Short
         // words like "de" can be valid English-client fantasy names/titles.
         private static readonly string[] NonEnglishTextMarkers = new[] { "¿", "¡", "á", "é", "í", "ó", "ú", "ñ", "ü" };
+        private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -571,10 +572,15 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     TraceNpcTts($"Talk state accepted speaker='{stateSnapshot.Speaker}' block={_blockAudioGeneration} blockCount={_blockAudioGenerationCount} text='{PreviewText(stateSnapshot.Text)}'");
                                                     if (!_blockAudioGeneration) {
                                                         var speaker = NPCVoiceMapping.AliasDetector(stateSnapshot.Speaker);
-                                                        TraceNpcTts($"Dispatching dialogue to NPCText speaker='{speaker}' text='{PreviewText(stateSnapshot.Text)}'");
-                                                        NPCText(speaker, stateSnapshot.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
-                                                        _startedNewDialogue = true;
-                                                        _passthroughTimer.Reset();
+                                                        if (IsPauseOnlyDialogue(stateSnapshot.Text)) {
+                                                            TraceNpcTts($"Pause-only dialogue detected speaker='{speaker}' delayMs={PauseOnlyDialogueAutoAdvanceDelayMs} text='{PreviewText(stateSnapshot.Text)}'");
+                                                            AutoAdvancePauseOnlyDialogue(stateSnapshot.Text);
+                                                        } else {
+                                                            TraceNpcTts($"Dispatching dialogue to NPCText speaker='{speaker}' text='{PreviewText(stateSnapshot.Text)}'");
+                                                            NPCText(speaker, stateSnapshot.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
+                                                            _startedNewDialogue = true;
+                                                            _passthroughTimer.Reset();
+                                                        }
                                                     } else {
                                                         TraceNpcTts($"Suppressed dialogue generation because blockAudioGeneration is true speaker='{stateSnapshot.Speaker}' text='{PreviewText(stateSnapshot.Text)}'");
                                                     }
@@ -650,6 +656,27 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
 
             return value.Substring(0, Math.Min(80, value.Length)).Replace("\r", " ").Replace("\n", " ");
+        }
+
+        private static bool IsPauseOnlyDialogue(string value) {
+            return string.Equals(value?.Trim(), "...", StringComparison.Ordinal);
+        }
+
+        private async void AutoAdvancePauseOnlyDialogue(string pauseText) {
+            if (!_plugin.Config.AutoTextAdvance || _plugin.Config.QualityAssuranceMode) {
+                TraceNpcTts($"Pause-only dialogue auto-advance skipped autoAdvance={_plugin.Config.AutoTextAdvance} qaMode={_plugin.Config.QualityAssuranceMode}");
+                return;
+            }
+
+            // A pause-only line has no generated audio, so mimic the playback
+            // completion path after a short readable beat.
+            await Task.Delay(PauseOnlyDialogueAutoAdvanceDelayMs);
+            if (_state != null && _currentText == pauseText && IsPauseOnlyDialogue(_state.Text)) {
+                TraceNpcTts($"Auto-advancing pause-only dialogue after {PauseOnlyDialogueAutoAdvanceDelayMs}ms");
+                _hook?.SendAsyncKey(Keys.NumPad0);
+            } else {
+                TraceNpcTts("Pause-only dialogue auto-advance skipped because the talk state changed");
+            }
         }
 
         private static void TraceNpcTts(string message) {
