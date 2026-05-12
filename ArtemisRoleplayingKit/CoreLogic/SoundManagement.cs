@@ -389,11 +389,18 @@ namespace RoleplayingVoice {
             if (Conditions.Instance()->InCombat && !Conditions.Instance()->Mounted && !Conditions.Instance()->BoundByDuty) {
                 if (!_combatOccured) {
                     Task.Run(delegate () {
-                        if (_threadSafeObjectTable.LocalPlayer != null) {
+                        var localPlayer = _threadSafeObjectTable.LocalPlayer;
+                        var localPlayerName = localPlayer?.Name.TextValue;
+                        if (config?.CharacterVoicePacks == null || string.IsNullOrEmpty(localPlayerName)) {
+                            // Combat audio is checked from a background task; the local player
+                            // can briefly be missing while logging in, zoning, or unloading.
+                            return;
+                        }
+
+                        if (config.CharacterVoicePacks.TryGetValue(localPlayerName, out string voice)) {
                             _combatOccured = true;
-                            string voice = config.CharacterVoicePacks[_threadSafeObjectTable.LocalPlayer.Name.TextValue];
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
-                            string staging = config.CacheFolder + @"\Staging\" + _threadSafeObjectTable.LocalPlayer.Name.TextValue;
+                            string staging = config.CacheFolder + @"\Staging\" + localPlayerName;
                             if (_mainCharacterVoicePack == null) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                             }
@@ -442,36 +449,41 @@ namespace RoleplayingVoice {
                 if (Conditions.Instance()->Mounted) {
                     if (!_mountingOccured) {
                         Task.Run(delegate () {
-                            if (_threadSafeObjectTable.LocalPlayer != null) {
-                                if (config.CharacterVoicePacks.ContainsKey(_threadSafeObjectTable.LocalPlayer.Name.TextValue)) {
-                                    string voice = config.CharacterVoicePacks[_threadSafeObjectTable.LocalPlayer.Name.TextValue];
-                                    string path = config.CacheFolder + @"\VoicePack\" + voice;
-                                    string staging = config.CacheFolder + @"\Staging\" + _threadSafeObjectTable.LocalPlayer.Name.TextValue;
-                                    if (_mainCharacterVoicePack == null) {
-                                        _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
-                                    }
-                                    bool isVoicedEmote = false;
-                                    var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)_threadSafeObjectTable.LocalPlayer.Address;
-                                    var mountId = characterReference->Mount.MountId;
-                                    var mount = DataManager.GetExcelSheet<Mount>(ClientLanguage.English).GetRow(mountId);
-                                    string value = _mainCharacterVoicePack.GetMisc(mount.Singular.ToString());
-                                    if (!string.IsNullOrEmpty(value)) {
-                                        //if (config.UsePlayerSync) {
-                                        //    Task.Run(async () => {
-                                        //        bool success = await _roleplayingMediaManager.SendZip(_threadSafeObjectTable.LocalPlayer.Name.TextValue, staging);
-                                        //    });
-                                        //}
-                                        _mediaManager.PlayMedia(_playerObject, value, SoundType.LoopUntilStopped, false, 0);
-                                        try {
-                                            _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
-                                        } catch (Exception e) {
-                                            Plugin.PluginLog?.Warning(e, e.Message);
-                                        }
-                                        _mountMusicWasPlayed = true;
-                                    }
-                                }
-                                _mountingOccured = true;
+                            var localPlayer = _threadSafeObjectTable.LocalPlayer;
+                            var localPlayerName = localPlayer?.Name.TextValue;
+                            if (config?.CharacterVoicePacks == null || string.IsNullOrEmpty(localPlayerName)) {
+                                // Mount audio uses the same per-character voice-pack map as
+                                // combat audio, so treat missing setup as "no custom audio".
+                                return;
                             }
+
+                            if (config.CharacterVoicePacks.TryGetValue(localPlayerName, out string voice)) {
+                                string path = config.CacheFolder + @"\VoicePack\" + voice;
+                                string staging = config.CacheFolder + @"\Staging\" + localPlayerName;
+                                if (_mainCharacterVoicePack == null) {
+                                    _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                                }
+                                bool isVoicedEmote = false;
+                                var characterReference = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)localPlayer.Address;
+                                var mountId = characterReference->Mount.MountId;
+                                var mount = DataManager.GetExcelSheet<Mount>(ClientLanguage.English).GetRow(mountId);
+                                string value = _mainCharacterVoicePack.GetMisc(mount.Singular.ToString());
+                                if (!string.IsNullOrEmpty(value)) {
+                                    //if (config.UsePlayerSync) {
+                                    //    Task.Run(async () => {
+                                    //        bool success = await _roleplayingMediaManager.SendZip(_threadSafeObjectTable.LocalPlayer.Name.TextValue, staging);
+                                    //    });
+                                    //}
+                                    _mediaManager.PlayMedia(_playerObject, value, SoundType.LoopUntilStopped, false, 0);
+                                    try {
+                                        _gameConfig.Set(SystemConfigOption.IsSndBgm, true);
+                                    } catch (Exception e) {
+                                        Plugin.PluginLog?.Warning(e, e.Message);
+                                    }
+                                    _mountMusicWasPlayed = true;
+                                }
+                            }
+                            _mountingOccured = true;
                         });
                     }
                 } else {
