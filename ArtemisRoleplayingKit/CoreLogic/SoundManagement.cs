@@ -1704,10 +1704,17 @@ namespace RoleplayingVoice {
         }
 
         private void SendingMovement(string playerName, IGameObject gameObject) {
-            if (config.CharacterVoicePacks.ContainsKey(_threadSafeObjectTable.LocalPlayer.Name.TextValue)) {
-                string voice = config.CharacterVoicePacks[_threadSafeObjectTable.LocalPlayer.Name.TextValue];
+            var localPlayer = _threadSafeObjectTable.LocalPlayer;
+            var localPlayerName = localPlayer?.Name.TextValue;
+            if (config?.CharacterVoicePacks == null || string.IsNullOrEmpty(localPlayerName)) {
+                // Movement checks run from a background poll, so local-player
+                // state can disappear briefly during login/logout or zoning.
+                return;
+            }
+
+            if (config.CharacterVoicePacks.TryGetValue(localPlayerName, out string voice)) {
                 string path = config.CacheFolder + @"\VoicePack\" + voice;
-                string staging = config.CacheFolder + @"\Staging\" + _threadSafeObjectTable.LocalPlayer.Name.TextValue;
+                string staging = config.CacheFolder + @"\Staging\" + localPlayerName;
                 if (_mainCharacterVoicePack == null) {
                     _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                 }
