@@ -99,6 +99,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             "Y ", "en lo", "de luto ", "Si ", " hecho ", " usted ", "nosotros", "también", " haremos "
         };
         private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
+        private long _pauseOnlyDialogueSequence;
+        private bool _pauseOnlyDialogueActive;
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -574,7 +576,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     if (!_blockAudioGeneration) {
                                                         var speaker = NPCVoiceMapping.AliasDetector(_state.Speaker);
                                                         if (IsPauseOnlyDialogue(_state.Text)) {
-                                                            AutoAdvancePauseOnlyDialogue(_state.Text);
+                                                            StartPauseOnlyDialogueAutoAdvance(_state.Text);
                                                         } else {
                                                             NPCText(speaker, _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
                                                             _startedNewDialogue = true;
@@ -610,6 +612,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                         _currentDialoguePaths[_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key] = true;
                                                     }
                                                 }
+                                                ClearPauseOnlyDialogueState();
                                                 if (_currentSpeechObject != null && _startedNewDialogue) {
                                                     var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
                                                     if (otherData.Value.RowId != 15) {
@@ -656,15 +659,35 @@ namespace RoleplayingVoiceDalamud.Voice {
             return string.Equals(value?.Trim(), "...", StringComparison.Ordinal);
         }
 
-        private async void AutoAdvancePauseOnlyDialogue(string pauseText) {
+        private void StartPauseOnlyDialogueAutoAdvance(string pauseText) {
+            Volatile.Write(ref _pauseOnlyDialogueActive, true);
+            var sequence = Interlocked.Increment(ref _pauseOnlyDialogueSequence);
+            AutoAdvancePauseOnlyDialogue(pauseText, sequence);
+        }
+
+        private void ClearPauseOnlyDialogueState() {
+            if (!Volatile.Read(ref _pauseOnlyDialogueActive)) {
+                return;
+            }
+
+            // Pause-only lines do not create _currentSpeechObject, so the normal
+            // dialogue cleanup path will not clear _currentText for them.
+            Volatile.Write(ref _pauseOnlyDialogueActive, false);
+            Interlocked.Increment(ref _pauseOnlyDialogueSequence);
+            _currentText = "";
+        }
+
+        private async void AutoAdvancePauseOnlyDialogue(string pauseText, long sequence) {
             if (!_plugin.Config.AutoTextAdvance || _plugin.Config.QualityAssuranceMode) {
                 return;
             }
 
             // A pause-only line has no generated audio, so mimic the playback
-            // completion path after a short readable beat.
+            // completion path after a short readable beat. The sequence check
+            // prevents an older delay from advancing a newer identical "..." line.
             await Task.Delay(PauseOnlyDialogueAutoAdvanceDelayMs);
-            if (_state != null && _currentText == pauseText && IsPauseOnlyDialogue(_state.Text)) {
+            if (Volatile.Read(ref _pauseOnlyDialogueActive) && Volatile.Read(ref _pauseOnlyDialogueSequence) == sequence &&
+                _state != null && _currentText == pauseText && IsPauseOnlyDialogue(_state.Text)) {
                 _hook?.SendAsyncKey(Keys.NumPad0);
             }
         }
