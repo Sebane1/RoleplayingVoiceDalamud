@@ -397,8 +397,11 @@ namespace RoleplayingVoice {
                             return;
                         }
 
+                        // Treat a missing per-character voice-pack entry as "no custom combat
+                        // audio" for this combat cycle so the poller does not keep scheduling
+                        // identical background checks until combat ends.
+                        _combatOccured = true;
                         if (config.CharacterVoicePacks.TryGetValue(localPlayerName, out string voice)) {
-                            _combatOccured = true;
                             string path = config.CacheFolder + @"\VoicePack\" + voice;
                             string staging = config.CacheFolder + @"\Staging\" + localPlayerName;
                             if (_mainCharacterVoicePack == null) {

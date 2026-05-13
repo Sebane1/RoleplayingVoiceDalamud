@@ -929,9 +929,13 @@ namespace RoleplayingVoice {
                                 }
                             }
                         }
-                        if (_manager != null) {
+                        if (_manager != null && _voiceEngineComboBox != null) {
+                            // RefreshVoices can run while the settings window is still
+                            // constructing its controls, so wait until the engine selector
+                            // exists before reading the selected voice backend.
+                            var selectedVoiceEngine = _voiceEngineComboBox.SelectedIndex;
                             var newVoiceList = new string[] { "None" };
-                            switch (_voiceEngineComboBox.SelectedIndex) {
+                            switch (selectedVoiceEngine) {
                                 case 0:
                                     newVoiceList = await _manager.GetVoiceListElevenlabs();
                                     break;
@@ -949,7 +953,7 @@ namespace RoleplayingVoice {
                                 }
                             }
                             if (configuration.Characters.TryGetValue(playerName, out var configuredVoice)) {
-                                switch (_voiceEngineComboBox.SelectedIndex) {
+                                switch (selectedVoiceEngine) {
                                     case 0:
                                         _manager.SetVoiceElevenlabs(configuredVoice);
                                         _manager.RefreshElevenlabsSubscriptionInfo();
