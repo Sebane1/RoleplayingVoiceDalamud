@@ -153,6 +153,17 @@ namespace RoleplayingVoice {
 
         }
 
+        public void DisposeHookResources() {
+            // The config window owns its keyboard helper hook; removing the window alone does not unhook it.
+            if (hook == null) {
+                return;
+            }
+
+            hook.Unhook();
+            hook = null;
+            Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed plugin window keyboard hook.");
+        }
+
         private void VoiceEngineComboBox_OnSelectedIndexChanged(object sender, EventArgs e) {
             RefreshVoices();
         }

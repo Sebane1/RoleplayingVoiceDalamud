@@ -1734,22 +1734,56 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
 
         public void Dispose() {
-            framework.Update -= Framework_Update;
-            _chatGui.ChatMessage -= _chatGui_ChatMessage;
-            _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
-            _toast.Toast -= _toast_Toast;
+            if (disposed) {
+                return;
+            }
+
             disposed = true;
 
-            _memoryService.Shutdown();
-            _settingService.Shutdown();
-            _gameDataService.Shutdown();
-            _actorService.Shutdown();
-            _gposeService.Shutdown();
-            _addressService.Shutdown();
-            _poseService?.Shutdown();
-            _targetService?.Shutdown();
-            _openChatBubbleHook?.Dispose();
-            addonTalkManager?.Dispose();
+            try {
+                // Dispose the hook before service teardown so a later cleanup failure cannot leak it during unload.
+                if (_openChatBubbleHook != null) {
+                    _openChatBubbleHook.Dispose();
+                    _openChatBubbleHook = null;
+                    Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed OpenChatBubble hook.");
+                }
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, "[Artemis Roleplaying Kit] OpenChatBubble hook cleanup failed: " + e.Message);
+            }
+
+            try {
+                framework.Update -= Framework_Update;
+                _chatGui.ChatMessage -= _chatGui_ChatMessage;
+                _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+                _toast.Toast -= _toast_Toast;
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, "[Artemis Roleplaying Kit] AddonTalkHandler event cleanup failed: " + e.Message);
+            }
+
+            try {
+                // FFXIVHook installs a native keyboard hook, so unload must release it explicitly.
+                if (_hook != null) {
+                    _hook.Unhook();
+                    _hook = null;
+                    Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed AddonTalkHandler keyboard hook.");
+                }
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, "[Artemis Roleplaying Kit] AddonTalkHandler keyboard hook cleanup failed: " + e.Message);
+            }
+
+            try {
+                _memoryService.Shutdown();
+                _settingService.Shutdown();
+                _gameDataService.Shutdown();
+                _actorService.Shutdown();
+                _gposeService.Shutdown();
+                _addressService.Shutdown();
+                _poseService?.Shutdown();
+                _targetService?.Shutdown();
+                addonTalkManager?.Dispose();
+            } catch (Exception e) {
+                Plugin.PluginLog?.Warning(e, "[Artemis Roleplaying Kit] AddonTalkHandler service cleanup failed: " + e.Message);
+            }
         }
 
 
