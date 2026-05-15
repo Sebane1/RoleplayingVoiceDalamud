@@ -101,6 +101,9 @@ namespace RoleplayingVoiceDalamud.Voice {
         private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
         private long _pauseOnlyDialogueSequence;
         private bool _pauseOnlyDialogueActive;
+        private bool _lastLoggedTalkStateWasPresent;
+        private string _lastLoggedTalkStateSpeaker = "";
+        private string _lastLoggedTalkStateText = "";
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -553,9 +556,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (_state == null) {
                                             _state = GetBattleTalkAddonState();
                                         }
-                                        if (_state != null) {
-                                            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {_state.Speaker}, Text: {_state.Text?.Substring(0, Math.Min(50, _state.Text?.Length ?? 0))}");
-                                        }
+                                        LogTalkStateIfChanged(_state);
                                         Task.Run((Action)delegate {
                                             if (!_alreadySortingList) {
                                                 _alreadySortingList = true;
@@ -703,6 +704,30 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
 
             return false;
+        }
+
+        private void LogTalkStateIfChanged(AddonTalkState state) {
+            if (state == null) {
+                _lastLoggedTalkStateWasPresent = false;
+                return;
+            }
+
+            var speaker = state.Speaker ?? "";
+            var text = state.Text ?? "";
+            if (_lastLoggedTalkStateWasPresent &&
+                speaker == _lastLoggedTalkStateSpeaker &&
+                text == _lastLoggedTalkStateText) {
+                return;
+            }
+
+            _lastLoggedTalkStateWasPresent = true;
+            _lastLoggedTalkStateSpeaker = speaker;
+            _lastLoggedTalkStateText = text;
+
+            // Framework_Update polls while the same dialogue window is visible,
+            // so log only state changes to avoid flooding Dalamud's shared log.
+            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {speaker}, Text: {text.Substring(0, Math.Min(50, text.Length))}");
+        }
         }
 
         private void GetAnimationDefaults() {
