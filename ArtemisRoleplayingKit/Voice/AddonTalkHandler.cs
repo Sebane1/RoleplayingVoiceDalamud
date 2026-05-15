@@ -116,7 +116,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         public List<NPCVoiceHistoryItem> NpcVoiceHistoryItems { get => _npcVoiceHistoryItems; set => _npcVoiceHistoryItems = value; }
         public Dictionary<string, byte> VoiceList { get => _voiceList; set => _voiceList = value; }
 
-        List<string> previouslyAddedLines = new List<string>();
+        HashSet<string> previouslyAddedLines = new HashSet<string>();
         private bool _gotPlayerDefaultState;
         private ushort _defaultBaseOverride;
         private ushort _defaultCharacterModeInput;
@@ -289,6 +289,8 @@ namespace RoleplayingVoiceDalamud.Voice {
             _blockAudioGenerationCount = 0;
             _blockNpcChat = BannedTerritories.Contains(obj);
             _knownNPCBossAnnouncers.Clear();
+            _knownNPCAnnouncers.Clear();
+            previouslyAddedLines.Clear();
         }
 
         private unsafe void _chatGui_ChatMessage(IHandleableChatMessage msg) {
@@ -560,14 +562,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                         if (_state == null) {
                                             _state = GetBattleTalkAddonState();
                                         }
-<<<<<<< HEAD
                                         LogTalkStateIfChanged(_state);
-=======
-                                        if (_state != null) {
-                                            Plugin.PluginLog.Information($"[DEBUG] Talk state detected - Speaker: {_state.Speaker}, Text: {_state.Text?.Substring(0, Math.Min(50, _state.Text?.Length ?? 0))}");
-                                        }
                                         var stateSnapshot = _state;
->>>>>>> pr-56
                                         Task.Run((Action)delegate {
                                             if (!_alreadySortingList) {
                                                 _alreadySortingList = true;
@@ -588,24 +584,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     _redoLineWindow.IsOpen = false;
                                                     TraceNpcTtsDebug($"Talk state accepted speaker='{stateSnapshot.Speaker}' block={_blockAudioGeneration} blockCount={_blockAudioGenerationCount} text='{PreviewText(stateSnapshot.Text)}'");
                                                     if (!_blockAudioGeneration) {
-<<<<<<< HEAD
-                                                        var speaker = NPCVoiceMapping.AliasDetector(_state.Speaker);
-                                                        if (IsPauseOnlyDialogue(_state.Text)) {
-                                                            StartPauseOnlyDialogueAutoAdvance(_state.Text);
+                                                        var speaker = NPCVoiceMapping.AliasDetector(stateSnapshot.Speaker);
+                                                        TraceNpcTts($"Dispatching dialogue to NPCText speaker='{speaker}' text='{PreviewText(stateSnapshot.Text)}'");
+                                                        if (IsPauseOnlyDialogue(stateSnapshot.Text)) {
+                                                            StartPauseOnlyDialogueAutoAdvance(stateSnapshot.Text);
                                                         } else {
-                                                            NPCText(speaker, _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
+                                                            NPCText(speaker, stateSnapshot.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
                                                             _startedNewDialogue = true;
                                                             _passthroughTimer.Reset();
                                                         }
-=======
-                                                        var speaker = NPCVoiceMapping.AliasDetector(stateSnapshot.Speaker);
-                                                        TraceNpcTts($"Dispatching dialogue to NPCText speaker='{speaker}' text='{PreviewText(stateSnapshot.Text)}'");
-                                                        NPCText(speaker, stateSnapshot.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
-                                                        _startedNewDialogue = true;
-                                                        _passthroughTimer.Reset();
                                                     } else {
                                                         TraceNpcTts($"Suppressed dialogue generation because blockAudioGeneration is true speaker='{stateSnapshot.Speaker}' text='{PreviewText(stateSnapshot.Text)}'");
->>>>>>> pr-56
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         DumpCurrentAudio(stateSnapshot.Speaker);
@@ -691,7 +680,6 @@ namespace RoleplayingVoiceDalamud.Voice {
             return value.Substring(0, Math.Min(80, value.Length)).Replace("\r", " ").Replace("\n", " ");
         }
 
-<<<<<<< HEAD
         private static bool IsPauseOnlyDialogue(string value) {
             return string.Equals(value?.Trim(), "...", StringComparison.Ordinal);
         }
@@ -1133,8 +1121,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             : (Sequence: 0L, Token: CancellationToken.None);
                         var values =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(stream, message, message, message, nameToUse, gender, backupVoice, false,
-                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority,
-                        cancellationToken: request.Token);
+                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
                         if (request.Sequence != 0 && !IsCurrentNpcVoiceRequest(request.Sequence)) {
                             stream.Dispose();
                             return;
@@ -1271,7 +1258,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             MemoryStream stream = new MemoryStream();
                             var values =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
-                            false, useMuteList, conditionsForDatamining, cancellationToken: request.Token);
+                            false, useMuteList, conditionsForDatamining);
                             if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
                                 TraceNpcTts($"Dropping stale audio response sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
                                 stream.Dispose();
@@ -1456,6 +1443,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                     _plugin.Chat.Print(e.Message);
                 }
             }
+            }
         }
 
         private WaveStream TryCreateNpcWavePlayer(Stream stream, string npcName, string playbackPath) {
@@ -1526,22 +1514,16 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     var request = BeginNpcVoiceRequest($"npc='{nameToUse}' object/bubble path");
                     var values =
-<<<<<<< HEAD
                     await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining);
+                    if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
+                        stream.Dispose();
+                        return;
+                    }
                     if (values.Item1 && stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
                         WaveStream wavePlayer = TryCreateNpcWavePlayer(stream, nameToUse, "object/bubble dialogue");
                         if (wavePlayer == null) {
                             return;
                         }
-=======
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining, cancellationToken: request.Token);
-	                    if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
-	                        stream.Dispose();
-	                        return;
-	                    }
-                    if (stream != null && _plugin.Window.NpcSpeechEnabled) {
-                        WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
->>>>>>> pr-56
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = values.Item1 ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
