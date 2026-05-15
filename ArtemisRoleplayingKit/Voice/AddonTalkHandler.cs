@@ -86,6 +86,21 @@ namespace RoleplayingVoiceDalamud.Voice {
         private string _lastSoundPath;
         bool _blockNpcChat = false;
         private List<NPCVoiceHistoryItem> _npcVoiceHistoryItems = new List<NPCVoiceHistoryItem>();
+        private static readonly string[] StrongNonEnglishTextMarkers = new[] { "¿", "¡", "á", "é", "í", "ó", "ú", "ñ", "ü" };
+        // Keep weak text markers separate so future false positives are easy to
+        // diagnose. " de " is intentionally excluded because it appears in valid
+        // English-client NPC names and titles.
+        private static readonly string[] WeakNonEnglishTextMarkers = new[] {
+            "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ", " puente ", "Heuso ",
+            "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " billis ", "Sepulcro",
+            " sur ", " cerca", "descubierto", "DESTINO", " y ", "puede", " es ", " muchas ", " pero ",
+            "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ",
+            " amigo", " caer ", "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ",
+            "Y ", "en lo", "de luto ", "Si ", " hecho ", " usted ", "nosotros", "también", " haremos "
+        };
+        private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
+        private long _pauseOnlyDialogueSequence;
+        private bool _pauseOnlyDialogueActive;
 
         ////public List<ActionTimeline> LipSyncTypes { get; private set; }
 
@@ -559,9 +574,14 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     _currentText = _state.Text;
                                                     _redoLineWindow.IsOpen = false;
                                                     if (!_blockAudioGeneration) {
-                                                        NPCText(NPCVoiceMapping.AliasDetector(_state.Speaker), _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
-                                                        _startedNewDialogue = true;
-                                                        _passthroughTimer.Reset();
+                                                        var speaker = NPCVoiceMapping.AliasDetector(_state.Speaker);
+                                                        if (IsPauseOnlyDialogue(_state.Text)) {
+                                                            StartPauseOnlyDialogueAutoAdvance(_state.Text);
+                                                        } else {
+                                                            NPCText(speaker, _state.Text.TrimStart('.'), false, NPCVoiceManager.VoiceModel.Speed, true);
+                                                            _startedNewDialogue = true;
+                                                            _passthroughTimer.Reset();
+                                                        }
                                                     }
                                                     if (_plugin.Config.DebugMode) {
                                                         DumpCurrentAudio(_state.Speaker);
@@ -592,6 +612,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                         _currentDialoguePaths[_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key] = true;
                                                     }
                                                 }
+                                                ClearPauseOnlyDialogueState();
                                                 if (_currentSpeechObject != null && _startedNewDialogue) {
                                                     var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
                                                     if (otherData.Value.RowId != 15) {
@@ -624,6 +645,64 @@ namespace RoleplayingVoiceDalamud.Voice {
                         }
                     }
                 }
+        }
+
+        private static string PreviewText(string value) {
+            if (string.IsNullOrEmpty(value)) {
+                return "";
+            }
+
+            return value.Substring(0, Math.Min(80, value.Length)).Replace("\r", " ").Replace("\n", " ");
+        }
+
+        private static bool IsPauseOnlyDialogue(string value) {
+            return string.Equals(value?.Trim(), "...", StringComparison.Ordinal);
+        }
+
+        private void StartPauseOnlyDialogueAutoAdvance(string pauseText) {
+            Volatile.Write(ref _pauseOnlyDialogueActive, true);
+            var sequence = Interlocked.Increment(ref _pauseOnlyDialogueSequence);
+            AutoAdvancePauseOnlyDialogue(pauseText, sequence);
+        }
+
+        private void ClearPauseOnlyDialogueState() {
+            if (!Volatile.Read(ref _pauseOnlyDialogueActive)) {
+                return;
+            }
+
+            // Pause-only lines do not create _currentSpeechObject, so the normal
+            // dialogue cleanup path will not clear _currentText for them.
+            Volatile.Write(ref _pauseOnlyDialogueActive, false);
+            Interlocked.Increment(ref _pauseOnlyDialogueSequence);
+            _currentText = "";
+        }
+
+        private async void AutoAdvancePauseOnlyDialogue(string pauseText, long sequence) {
+            if (!_plugin.Config.AutoTextAdvance || _plugin.Config.QualityAssuranceMode) {
+                return;
+            }
+
+            // A pause-only line has no generated audio, so mimic the playback
+            // completion path after a short readable beat. The sequence check
+            // prevents an older delay from advancing a newer identical "..." line.
+            await Task.Delay(PauseOnlyDialogueAutoAdvanceDelayMs);
+            if (Volatile.Read(ref _pauseOnlyDialogueActive) && Volatile.Read(ref _pauseOnlyDialogueSequence) == sequence &&
+                _state != null && _currentText == pauseText && IsPauseOnlyDialogue(_state.Text)) {
+                _hook?.SendAsyncKey(Keys.NumPad0);
+            }
+        }
+
+        private bool ShouldSkipNpcText(string npcName, string message) {
+            if (!VerifyIsEnglish(message, out var languageRejectionReason)) {
+                Plugin.PluginLog.Information($"[NPC TTS] Skipping text for npc='{npcName}' reason='{languageRejectionReason}' text='{PreviewText(message)}'");
+                return true;
+            }
+
+            if (message?.Contains("You have submitted") == true) {
+                return true;
+            }
+
+            return false;
         }
 
         private void GetAnimationDefaults() {
@@ -917,7 +996,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return message;
         }
         private async void NPCText(string npcName, string message, string voice, NPCVoiceManager.VoiceModel voiceModel, bool lowLatencyMode = false, bool onlySendData = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
-            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
+            if (!ShouldSkipNpcText(npcName, message)) {
                 try {
                     bool gender = false;
                     byte race = 0;
@@ -1027,7 +1106,7 @@ namespace RoleplayingVoiceDalamud.Voice {
         }
         private async void NPCText(string npcName, string message, bool ignoreAutoProgress, NPCVoiceManager.VoiceModel voiceModel,
             bool lowLatencyMode = false, bool redoLine = false, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
-            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
+            if (!ShouldSkipNpcText(npcName, message)) {
                 try {
                     bool gender = false;
                     byte race = 0;
@@ -1279,7 +1358,7 @@ namespace RoleplayingVoiceDalamud.Voice {
 
         private async void NPCText(string name, string message, bool gender,
             byte race, int body, byte tribe, byte eyes, uint objectId, MediaGameObject mediaGameObject, NPCVoiceManager.VoiceModel voiceModel, string note = "", VoiceLinePriority voiceLinePriority = VoiceLinePriority.None) {
-            if (VerifyIsEnglish(message) && !message.Contains("You have submitted")) {
+            if (!ShouldSkipNpcText(name, message)) {
                 try {
                     string nameToUse = name;
                     MediaGameObject currentSpeechObject = mediaGameObject;
@@ -1322,22 +1401,36 @@ namespace RoleplayingVoiceDalamud.Voice {
             }
         }
 
-        /// <summary>
-        /// Line generation is expensive, for now enforce only generating english text.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
         private bool VerifyIsEnglish(string message) {
-            string[] symbolBlacklist = new string[] { "¿", "á", "í", "ó", "ú", "ñ", "ü", "Las ", "Los ", "Esta", " que ", " haces ", " tiene ", " las ", " los ",
-            " puente ", "Heuso ", "Campamento", "Muéstrale", "evidencia", " un ", "Busca ", " frasco ", " de ", " billis ", "Sepulcro", " sur ", "¡", " cerca", "descubierto",
-            "DESTINO", " y ", "puede", " es ", " muchas ", " pero ", "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ", " amigo", " caer ",
-            "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ", "Y ", "en lo", "de luto ","Si "," hecho "," usted ", "nosotros", "también", " haremos "};
-            foreach (string symbol in symbolBlacklist) {
-                if (message.Contains(symbol)) {
+            return VerifyIsEnglish(message, out _);
+        }
+
+        private bool VerifyIsEnglish(string message, out string reason) {
+            reason = "";
+            if (_clientState.ClientLanguage != ClientLanguage.English) {
+                reason = $"client language is {_clientState.ClientLanguage}";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(message)) {
+                return true;
+            }
+
+            foreach (string marker in StrongNonEnglishTextMarkers) {
+                if (message.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
+                    reason = $"contains strong non-English marker '{marker}'";
                     return false;
                 }
             }
-            return _clientState.ClientLanguage == ClientLanguage.English;
+
+            foreach (string marker in WeakNonEnglishTextMarkers) {
+                if (message.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
+                    reason = $"contains weak non-English marker '{marker}'";
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private string FindNPCNameFromMessage(string message) {
