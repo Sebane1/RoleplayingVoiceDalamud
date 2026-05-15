@@ -1423,6 +1423,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }, _plugin.Config.NPCSpeechSpeed, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
                                         } else {
                                             TraceNpcTts($"Audio ready but playback suppressed by blockAudioGeneration sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
+                                            // A cutscene SCD can arrive while a relay request is in flight.
+                                            // Once that late response is suppressed, the block has done its job.
                                             ClearConsumedAudioGenerationBlock("npc audio playback suppressed");
                                         }
                                     }
