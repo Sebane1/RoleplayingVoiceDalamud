@@ -448,6 +448,7 @@ namespace RoleplayingVoice
                     {
                         ipcSystem?.Dispose();
                         addonTalkHandler?.Dispose();
+                        // AddonTalkHandler owns addonTalkManager after construction; dispose the manager directly only if handler creation failed.
                         if (addonTalkHandler == null)
                         {
                             addonTalkManager?.Dispose();
@@ -878,6 +879,7 @@ namespace RoleplayingVoice
             });
             RunDisposeStep("Penumbra IPC events", () =>
             {
+                // Penumbra is optional, so only unsubscribe if startup confirmed that both IPC event subscriptions succeeded.
                 if (!_penumbraEventSubscriptionsActive)
                 {
                     return;
