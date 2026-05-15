@@ -1756,6 +1756,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _chatGui.ChatMessage -= _chatGui_ChatMessage;
                 _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                 _toast.Toast -= _toast_Toast;
+                _toast.QuestToast -= _toast_QuestToast;
             } catch (Exception e) {
                 Plugin.PluginLog?.Warning(e, "[Artemis Roleplaying Kit] AddonTalkHandler event cleanup failed: " + e.Message);
             }

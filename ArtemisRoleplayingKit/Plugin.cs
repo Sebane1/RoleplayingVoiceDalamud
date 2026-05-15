@@ -119,6 +119,8 @@ namespace RoleplayingVoice
         private bool streamWasPlaying;
         private bool _inGameSoundStartedAudio;
         private bool _penumbraReady = true;
+        private bool _penumbraEventSubscriptionsActive;
+        private readonly object _disposeLock = new object();
         private string lastPrintedWarning;
         private string stagingPath;
         private string potentialStream;
@@ -394,22 +396,63 @@ namespace RoleplayingVoice
 
                 Task.Run(async () =>
                 {
+                    AddonTalkManager addonTalkManager = null;
+                    AddonTalkHandler addonTalkHandler = null;
+                    IpcSystem ipcSystem = null;
                     try
                     {
-                        _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
+                        var voiceMappings = await NPCVoiceMapping.GetVoiceMappings();
+                        var cacheTypes = await NPCVoiceMapping.GetCharacterToCacheType();
+
+                        lock (_disposeLock)
+                        {
+                            if (disposed)
+                            {
+                                return;
+                            }
+                        }
+
+                        var npcVoiceManager = new NPCVoiceManager(voiceMappings, cacheTypes,
                             config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
-                        _voiceEditor.NPCVoiceManager = _npcVoiceManager;
-                        _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                        _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
-                        _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
+                        addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
+                        addonTalkHandler = new AddonTalkHandler(addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                        ipcSystem = new IpcSystem(pluginInterface, addonTalkHandler, this);
+
+                        lock (_disposeLock)
+                        {
+                            // Async startup can complete after plugin unload has begun; avoid publishing new hook owners in that case.
+                            if (disposed)
+                            {
+                                ipcSystem.Dispose();
+                                addonTalkHandler.Dispose();
+                                return;
+                            }
+
+                            _npcVoiceManager = npcVoiceManager;
+                            _voiceEditor.NPCVoiceManager = _npcVoiceManager;
+                            _addonTalkHandler = addonTalkHandler;
+                            _addonTalkManager = addonTalkManager;
+                            _ipcSystem = ipcSystem;
+                            _gameGui = gameGui;
+                            _dragDrop = dragDrop;
+                            _videoWindow.WindowResized += _videoWindow_WindowResized;
+                            _toast.ErrorToast += _toast_ErrorToast;
+                        }
+
+                        addonTalkManager = null;
+                        addonTalkHandler = null;
+                        ipcSystem = null;
                         NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
-                        _gameGui = gameGui;
-                        _dragDrop = dragDrop;
-                        _videoWindow.WindowResized += _videoWindow_WindowResized;
-                        _toast.ErrorToast += _toast_ErrorToast;
                     }
                     catch (Exception e)
                     {
+                        ipcSystem?.Dispose();
+                        addonTalkHandler?.Dispose();
+                        if (addonTalkHandler == null)
+                        {
+                            addonTalkManager?.Dispose();
+                        }
+
                         Plugin.PluginLog?.Error(e, "[Artemis Roleplaying Kit] Async initialization failed: " + e.Message);
                     }
                 });
@@ -789,13 +832,16 @@ namespace RoleplayingVoice
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed)
+            lock (_disposeLock)
             {
-                return;
-            }
+                if (disposed)
+                {
+                    return;
+                }
 
-            disposed = true;
-            Disposed = true;
+                disposed = true;
+                Disposed = true;
+            }
 
             RunDisposeStep("configuration save", () => config.Save());
             RunDisposeStep("configuration event", () => config.OnConfigurationChanged -= Config_OnConfigurationChanged);
@@ -821,6 +867,25 @@ namespace RoleplayingVoice
                 _clientState.Logout -= _clientState_Logout;
                 _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
                 _clientState.LeavePvP -= _clientState_LeavePvP;
+                _clientState.CfPop -= _clientState_CfPop;
+            });
+            RunDisposeStep("window events", () =>
+            {
+                Window.RequestingReconnect -= Window_RequestingReconnect;
+                Window.OnMoveFailed -= Window_OnMoveFailed;
+                Window.OnWindowOperationFailed -= Window_OnWindowOperationFailed;
+                _videoWindow.WindowResized -= _videoWindow_WindowResized;
+            });
+            RunDisposeStep("Penumbra IPC events", () =>
+            {
+                if (!_penumbraEventSubscriptionsActive)
+                {
+                    return;
+                }
+
+                Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+                Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event -= gameObjectRedrawn;
+                _penumbraEventSubscriptionsActive = false;
             });
             RunDisposeStep("toast event", () => _toast.ErrorToast -= _toast_ErrorToast);
             RunDisposeStep("framework update event", () => _framework.Update -= framework_Update);
