@@ -1429,8 +1429,12 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     if (_plugin.Config.DebugMode) {
                                         _plugin.Chat.Print("Waveplayer is valid");
                                     }
-                                    Vector3 startingPosition = npcObject.Position;
-                                    if (npcObject != null && canDoLipSync) {
+                                    // Unknown/nameless dialogue can still be voiced by falling back to
+                                    // the local player as the audio source. Only read NPC position data
+                                    // after DiscoverNpc() has actually resolved a game object for lip sync.
+                                    bool canTrackNpcLipSync = npcObject != null && canDoLipSync;
+                                    Vector3 startingPosition = canTrackNpcLipSync ? npcObject.Position : Vector3.Zero;
+                                    if (canTrackNpcLipSync) {
                                         actorMemory = new ActorMemory();
                                         try {
                                             actorMemory.SetAddress(npcObject.Address);
@@ -1480,7 +1484,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             if (_hook != null) {
                                                 try {
                                                     if (animationMemory != null) {
-                                                        if (npcObject != null && canDoLipSync) {
+                                                        if (canTrackNpcLipSync) {
                                                             animationMemory.LipsOverride = 0;
                                                             if (!Conditions.Instance()->BoundByDuty || IsInACutscene()) {
                                                                 if (IsInACutscene()) {
@@ -1514,7 +1518,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }
                                         }, delegate (object sender, StreamVolumeEventArgs e) {
                                             if (animationMemory != null) {
-                                                if (npcObject != null && canDoLipSync) {
+                                                if (canTrackNpcLipSync) {
                                                     if (e.MaxSampleValues.Length > 0) {
                                                         if (_plugin.Config.DebugMode && IsInACutscene()) {
                                                             Plugin.PluginLog.Debug($"[LipSync] Vol: {e.MaxSampleValues[0]:F3} State: {(_state != null)} Dist: {Vector3.Distance(startingPosition, npcObject.Position):F2}");
