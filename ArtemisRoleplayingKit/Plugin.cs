@@ -270,6 +270,7 @@ namespace RoleplayingVoice
         public ThreadSafeGameObjectManager ThreadSafeObjectTable { get => _threadSafeObjectTable; set => _threadSafeObjectTable = value; }
         
         private ArtemisRoleplayingKit.Voice.ActionEffectListener _actionEffectListener;
+        private ArtemisRoleplayingKit.Voice.UseActionListener _useActionListener;
         #endregion
         #region Plugin Initiialization
         public Plugin(
@@ -390,6 +391,9 @@ namespace RoleplayingVoice
 
                 _actionEffectListener = new ArtemisRoleplayingKit.Voice.ActionEffectListener(_interopProvider, pluginLog);
                 _actionEffectListener.OnActionEffectReceived += ActionEffectListener_OnActionEffectReceived;
+
+                _useActionListener = new ArtemisRoleplayingKit.Voice.UseActionListener(_interopProvider, pluginLog);
+                _useActionListener.OnUseAction += UseActionListener_OnUseAction;
 
                 Task.Run(async () =>
                 {
@@ -780,6 +784,8 @@ namespace RoleplayingVoice
                 }
                 CleanupEmoteWatchList();
                 _addonTalkHandler?.Dispose();
+                _actionEffectListener?.Dispose();
+                _useActionListener?.Dispose();
                 //PenumbraAndGlamourerIPCWrapper.Instance.ModSettingChanged.Event -= modSettingChanged;
             } catch (Exception e)
             {

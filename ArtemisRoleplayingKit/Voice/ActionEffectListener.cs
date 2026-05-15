@@ -31,21 +31,20 @@ namespace ArtemisRoleplayingKit.Voice
 
             try
             {
-                // Attempt to hook the FFXIVClientStructs mapped method directly
-                var receiveMethod = typeof(ActionEffectHandler).GetMethod("Receive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+                // Use HookFromSignature with the exact signature from FFXIVClientStructs' MemberFunctionAttribute
+                // This bypasses the need for FFXIVClientStructs' Resolver to be initialized.
+                string signature = "E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 33 CC E8 ?? ?? ?? ?? 48 81 C4 00 05 00 00";
                 
-                if (receiveMethod != null)
+                _receiveActionEffectHook = _interopProvider.HookFromSignature<ReceiveActionEffectDelegate>(signature, ReceiveActionEffectDetour);
+                
+                if (_receiveActionEffectHook != null)
                 {
-                    // Hook directly from the method info provided by FFXIVClientStructs
-                    _receiveActionEffectHook = _interopProvider.HookFromAddress<ReceiveActionEffectDelegate>(
-                        (nint)receiveMethod.MethodHandle.GetFunctionPointer(), ReceiveActionEffectDetour);
-                    
                     _receiveActionEffectHook.Enable();
-                    _pluginLog.Information("[Artemis Roleplaying Kit] Successfully hooked ActionEffectHandler.Receive!");
+                    _pluginLog.Information("[Artemis Roleplaying Kit] Successfully hooked ActionEffectHandler.Receive via signature!");
                 }
                 else
                 {
-                    _pluginLog.Warning("[Artemis Roleplaying Kit] Failed to find ActionEffectHandler.Receive method.");
+                    _pluginLog.Warning("[Artemis Roleplaying Kit] Failed to find ActionEffectHandler.Receive signature.");
                 }
             }
             catch (Exception ex)

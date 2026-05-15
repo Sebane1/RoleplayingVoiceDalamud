@@ -1374,6 +1374,10 @@ namespace RoleplayingVoice {
 
         private void LocalPlayerCombat(string playerName, SeString message,
     XivChatType type, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
+            if (config.DebugMode) {
+                _chat?.Print($"[Artemis Roleplaying Kit] BattleText Action: {message.TextValue} (Type: {type})");
+            }
+
             if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
                 if (!LanguageSpecificMount(_clientState.ClientLanguage, message)) {
@@ -1829,6 +1833,90 @@ namespace RoleplayingVoice {
         #endregion
         
         #region Action Effect Wiring
+        private void UseActionListener_OnUseAction(uint actionId, ActionType actionType) {
+            Task.Run(() => {
+                try {
+                    var actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    string actionName = actionRow.Name.ToString();
+
+                    if (string.IsNullOrEmpty(actionName)) {
+                        actionName = "Unknown";
+                    }
+
+                    if (config.DebugMode) {
+                        _chat?.Print($"[Artemis Roleplaying Kit] UseAction (Native Cast Hook): {actionName} (ID: {actionId}, Type: {actionType})");
+                        PluginLog.Information($"[Artemis Roleplaying Kit] UseAction (Native Cast Hook): {actionName} (ID: {actionId}, Type: {actionType})");
+                    }
+
+                    if (_threadSafeObjectTable.LocalPlayer == null) {
+                        if (config.DebugMode) PluginLog.Warning("[Artemis Roleplaying Kit] LocalPlayer is null in UseAction");
+                        return;
+                    }
+                    string playerName = _threadSafeObjectTable.LocalPlayer.Name.TextValue;
+
+                    if (config.DebugMode) PluginLog.Information($"[Artemis Roleplaying Kit] UseAction playerName: {playerName}, HasVoicePack: {config.CharacterVoicePacks.ContainsKey(playerName)}");
+
+                    if (config.CharacterVoicePacks.ContainsKey(playerName)) {
+                        if (_mainCharacterVoicePack == null) {
+                            _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                        }
+
+                        bool isCast = actionRow.Cast100ms > 0;
+                        string value = _mainCharacterVoicePack.GetMisc(actionName);
+                        bool attackIntended = false;
+
+                        // Only handle casting sounds here (when button is pressed and cast bar starts)
+                        if (isCast) {
+                            if (string.IsNullOrEmpty(value)) {
+                                if (castingCount == 0) {
+                                    // Use basic heuristics to determine if it's a heal or attack
+                                    string lowerName = actionName.ToLower();
+                                    if (lowerName.Contains("cure") || lowerName.Contains("heal") || lowerName.Contains("raise") || lowerName.Contains("resurrect") || lowerName.Contains("medica") || lowerName.Contains("benefic") || lowerName.Contains("helios") || lowerName.Contains("diagnosis") || lowerName.Contains("prognosis")) {
+                                        value = _mainCharacterVoicePack.GetCastingHeal();
+                                    } else {
+                                        value = _mainCharacterVoicePack.GetCastingAttack();
+                                    }
+                                    castingCount++;
+                                } else {
+                                    castingCount++;
+                                    if (castingCount >= 3) {
+                                        castingCount = 0;
+                                    }
+                                    attackIntended = true;
+                                }
+                            }
+                        } else {
+                            // For instant actions, we can choose to play Melee/Action sounds immediately on press
+                            // or leave it to ActionEffectListener to play when the hit lands.
+                            // The ActionEffectListener currently handles instantaneous hits!
+                        }
+
+                        if (config.DebugMode) PluginLog.Information($"[Artemis Roleplaying Kit] UseAction isCast: {isCast}, actionName: {actionName}, resolved value: '{value}', attackIntended: {attackIntended}");
+
+                        if (!string.IsNullOrEmpty(value) || attackIntended) {
+                            if (config.DebugMode) PluginLog.Information($"[Artemis Roleplaying Kit] Attempting to play media for UseAction. Value: {value}");
+                            if (!attackIntended) {
+                                bool boundByDuty = false;
+                                unsafe { boundByDuty = Conditions.Instance()->BoundByDuty; }
+                                _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerCombat, false, 0, default, 
+                                    boundByDuty ? null : delegate { Task.Run(() => { if (_threadSafeObjectTable.LocalPlayer != null) _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer); }); },
+                                    boundByDuty ? null : delegate (object sender, NAudio.Wave.SampleProviders.StreamVolumeEventArgs e) {
+                                        Task.Run(() => {
+                                            if (_threadSafeObjectTable.LocalPlayer != null && e.MaxSampleValues.Length > 0) {
+                                                if (e.MaxSampleValues[0] > 0.2) _addonTalkHandler.TriggerLipSync(_threadSafeObjectTable.LocalPlayer, 2);
+                                                else _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer);
+                                            }
+                                        });
+                                    });
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    PluginLog.Warning(ex, "[Artemis] Error processing UseAction in SoundManagement.");
+                }
+            });
+        }
+
         private void ActionEffectListener_OnActionEffectReceived(uint casterId, uint actionId) {
             Task.Run(() => {
                 try {
@@ -1859,6 +1947,12 @@ namespace RoleplayingVoice {
                     bool attackIntended = false;
 
                     if (isLocalPlayer) {
+                        if (config.DebugMode) {
+                            _chat?.Print($"[Artemis Roleplaying Kit] Action Detected: {actionName} (ID: {actionId}, IsCast: {isCast})");
+                            PluginLog.Information($"[Artemis Roleplaying Kit] Action Detected: {actionName} (ID: {actionId}, IsCast: {isCast})");
+                            PluginLog.Information($"[Artemis Roleplaying Kit] ActionEffect playerName: {playerName}, HasVoicePack: {config.CharacterVoicePacks.ContainsKey(playerName)}");
+                        }
+                        
                         if (config.CharacterVoicePacks.ContainsKey(playerName)) {
                             if (_mainCharacterVoicePack == null) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
@@ -1883,7 +1977,11 @@ namespace RoleplayingVoice {
                                     attackIntended = true;
                                 }
                             }
+
+                            if (config.DebugMode) PluginLog.Information($"[Artemis Roleplaying Kit] ActionEffect isCast: {isCast}, actionName: {actionName}, resolved value: '{value}', attackIntended: {attackIntended}");
+
                             if (!string.IsNullOrEmpty(value) || attackIntended) {
+                                if (config.DebugMode) PluginLog.Information($"[Artemis Roleplaying Kit] Attempting to play media for ActionEffect. Value: {value}");
                                 if (!attackIntended) {
                                     bool boundByDuty = false;
                                     unsafe { boundByDuty = Conditions.Instance()->BoundByDuty; }
