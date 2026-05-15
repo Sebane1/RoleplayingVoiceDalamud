@@ -1130,10 +1130,13 @@ namespace RoleplayingVoice {
             uint soundEffectVolume = 0;
             uint soundMicPos = 0;
             try {
-                _mediaManager.AudioPlayerType = (AudioOutputType)config.AudioOutputType;
-                _mediaManager.SpatialAudioAccuracy = config.SpatialAudioAccuracy;
-                _mediaManager.LowPerformanceMode = config.LowPerformanceMode;
-                _mediaManager.IgnoreSpatialAudioForTTS = config.IgnoreSpatialAudioForTTS;
+                if (_mediaManager != null && config != null) {
+                    _mediaManager.AudioPlayerType = (AudioOutputType)config.AudioOutputType;
+                    _mediaManager.AudioOutputDeviceIndex = config.AudioOutputDeviceIndex;
+                    _mediaManager.SpatialAudioAccuracy = config.SpatialAudioAccuracy;
+                    _mediaManager.LowPerformanceMode = config.LowPerformanceMode;
+                    _mediaManager.IgnoreSpatialAudioForTTS = config.IgnoreSpatialAudioForTTS;
+                }
                 if (_gameConfig.TryGet(SystemConfigOption.SoundVoice, out voiceVolume)) {
                     if (_gameConfig.TryGet(SystemConfigOption.SoundMaster, out masterVolume)) {
                         if (_gameConfig.TryGet(SystemConfigOption.SoundMicpos, out soundMicPos))

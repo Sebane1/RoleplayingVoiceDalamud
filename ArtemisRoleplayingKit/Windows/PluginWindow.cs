@@ -47,6 +47,7 @@ namespace RoleplayingVoice {
         BetterComboBox _twitchDefaultPlayback = new BetterComboBox("##twitchDefaultPlayback",
             new string[] { "Start Stream With Video", "Start Stream With Audio" }, 200);
         BetterComboBox _audioOutputType;
+        BetterComboBox _audioOutputDevice;
         private FileDialogManager fileDialogManager;
         private FFXIVHook hook;
         private IClientState clientState;
@@ -182,6 +183,14 @@ namespace RoleplayingVoice {
                 configuration = value;
                 if (configuration != null) {
                     _audioOutputType = new BetterComboBox("##audioOutputMethod", Enum.GetNames(typeof(AudioOutputType)).ToArray(), 0, 200);
+                    
+                    var devices = new List<string>();
+                    devices.Add("Default");
+                    for (int i = 0; i < NAudio.Wave.WaveOut.DeviceCount; i++) {
+                        devices.Add(NAudio.Wave.WaveOut.GetCapabilities(i).ProductName);
+                    }
+                    _audioOutputDevice = new BetterComboBox("##audioOutputDevice", devices.ToArray(), 0, 200);
+
                     serverIP = configuration.ConnectionIP != null ? configuration.ConnectionIP.ToString() : "";
                     apiKey = !string.IsNullOrEmpty(configuration.ApiKey) ? configuration.ApiKey : "";
                     _customTTSVoiceActive = configuration.AiVoiceActive;
@@ -203,6 +212,7 @@ namespace RoleplayingVoice {
                     _npcAutoTextAdvance = configuration.AutoTextAdvance;
                     _replaceVoicedARRCutscenes = configuration.ReplaceVoicedARRCutscenes;
                     _audioOutputType.SelectedIndex = configuration.AudioOutputType;
+                    _audioOutputDevice.SelectedIndex = configuration.AudioOutputDeviceIndex + 1; // Offset by 1 since Default is -1
                     _qualityAssuranceMode = configuration.QualityAssuranceMode;
                     _streamPath = configuration.StreamPath;
                     _twitchStreamTriggersIfShouter = configuration.TwitchStreamTriggersIfShouter;
@@ -801,6 +811,7 @@ namespace RoleplayingVoice {
             configuration.AutoTextAdvance = _npcAutoTextAdvance;
             configuration.ReplaceVoicedARRCutscenes = _replaceVoicedARRCutscenes;
             configuration.AudioOutputType = _audioOutputType.SelectedIndex;
+            configuration.AudioOutputDeviceIndex = _audioOutputDevice.SelectedIndex - 1; // Offset by 1 since Default is -1
             configuration.QualityAssuranceMode = _qualityAssuranceMode;
             configuration.TwitchStreamTriggersIfShouter = _twitchStreamTriggersIfShouter;
             configuration.NPCSpeechSpeed = _npcPlaybackSpeed;
@@ -1345,6 +1356,11 @@ namespace RoleplayingVoice {
             ImGui.Text("Audio Output System (Change if you notice playback issues)");
             _audioOutputType.Width = (int)ImGui.GetContentRegionMax().X;
             _audioOutputType.Draw();
+            if (_audioOutputType.SelectedIndex == (int)AudioOutputType.WaveOut) {
+                ImGui.Text("Hardware Output Device (WaveOut only)");
+                _audioOutputDevice.Width = (int)ImGui.GetContentRegionMax().X;
+                _audioOutputDevice.Draw();
+            }
             ImGui.Checkbox("##moveSCDBasedModsToPerformanceSlider", ref _moveSCDBasedModsToPerformanceSlider);
             ImGui.SameLine();
             ImGui.Text("Seperate Dance Mods From BGM Track (Experimental)");

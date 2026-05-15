@@ -1,4 +1,4 @@
-﻿using Dalamud.Configuration;
+using Dalamud.Configuration;
 using Dalamud.Plugin;
 using RoleplayingMediaCore.AudioRecycler;
 using System;
@@ -43,6 +43,7 @@ namespace RoleplayingVoice {
         private bool _readLocationsAndToastNotifications = false;
         private bool _lowPerformanceMode;
         private int _spatialAudioAccuracy = 100;
+        private int _audioOutputDeviceIndex = -1;
 
         List<CustomNpcCharacter> _customNpcCharacters = new List<CustomNpcCharacter>();
         private int _playerVoiceEngine;
@@ -138,6 +139,7 @@ namespace RoleplayingVoice {
         public bool AutoTextAdvance { get => _autoTextAdvance; set => _autoTextAdvance = value; }
         public bool ReplaceVoicedARRCutscenes { get => _replaceVoicedARRCutscenes; set => _replaceVoicedARRCutscenes = value; }
         public int AudioOutputType { get => _audioOutputType; set => _audioOutputType = value; }
+        public int AudioOutputDeviceIndex { get => _audioOutputDeviceIndex; set => _audioOutputDeviceIndex = value; }
         public bool QualityAssuranceMode { get => _qualityAssuranceMode; set => _qualityAssuranceMode = value; }
         public int DefaultTwitchOpen { get => _defaultTwitchOpen; set => _defaultTwitchOpen = value; }
         public bool TwitchStreamTriggersIfShouter { get => _twitchStreamTriggersIfShouter; set => _twitchStreamTriggersIfShouter = value; }
