@@ -638,12 +638,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                         _currentDialoguePaths[_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key] = true;
                                                     }
                                                 }
-<<<<<<< HEAD
                                                 ClearPauseOnlyDialogueState();
-                                                if (_currentSpeechObject != null && _startedNewDialogue) {
-                                                    var otherData = this._threadSafeObjectTable.LocalPlayer.OnlineStatus;
-                                                    if (otherData.Value.RowId != 15) {
-=======
                                                 if (_startedNewDialogue) {
                                                     CancelNpcVoiceRequests("talk state cleared while dialogue was active");
                                                     if (_currentSpeechObject != null) {
@@ -662,7 +657,6 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     } else {
                                                         // A relay request can still be pending before playback has
                                                         // created a speech object, so clear the text gate here too.
->>>>>>> pr-56
                                                         _namesToRemove.Clear();
                                                         _currentText = "";
                                                         _currentDialoguePaths.Clear();
