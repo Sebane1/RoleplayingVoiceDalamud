@@ -1121,7 +1121,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                             : (Sequence: 0L, Token: CancellationToken.None);
                         var values =
                         await _plugin.NpcVoiceManager.GetCharacterAudio(stream, message, message, message, nameToUse, gender, backupVoice, false,
-                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority);
+                        voiceModel, npcData, false, false, canProceed, !_plugin.Window.NpcSpeechEnabled ? VoiceLinePriority.Datamining : voiceLinePriority,
+                        cancellationToken: request.Token);
                         if (request.Sequence != 0 && !IsCurrentNpcVoiceRequest(request.Sequence)) {
                             stream.Dispose();
                             return;
@@ -1258,7 +1259,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                             MemoryStream stream = new MemoryStream();
                             var values =
                             await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, arcValue, initialCleanedValue, nameToUse, gender, backupVoice, false, voiceModel, npcData, redoLine,
-                            false, useMuteList, conditionsForDatamining);
+                            false, useMuteList, conditionsForDatamining, cancellationToken: request.Token);
                             if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
                                 TraceNpcTts($"Dropping stale audio response sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
                                 stream.Dispose();
@@ -1514,7 +1515,8 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     var request = BeginNpcVoiceRequest($"npc='{nameToUse}' object/bubble path");
                     var values =
-                    await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining);
+                    await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining,
+                    cancellationToken: request.Token);
                     if (!IsCurrentNpcVoiceRequest(request.Sequence)) {
                         stream.Dispose();
                         return;
