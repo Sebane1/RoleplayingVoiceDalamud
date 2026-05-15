@@ -129,6 +129,7 @@ namespace RoleplayingVoice {
                     new PenumbraAndGlamourerIpcWrapper(pluginInterface);
                     Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event += modSettingChanged;
                     Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event += gameObjectRedrawn;
+                    _penumbraEventSubscriptionsActive = true;
                     Plugin.PluginLog.Debug("Penumbra connected to Artemis Roleplaying Kit");
                     _penumbraReady = true;
                 } catch (Exception e) {
@@ -142,7 +143,9 @@ namespace RoleplayingVoice {
                 Window.OnMoveFailed += Window_OnMoveFailed;
                 config.OnConfigurationChanged += Config_OnConfigurationChanged;
                 _emoteReaderHook = new EmoteReaderHooks(_interopProvider, _clientState, _threadSafeObjectTable);
-                _emoteReaderHook.OnEmote += (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
+                // Keep the delegate instance so teardown can unsubscribe the same handler before disposing the hook.
+                _onEmoteHandler = (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
+                _emoteReaderHook.OnEmote += _onEmoteHandler;
                 _realChat = new Chat(_sigScanner);
                 RaceVoice.LoadRacialVoiceInfo();
                 CheckDependancies();

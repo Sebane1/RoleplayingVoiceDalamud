@@ -89,6 +89,7 @@ namespace RoleplayingVoice
         private Stopwatch _queueTimer = new Stopwatch();
 
         private EmoteReaderHooks _emoteReaderHook;
+        private Action<IGameObject, ushort> _onEmoteHandler;
         private Chat _realChat;
         private Filter _filter;
         private MediaGameObject _playerObject;
@@ -118,6 +119,8 @@ namespace RoleplayingVoice
         private bool streamWasPlaying;
         private bool _inGameSoundStartedAudio;
         private bool _penumbraReady = true;
+        private bool _penumbraEventSubscriptionsActive;
+        private readonly object _disposeLock = new object();
         private string lastPrintedWarning;
         private string stagingPath;
         private string potentialStream;
@@ -397,22 +400,64 @@ namespace RoleplayingVoice
 
                 Task.Run(async () =>
                 {
+                    AddonTalkManager addonTalkManager = null;
+                    AddonTalkHandler addonTalkHandler = null;
+                    IpcSystem ipcSystem = null;
                     try
                     {
-                        _npcVoiceManager = new NPCVoiceManager(await NPCVoiceMapping.GetVoiceMappings(), await NPCVoiceMapping.GetCharacterToCacheType(),
+                        var voiceMappings = await NPCVoiceMapping.GetVoiceMappings();
+                        var cacheTypes = await NPCVoiceMapping.GetCharacterToCacheType();
+
+                        lock (_disposeLock)
+                        {
+                            if (disposed)
+                            {
+                                return;
+                            }
+                        }
+
+                        var npcVoiceManager = new NPCVoiceManager(voiceMappings, cacheTypes,
                             config.CacheFolder, "7fe29e49-2d45-423d-8efc-d8e2c1ceaf6d", false);
-                        _voiceEditor.NPCVoiceManager = _npcVoiceManager;
-                        _addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
-                        _addonTalkHandler = new AddonTalkHandler(_addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
-                        _ipcSystem = new IpcSystem(pluginInterface, _addonTalkHandler, this);
+                        addonTalkManager = new AddonTalkManager(_framework, _clientState, condition, gameGui);
+                        addonTalkHandler = new AddonTalkHandler(addonTalkManager, _framework, _threadSafeObjectTable, clientState, this, chat, scanner, _redoLineWindow, _toast);
+                        ipcSystem = new IpcSystem(pluginInterface, addonTalkHandler, this);
+
+                        lock (_disposeLock)
+                        {
+                            // Async startup can complete after plugin unload has begun; avoid publishing new hook owners in that case.
+                            if (disposed)
+                            {
+                                ipcSystem.Dispose();
+                                addonTalkHandler.Dispose();
+                                return;
+                            }
+
+                            _npcVoiceManager = npcVoiceManager;
+                            _voiceEditor.NPCVoiceManager = _npcVoiceManager;
+                            _addonTalkHandler = addonTalkHandler;
+                            _addonTalkManager = addonTalkManager;
+                            _ipcSystem = ipcSystem;
+                            _gameGui = gameGui;
+                            _dragDrop = dragDrop;
+                            _videoWindow.WindowResized += _videoWindow_WindowResized;
+                            _toast.ErrorToast += _toast_ErrorToast;
+                        }
+
+                        addonTalkManager = null;
+                        addonTalkHandler = null;
+                        ipcSystem = null;
                         NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
-                        _gameGui = gameGui;
-                        _dragDrop = dragDrop;
-                        _videoWindow.WindowResized += _videoWindow_WindowResized;
-                        _toast.ErrorToast += _toast_ErrorToast;
                     }
                     catch (Exception e)
                     {
+                        ipcSystem?.Dispose();
+                        addonTalkHandler?.Dispose();
+                        // AddonTalkHandler owns addonTalkManager after construction; dispose the manager directly only if handler creation failed.
+                        if (addonTalkHandler == null)
+                        {
+                            addonTalkManager?.Dispose();
+                        }
+
                         Plugin.PluginLog?.Error(e, "[Artemis Roleplaying Kit] Async initialization failed: " + e.Message);
                     }
                 });
@@ -719,78 +764,155 @@ namespace RoleplayingVoice
         }
         #endregion
         #region IDisposable Support
-        protected virtual void Dispose(bool disposing)
+        private void RunDisposeStep(string cleanupName, System.Action cleanup)
         {
             try
             {
-                disposed = true;
-                Disposed = true;
-                config.Save();
-                config.OnConfigurationChanged -= Config_OnConfigurationChanged;
-                IpcSystem.Dispose();
-                _chat.ChatMessage -= Chat_ChatMessage;
-                this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw;
-                this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi;
-                this.windowSystem.RemoveAllWindows();
-                this.commandManager?.Dispose();
-                if (_filter != null)
-                {
-                    _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
-                }
-                try
-                {
-                    if (_mediaManager != null)
-                    {
-                        _mediaManager.Invalidated = true;
-                        _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
-                        _mediaManager?.Dispose();
-                    }
-                } catch (Exception e)
-                {
-                    Plugin.PluginLog?.Warning(e, e.Message);
-                }
-                try
-                {
-                    _clientState.Login -= _clientState_Login;
-                    _clientState.Logout -= _clientState_Logout;
-                    _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
-                    _clientState.LeavePvP -= _clientState_LeavePvP;
-                } catch (Exception e)
-                {
-                    Plugin.PluginLog?.Warning(e, e.Message);
-                }
-                try
-                {
-                    _toast.ErrorToast -= _toast_ErrorToast;
-                } catch (Exception e)
-                {
-                    Plugin.PluginLog?.Warning(e, e.Message);
-                }
-                try
-                {
-                    _framework.Update -= framework_Update;
-                } catch (Exception e)
-                {
-                    Plugin.PluginLog?.Warning(e, e.Message);
-                }
-                _networkedClient?.Dispose();
-                Filter?.Dispose();
-                if (_emoteReaderHook != null)
-                {
-                    if (_emoteReaderHook.OnEmote != null)
-                    {
-                        _emoteReaderHook.OnEmote -= (instigator, emoteId) => OnEmote(instigator as ICharacter, emoteId);
-                    }
-                }
-                CleanupEmoteWatchList();
-                _addonTalkHandler?.Dispose();
-                _actionEffectListener?.Dispose();
-                _useActionListener?.Dispose();
-                //PenumbraAndGlamourerIPCWrapper.Instance.ModSettingChanged.Event -= modSettingChanged;
+                cleanup();
             } catch (Exception e)
             {
-                Plugin.PluginLog?.Warning(e, e.Message);
+                Plugin.PluginLog?.Warning(e, $"[Artemis Roleplaying Kit] {cleanupName} cleanup failed: {e.Message}");
             }
+        }
+
+        private void DisposeHookResources()
+        {
+            // Hook cleanup is kept separate from unrelated teardown so one failing cleanup step cannot leak hooks.
+            RunDisposeStep("ActionEffectHandler hook", () =>
+            {
+                if (_actionEffectListener == null)
+                {
+                    return;
+                }
+
+                _actionEffectListener.OnActionEffectReceived -= ActionEffectListener_OnActionEffectReceived;
+                _actionEffectListener.Dispose();
+                _actionEffectListener = null;
+                Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed ActionEffectHandler hook.");
+            });
+
+            RunDisposeStep("UseActionHandler hook", () =>
+            {
+                if (_useActionListener == null)
+                {
+                    return;
+                }
+
+                _useActionListener.OnUseAction -= UseActionListener_OnUseAction;
+                _useActionListener.Dispose();
+                _useActionListener = null;
+                Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed UseActionHandler hook.");
+            });
+
+            RunDisposeStep("emote reader hook", () =>
+            {
+                if (_emoteReaderHook == null)
+                {
+                    return;
+                }
+
+                if (_onEmoteHandler != null)
+                {
+                    _emoteReaderHook.OnEmote -= _onEmoteHandler;
+                }
+
+                _emoteReaderHook.Dispose();
+                _emoteReaderHook = null;
+                _onEmoteHandler = null;
+                Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed emote reader hook.");
+            });
+
+            RunDisposeStep("sound filter hooks", () =>
+            {
+                if (_filter == null)
+                {
+                    return;
+                }
+
+                _filter.OnSoundIntercepted -= _filter_OnSoundIntercepted;
+                _filter.Dispose();
+                _filter = null;
+                Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed sound filter hooks.");
+            });
+
+            RunDisposeStep("addon talk handler hooks", () =>
+            {
+                if (_addonTalkHandler == null)
+                {
+                    return;
+                }
+
+                _addonTalkHandler.Dispose();
+                _addonTalkHandler = null;
+                Plugin.PluginLog?.Information("[Artemis Roleplaying Kit] Disposed addon talk handler hooks.");
+            });
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            lock (_disposeLock)
+            {
+                if (disposed)
+                {
+                    return;
+                }
+
+                disposed = true;
+                Disposed = true;
+            }
+
+            RunDisposeStep("configuration save", () => config.Save());
+            RunDisposeStep("configuration event", () => config.OnConfigurationChanged -= Config_OnConfigurationChanged);
+            RunDisposeStep("IPC", () => _ipcSystem?.Dispose());
+            RunDisposeStep("chat event", () => _chat.ChatMessage -= Chat_ChatMessage);
+            RunDisposeStep("UiBuilder draw event", () => this.pluginInterface.UiBuilder.Draw -= UiBuilder_Draw);
+            RunDisposeStep("UiBuilder config event", () => this.pluginInterface.UiBuilder.OpenConfigUi -= UiBuilder_OpenConfigUi);
+            RunDisposeStep("window system", () => this.windowSystem.RemoveAllWindows());
+            RunDisposeStep("command manager", () => this.commandManager?.Dispose());
+            RunDisposeStep("media manager", () =>
+            {
+                if (_mediaManager != null)
+                {
+                    _mediaManager.Invalidated = true;
+                    _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                    _mediaManager.Dispose();
+                    _mediaManager = null;
+                }
+            });
+            RunDisposeStep("client state events", () =>
+            {
+                _clientState.Login -= _clientState_Login;
+                _clientState.Logout -= _clientState_Logout;
+                _clientState.TerritoryChanged -= _clientState_TerritoryChanged;
+                _clientState.LeavePvP -= _clientState_LeavePvP;
+                _clientState.CfPop -= _clientState_CfPop;
+            });
+            RunDisposeStep("window events", () =>
+            {
+                Window.RequestingReconnect -= Window_RequestingReconnect;
+                Window.OnMoveFailed -= Window_OnMoveFailed;
+                Window.OnWindowOperationFailed -= Window_OnWindowOperationFailed;
+                _videoWindow.WindowResized -= _videoWindow_WindowResized;
+            });
+            RunDisposeStep("Penumbra IPC events", () =>
+            {
+                // Penumbra is optional, so only unsubscribe if startup confirmed that both IPC event subscriptions succeeded.
+                if (!_penumbraEventSubscriptionsActive)
+                {
+                    return;
+                }
+
+                Penumbra.Api.IpcSubscribers.ModSettingChanged.Subscriber(pluginInterface).Event -= modSettingChanged;
+                Penumbra.Api.IpcSubscribers.GameObjectRedrawn.Subscriber(pluginInterface).Event -= gameObjectRedrawn;
+                _penumbraEventSubscriptionsActive = false;
+            });
+            RunDisposeStep("toast event", () => _toast.ErrorToast -= _toast_ErrorToast);
+            RunDisposeStep("framework update event", () => _framework.Update -= framework_Update);
+            RunDisposeStep("networked client", () => _networkedClient?.Dispose());
+            RunDisposeStep("plugin window hooks", () => Window?.DisposeHookResources());
+            DisposeHookResources();
+            RunDisposeStep("emote watch list", CleanupEmoteWatchList);
+            //PenumbraAndGlamourerIPCWrapper.Instance.ModSettingChanged.Event -= modSettingChanged;
         }
 
         public void Dispose()
