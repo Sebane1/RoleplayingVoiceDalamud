@@ -879,7 +879,14 @@ namespace RoleplayingVoice {
             Task.Run(async delegate () {
                 _refreshing = true;
                 try {
-                    if (PluginReference.ThreadSafeObjectTable.LocalPlayer != null) {
+                    var playerName = PluginReference?.ThreadSafeObjectTable?.LocalPlayer?.Name.TextValue;
+                    if (!string.IsNullOrWhiteSpace(playerName) && configuration != null) {
+                        // RefreshVoices awaits relay/API calls below. Snapshot the player name
+                        // up front so login, logout, or zoning cannot invalidate LocalPlayer
+                        // between the initial guard and the later voice-setting reads.
+                        if (configuration.Characters == null) {
+                            configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
+                        }
                         List<string> voicePacks = new List<string>();
                         string path = cacheFolder + @"\VoicePack\";
                         if (Directory.Exists(path)) {
@@ -889,29 +896,29 @@ namespace RoleplayingVoice {
                                 }
                             }
                             _voicePackList = voicePacks.ToArray();
-                            if (voicePacks.Count > voicePackComboBox.Contents.Length) {
+                            if (voicePackComboBox != null && voicePacks.Count > voicePackComboBox.Contents.Length) {
                                 voicePackComboBox.Contents = _voicePackList;
                             }
                         }
                         if (configuration.CharacterVoicePacks == null) {
                             configuration.CharacterVoicePacks = new System.Collections.Generic.Dictionary<string, string>();
                         }
-                        if (configuration.CharacterVoicePacks.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                        if (configuration.CharacterVoicePacks.TryGetValue(playerName, out var configuredVoicePack)) {
                             if (voicePackComboBox != null) {
                                 if (_voicePackList != null) {
                                     if (voiceComboBox != null) {
                                         voicePackComboBox.Contents = _voicePackList;
                                         if (voicePackComboBox.Contents.Length > 0) {
                                             for (int i = 0; i < voicePackComboBox.Contents.Length; i++) {
-                                                if (voicePackComboBox.Contents[i].Contains(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
+                                                if (voicePackComboBox.Contents[i].Contains(configuredVoicePack)) {
                                                     voicePackComboBox.SelectedIndex = i;
                                                     break;
                                                 }
                                             }
                                             try {
-                                                if (string.IsNullOrWhiteSpace(configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
+                                                if (string.IsNullOrWhiteSpace(configuredVoicePack)) {
                                                     if (voicePackComboBox.SelectedIndex < voicePackComboBox.Contents.Length) {
-                                                        configuration.CharacterVoicePacks[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
+                                                        configuration.CharacterVoicePacks[playerName] = voicePackComboBox.Contents[voicePackComboBox.SelectedIndex];
                                                     }
                                                 }
                                             } catch {
@@ -922,9 +929,13 @@ namespace RoleplayingVoice {
                                 }
                             }
                         }
-                        if (_manager != null) {
+                        if (_manager != null && _voiceEngineComboBox != null) {
+                            // RefreshVoices can run while the settings window is still
+                            // constructing its controls, so wait until the engine selector
+                            // exists before reading the selected voice backend.
+                            var selectedVoiceEngine = _voiceEngineComboBox.SelectedIndex;
                             var newVoiceList = new string[] { "None" };
-                            switch (_voiceEngineComboBox.SelectedIndex) {
+                            switch (selectedVoiceEngine) {
                                 case 0:
                                     newVoiceList = await _manager.GetVoiceListElevenlabs();
                                     break;
@@ -937,43 +948,43 @@ namespace RoleplayingVoice {
                             }
                             if (newVoiceList != null && newVoiceList.Length > 0) {
                                 _voiceList = newVoiceList;
-                                voiceComboBox.Contents = newVoiceList;
+                                if (voiceComboBox != null) {
+                                    voiceComboBox.Contents = newVoiceList;
+                                }
                             }
-                            switch (_voiceEngineComboBox.SelectedIndex) {
-                                case 0:
-                                    _manager.SetVoiceElevenlabs(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
-                                    _manager.RefreshElevenlabsSubscriptionInfo();
-                                    break;
-                                case 1:
-                                    _manager.SetVoiceXTTS(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
-                                    break;
-                                case 2:
-                                    _manager.SetVoiceMicrosoftNarrator(Configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue]);
-                                    break;
+                            if (configuration.Characters.TryGetValue(playerName, out var configuredVoice)) {
+                                switch (selectedVoiceEngine) {
+                                    case 0:
+                                        _manager.SetVoiceElevenlabs(configuredVoice);
+                                        _manager.RefreshElevenlabsSubscriptionInfo();
+                                        break;
+                                    case 1:
+                                        _manager.SetVoiceXTTS(configuredVoice);
+                                        break;
+                                    case 2:
+                                        _manager.SetVoiceMicrosoftNarrator(configuredVoice);
+                                        break;
+                                }
                             }
-                            if (_voiceList != null && _voiceList.Length > 0) {
+                            if (voiceComboBox != null && _voiceList != null && _voiceList.Length > 0) {
                                 voiceComboBox.Contents = _voiceList;
                             }
                         }
-                        if (configuration.Characters == null) {
-                            configuration.Characters = new System.Collections.Generic.Dictionary<string, string>();
-                        }
-                        if (configuration.Characters.ContainsKey(PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue)) {
+                        if (configuration.Characters.TryGetValue(playerName, out var configuredCharacterVoice)) {
                             if (voiceComboBox != null) {
                                 if (_voiceList != null && _voiceList.Length > 0) {
                                     voiceComboBox.Contents = _voiceList;
                                     if (voiceComboBox.Contents.Length > 0) {
                                         for (int i = 0; i < voiceComboBox.Contents.Length; i++) {
-                                            string value = configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue];
-                                            if (voiceComboBox.Contents[i].Contains(value) && !string.IsNullOrEmpty(value)) {
+                                            if (voiceComboBox.Contents[i].Contains(configuredCharacterVoice) && !string.IsNullOrEmpty(configuredCharacterVoice)) {
                                                 voiceComboBox.SelectedIndex = i;
                                                 break;
                                             }
                                         }
                                         try {
-                                            if (string.IsNullOrWhiteSpace(configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue])) {
+                                            if (string.IsNullOrWhiteSpace(configuration.Characters[playerName])) {
                                                 if (voiceComboBox.SelectedIndex < voiceComboBox.Contents.Length) {
-                                                    configuration.Characters[PluginReference.ThreadSafeObjectTable.LocalPlayer.Name.TextValue] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
+                                                    configuration.Characters[playerName] = voiceComboBox.Contents[voiceComboBox.SelectedIndex];
                                                 }
                                             }
                                         } catch {

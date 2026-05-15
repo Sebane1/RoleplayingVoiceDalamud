@@ -952,11 +952,17 @@ namespace RoleplayingVoiceDalamud.Voice {
                             }
                         }
                         if (_plugin.Window.NpcSpeechEnabled && !onlySendData) {
-                            if (stream != null) {
+                            // GetCharacterAudio can fail without throwing and still leave a non-null MemoryStream.
+                            // MediaFoundation throws a COMException for empty or non-audio streams, so validate the
+                            // request result before handing the stream to NAudio for decoding.
+                            if (values.Item1 && stream != null && stream.Length > 1) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+                                WaveStream wavePlayer = TryCreateNpcWavePlayer(stream, nameToUse, "explicit voice");
+                                if (wavePlayer == null) {
+                                    return;
+                                }
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -1000,6 +1006,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 }
                             } else {
+                                Plugin.PluginLog.Warning($"Skipping NPC voice playback because no playable audio was returned for {nameToUse}. Success={values.Item1}, StreamLength={stream?.Length ?? 0}, Engine={values.Item2}");
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream was null! Download took " + downloadTimer.Elapsed.ToString());
                                 }
@@ -1067,11 +1074,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     _npcVoiceHistoryItems.RemoveAt(0);
                                 }
                             }
-                            if (stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
+                            if (values.Item1 && stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream is valid! Download took " + downloadTimer.Elapsed.ToString());
                                 }
-                                WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+                                WaveStream wavePlayer = TryCreateNpcWavePlayer(stream, nameToUse, "NPC dialogue");
                                 ActorMemory actorMemory = null;
                                 AnimationMemory animationMemory = null;
                                 ActorMemory.CharacterModes initialState = ActorMemory.CharacterModes.None;
@@ -1208,6 +1215,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                     }
                                 }
                             } else {
+                                Plugin.PluginLog.Warning($"Skipping NPC voice playback because no playable audio was returned for {nameToUse}. Success={values.Item1}, StreamLength={stream?.Length ?? 0}, Engine={values.Item2}");
                                 if (_plugin.Config.DebugMode) {
                                     _plugin.Chat.Print("Stream was null! trying again. " + downloadTimer.Elapsed.ToString());
                                 }
@@ -1223,6 +1231,19 @@ namespace RoleplayingVoiceDalamud.Voice {
                         _plugin.Chat.Print(e.Message);
                     }
                 }
+            }
+        }
+
+        private WaveStream TryCreateNpcWavePlayer(Stream stream, string npcName, string playbackPath) {
+            // GetCharacterAudio can report success with bytes that MediaFoundation cannot decode
+            // on some machines/codecs. Keep that failure local to this line instead of letting
+            // a COMException unwind the async NPC playback task.
+            try {
+                stream.Position = 0;
+                return _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+            } catch (System.Runtime.InteropServices.COMException e) {
+                Plugin.PluginLog.Warning(e, $"Skipping {playbackPath} playback for {npcName} because MediaFoundation could not decode the generated audio stream. StreamLength={stream.Length}");
+                return null;
             }
         }
 
@@ -1281,8 +1302,11 @@ namespace RoleplayingVoiceDalamud.Voice {
                     }
                     var values =
                     await _plugin.NpcVoiceManager.GetCharacterAudio(stream, value, StripPlayerNameFromNPCDialogueArc(message), initialConvertedString, nameToUse, gender, voice, false, voiceModel, npcData, false, false, canBeMuted, conditionsForDatamining);
-                    if (stream != null && _plugin.Window.NpcSpeechEnabled) {
-                        WaveStream wavePlayer = _plugin.NpcVoiceManager.StreamToFoundationReader(stream);
+                    if (values.Item1 && stream != null && stream.Length > 1 && _plugin.Window.NpcSpeechEnabled) {
+                        WaveStream wavePlayer = TryCreateNpcWavePlayer(stream, nameToUse, "object/bubble dialogue");
+                        if (wavePlayer == null) {
+                            return;
+                        }
                         bool useSmbPitch = CheckIfshouldUseSmbPitch(nameToUse, body);
                         float pitch = values.Item1 ? CheckForDefinedPitch(nameToUse) :
                          CalculatePitchBasedOnTraits(nameToUse, gender, race, body, 0.09f);
