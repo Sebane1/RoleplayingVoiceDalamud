@@ -602,7 +602,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                     if (_currentDialoguePaths.Count > 0) {
                                                         _currentDialoguePaths[_currentDialoguePaths.ElementAt(_currentDialoguePaths.Count - 1).Key] = true;
                                                     }
-                                                    _blockAudioGeneration = false;
+                                                    ClearConsumedAudioGenerationBlock("talk state handled");
                                                 }
                                             } else if (stateSnapshot != null) {
                                                 TraceNpcTtsDebug($"Ignored talk state speaker='{stateSnapshot.Speaker}' textPresent={!string.IsNullOrEmpty(stateSnapshot.Text)} text='{PreviewText(stateSnapshot.Text)}'");
@@ -715,6 +715,18 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _state != null && _currentText == pauseText && IsPauseOnlyDialogue(_state.Text)) {
                 _hook?.SendAsyncKey(Keys.NumPad0);
             }
+        }
+
+        private void ClearConsumedAudioGenerationBlock(string reason) {
+            if (!_blockAudioGeneration) {
+                return;
+            }
+
+            // Cutscene audio blocks are intended to suppress one matching NPC line.
+            // Clear the flag once that block has been consumed so it cannot leak into
+            // later manually advanced dialogue after the voiced scene has ended.
+            _blockAudioGeneration = false;
+            TraceNpcTts($"Cleared consumed cutscene audio block reason='{reason}' blockCount={_blockAudioGenerationCount}");
         }
 
         private bool ShouldSkipNpcText(string npcName, string message) {
@@ -1411,6 +1423,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                             }, _plugin.Config.NPCSpeechSpeed, values.Item2 == "Elevenlabs" ? 0.5f : (values.Item2 == "XTTS" ? 1.8f : 1.8f));
                                         } else {
                                             TraceNpcTts($"Audio ready but playback suppressed by blockAudioGeneration sequence={request.Sequence} npc='{nameToUse}' text='{PreviewText(value)}'");
+                                            ClearConsumedAudioGenerationBlock("npc audio playback suppressed");
                                         }
                                     }
                                     break;
