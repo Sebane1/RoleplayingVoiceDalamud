@@ -96,7 +96,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             " sur ", " cerca", "descubierto", "DESTINO", " y ", "puede", " es ", " muchas ", " pero ",
             "asesino", " agua ", " rota.", "Por ", " tu ", " nombre ", " porque ", " mi ", " querido ",
             " amigo", " caer ", "en la", "Te ", "esperaré", "Muy", "bien", " lugar ", " termine ",
-            "Y ", "en lo", "de luto ", "Si ", " hecho ", " usted ", "nosotros", "también", " haremos "
+            " Y ", "en lo", "de luto ", "Si ", " hecho ", " usted ", "nosotros", "también", " haremos "
         };
         private const int PauseOnlyDialogueAutoAdvanceDelayMs = 1500;
         private long _pauseOnlyDialogueSequence;
