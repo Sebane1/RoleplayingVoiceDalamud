@@ -32,7 +32,7 @@ namespace RoleplayingVoiceDalamud.Voice {
             return (AddonTalk*)Address.ToPointer();
         }
         private unsafe AddonBattleTalk* GetAddonTalkBattle() {
-            // _BattleTalk is a separate addon from Talk — must look it up independently
+            // _BattleTalk is a separate addon from Talk - must look it up independently
             nint battleTalkAddr = _gui.GetAddonByName("_BattleTalk");
             return battleTalkAddr == nint.Zero ? null : (AddonBattleTalk*)battleTalkAddr.ToPointer();
         }

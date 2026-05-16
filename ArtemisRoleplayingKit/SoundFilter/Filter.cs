@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Dalamud.Game;
@@ -27,14 +28,31 @@ namespace SoundFilter {
 
             internal const string MusicManagerOffset = "48 89 87 ?? ?? ?? ?? 49 8B CC E8 ?? ?? ?? ?? 48 8B 8F";
 
+            // SoundManager singleton pointer store: mov [rip+offset], rsi
+            internal const string SoundManagerInstance = "48 89 35 ?? ?? ?? ?? 48 83 C4 20";
+
+            internal const string PlayCutsceneVoice = "48 8B C4 48 89 58 18 57 48 81 EC 40 01 00 00 0F 29 70 E8 0F 29 78 D8 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 10 01 00 00 8D 82 D8 DC 82 FF 0F 28 F3 0F 28 FA 8B DA 48 8B F9 3D D0 7E 01 00";
+
         }
 
         // Updated: 5.55
         private const int ResourceDataPointerOffset = 0xB0;
         private const int MusicManagerStreamingOffset = 0x32;
+
+        // SoundData pool constants (from FFXIVClientStructs SoundManager/SoundData)
+        private const int SoundDataPoolOffset = 0x220;       // SoundManager + 0x220 → SoundDataMemory*
+        private const int SoundDataSize = 0xD0;              // sizeof(SoundData)
+        private const int SoundDataPoolCount = 256;           // 256 pre-allocated entries
+        private const int SoundData_SoundResourceHandle = 0x28; // SoundResourceHandle* offset in SoundData
+        private const int SoundData_PosX = 0x68;             // float PosX
+        private const int SoundData_PosY = 0x6C;             // float PosY
+        private const int SoundData_PosZ = 0x70;             // float PosZ
+        private const int SoundData_IsPositional = 0xB9;     // bool IsPositional
+
         public event EventHandler<InterceptedSound> OnSoundIntercepted;
         public event EventHandler<InterceptedSound> OnCutsceneAudioDetected;
         public event EventHandler<InterceptedSound> OnFilterWasRan;
+        public event EventHandler<int> OnCutsceneVoiceLineTriggered;
         #region Delegates
 
         private delegate void* PlaySpecificSoundDelegate(long a1, int idx);
@@ -44,6 +62,8 @@ namespace SoundFilter {
         private delegate void* GetResourceAsyncPrototype(IntPtr pFileManager, uint* pCategoryId, char* pResourceType, uint* pResourceHash, char* pPath, void* pUnknown, bool isUnknown, void* pUnknown2, uint unknown3);
 
         private delegate IntPtr LoadSoundFileDelegate(IntPtr resourceHandle, uint a2);
+
+        private delegate nint PlayCutsceneVoiceDelegate(nint soundManager, int voiceLineId, float param_3, float param_4, float param_5, byte param_6, byte param_7, byte param_8, byte param_9);
 
         #endregion
 
@@ -56,6 +76,8 @@ namespace SoundFilter {
         private Hook<GetResourceAsyncPrototype>? GetResourceAsyncHook { get; set; }
 
         private Hook<LoadSoundFileDelegate>? LoadSoundFileHook { get; set; }
+        
+        private Hook<PlayCutsceneVoiceDelegate>? PlayCutsceneVoiceHook { get; set; }
         public Plugin Plugin { get; }
 
         #endregion
@@ -72,6 +94,7 @@ namespace SoundFilter {
 
         private List<string> _blacklist = new List<string>();
         private bool muted = false;
+        private IntPtr _soundManagerInstancePtr = IntPtr.Zero; // Cached pointer to the SoundManager*
 
         private IntPtr MusicManager {
             get {
@@ -165,10 +188,18 @@ namespace SoundFilter {
                 this.LoadSoundFileHook = this.Plugin.InteropProvider.HookFromAddress<LoadSoundFileDelegate>(soundPtr, this.LoadSoundFileDetour);
             }
 
+            if (this.PlayCutsceneVoiceHook == null && this.Plugin.SigScanner.TryScanText(Signatures.PlayCutsceneVoice, out var playCutscenePtr)) {
+                this.PlayCutsceneVoiceHook = this.Plugin.InteropProvider.HookFromAddress<PlayCutsceneVoiceDelegate>(playCutscenePtr, this.PlayCutsceneVoiceDetour);
+            }
+
             this.PlaySpecificSoundHook?.Enable();
             this.LoadSoundFileHook?.Enable();
             this.GetResourceSyncHook?.Enable();
             this.GetResourceAsyncHook?.Enable();
+            this.PlayCutsceneVoiceHook?.Enable();
+
+            // Resolve SoundManager singleton pointer
+            ResolveSoundManagerInstance();
         }
 
         internal void Disable() {
@@ -176,6 +207,7 @@ namespace SoundFilter {
             this.LoadSoundFileHook?.Disable();
             this.GetResourceSyncHook?.Disable();
             this.GetResourceAsyncHook?.Disable();
+            this.PlayCutsceneVoiceHook?.Disable();
         }
 
         public void Dispose() {
@@ -183,11 +215,21 @@ namespace SoundFilter {
             this.LoadSoundFileHook?.Dispose();
             this.GetResourceSyncHook?.Dispose();
             this.GetResourceAsyncHook?.Dispose();
+            this.PlayCutsceneVoiceHook?.Dispose();
 
             Marshal.FreeHGlobal(this.InfoPtr);
             Marshal.FreeHGlobal(this.NoSoundPtr);
 
             this.Streaming = this.WasStreamingEnabled;
+        }
+
+        private nint PlayCutsceneVoiceDetour(nint soundManager, int voiceLineId, float param_3, float param_4, float param_5, byte param_6, byte param_7, byte param_8, byte param_9) {
+            try {
+                OnCutsceneVoiceLineTriggered?.Invoke(this, voiceLineId);
+            } catch (Exception ex) {
+                Plugin.PluginLog.Error(ex, "Error in PlayCutsceneVoiceDetour");
+            }
+            return this.PlayCutsceneVoiceHook!.Original(soundManager, voiceLineId, param_3, param_4, param_5, param_6, param_7, param_8, param_9);
         }
 
         private void* PlaySpecificSoundDetour(long a1, int idx) {
@@ -253,6 +295,9 @@ namespace SoundFilter {
                 path = path.ToLowerInvariant();
                 var specificPath = $"{path}/{idx}";
                 string splitPath = specificPath.Split(".scd")[0] + ".scd";
+                if (specificPath.Contains("vo_") || specificPath.Contains("voice/")) {
+                    Plugin.PluginLog.Info($"[SoundFilter] Voice SCD detected: '{splitPath}' muted={muted}");
+                }
                 if ((specificPath.Contains("vo_battle") && muted)
                     || (_blacklist.Contains(splitPath) && Plugin.Config.MoveSCDBasedModsToPerformanceSlider) && !splitPath.Contains("sound/foot")) {
                     Plugin.PluginLog.Info("Trigger Sound Interception");
@@ -262,13 +307,15 @@ namespace SoundFilter {
                     return true;
                 }
                 if (Plugin.ClientState.ClientLanguage == ClientLanguage.English) {
-                    if (((specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man") || specificPath.Contains("vo_line") || specificPath.Contains("vo_line")) || specificPath.Contains("cut/ffxiv/"))) {
+                    if (specificPath.Contains("vo_voiceman") || specificPath.Contains("vo_man")
+                        || specificPath.Contains("vo_line") || specificPath.Contains("cut/ffxiv/")) {
+                        var sourcePos = TryGetSoundSourcePosition((IntPtr)scdData);
                         if ((specificPath.Contains("vo_man") || (specificPath.Contains("cut/ffxiv/") && specificPath.Contains("vo_voiceman"))) && Plugin.Config.ReplaceVoicedARRCutscenes
                             && Plugin.Window.NpcSpeechEnabled) {
-                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false });
+                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = false, SourcePosition = sourcePos });
                             return true;
                         } else {
-                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true });
+                            OnCutsceneAudioDetected?.Invoke(this, new InterceptedSound() { SoundPath = splitPath, isBlocking = true, SourcePosition = sourcePos });
                             return false;
                         }
                     }
@@ -282,6 +329,62 @@ namespace SoundFilter {
         public bool IsCutsceneDetectionNull() {
             return OnCutsceneAudioDetected == null;
         }
+
+        /// <summary>
+        /// Resolves the SoundManager singleton pointer from a known signature.
+        /// </summary>
+        private void ResolveSoundManagerInstance() {
+            try {
+                if (this.Plugin.SigScanner.TryScanText(Signatures.SoundManagerInstance, out var instrPtr)) {
+                    // The instruction is: mov [rip+offset], rsi
+                    // The RIP-relative offset is at instrPtr+3, and the instruction is 7 bytes long.
+                    var ripOffset = Marshal.ReadInt32(instrPtr + 3);
+                    _soundManagerInstancePtr = instrPtr + 7 + ripOffset;
+                    Plugin.PluginLog.Information($"[SoundFilter] Resolved SoundManager instance pointer at 0x{_soundManagerInstancePtr:X}");
+                } else {
+                    Plugin.PluginLog.Warning("[SoundFilter] Could not find SoundManager instance signature.");
+                }
+            } catch (Exception ex) {
+                Plugin.PluginLog.Error(ex, "[SoundFilter] Failed to resolve SoundManager instance.");
+            }
+        }
+
+        /// <summary>
+        /// Scans the SoundManager's SoundData pool for a positional entry whose
+        /// SoundResourceHandle data pointer matches the given SCD data pointer.
+        /// Returns the 3D source position if found.
+        /// </summary>
+        private Vector3? TryGetSoundSourcePosition(IntPtr scdDataPtr) {
+            try {
+                if (_soundManagerInstancePtr == IntPtr.Zero) return null;
+
+                var soundMgr = Marshal.ReadIntPtr(_soundManagerInstancePtr);
+                if (soundMgr == IntPtr.Zero) return null;
+
+                var pool = Marshal.ReadIntPtr(soundMgr + SoundDataPoolOffset);
+                if (pool == IntPtr.Zero) return null;
+
+                for (int i = 0; i < SoundDataPoolCount; i++) {
+                    var entry = pool + (i * SoundDataSize);
+
+                    var soundResHandle = Marshal.ReadIntPtr(entry + SoundData_SoundResourceHandle);
+                    if (soundResHandle == IntPtr.Zero) continue;
+
+                    var resScdData = Marshal.ReadIntPtr(soundResHandle + ResourceDataPointerOffset);
+                    if (resScdData == scdDataPtr) {
+                        float px = BitConverter.Int32BitsToSingle(Marshal.ReadInt32(entry + SoundData_PosX));
+                        float py = BitConverter.Int32BitsToSingle(Marshal.ReadInt32(entry + SoundData_PosY));
+                        float pz = BitConverter.Int32BitsToSingle(Marshal.ReadInt32(entry + SoundData_PosZ));
+
+                        return new Vector3(px, py, pz);
+                    }
+                }
+            } catch (Exception ex) {
+                Plugin.PluginLog.Error(ex, "[SoundFilter] Error scanning SoundData pool for source position.");
+            }
+            return null;
+        }
+
         private IntPtr LoadSoundFileDetour(IntPtr resourceHandle, uint a2) {
             var ret = this.LoadSoundFileHook!.Original(resourceHandle, a2);
 

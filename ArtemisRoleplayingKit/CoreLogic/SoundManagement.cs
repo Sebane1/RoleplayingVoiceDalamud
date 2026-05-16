@@ -312,18 +312,32 @@ namespace RoleplayingVoice {
             if (config.VoiceReplacementType == 0) {
                 Task.Run(delegate {
                     if (_threadSafeObjectTable.LocalPlayer != null) {
-                        if (_threadSafeObjectTable.LocalPlayer.CurrentHp <= 0 && !_playerDied) {
+                        uint currentHp = _threadSafeObjectTable.LocalPlayer.CurrentHp;
+                        if (currentHp <= 0 && !_playerDied) {
                             if (_mainCharacterVoicePack == null) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                             }
                             PlayVoiceLine(_mainCharacterVoicePack.GetDeath());
                             _playerDied = true;
-                        } else if (_threadSafeObjectTable.LocalPlayer.CurrentHp > 0 && _playerDied) {
+                            _lastHealth = 0;
+                        } else if (currentHp > 0 && _playerDied) {
                             if (_mainCharacterVoicePack == null) {
                                 _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
                             }
                             PlayVoiceLine(_mainCharacterVoicePack.GetRevive());
                             _playerDied = false;
+                            _lastHealth = currentHp;
+                        } else if (currentHp > 0 && currentHp < _lastHealth) {
+                            if (!_hurtCooldown.IsRunning || _hurtCooldown.ElapsedMilliseconds > 2000) {
+                                if (_mainCharacterVoicePack == null) {
+                                    _mainCharacterVoicePack = new CharacterVoicePack(combinedSoundList, DataManager, _clientState.ClientLanguage);
+                                }
+                                PlayVoiceLine(_mainCharacterVoicePack.GetHurt());
+                                _hurtCooldown.Restart();
+                            }
+                            _lastHealth = currentHp;
+                        } else if (currentHp > _lastHealth) {
+                            _lastHealth = currentHp;
                         }
                     }
                 });

@@ -189,6 +189,8 @@ namespace RoleplayingVoice
         private int _failCount;
         Stopwatch pollingTimer = new Stopwatch();
         private bool _playerDied;
+        private uint _lastHealth;
+        private Stopwatch _hurtCooldown = new Stopwatch();
         private static bool _blockDataRefreshes;
         private CharacterVoicePack _mainCharacterVoicePack;
         Dictionary<string, CharacterVoicePack> _characterVoicePacks = new Dictionary<string, CharacterVoicePack>();
