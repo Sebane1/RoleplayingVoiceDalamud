@@ -1872,10 +1872,22 @@ namespace RoleplayingVoice {
         #endregion
         
         #region Action Effect Wiring
+        private bool TryGetActionRow(uint actionId, string source, out Lumina.Excel.Sheets.Action actionRow) {
+            if (DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().TryGetRow(actionId, out actionRow)) {
+                return true;
+            }
+
+            if (config.DebugMode) {
+                PluginLog.Debug($"[Artemis] Ignoring {source} for missing Action row ID {actionId}.");
+            }
+
+            return false;
+        }
+
         private void UseActionListener_OnUseAction(uint actionId, ActionType actionType) {
             Task.Run(() => {
                 try {
-                    var actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    if (!TryGetActionRow(actionId, "UseAction", out var actionRow)) return;
                     string actionName = actionRow.Name.ToString();
 
                     if (string.IsNullOrEmpty(actionName)) {
@@ -1959,7 +1971,7 @@ namespace RoleplayingVoice {
         private void ActionEffectListener_OnActionEffectReceived(uint casterId, uint actionId) {
             Task.Run(() => {
                 try {
-                    var actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    if (!TryGetActionRow(actionId, "ActionEffect", out var actionRow)) return;
                     if (string.IsNullOrEmpty(actionRow.Name.ToString())) return;
                     string actionName = actionRow.Name.ToString();
                     if (string.IsNullOrEmpty(actionName)) return;
