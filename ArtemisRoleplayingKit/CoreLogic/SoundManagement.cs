@@ -599,14 +599,15 @@ namespace RoleplayingVoice {
                             case (XivChatType)8235:
                             case (XivChatType)9001:
                             case (XivChatType)4139:
-                                BattleText(playerName, storedMessage, type, sourceKind, targetKind);
+                                BattleText(playerName, storedMessage, type, sourceKind, targetKind, V15CombatFallbackVoiceLine.None);
                                 break;
                             default:
                                 // Native UseAction/ActionEffect hooks own action and cast combat sounds in 0.6.0.4+.
-                                // This chat fallback is intentionally limited to incoming damage/hurt, because the
-                                // current SoundManagement hook handler only receives caster/action ids.
-                                if (IsV15LocalPlayerHurtCandidate(storedMessage, type, sourceKind, targetKind, true)) {
-                                    BattleText(playerName, storedMessage, type, sourceKind, targetKind);
+                                // This v15 chat fallback covers combat events that are not visible from HP deltas
+                                // or from the current SoundManagement hook handler's caster/action-only payload.
+                                V15CombatFallbackVoiceLine fallbackVoiceLine = ResolveV15CombatFallbackVoiceLine(storedMessage, type, sourceKind, targetKind, true);
+                                if (fallbackVoiceLine != V15CombatFallbackVoiceLine.None) {
+                                    BattleText(playerName, storedMessage, type, sourceKind, targetKind, fallbackVoiceLine);
                                 }
                                 break;
                         }
@@ -1222,9 +1223,14 @@ namespace RoleplayingVoice {
         }
         #endregion
         #region Combat
-        private void BattleText(string playerName, SeString message, XivChatType type, XivChatRelationKind sourceKind = default, XivChatRelationKind targetKind = default) {
+        private enum V15CombatFallbackVoiceLine {
+            None,
+            LocalPlayerMissed
+        }
+
+        private void BattleText(string playerName, SeString message, XivChatType type, XivChatRelationKind sourceKind = default, XivChatRelationKind targetKind = default, V15CombatFallbackVoiceLine fallbackVoiceLine = V15CombatFallbackVoiceLine.None) {
             CheckDependancies();
-            if (IsV15LocalPlayerHurtCandidate(message, type, sourceKind, targetKind) || (type != (XivChatType)8235 && type != (XivChatType)4139) || message.TextValue.Contains("You")) {
+            if (fallbackVoiceLine != V15CombatFallbackVoiceLine.None || (type != (XivChatType)8235 && type != (XivChatType)4139) || message.TextValue.Contains("You")) {
                 Task.Run(delegate () {
                     string value = "";
                     string playerMessage = message.TextValue.Replace("「", " ").Replace("」", " ").Replace("の", " の").Replace("に", " に");
@@ -1246,7 +1252,7 @@ namespace RoleplayingVoice {
                             if (!message.TextValue.Contains("cancel")) {
                                 if (Conditions.Instance()->BoundByDuty || !IsDicipleOfTheHand(_threadSafeObjectTable.LocalPlayer.ClassJob.Value.Abbreviation.ToString())) {
                                     LocalPlayerCombat(playerName, _clientState.ClientLanguage == ClientLanguage.Japanese ?
-                                        playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, sourceKind, targetKind, _mainCharacterVoicePack, ref value, ref attackIntended);
+                                        playerMessage.Replace(values[0], "").Replace(values[1], "") : playerMessage, type, sourceKind, targetKind, fallbackVoiceLine, _mainCharacterVoicePack, ref value, ref attackIntended);
                                 } else {
                                     PlayerCrafting(playerName, playerMessage, type, _mainCharacterVoicePack, ref value);
                                 }
@@ -1415,13 +1421,13 @@ namespace RoleplayingVoice {
         }
 
         private void LocalPlayerCombat(string playerName, SeString message,
-    XivChatType type, XivChatRelationKind sourceKind, XivChatRelationKind targetKind, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
+    XivChatType type, XivChatRelationKind sourceKind, XivChatRelationKind targetKind, V15CombatFallbackVoiceLine fallbackVoiceLine, CharacterVoicePack characterVoicePack, ref string value, ref bool attackIntended) {
             if (config.DebugMode) {
                 _chat?.Print($"[Artemis Roleplaying Kit] BattleText Action: {message.TextValue} (Type: {type})");
             }
 
-            if (IsV15LocalPlayerHurtCandidate(message, type, sourceKind, targetKind)) {
-                PlayLocalPlayerHurt(characterVoicePack, ref value);
+            if (fallbackVoiceLine == V15CombatFallbackVoiceLine.LocalPlayerMissed) {
+                value = characterVoicePack.GetMissed();
             } else if (type == (XivChatType)2729 ||
             type == (XivChatType)2091) {
                 if (!LanguageSpecificMount(_clientState.ClientLanguage, message)) {
@@ -1500,28 +1506,49 @@ namespace RoleplayingVoice {
             }
         }
 
-        private bool IsV15LocalPlayerHurtCandidate(SeString message, XivChatType type, XivChatRelationKind sourceKind, XivChatRelationKind targetKind, bool logCandidate = false) {
+        private V15CombatFallbackVoiceLine ResolveV15CombatFallbackVoiceLine(SeString message, XivChatType type, XivChatRelationKind sourceKind, XivChatRelationKind targetKind, bool logCandidate = false) {
             // Dalamud v15 split the old packed XivChatType values into LogKind plus source/target relations.
-            // This keeps the migration intentionally narrow: only damage-like messages targeted at the local player can trigger hurt sounds.
+            // Keep this fallback narrow: HP polling handles local hurt/death/revive, and native hooks handle local actions/casts.
             bool hasRelationData = !IsEmptyChatRelation(sourceKind) || !IsEmptyChatRelation(targetKind);
-            bool targetsLocalPlayer = IsSelfChatRelation(targetKind);
+            bool sourceIsLocalPlayer = IsLocalPlayerChatRelation(sourceKind);
+            bool targetIsLocalPlayer = IsLocalPlayerChatRelation(targetKind);
+            bool looksLikeMiss = LanguageSpecificMiss(_clientState.ClientLanguage, message);
             bool looksLikeDamage = LanguageSpecificHurt(_clientState.ClientLanguage, message);
+            bool looksLikeDeath = LanguageSpecificDefeat(_clientState.ClientLanguage, message);
+            bool looksLikeRevive = LanguageSpecificRevive(_clientState.ClientLanguage, message);
+            bool looksLikeReadying = LanguageSpecificReadying(_clientState.ClientLanguage, message);
+            bool looksLikeCasting = LanguageSpecificCasting(_clientState.ClientLanguage, message);
+            bool looksLikeHit = LanguageSpecificHit(_clientState.ClientLanguage, message);
+            bool looksLikeCast = LanguageSpecificCast(_clientState.ClientLanguage, message);
 
-            if (logCandidate && config.DebugMode && hasRelationData && (targetsLocalPlayer || looksLikeDamage)) {
+            if (logCandidate && config.DebugMode && hasRelationData &&
+                (sourceIsLocalPlayer || targetIsLocalPlayer || looksLikeMiss || looksLikeDamage || looksLikeDeath || looksLikeRevive || looksLikeReadying || looksLikeCasting || looksLikeHit || looksLikeCast)) {
                 Plugin.PluginLog.Information(
-                    "[Artemis Roleplaying Kit] v15 hurt fallback candidate LogKind={LogKind}({LogKindValue}) SourceKind={SourceKind}({SourceKindValue}) TargetKind={TargetKind}({TargetKindValue}) targetsLocalPlayer={TargetsLocalPlayer} looksLikeDamage={LooksLikeDamage} message='{Message}'",
+                    "[Artemis Roleplaying Kit] v15 combat fallback candidate LogKind={LogKind}({LogKindValue}) SourceKind={SourceKind}({SourceKindValue}) TargetKind={TargetKind}({TargetKindValue}) sourceLocalPlayer={SourceLocalPlayer} targetLocalPlayer={TargetLocalPlayer} miss={Miss} damage={Damage} death={Death} revive={Revive} readying={Readying} casting={Casting} hit={Hit} cast={Cast} message='{Message}'",
                     type,
                     GetEnumNumericValue(type),
                     sourceKind,
                     GetEnumNumericValue(sourceKind),
                     targetKind,
                     GetEnumNumericValue(targetKind),
-                    targetsLocalPlayer,
+                    sourceIsLocalPlayer,
+                    targetIsLocalPlayer,
+                    looksLikeMiss,
                     looksLikeDamage,
+                    looksLikeDeath,
+                    looksLikeRevive,
+                    looksLikeReadying,
+                    looksLikeCasting,
+                    looksLikeHit,
+                    looksLikeCast,
                     TrimCombatLogMessage(message.TextValue));
             }
 
-            return targetsLocalPlayer && looksLikeDamage;
+            if (sourceIsLocalPlayer && looksLikeMiss) {
+                return V15CombatFallbackVoiceLine.LocalPlayerMissed;
+            }
+
+            return V15CombatFallbackVoiceLine.None;
         }
 
         private void PlayLocalPlayerHurt(CharacterVoicePack characterVoicePack, ref string value) {
@@ -1542,7 +1569,7 @@ namespace RoleplayingVoice {
             return GetEnumNumericValue(relationKind) == 0;
         }
 
-        private bool IsSelfChatRelation(XivChatRelationKind relationKind) {
+        private bool IsLocalPlayerChatRelation(XivChatRelationKind relationKind) {
             return relationKind == XivChatRelationKind.LocalPlayer;
         }
 
