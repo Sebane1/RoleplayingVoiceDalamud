@@ -764,6 +764,10 @@ namespace RoleplayingVoice
         {
             Plugin.PluginLog?.Warning(e.Exception, e.Exception.Message);
         }
+        private void _mediaManager_OnDiagnosticReceived(object sender, string e)
+        {
+            Plugin.PluginLog?.Information("[NPC TTS] " + e);
+        }
         #endregion
         #region IDisposable Support
         private void RunDisposeStep(string cleanupName, System.Action cleanup)
@@ -877,6 +881,7 @@ namespace RoleplayingVoice
                 {
                     _mediaManager.Invalidated = true;
                     _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                    _mediaManager.OnDiagnosticReceived -= _mediaManager_OnDiagnosticReceived;
                     _mediaManager.Dispose();
                     _mediaManager = null;
                 }
