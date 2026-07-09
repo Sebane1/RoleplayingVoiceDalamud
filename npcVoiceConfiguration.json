@@ -1,5 +1,5 @@
 {
-    "CacheOnly": true,
+    "CacheOnly": false,
     "CharacterToVoiceList": {
         "Alphinaud": "Alev",
         "Self-assured Youth": "Alev",
