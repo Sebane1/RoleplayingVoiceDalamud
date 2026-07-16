@@ -45,10 +45,12 @@ namespace RoleplayingVoice {
                     _playerCamera = new MediaCameraObject(_camera);
                     if (_mediaManager != null) {
                         _mediaManager.OnErrorReceived -= _mediaManager_OnErrorReceived;
+                        _mediaManager.OnDiagnosticReceived -= _mediaManager_OnDiagnosticReceived;
                     }
                     _mediaManager = new MediaManager(_playerObject, _playerCamera, Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName));
                     _voiceEditor.MediaManager = _mediaManager;
                     _mediaManager.OnErrorReceived += _mediaManager_OnErrorReceived;
+                    _mediaManager.OnDiagnosticReceived += _mediaManager_OnDiagnosticReceived;
                     _videoWindow.MediaManager = _mediaManager;
                 }
                 if (_speechToTextManager == null || forceNewAssignments) {

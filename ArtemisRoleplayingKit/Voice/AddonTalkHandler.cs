@@ -710,6 +710,7 @@ namespace RoleplayingVoiceDalamud.Voice {
                                                 if (stateSnapshot.Text != _currentText) {
                                                     _lastText = _currentText;
                                                     CancelNpcVoiceRequests("talk state text changed");
+                                                    StopCurrentNpcSpeechBeforeReplacement("talk state text changed");
                                                     _currentText = stateSnapshot.Text;
                                                     _lastKnownSpeaker = stateSnapshot.Speaker;
                                                     _redoLineWindow.IsOpen = false;
@@ -1037,6 +1038,21 @@ namespace RoleplayingVoiceDalamud.Voice {
                 _npcVoiceRequestSequence++;
                 TraceNpcTts($"Cancelled pending requests; new sequence={_npcVoiceRequestSequence} reason='{reason}'");
             }
+        }
+
+        private void StopCurrentNpcSpeechBeforeReplacement(string reason) {
+            var speechObject = _currentSpeechObject;
+            if (speechObject == null) {
+                return;
+            }
+
+            // A new talk line can arrive before the addon reports that the old
+            // line has cleared. Stop the outgoing speech object before NPCText()
+            // overwrites _currentSpeechObject with the next speaker, otherwise
+            // skipping from one NPC to another can leave the first line playing.
+            _currentSpeechObject = null;
+            TraceNpcTts($"Stopping active dialogue audio before replacement reason='{reason}'");
+            _plugin.MediaManager.StopAudio(speechObject);
         }
 
         private bool IsCurrentNpcVoiceRequest(long sequence) {
