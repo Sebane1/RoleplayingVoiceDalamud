@@ -1959,7 +1959,12 @@ namespace RoleplayingVoice {
         private void ActionEffectListener_OnActionEffectReceived(uint casterId, uint actionId) {
             Task.Run(() => {
                 try {
-                    var actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    Lumina.Excel.Sheets.Action actionRow;
+                    try {
+                        actionRow = DataManager.GetExcelSheet<Lumina.Excel.Sheets.Action>().GetRow(actionId);
+                    } catch (System.ArgumentOutOfRangeException) {
+                        return;
+                    }
                     if (string.IsNullOrEmpty(actionRow.Name.ToString())) return;
                     string actionName = actionRow.Name.ToString();
                     if (string.IsNullOrEmpty(actionName)) return;
