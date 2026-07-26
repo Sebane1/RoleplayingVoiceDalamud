@@ -38,7 +38,7 @@ namespace RoleplayingVoice {
     public class PluginWindow : Window {
         private Configuration configuration;
         RoleplayingMediaManager _manager = null;
-        BetterComboBox _voiceEngineComboBox = new BetterComboBox("TTS Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator" }, 0, 390);
+        BetterComboBox _voiceEngineComboBox = new BetterComboBox("TTS Voice Engine", new string[] { "Elevenlabs", "XTTS (Hyper Experimental)", "Microsoft Narrator", "Fish Audio", "CTTS" }, 0, 390);
         BetterComboBox _voicePackTypeBox = new BetterComboBox("Voice Replacement Type", new string[] { "Voice Pack", "Voice Swap (Hyper Experimental)" }, 0, 390);
         BetterComboBox _voiceToSwap = new BetterComboBox("Voice To Use", new string[] { "None" }, 0, 390);
         BetterComboBox _xttsLanguageComboBox = new BetterComboBox("Voice Language", new string[] { "en", "es", "fr", "de", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko", "hi" }, 0, 390);
@@ -962,10 +962,14 @@ namespace RoleplayingVoice {
                                     newVoiceList = await _manager.GetVoiceListElevenlabs();
                                     break;
                                 case 1:
+                                case 4:
                                     newVoiceList = await _manager.GetVoiceListXTTS();
                                     break;
                                 case 2:
                                     newVoiceList = await _manager.GetVoiceListMicrosoftNarrator();
+                                    break;
+                                case 3:
+                                    newVoiceList = await _manager.GetVoiceListFishAudio();
                                     break;
                             }
                             if (newVoiceList != null && newVoiceList.Length > 0) {
@@ -981,10 +985,14 @@ namespace RoleplayingVoice {
                                         _manager.RefreshElevenlabsSubscriptionInfo();
                                         break;
                                     case 1:
+                                    case 4:
                                         _manager.SetVoiceXTTS(configuredVoice);
                                         break;
                                     case 2:
                                         _manager.SetVoiceMicrosoftNarrator(configuredVoice);
+                                        break;
+                                    case 3:
+                                        _manager.SetVoiceFishAudio(configuredVoice);
                                         break;
                                 }
                             }
@@ -1142,6 +1150,40 @@ namespace RoleplayingVoice {
                             }
                         }
                         break;
+                    case 3:
+                        ImGui.Text("Fish Audio API Key");
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                        string fishApiKey = configuration.FishAudioApiKey ?? "";
+                        ImGui.InputText("##fishApiKey", ref fishApiKey, 2000, ImGuiInputTextFlags.Password);
+                        if (configuration.FishAudioApiKey != fishApiKey) {
+                            configuration.FishAudioApiKey = fishApiKey;
+                            if (_manager != null) _manager.FishAudioApiKey = fishApiKey;
+                            configuration.Save();
+                        }
+                        if (string.IsNullOrEmpty(fishApiKey)) {
+                            if (ImGui.Button("Fish Audio API Key Sign Up", new Vector2(ImGui.GetWindowSize().X - 10, 25))) {
+                                Process process = new Process();
+                                try {
+                                    process.StartInfo.UseShellExecute = true;
+                                    process.StartInfo.FileName = "https://fish.audio/";
+                                    process.Start();
+                                } catch (Exception e) {
+
+                                }
+                            }
+                        }
+                        break;
+                    case 4:
+                        ImGui.Text("CTTS Server Address");
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
+                        string cttsAddress = configuration.CTTSAddress ?? "http://localhost:8308";
+                        ImGui.InputText("##cttsAddress", ref cttsAddress, 2000);
+                        if (configuration.CTTSAddress != cttsAddress) {
+                            configuration.CTTSAddress = cttsAddress;
+                            if (_manager != null) _manager.CTTSAddress = cttsAddress;
+                            configuration.Save();
+                        }
+                        break;
                     case 1:
                         if (_manager != null) {
                             if (!_manager.XttsReady) {
@@ -1153,7 +1195,7 @@ namespace RoleplayingVoice {
                 string path = Path.Combine(configuration.CacheFolder, "xtts_models\\v2.0.2\\model.pth");
                 bool xttsExists = File.Exists(path);
                 if ((voiceComboBox != null && _voiceList != null && _voiceEngineComboBox.SelectedIndex == 1 && xttsExists)
-                    || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2))) {
+                    || (voiceComboBox != null && _voiceList != null && (_voiceEngineComboBox.SelectedIndex == 0 || _voiceEngineComboBox.SelectedIndex == 2 || _voiceEngineComboBox.SelectedIndex == 3 || _voiceEngineComboBox.SelectedIndex == 4))) {
                     if (_voiceList.Length > 0) {
                         ImGui.Text((_streamDetectionActive ? "Your characters " : PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s") + " TTS Voice");
                         voiceComboBox.Width = (int)ImGui.GetContentRegionMax().X;
@@ -1166,7 +1208,7 @@ namespace RoleplayingVoice {
                       voiceComboBox.Contents[0].Contains("", StringComparison.OrdinalIgnoreCase))) {
                     RefreshVoices();
                 }
-                if (_voiceEngineComboBox.SelectedIndex == 1) {
+                if (_voiceEngineComboBox.SelectedIndex == 1 || _voiceEngineComboBox.SelectedIndex == 4) {
                     if (xttsExists) {
                         ImGui.Text("Language");
                         _xttsLanguageComboBox.Width = (int)ImGui.GetContentRegionMax().X;
@@ -1184,7 +1226,7 @@ namespace RoleplayingVoice {
                             }
                         }
                         ImGui.SameLine();
-                        if (_voiceEngineComboBox.SelectedIndex == 1) {
+                        if (_voiceEngineComboBox.SelectedIndex == 1 || _voiceEngineComboBox.SelectedIndex == 4) {
                             if (ImGui.Button("Refresh Voices", new Vector2(ImGui.GetWindowSize().X / 2 - 5, 25))) {
                                 RefreshVoices();
                             }

@@ -1,4 +1,4 @@
-﻿using ArtemisRoleplayingKit;
+using ArtemisRoleplayingKit;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -86,6 +86,8 @@ namespace RoleplayingVoice {
         public void InitialzeManager() {
             if (_roleplayingMediaManager == null) {
                 _roleplayingMediaManager = new RoleplayingMediaManager(config.ApiKey, config.CacheFolder, _networkedClient, config.CharacterVoices, _roleplayingMediaManager_InitializationStatus);
+                _roleplayingMediaManager.FishAudioApiKey = config.FishAudioApiKey;
+                _roleplayingMediaManager.CTTSAddress = config.CTTSAddress;
                 _roleplayingMediaManager.BasePath = Path.GetDirectoryName(pluginInterface.AssemblyLocation.FullName);
                 _roleplayingMediaManager.XTTSStatus += _roleplayingMediaManager_XTTSStatus;
                 _roleplayingMediaManager.VoicesUpdated += _roleplayingVoiceManager_VoicesUpdated;
@@ -117,7 +119,11 @@ namespace RoleplayingVoice {
         }
 
         private void _roleplayingMediaManager_OnVoiceFailed(object sender, VoiceFailure e) {
-            Plugin.PluginLog.Error(e.Exception, e.Exception.Message);
+            if (e.Exception != null) {
+                Plugin.PluginLog.Error(e.Exception, e.Exception.Message);
+            } else {
+                Plugin.PluginLog.Error(e.FailureMessage ?? "Unknown voice failure");
+            }
         }
 
         private void modSettingChanged(ModSettingChange arg1, Guid arg2, string arg3, bool arg4) {

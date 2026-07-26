@@ -537,7 +537,7 @@ namespace RoleplayingVoice {
                             TextPayload text = item as TextPayload;
                             if (player != null) {
                                 string possiblePlayerName = RemoveSpecialSymbols(player.PlayerName).Trim();
-                                if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                if (!string.IsNullOrEmpty(possiblePlayerName) && possiblePlayerName.Length > 1) {
                                     if (char.IsLower(possiblePlayerName[1])) {
                                         playerName = player.PlayerName;
                                         break;
@@ -546,7 +546,7 @@ namespace RoleplayingVoice {
                             }
                             if (text != null) {
                                 string possiblePlayerName = RemoveSpecialSymbols(text.Text).Trim();
-                                if (!string.IsNullOrEmpty(possiblePlayerName)) {
+                                if (!string.IsNullOrEmpty(possiblePlayerName) && possiblePlayerName.Length > 1) {
                                     if (char.IsLower(possiblePlayerName[1])) {
                                         playerName = text.Text;
                                         break;
@@ -669,22 +669,35 @@ namespace RoleplayingVoice {
                         string playerMessage = message.TextValue;
                         ICharacter player = (ICharacter)_objectTable.FirstOrDefault(x => x.Name.TextValue == playerSender);
                         PluginLog.Verbose("Found " + player.Name.TextValue + " for speech detection.");
-                        unsafe {
-                            if (config.TwitchStreamTriggersIfShouter && !Conditions.Instance()->BoundByDuty) {
-                                TwitchChatCheck(message, type, player, playerSender);
+                        try {
+                            unsafe {
+                                PluginLog.Verbose("Checking TwitchStreamTriggersIfShouter...");
+                                if (config.TwitchStreamTriggersIfShouter && !Conditions.Instance()->BoundByDuty) {
+                                    PluginLog.Verbose("Executing TwitchChatCheck...");
+                                    TwitchChatCheck(message, type, player, playerSender);
+                                }
                             }
+                        } catch (Exception ex) {
+                            PluginLog.Verbose($"Exception during Twitch check: {ex.Message}");
                         }
+
+                        PluginLog.Verbose($"Checking AiVoiceActive. Current value: {config.AiVoiceActive}");
                         if (config.AiVoiceActive) {
                             bool lipWasSynced = true;
+                            PluginLog.Verbose("Spawning Task to fetch and play voice...");
                             Task.Run(async () => {
-                                string value = await GetPlayerVoice(playerSender, playerMessage, type);
-                                _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerTts, false, 0, default, delegate {
-                                    if (_addonTalkHandler != null) {
-                                        if (_threadSafeObjectTable.LocalPlayer != null) {
-                                            _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                try {
+                                    PluginLog.Verbose("Task started. Calling GetPlayerVoice...");
+                                    string value = await GetPlayerVoice(playerSender, playerMessage, type);
+                                    PluginLog.Verbose($"GetPlayerVoice returned. Calling PlayMedia with value: {(string.IsNullOrEmpty(value) ? "EMPTY" : value)}");
+                                    _mediaManager.PlayMedia(_playerObject, value, SoundType.MainPlayerTts, false, 0, default, delegate {
+                                        PluginLog.Verbose("PlayMedia on-start delegate fired. Stopping LipSync.");
+                                        if (_addonTalkHandler != null) {
+                                            if (_threadSafeObjectTable.LocalPlayer != null) {
+                                                _addonTalkHandler.StopLipSync(_threadSafeObjectTable.LocalPlayer as ICharacter);
+                                            }
                                         }
-                                    }
-                                }, delegate (object sender, StreamVolumeEventArgs e) {
+                                    }, delegate (object sender, StreamVolumeEventArgs e) {
                                     Task.Run(delegate {
                                         Task.Run(delegate {
                                             if (e.MaxSampleValues.Length > 0) {
@@ -698,6 +711,9 @@ namespace RoleplayingVoice {
                                         });
                                     });
                                 });
+                                } catch (Exception ex) {
+                                    PluginLog.Verbose($"Exception in TTS Task: {ex.Message}\n{ex.StackTrace}");
+                                }
                             });
                         }
                         CheckForChatSoundEffectLocal(message);
@@ -834,23 +850,73 @@ namespace RoleplayingVoice {
             return null;
         }
         private async Task<string> GetPlayerVoice(string playerSender, string playerMessage, XivChatType type) {
+            PluginLog.Verbose($"GetPlayerVoice called: Engine={config.PlayerVoiceEngine}");
             switch (config.PlayerVoiceEngine) {
                 case 0:
-                    return await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
+                    if (config.Characters.TryGetValue(_threadSafeObjectTable.LocalPlayer.Name.TextValue, out string elevenlabsVoice)) {
+                        PluginLog.Verbose($"Elevenlabs voice configured: {elevenlabsVoice}");
+                        _roleplayingMediaManager.SetVoiceElevenlabs(elevenlabsVoice);
+                    } else {
+                        PluginLog.Verbose($"No Elevenlabs voice configured for {_threadSafeObjectTable.LocalPlayer.Name.TextValue}");
+                    }
+                    string elevenlabsResult = await _roleplayingMediaManager.DoVoiceElevenlabs(playerSender, playerMessage,
                     type == XivChatType.CustomEmote,
                     config.PlayerCharacterVolume,
                     _threadSafeObjectTable.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                    PluginLog.Verbose($"Elevenlabs returned: {(string.IsNullOrEmpty(elevenlabsResult) ? "EMPTY" : elevenlabsResult)}");
+                    return elevenlabsResult;
                 case 1:
-                    return await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
+                    if (config.Characters.TryGetValue(_threadSafeObjectTable.LocalPlayer.Name.TextValue, out string xttsVoice)) {
+                        PluginLog.Verbose($"XTTS voice configured: {xttsVoice}");
+                        _roleplayingMediaManager.SetVoiceXTTS(xttsVoice);
+                    } else {
+                        PluginLog.Verbose($"No XTTS voice configured for {_threadSafeObjectTable.LocalPlayer.Name.TextValue}");
+                    }
+                    string xttsResult = await _roleplayingMediaManager.DoVoiceXTTS(playerSender, playerMessage,
                     type == XivChatType.CustomEmote,
                     config.PlayerCharacterVolume,
                     _threadSafeObjectTable.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync, Window.XttsLanguageComboBox.Contents[config.XTTSLanguage]);
+                    PluginLog.Verbose($"XTTS returned: {(string.IsNullOrEmpty(xttsResult) ? "EMPTY" : xttsResult)}");
+                    return xttsResult;
                 case 2:
-                    _roleplayingMediaManager.SetVoiceMicrosoftNarrator(config.Characters[_threadSafeObjectTable.LocalPlayer.Name.TextValue]);
-                    return await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
+                    if (config.Characters.TryGetValue(_threadSafeObjectTable.LocalPlayer.Name.TextValue, out string msVoice)) {
+                        PluginLog.Verbose($"Microsoft Narrator voice configured: {msVoice}");
+                        _roleplayingMediaManager.SetVoiceMicrosoftNarrator(msVoice);
+                    } else {
+                        PluginLog.Verbose($"No MS Narrator voice configured for {_threadSafeObjectTable.LocalPlayer.Name.TextValue}");
+                    }
+                    string msResult = await _roleplayingMediaManager.DoVoiceMicrosoftNarrator(playerSender, playerMessage,
                     type == XivChatType.CustomEmote,
                     config.PlayerCharacterVolume,
                     _threadSafeObjectTable.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                    PluginLog.Verbose($"MS Narrator returned: {(string.IsNullOrEmpty(msResult) ? "EMPTY" : msResult)}");
+                    return msResult;
+                case 3:
+                    if (config.Characters.TryGetValue(_threadSafeObjectTable.LocalPlayer.Name.TextValue, out string fishVoice)) {
+                        PluginLog.Verbose($"Fish Audio voice configured: {fishVoice}");
+                        _roleplayingMediaManager.SetVoiceFishAudio(fishVoice);
+                    } else {
+                        PluginLog.Verbose($"No Fish Audio voice configured for {_threadSafeObjectTable.LocalPlayer.Name.TextValue}");
+                    }
+                    string fishResult = await _roleplayingMediaManager.DoVoiceFishAudio(playerSender, playerMessage,
+                    type == XivChatType.CustomEmote,
+                    config.PlayerCharacterVolume,
+                    _threadSafeObjectTable.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync);
+                    PluginLog.Verbose($"Fish Audio returned: {(string.IsNullOrEmpty(fishResult) ? "EMPTY" : fishResult)}");
+                    return fishResult;
+                case 4:
+                    if (config.Characters.TryGetValue(_threadSafeObjectTable.LocalPlayer.Name.TextValue, out string cttsVoice)) {
+                        PluginLog.Verbose($"CTTS voice configured: {cttsVoice}");
+                        _roleplayingMediaManager.SetVoiceCTTS(cttsVoice);
+                    } else {
+                        PluginLog.Verbose($"No CTTS voice configured for {_threadSafeObjectTable.LocalPlayer.Name.TextValue}");
+                    }
+                    string cttsResult = await _roleplayingMediaManager.DoVoiceCTTS(playerSender, playerMessage,
+                    type == XivChatType.CustomEmote,
+                    config.PlayerCharacterVolume,
+                    _threadSafeObjectTable.LocalPlayer.Position, config.UseAggressiveSplicing, config.UsePlayerSync, Window.XttsLanguageComboBox.Contents[config.XTTSLanguage]);
+                    PluginLog.Verbose($"CTTS returned: {(string.IsNullOrEmpty(cttsResult) ? "EMPTY" : cttsResult)}");
+                    return cttsResult;
                 default:
                     return "";
             }

@@ -72,6 +72,8 @@ namespace RoleplayingVoice {
             }
         }
         public string ApiKey { get; set; }
+        public string FishAudioApiKey { get; set; }
+        public string CTTSAddress { get; set; } = "http://localhost:8308";
         public bool IsActive {
             set {
                 AiVoiceActive = value;
