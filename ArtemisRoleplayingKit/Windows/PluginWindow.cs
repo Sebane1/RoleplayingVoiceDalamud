@@ -1157,7 +1157,10 @@ namespace RoleplayingVoice {
                         ImGui.InputText("##fishApiKey", ref fishApiKey, 2000, ImGuiInputTextFlags.Password);
                         if (configuration.FishAudioApiKey != fishApiKey) {
                             configuration.FishAudioApiKey = fishApiKey;
-                            if (_manager != null) _manager.FishAudioApiKey = fishApiKey;
+                            if (_manager != null) {
+                                _manager.FishAudioApiKey = fishApiKey;
+                                _manager.RefreshFishAudioSubscriptionInfo();
+                            }
                             configuration.Save();
                         }
                         if (string.IsNullOrEmpty(fishApiKey)) {
@@ -1165,7 +1168,7 @@ namespace RoleplayingVoice {
                                 Process process = new Process();
                                 try {
                                     process.StartInfo.UseShellExecute = true;
-                                    process.StartInfo.FileName = "https://fish.audio/";
+                                    process.StartInfo.FileName = "https://fish.audio/?aff=P6GEKKIOVQVNI";
                                     process.Start();
                                 } catch (Exception e) {
 
@@ -1266,6 +1269,15 @@ namespace RoleplayingVoice {
                             ProcessInfo = new ProcessStartInfo(urlPath);
                             ProcessInfo.UseShellExecute = true;
                             Process = Process.Start(ProcessInfo);
+                        }
+                        break;
+                    case 3:
+                        if (_manager != null && _manager.FishAudioCredit != null && !string.IsNullOrEmpty(configuration.FishAudioApiKey)) {
+                            if (double.TryParse(_manager.FishAudioCredit, out double credit)) {
+                                ImGui.TextWrapped($"You have ${Math.Round(credit, 2):0.00} remaining.");
+                            } else {
+                                ImGui.TextWrapped($"You have {_manager.FishAudioCredit} FishAudio credits remaining.");
+                            }
                         }
                         break;
                 }
