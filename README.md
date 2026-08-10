@@ -58,9 +58,4 @@ Support Discord:
 https://discord.gg/rtGXwMn7pX
 
 SEO:
-TTS (Text To Speech), FFXIV Voiceover, FFXIV Twitch Playback Plugin, FFXIV Voices, XIV Voices, Final Fantasy 14 Voices, Free FFXIV Voice, Free XIV Voice
-'final fantasy'
-'final fantasy'
-'final fantasy'
-'final fantasy'
-'final fantasy'
+TTS (Text To Speech), FFXIV Voiceover, FFXIV Voices, XIV Voices, Final Fantasy 14 Voices, Free FFXIV Voice, Free XIV Voice
