@@ -4,15 +4,13 @@ Want a full overview? Check out the the plugin website!
 https://artemisroleplayingkit.carrd.co/
 
 Features:
-- Reading for anything you type via Elevenlabs (User provided API key needed), XTTS, or custom Narrator voices.
+- Reading for anything you type via Elevenlabs, Fish Audio, Chatterbox TTS, or custom Narrator voices.
 - Voiceover for other players.
 - Expanded voice packs and possible sound additions that cover just about every character action imaginable with near infinite flexibility.
 - Automatic lip syncronization on your character!
-- Automatic twitch playback allows you to hear your favourite DJ's while inside venues without having to think or manually open a web browser. Everything is in the game world!
 - Penumbra support so that you can still sort your Artemis Roleplaying Kit sound mods.
 - Sync your custom voices and sounds with friends by whitelisting them in Artemis Roleplaying Kit!
 - Dynamic character emote triggering based on text in custom emotes.
-- Automated mod switching for animation mods. Just enter the mod name you want to trigger.
 - Hands free speech to text typing leveraging a locally ran version of Whisper.
 
 Repo Link:
@@ -33,21 +31,6 @@ In the dalamud settings experimental tab, put the repository link here, click th
 
 Then install Artemis Roleplaying Kit from the dalamud plugin list.
 ![2c5234d89be9cf69de65858801152179](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/329adbde-06b9-4315-bf43-1b32ba9d18c2)
-
-[OPTIONAL INSTRUCTIONS FOR GENERATIVE VOICE]
-
-If you want to have your character speak what you type, you will need to have an Elevenlabs account.
-
-Elevenlabs: https://www.elevenlabs.io/?from=partnerthompson2324
-
-After registration, get your API key.
-
-![API Key](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/ece3f2a2-f61d-4c2d-94fa-c0fc4b189ff2)
-![image](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/244486d8-9eda-4295-a051-46891a101405)
-
-Open the plugin with /ark in chat and copy paste your elevenlabs key after enabling "Generative Voice". This is optional and only needed if you want your character to speak out lines you type. 
-
-![a9c07f1e8cc8a19bc80f5b5a9c9a572e](https://github.com/Sebane1/RoleplayingVoiceDalamud/assets/7157688/0d35880a-472b-43c8-856a-b45ba19115cc)
 
 [OPTIONAL INSTRUCTIONS FOR CUSTOM VOICE PACKS]
 
