@@ -436,7 +436,7 @@ namespace RoleplayingVoiceDalamud.Voice
                         {
                             if (!_currentDialoguePaths.ContainsKey(e.SoundPath) || Conditions.Instance()->BoundByDuty)
                             {
-                                if (e.SoundPath != _lastSoundPath)
+                                if (e.SoundPath != _lastSoundPath && e.isBlocking)
                                 {
                                     // A valid .scd voice file was just loaded! 
                                     // Set the timestamp so that any NPCText arriving within the next 1500ms will be automatically assumed to be the owner of this audio file, and TTS will be blocked.
@@ -876,22 +876,22 @@ namespace RoleplayingVoiceDalamud.Voice
                                                     var speaker = NPCVoiceMapping.AliasDetector(stateSnapshot.Speaker);
 
                                                     // If a voiced SCD recently fired for this speaker,
-                                                    // skip TTS dispatch - the game is playing real voice acting.
+                                                    // skip TTS dispatch the game is playing real voice acting.
                                                     bool suppressedByPerNpcBlock = false;
                                                     CleanExpiredVoicedNpcs();
-                                                    if (_npcsWithGameVoice.ContainsKey(speaker) || _npcsWithGameVoice.ContainsKey(stateSnapshot.Speaker))
+                                                    if ((_npcsWithGameVoice.ContainsKey(speaker) || _npcsWithGameVoice.ContainsKey(stateSnapshot.Speaker)) && (!IsInACutscene()))
                                                     {
                                                         var matchedKey = _npcsWithGameVoice.ContainsKey(speaker) ? speaker : stateSnapshot.Speaker;
-                                                        TraceNpcTts($"Per-NPC block: suppressed TTS dispatch for '{speaker}' - game voice detected (key='{matchedKey}')");
+                                                        TraceNpcTts($"Per-NPC block: suppressed TTS dispatch for '{speaker}', game voice detected (key='{matchedKey}')");
                                                         if (_plugin.Config.DebugMode)
                                                         {
-                                                            _plugin.Chat.Print($"[Per-NPC Block] Skipped TTS for '{speaker}' - game has voice acting");
+                                                            _plugin.Chat.Print($"[Per-NPC Block] Skipped TTS for '{speaker}', game has voice acting");
                                                         }
                                                         suppressedByPerNpcBlock = true;
                                                         _npcsWithGameVoice.TryRemove(matchedKey, out _); // Consume on match
                                                     }
 
-                                                    if (!suppressedByPerNpcBlock)
+                                                    if (!suppressedByPerNpcBlock || IsInACutscene())
                                                     {
                                                         TraceNpcTts($"Dispatching dialogue to NPCText speaker='{speaker}' text='{PreviewText(stateSnapshot.Text)}'");
                                                         if (IsPauseOnlyDialogue(stateSnapshot.Text))
