@@ -1057,12 +1057,6 @@ namespace RoleplayingVoiceDalamud.Voice
 
         private bool ShouldSkipNpcText(string npcName, string message)
         {
-            if (!VerifyIsEnglish(message, out var languageRejectionReason))
-            {
-                Plugin.PluginLog.Information($"[NPC TTS] Skipping text for npc='{npcName}' reason='{languageRejectionReason}' text='{PreviewText(message)}'");
-                return true;
-            }
-
             if (message?.Contains("You have submitted") == true)
             {
                 return true;
@@ -2160,47 +2154,47 @@ namespace RoleplayingVoiceDalamud.Voice
             }
         }
 
-        private bool VerifyIsEnglish(string message)
-        {
-            return VerifyIsEnglish(message, out _);
-        }
+        //private bool VerifyIsEnglish(string message)
+        //{
+        //    return VerifyIsEnglish(message, out _);
+        //}
 
-        private bool VerifyIsEnglish(string message, out string reason)
-        {
-            reason = "";
-            if (_clientState.ClientLanguage != ClientLanguage.English)
-            {
-                reason = $"client language is {_clientState.ClientLanguage}";
-                return false;
-            }
+        //private bool VerifyIsEnglish(string message, out string reason)
+        //{
+        //    reason = "";
+        //    if (_clientState.ClientLanguage != ClientLanguage.English)
+        //    {
+        //        reason = $"client language is {_clientState.ClientLanguage}";
+        //        return false;
+        //    }
 
-            if (string.IsNullOrEmpty(message))
-            {
-                return true;
-            }
+        //    if (string.IsNullOrEmpty(message))
+        //    {
+        //        return true;
+        //    }
 
-            foreach (string marker in StrongNonEnglishTextMarkers)
-            {
-                if (message.Contains(marker, StringComparison.OrdinalIgnoreCase))
-                {
-                    reason = $"contains strong non-English marker '{marker}'";
-                    return false;
-                }
-            }
+        //    foreach (string marker in StrongNonEnglishTextMarkers)
+        //    {
+        //        if (message.Contains(marker, StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            reason = $"contains strong non-English marker '{marker}'";
+        //            return false;
+        //        }
+        //    }
 
-            foreach (string marker in WeakNonEnglishTextMarkers)
-            {
-                // Use a word boundary (\b) so "Te" doesn't match inside "late".
-                // We use RegexOptions.IgnoreCase to make it case-insensitive.
-                if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b" + System.Text.RegularExpressions.Regex.Escape(marker) + @"\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                {
-                    reason = $"contains weak non-English marker '{marker}'";
-                    return false;
-                }
-            }
+        //    foreach (string marker in WeakNonEnglishTextMarkers)
+        //    {
+        //        // Use a word boundary (\b) so "Te" doesn't match inside "late".
+        //        // We use RegexOptions.IgnoreCase to make it case-insensitive.
+        //        if (System.Text.RegularExpressions.Regex.IsMatch(message, @"\b" + System.Text.RegularExpressions.Regex.Escape(marker) + @"\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        //        {
+        //            reason = $"contains weak non-English marker '{marker}'";
+        //            return false;
+        //        }
+        //    }
 
-            return true;
-        }
+        //    return true;
+        //}
 
         private string FindNPCNameFromMessage(string message)
         {
