@@ -244,7 +244,7 @@ namespace RoleplayingVoice {
                     _xttsLanguageComboBox.SelectedIndex = configuration.XTTSLanguage;
                     _localVoiceForNonWhitelistedPlayers = configuration.LocalVoiceForNonWhitelistedPlayers;
                     _narrateUnquotedText = configuration.NarrateUnquotedText;
-                    _useClosestRelayServer = configuration.UseClosestRelayServer;
+                    //_useClosestRelayServer = configuration.UseClosestRelayServer;
                     cacheFolder = configuration.CacheFolder ??
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RPVoiceCache");
                     _voicePackTypeBox.SelectedIndex = configuration.VoiceReplacementType;
@@ -531,13 +531,13 @@ namespace RoleplayingVoice {
                 ImGui.Checkbox("Use the same voices for A Realm Reborn", ref _replaceVoicedARRCutscenes);
                 ImGui.Checkbox("Ignore bubbles from overworld NPCs", ref _ignoreBubblesFromOverworldNPCs);
                 ImGui.Checkbox("Quality Assurance Mode (help fix lines)", ref _qualityAssuranceMode);
-                ImGui.Checkbox("Use Closest Relay Server", ref _useClosestRelayServer);
+                //ImGui.Checkbox("Use Closest Relay Server", ref _useClosestRelayServer);
                 ImGui.EndTable();
                 ImGui.Text("NPC Playback Speed");
                 ImGui.SetNextItemWidth(ImGui.GetContentRegionMax().X);
                 ImGui.SliderFloat("##_npcPlaybackSpeed", ref _npcPlaybackSpeed, 1, 2);
                 // ImGui.Checkbox("Use Relay Server", ref _useCustomDialogueRelayServer);
-                if (PluginReference != null && PluginReference.NpcVoiceManager != null && PluginReference.NpcVoiceManager.UseCustomRelayServer) {
+                if (PluginReference != null && PluginReference.NpcVoiceManager != null) {
                     ImGui.Text("Connected to server " + PluginReference.NpcVoiceManager.CurrentServerAlias + ".");
                 }
                 ImGui.Text(PluginReference.ThreadSafeObjectTable.LocalPlayer != null ? PluginReference.ThreadSafeObjectTable.LocalPlayer.Name + "'s Experienced History:" : "No character loaded.");
@@ -836,7 +836,7 @@ namespace RoleplayingVoice {
             configuration.IgnoreBubblesFromOverworldNPCs = _ignoreBubblesFromOverworldNPCs;
             configuration.XTTSLanguage = _xttsLanguageComboBox.SelectedIndex;
             configuration.LocalVoiceForNonWhitelistedPlayers = _localVoiceForNonWhitelistedPlayers;
-            configuration.UseClosestRelayServer = _useClosestRelayServer;
+            //configuration.UseClosestRelayServer = _useClosestRelayServer;
             configuration.NarrateUnquotedText = _narrateUnquotedText;
             configuration.VoiceReplacementType = _voicePackTypeBox.SelectedIndex;
             configuration.ChosenVanillaReplacement = _voiceToSwap.SelectedIndex;
@@ -853,7 +853,7 @@ namespace RoleplayingVoice {
                     characterVoice = _voiceList[voiceComboBox.SelectedIndex];
                 }
             }
-                                PluginReference.NpcVoiceManager.UseClosestRelay = _useClosestRelayServer;
+                                //PluginReference.NpcVoiceManager.UseClosestRelay = _useClosestRelayServer;
             configuration.Save();
             save = false;
             RefreshVoices();

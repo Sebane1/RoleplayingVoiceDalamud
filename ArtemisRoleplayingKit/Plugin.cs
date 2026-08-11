@@ -448,7 +448,7 @@ namespace RoleplayingVoice
                         addonTalkManager = null;
                         addonTalkHandler = null;
                         ipcSystem = null;
-                        NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
+                        //NpcVoiceManager.UseClosestRelay = config.UseClosestRelayServer;
                     }
                     catch (Exception e)
                     {
