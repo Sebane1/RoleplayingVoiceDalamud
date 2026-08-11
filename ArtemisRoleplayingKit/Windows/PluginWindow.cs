@@ -386,14 +386,14 @@ namespace RoleplayingVoice {
                     //    PluginReference.NpcPersonalityWindow.Draw();
                     //    ImGui.EndTabItem();
                     //}
-                    if (ImGui.BeginTabItem("Animation")) {
-                        DrawAnimationWindow();
-                        ImGui.EndTabItem();
-                    }
-                    if (ImGui.BeginTabItem("Twitch")) {
-                        DrawTwitch();
-                        ImGui.EndTabItem();
-                    }
+                    //if (ImGui.BeginTabItem("Animation")) {
+                    //    DrawAnimationWindow();
+                    //    ImGui.EndTabItem();
+                    //}
+                    //if (ImGui.BeginTabItem("Twitch")) {
+                    //    DrawTwitch();
+                    //    ImGui.EndTabItem();
+                    //}
                     if (ImGui.BeginTabItem("Volume")) {
                         DrawVolume();
                         ImGui.EndTabItem();
@@ -497,10 +497,6 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Contribute Your Voice!", new Vector2(ImGui.GetWindowSize().X - 10, 40))) {
                 Process process = new Process();
                 try {
-                    //// true is the default, but it is important not to set it to false
-                    //process.StartInfo.UseShellExecute = true;
-                    //process.StartInfo.FileName = "https://forms.gle/JrarUbRpnhNyEThAA";
-                    //process.Start();
                     PluginReference.VoiceEditor.IsOpen = true;
                 } catch (Exception e) {
 
@@ -509,7 +505,6 @@ namespace RoleplayingVoice {
             if (ImGui.Button("Learn how text to speech voices are made.", new Vector2(ImGui.GetWindowSize().X - 10, 20))) {
                 Process process = new Process();
                 try {
-                    // true is the default, but it is important not to set it to false
                     process.StartInfo.UseShellExecute = true;
                     process.StartInfo.FileName = "https://docs.google.com/document/d/1hQrFjk5dKKTaXqhiS3HGJDZJ6rjMb4vFAwwT8E-hEUc/edit?usp=sharing";
                     process.Start();
@@ -549,7 +544,7 @@ namespace RoleplayingVoice {
                 int count = 0;
                 foreach (var item in PluginReference.AddonTalkHandler.NpcVoiceHistoryItems) {
                     ImGui.SetNextItemWidth(ImGui.GetWindowContentRegionMax().X - (ImGui.GetWindowContentRegionMax().X * (PluginReference.Config.QualityAssuranceMode ? (item.CanBeMuted ? 0.4f : 0.3f) : 0.2f)));
-                    ImGui.LabelText("##label" + item.Text, $"[{item.GenerationString.Replace("Alternate", "XIVV")}]" + item.Character + ": " + item.OriginalValue);
+                    ImGui.LabelText("##label" + item.Text, $"[{item.GenerationString.Replace("Alternate", "XIVV/CTTS")}]" + item.Character + ": " + item.OriginalValue);
                     ImGui.SameLine();
                     if (ImGui.Button($"Replay Line##" + count++)) {
                         Task.Run(async () => {
